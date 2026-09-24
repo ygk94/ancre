@@ -258,6 +258,10 @@ CC0.
 
 `data/` is **not** in this repo yet. Reproduce with the endpoints in §1; the 2026-09-21 snapshot (`fb.json`, 9,188 entries; `agents.json`, 10,171 agents) lives in the research vault under `2 - EVM/Monad (L1)/Hackathons/_data-metropolis/`.
 
-## 10. Status
+## 10. Build kit
+
+Backend workstreams, prompts and boundaries: **[BACKEND-KIT.md](BACKEND-KIT.md)** (laid-out version: `docs/backend-kit.html`). Three parallel workstreams — `indexer/`, `solver/`, `contracts/` — connected by frozen files in `spec/`.
+
+## 11. Status
 
 Research and specification complete; **no code written yet**. Next action: `AnchoredReputation.sol` with a real gas report, to replace the estimates in §4.

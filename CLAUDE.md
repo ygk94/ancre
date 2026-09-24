@@ -95,6 +95,8 @@ RPC mainnet : `https://rpc.monad.xyz` (25 rps) · testnet : `https://testnet-rpc
 
 ## 9. Prochaines actions, dans l'ordre
 
+> Les prompts prêts à coller pour chaque chantier sont dans **BACKEND-KIT.md** (frontières, skills, critères de sortie). Ne lance pas un chantier sans lire ses interdits.
+
 1. **`AnchoredReputation.sol`** (niveau `Verified`) + `forge test --gas-report` → remplacer les estimations du README §4. **C'est le point qui peut tuer le projet : à faire en premier.**
 2. **Indexeur** des events `NewFeedback` / `FeedbackRevoked` (HyperSync) + reconstruction du graphe via `getAgentWallet` / owner ERC-721.
 3. **Solveur PPR** hors chaîne + normalisation par tag, validé sur le snapshot du 21/09.
