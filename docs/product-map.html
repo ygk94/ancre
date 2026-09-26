@@ -1,0 +1,403 @@
+<title>ANCRE Product Map</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --ground:#EDEFF2; --surface:#FFFFFF; --surface-2:#F6F7F9;
+    --ink:#11151B; --ink-2:#39424E; --muted:#5E6875; --line:#D2D8E0; --line-strong:#B6BFCB;
+    --accent:#2E4A7D; --accent-soft:#E3E9F4; --signal:#B45F11; --signal-soft:#F7ECDF;
+    --ok:#1C6B50; --ok-soft:#E0EFE8; --danger:#8F2321; --danger-soft:#F6E4E2;
+    --shadow:0 1px 2px rgba(17,21,27,.06), 0 8px 24px -16px rgba(17,21,27,.28);
+    --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans:"IBM Plex Sans", system-ui, -apple-system, Segoe UI, sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0E1216; --surface:#151A20; --surface-2:#1A2029;
+      --ink:#E6EAF0; --ink-2:#C0C8D2; --muted:#8D98A6; --line:#252D37; --line-strong:#38424F;
+      --accent:#8DAEE8; --accent-soft:#1B2534; --signal:#E2A055; --signal-soft:#2B2113;
+      --ok:#6FCBA4; --ok-soft:#12251D; --danger:#E08E89; --danger-soft:#2A1614;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0E1216; --surface:#151A20; --surface-2:#1A2029;
+    --ink:#E6EAF0; --ink-2:#C0C8D2; --muted:#8D98A6; --line:#252D37; --line-strong:#38424F;
+    --accent:#8DAEE8; --accent-soft:#1B2534; --signal:#E2A055; --signal-soft:#2B2113;
+    --ok:#6FCBA4; --ok-soft:#12251D; --danger:#E08E89; --danger-soft:#2A1614;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+  }
+  *{box-sizing:border-box}
+  body{background:var(--ground); color:var(--ink); font-family:var(--sans); font-size:15px; line-height:1.55; margin:0; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1060px; margin:0 auto; padding-inline:16px}
+  a{color:var(--accent)}
+  h1,h2,h3{text-wrap:balance; margin:0}
+  code{font-family:var(--mono); font-size:.88em}
+
+  header.bar{position:sticky; top:env(safe-area-inset-top,0px); z-index:20; background:color-mix(in srgb, var(--ground) 92%, transparent); backdrop-filter:blur(8px); border-bottom:1px solid var(--line)}
+  .bar-in{max-width:1060px; margin:0 auto; padding:10px 16px; display:flex; align-items:center; gap:14px; flex-wrap:wrap}
+  .mark{font-family:var(--mono); font-weight:600; letter-spacing:.08em; text-transform:uppercase; font-size:12px}
+  .mark span{color:var(--signal)}
+  nav.jump{display:flex; gap:4px; flex-wrap:wrap; margin-left:auto}
+  nav.jump a{font-family:var(--mono); font-size:11.5px; text-decoration:none; color:var(--muted); padding:4px 8px; border:1px solid transparent; border-radius:4px}
+  nav.jump a:hover{color:var(--ink); border-color:var(--line); background:var(--surface)}
+
+  .hero{padding-block:44px 30px; border-bottom:1px solid var(--line)}
+  .eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--signal); margin-bottom:14px}
+  h1{font-size:clamp(28px,5vw,44px); line-height:1.08; letter-spacing:-.02em; font-weight:700; max-width:20ch}
+  .lede{margin-top:16px; max-width:64ch; color:var(--ink-2); font-size:17px}
+  .facts{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1px; margin-top:28px; background:var(--line); border:1px solid var(--line)}
+  .fact{background:var(--surface); padding:12px 14px}
+  .fact dt{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+  .fact dd{margin:4px 0 0; font-size:19px; font-weight:600; font-variant-numeric:tabular-nums}
+  .fact dd small{display:block; font-size:11.5px; font-weight:400; color:var(--muted); letter-spacing:0}
+
+  section{padding-block:38px; border-bottom:1px solid var(--line)}
+  h2{font-size:24px; font-weight:600; letter-spacing:-.01em}
+  h3{font-size:17px; font-weight:600; margin-top:24px}
+  .sub{color:var(--muted); max-width:66ch}
+  p{margin:10px 0}
+
+  .stack{display:flex; flex-direction:column; gap:8px; margin-top:20px}
+  .layer{border:1px solid var(--line); background:var(--surface); padding:14px 16px; box-shadow:var(--shadow)}
+  .layer .lbl{font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:8px}
+  .layer.surfaces{border-top:3px solid var(--signal)}
+  .layer.engine{border-top:3px solid var(--accent)}
+  .layer.base{border-top:3px solid var(--line-strong)}
+  .row{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:8px}
+  .cell{background:var(--surface-2); border:1px solid var(--line); padding:10px 12px}
+  .cell b{display:block; font-size:14px; margin-bottom:3px}
+  .cell span{font-size:12.5px; color:var(--muted)}
+  .flowdown{text-align:center; font-family:var(--mono); color:var(--line-strong); font-size:16px}
+
+  table{width:100%; border-collapse:collapse; font-size:13.5px}
+  .scroll{overflow-x:auto; margin-top:14px; border:1px solid var(--line); background:var(--surface)}
+  th,td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top}
+  th{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); background:var(--surface-2); white-space:nowrap}
+  tbody tr:last-child td{border-bottom:none}
+  td code{background:var(--surface-2); padding:1px 4px; border-radius:3px}
+  .yes{color:var(--ok); font-weight:600}
+  .no{color:var(--danger); font-weight:600}
+
+  .rules{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px; margin-top:20px}
+  .rule{background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--accent); padding:14px 16px}
+  .rule b{display:block; font-size:14.5px; margin-bottom:5px}
+  .rule p{margin:0; font-size:13.5px; color:var(--ink-2)}
+
+  .compare{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px}
+  @media (max-width:700px){ .compare{grid-template-columns:1fr} }
+  .bad,.good{padding:13px 15px; border:1px solid var(--line)}
+  .bad{background:var(--danger-soft); border-left:3px solid var(--danger)}
+  .good{background:var(--ok-soft); border-left:3px solid var(--ok)}
+  .bad .t,.good .t{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; margin-bottom:6px}
+  .bad .t{color:var(--danger)} .good .t{color:var(--ok)}
+
+  pre.code{margin:14px 0 0; padding:14px; font-family:var(--mono); font-size:12.5px; line-height:1.55; background:var(--surface); border:1px solid var(--line); overflow-x:auto}
+
+  ol.script{list-style:none; counter-reset:s; padding:0; margin:18px 0 0}
+  ol.script li{counter-increment:s; display:grid; grid-template-columns:78px 1fr; gap:14px; padding:13px 0; border-bottom:1px solid var(--line)}
+  ol.script li:last-child{border-bottom:none}
+  ol.script .t{font-family:var(--mono); font-size:13px; color:var(--signal); font-variant-numeric:tabular-nums}
+  ol.script b{display:block; font-size:14.5px; margin-bottom:3px}
+  ol.script p{margin:0; font-size:13.5px; color:var(--ink-2)}
+
+  .note{border-left:3px solid var(--signal); background:var(--signal-soft); padding:12px 14px; margin-top:18px; font-size:13.5px}
+  footer{padding-block:32px 44px; color:var(--muted); font-size:13px}
+  @media (prefers-reduced-motion:reduce){ *{transition:none!important; animation:none!important} }
+</style>
+
+<header class="bar">
+  <div class="bar-in">
+    <span class="mark">ANCRE <span>/</span> product map</span>
+    <nav class="jump">
+      <a href="#probleme">Problème</a>
+      <a href="#nouveau">Nouveauté</a>
+      <a href="#norme">Norme</a>
+      <a href="#principe">Principe</a>
+      <a href="#pile">Pile</a>
+      <a href="#surfaces">4 surfaces</a>
+      <a href="#domaine">Domaine</a>
+      <a href="#monad">Monad</a>
+      <a href="#scope">Périmètre</a>
+      <a href="#demo">Démo</a>
+      <a href="#plan">Plan</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<div class="hero">
+  <div class="eyebrow">Présentation complète · 26 sept. 2026 · Monad Metropolis, track 04</div>
+  <h1>Un moteur de confiance, quatre surfaces</h1>
+  <p class="lede">ANCRE calcule une réputation d'agents IA résistante aux faux comptes, relative aux personnes en qui <i>vous</i> avez confiance, certifiée on-chain et lisible par un contrat avant qu'il paie. Émettre un agent, en importer un, fermer un réseau d'entreprise, déposer une revue : quatre vues sur ce seul mécanisme.</p>
+  <dl class="facts">
+    <div class="fact"><dt>Registre réel</dt><dd>9 188<small>avis sur Monad mainnet</small></dd></div>
+    <div class="fact"><dt>Venant d'une ferme</dt><dd>83 %<small>7 665 faux agents en 48 h</small></dd></div>
+    <div class="fact"><dt>Réaction à une alerte</dt><dd>~0,6 s<small>12 s sur Ethereum</small></dd></div>
+    <div class="fact"><dt>Vérification du graphe</dt><dd>~3,7 M<small>gas estimés, bloc de 150 M</small></dd></div>
+  </dl>
+  <div class="note" style="margin-top:22px"><b>Statut au 26/09 :</b> recherche et spec terminées, architecture rédigée mais <b>non figée</b>, zéro ligne de code. Les chiffres du registre sont mesurés ; les coûts en gas sont des estimations, que le premier chantier de code doit remplacer.</div>
+</div>
+
+<section id="probleme">
+  <h2>Le problème, mesuré et non supposé</h2>
+  <p class="sub">ERC-8004 est la norme d'identité et de réputation des agents IA, déployée à la même adresse sur plus de 40 chaînes, dont Monad. Elle enregistre les avis, mais elle dit elle-même qu'elle ne sait pas les filtrer : <i>« Sybil attacks are possible »</i>. Sa fonction de synthèse refuse même de répondre si le lecteur ne fournit pas lui-même la liste des noteurs à croire.</p>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Sur le mainnet Monad, le 21/09/2026</th><th>Valeur</th></tr></thead>
+      <tbody>
+        <tr><td>Agents enregistrés</td><td><b>10 171</b></td></tr>
+        <tr><td>Avis déposés, pour 84 agents seulement</td><td><b>9 188</b></td></tr>
+        <tr><td>Part venant d'une seule ferme — 7 665 agents « Spawn-8004 » créés les 16-17 février à ~300/heure, tous notant le même agent</td><td><b>83 %</b></td></tr>
+        <tr><td>Avis à la valeur maximale <code>1e38</code>, tous sur cet agent</td><td><b>117</b></td></tr>
+        <tr><td>Moyenne naïve de cet agent</td><td><b>1,5 × 10³⁶</b></td></tr>
+        <tr><td>Unités mélangées dans le même registre</td><td>notes sur 100, Elo ≈1 600, ±1, <code>1e38</code></td></tr>
+        <tr><td>Liens réellement utiles — où le noteur est lui-même noté</td><td><b>36</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="sub" style="margin-top:14px">Une étude externe trouve le même schéma ailleurs : 73,5 % de noteurs au comportement coordonné sur Ethereum, 59,2 % sur BSC, 90,6 % sur Base. <b>La norme confie le filtrage au lecteur et ne lui donne aucun outil pour le faire.</b> C'est le trou qu'ANCRE remplit.</p>
+</section>
+
+<section id="nouveau">
+  <h2>Ce qui existe déjà, et ce qui n'existe pas</h2>
+  <p class="sub">Huit agrégateurs de réputation ERC-8004 tournent aujourd'hui, tous avec leur propre interface, aucun lisible par un contrat. Deux projets sont techniquement proches et méritent d'être nommés avant que le jury ne les trouve.</p>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Projet</th><th>Ce qu'il fait</th><th>Ce qui nous en sépare</th></tr></thead>
+      <tbody>
+        <tr><td><b>ColinkaMir/monad-agent-trust</b><br><span style="color:var(--muted)">★0, actif depuis le 18/09</span></td><td>Provenance des paiements sur Monad, même jeu de données. Trouve 16 avis propres sur 9 188</td><td>Heuristiques, pas d'algorithme de graphe, pas lisible par un contrat → <b>on consomme son signal, on ne le concurrence pas</b></td></tr>
+        <tr><td><b>trustgraphs</b><br><span style="color:var(--muted)">★8, Sepolia</span></td><td>PageRank à graines prouvé en ZK, vérifié on-chain</td><td>Construit sur EAS, pas sur ERC-8004. Leurs propres notes refusent de dire « prouvé » tant que la complétude d'un registre externe n'est pas résolue</td></tr>
+        <tr><td><b>OpenRank</b> (Karma3)</td><td>Vérification d'une itération EigenTrust avec contestation</td><td>Archivé en 2025. ⚠️ <b>Vérifier un point fixe on-chain n'est pas une invention</b> — à ne jamais pitcher comme telle</td></tr>
+        <tr><td><b>Pfand, Agent Veil, RNWY, TrustLayer</b></td><td>Scores calculés hors chaîne, oracle signé, rafraîchis chaque jour</td><td>Il faut leur faire confiance, et le score a un jour de retard</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3>Ce qui est réellement nouveau</h3>
+  <div class="rules">
+    <div class="rule"><b>Relatif au lecteur, lisible par un contrat</b><p><code>trustOf(agentId, anchorSetId)</code>. C'est la réponse à une demande publique faite aux auteurs d'ERC-8004 le 23 juillet, restée sans réponse.</p></div>
+    <div class="rule"><b>Certifié à la cadence de la chaîne</b><p>Tout le reste se rafraîchit une fois par jour. Ici, un signal négatif se propage en moins d'une seconde.</p></div>
+    <div class="rule"><b>Une borne d'erreur publiée</b><p>Le certificat porte son propre résidu : on sait de combien le score peut se tromper, on ne le croit pas sur parole.</p></div>
+    <div class="rule"><b>La confiance conditionne le paiement</b><p>Sous le seuil, le contrat refuse. Le refus ne vient pas de l'application.</p></div>
+  </div>
+</section>
+
+<section id="norme">
+  <h2>La norme qu'on écrit</h2>
+  <p class="sub">Huit agrégateurs incompatibles, et aucun ERC ne couvre l'agrégation — vérifié dans le dépôt officiel, où trois propositions « reputation » ont été fermées sans être fusionnées. ANCRE est l'implémentation de référence d'un ERC en trois parties, chain-agnostique par construction.</p>
+  <div class="row" style="margin-top:18px; display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:10px">
+    <div class="cell"><b>1 · Échelles de notes</b><span>chaque tag déclare ses bornes ; une valeur hors bornes est rejetée, jamais plafonnée — ce qui élimine les 1e38</span></div>
+    <div class="cell"><b>2 · Interface d'agrégateur</b><span><code>trustOf</code> renvoie score, borne d'erreur, bloc d'observation et niveau de garantie</span></div>
+    <div class="cell"><b>3 · Certificat</b><span>deux niveaux : <b>Verified</b> (calcul vérifié dans la transaction) et <b>Optimistic</b> (caution et contestation)</span></div>
+  </div>
+  <div class="note"><b>Une demande à la norme mère, issue du travail :</b> ERC-8004 ne stocke pas le numéro de bloc de chaque avis. Sans lui, on ne peut pas prouver on-chain qu'un certificat a omis un avis antérieur à son époque. Le draft demande que la prochaine version le corrige — c'est un apport à la norme, pas seulement une extension.</div>
+</section>
+
+<section id="principe">
+  <h2>Le principe qui gouverne tout</h2>
+  <p class="sub">La confiance n'existe pas dans l'absolu : elle existe <i>depuis</i> quelqu'un. Le même agent peut valoir 0,9 chez un lecteur et 0 chez un autre. C'est ce qui rend le réseau privé gratuit — un domaine fermé, c'est un ensemble d'ancres, pas une infrastructure séparée.</p>
+  <div class="rules">
+    <div class="rule"><b>Un agent neuf vaut zéro</b><p>On ne le certifie pas, on le parraine : plafonné, cautionné, révocable. Un score à la naissance, c'est exactement ce qu'a fabriqué la ferme Eve-8004.</p></div>
+    <div class="rule"><b>Une revue hors d'atteinte pèse zéro</b><p>Si son auteur n'est atteignable depuis aucune de vos ancres, son poids effectif est nul — et l'interface l'affiche au lieu de le cacher.</p></div>
+    <div class="rule"><b>Le refus vient du contrat</b><p>Un paiement bloqué n'est pas une décision d'application : c'est <code>trustOf</code> lu on-chain, avec une fraîcheur bornée en blocs.</p></div>
+  </div>
+
+  <h3>Pourquoi « créé chez nous donc certifié » est le seul point à réécrire</h3>
+  <div class="compare">
+    <div class="bad">
+      <div class="t">Ce qu'on ne dit pas</div>
+      <p style="margin:0">« Votre agent est certifié. » C'est précisément le geste de la ferme : 7 665 agents créés en 48 h, tous notés au maximum. On vendrait le problème qu'on prétend résoudre.</p>
+    </div>
+    <div class="good">
+      <div class="t">Ce qu'on dit</div>
+      <p style="margin:0">« Votre agent est actif, parrainé par Acme — plafond 2 % de la confiance d'Acme, caution 50 USDC. Score dans votre domaine : 0,03. Il montera avec ses premiers travaux. »</p>
+    </div>
+  </div>
+  <div class="note">Le parrainage n'est pas un nouvel objet : c'est un feedback ERC-8004 ordinaire au tag réservé <code>ancre:vouch</code>, plus un contrat de caution. Zéro nouveau registre, donc on ne devient pas le 19ᵉ passeport d'agent de la track. <b>À dire avant qu'on nous le demande :</b> en PageRank personnalisé, pointer vers un mauvais nœud ne fait pas baisser mécaniquement le score du pointeur. La responsabilité du parrain est économique — la caution — et réputationnelle par métrique dérivée, pas automatique.</div>
+</section>
+
+<section id="pile">
+  <h2>La pile</h2>
+  <div class="stack">
+    <div class="layer surfaces">
+      <div class="lbl">Surfaces — ce que l'utilisateur voit</div>
+      <div class="row">
+        <div class="cell"><b>1 · Émettre</b><span>identité + parrainage cautionné</span></div>
+        <div class="cell"><b>2 · Importer</b><span>revendiquer, équiper, certifier</span></div>
+        <div class="cell"><b>3 · Domaine fermé</b><span>ancres + politique + membres</span></div>
+        <div class="cell"><b>4 · Revues</b><span>pondérées, avec droit de réponse</span></div>
+      </div>
+    </div>
+    <div class="flowdown">↓</div>
+    <div class="layer">
+      <div class="lbl">Couche produit — contrats ANCRE</div>
+      <div class="row">
+        <div class="cell"><b>AgentFactory</b><span>émission</span></div>
+        <div class="cell"><b>VouchBond</b><span>caution, plafond, slashing</span></div>
+        <div class="cell"><b>TrustDomain</b><span>ancres, politique, membres</span></div>
+        <div class="cell"><b>TrustGatedRouter</b><span>paiement x402 conditionné</span></div>
+      </div>
+    </div>
+    <div class="flowdown">↓ <span style="font-family:var(--mono); font-size:11.5px">trustOf(agentId, anchorSetId)</span></div>
+    <div class="layer engine">
+      <div class="lbl">Moteur — la norme</div>
+      <div class="row">
+        <div class="cell"><b>AnchoredReputation</b><span>certificats Verified / Optimistic</span></div>
+        <div class="cell"><b>TagSchemaRegistry</b><span>échelles de notes</span></div>
+        <div class="cell"><b>Solveur + publieur</b><span>PPR, résidu, recertification</span></div>
+        <div class="cell"><b>Indexer + watcher</b><span>graphe, contestations</span></div>
+      </div>
+    </div>
+    <div class="flowdown">↓ <span style="font-family:var(--mono); font-size:11.5px">events</span></div>
+    <div class="layer base">
+      <div class="lbl">Socle — ERC-8004, non modifié</div>
+      <div class="row">
+        <div class="cell"><b>IdentityRegistry</b><span>0x8004A169…a432 · Monad 143</span></div>
+        <div class="cell"><b>ReputationRegistry</b><span>0x8004BAa1…9b63</span></div>
+        <div class="cell"><b>PermissionedRegistry</b><span>option entreprise, même interface</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="sub" style="margin-top:16px"><b>Ce qu'on n'écrit pas :</b> aucun nouveau registre d'identité, aucun format de feedback propriétaire. C'est la ligne de démarcation avec les ~18 projets « passeport d'agent » de la track.</p>
+</section>
+
+<section id="surfaces">
+  <h2>Les quatre surfaces face à la norme</h2>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Surface</th><th>Dans la norme ?</th><th>Déjà fait ailleurs</th><th>Ce qu'on ajoute</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>1 · Émettre</b></td>
+          <td><span class="no">À reformuler</span><br><span style="color:var(--muted)">produit, pas norme</span></td>
+          <td>Des dizaines de factories d'agents 8004</td>
+          <td>Le parrainage <b>plafonné et cautionné</b>, écrit comme un feedback 8004 standard. Personne ne relie émission et responsabilité économique</td>
+        </tr>
+        <tr>
+          <td><b>2 · Importer</b></td>
+          <td><span class="yes">Nativement</span></td>
+          <td>Les explorateurs affichent n'importe quel agent</td>
+          <td>Le score est <b>relatif au lecteur</b> et livré avec son <b>certificat revérifiable</b> sans nous</td>
+        </tr>
+        <tr>
+          <td><b>3 · Domaine fermé</b></td>
+          <td><span class="yes">C'est la définition même d'un ensemble d'ancres</span></td>
+          <td>Des allowlists, des registres privés</td>
+          <td>Le réseau privé <b>sans infrastructure privée</b>, et la double vérification <b>dans le contrat qui paie</b></td>
+        </tr>
+        <tr>
+          <td><b>4 · Revues</b></td>
+          <td><span class="yes">C'est <code>giveFeedback</code></span></td>
+          <td>Le registre existe et prend tout</td>
+          <td>Le <b>poids effectif affiché</b> : un faux avis est visiblement inerte. Personne ne montre ça</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="domaine">
+  <h2>Le domaine d'entreprise, en détail</h2>
+  <p class="sub">C'est la surface qui se vend, et celle qu'aucun concurrent ne peut copier sans la norme. La « double vérification » demandée est littéralement deux lignes exécutées par le contrat avant chaque paiement.</p>
+<pre class="code">require(!d.membershipOnly || isMember[domainId][agentId], "hors domaine");
+
+(uint256 s, uint256 err, uint64 epoch, uint8 lvl) = ancre.trustOf(agentId, d.anchorSetId);
+require(lvl &gt;= d.minLevel &amp;&amp; block.number - epoch &lt;= d.maxStaleness, "certificat perime ou trop faible");
+require(s - err &gt;= d.minScore, "confiance insuffisante");</pre>
+
+  <h3>Trois niveaux d'isolation, à vendre différemment</h3>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Niveau</th><th>Comment</th><th>Ce que ça protège</th><th>Ce que ça ne protège pas</th></tr></thead>
+      <tbody>
+        <tr><td><b>A · Domaine logique</b></td><td>Ancres privées + politique, registre public</td><td>Le sens des scores : les avis extérieurs pèsent zéro</td><td>Rien n'est caché, tout le monde lit le graphe</td></tr>
+        <tr><td><b>B · Registre permissionné</b></td><td>Instance ERC-8004 dont <code>register()</code> est réservé à l'admin</td><td>L'appartenance : personne ne s'auto-inscrit</td><td>L'existence du trafic reste publique</td></tr>
+        <tr><td><b>C · Contenu hors chaîne</b></td><td>Seuls les hash et les valeurs numériques on-chain</td><td>Le contenu des revues et des preuves</td><td>Le graphe des relations reste déductible</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note"><b>Ce qu'on ne fait pas, et qu'il faut dire à un prospect :</b> cacher le graphe lui-même. Il faudrait du chiffrement homomorphe ou des preuves ZK sur tout le calcul — c'est un autre projet, et <code>trustgraphs</code> occupe déjà ce terrain avec SP1.</div>
+</section>
+
+<section id="monad">
+  <h2>Pourquoi Monad, sans slogan</h2>
+  <p class="sub">La norme est chain-agnostique et ne cite Monad nulle part : ERC-8004 vit sur 40+ chaînes, et une norme mono-chaîne meurt. Mais elle rend la fraîcheur et le niveau de garantie <i>mesurables</i>, et c'est là que Monad gagne la comparaison.</p>
+  <div class="scroll">
+    <table>
+      <thead><tr><th></th><th>Ethereum L1</th><th>Base — le concurrent sérieux</th><th>Monad</th></tr></thead>
+      <tbody>
+        <tr><td>Débit</td><td>quelques dizaines de Mgas/s</td><td>150 Mgas/s</td><td><b>500 Mgas/s</b></td></tr>
+        <tr><td>Blocs</td><td>12 s</td><td>2 s, pré-confirmations ~200 ms</td><td><b>0,3 s</b></td></tr>
+        <tr><td>Finalité</td><td>~13 min</td><td>promesse d'un séquenceur unique</td><td><b>~0,6 s, consensus BFT</b></td></tr>
+        <tr><td>Niveau atteignable</td><td>Optimistic en pratique</td><td>Optimistic</td><td><b>Verified à chaque changement du graphe</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="sub" style="margin-top:14px">Une pré-confirmation est la parole d'un opérateur unique. Pour une norme dont le sujet est de <i>ne pas</i> faire confiance à un opérateur, y adosser le niveau le plus fort serait contradictoire. Et l'avantage n'est pas éternel : Denim côté Base vise novembre 2026, ZKsync Atlas affiche 200 ms, Monad prépare des blocs de 100 ms.</p>
+  <div class="note"><b>Ce que Monad ne change pas :</b> on ne recalcule pas « à chaque bloc pour toujours » — 3,7 M de gas × 288 000 blocs par jour ne tient pas. On recalcule <b>à chaque changement du graphe</b>, et c'est ce qui rend la réaction sub-seconde. Trois contraintes à coder dès la première ligne : on paie la gas limit et non le gas consommé, 30 M de gas par transaction, et les époques se comptent en numéros de bloc parce que 3 à 4 blocs partagent la même seconde.</div>
+</section>
+
+<section id="scope">
+  <h2>Périmètre : ce qu'on construit, et l'ordre dans lequel on coupe</h2>
+  <p class="sub">17 jours, 3 développeurs. L'ordre de sacrifice se décide maintenant, à froid, pas à J-3 à 2 h du matin.</p>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Priorité</th><th>Élément</th><th>Si on coupe</th></tr></thead>
+      <tbody>
+        <tr><td><b>P0</b></td><td>Moteur : indexer + solveur + <code>AnchoredReputation</code> Verified + rapport de gas</td><td>Il n'y a plus de projet</td></tr>
+        <tr><td><b>P0</b></td><td>L'attaque et le disjoncteur sur le <b>vrai</b> registre Monad</td><td>Il n'y a plus de démo</td></tr>
+        <tr><td><b>P1</b></td><td><code>TrustDomain</code> + <code>TrustGatedRouter</code></td><td>On perd l'angle entreprise, le plus différenciant</td></tr>
+        <tr><td><b>P1</b></td><td>Revue + affichage du poids effectif</td><td>On perd la boucle produit</td></tr>
+        <tr><td><b>P2</b></td><td><code>AgentFactory</code> + <code>VouchBond</code></td><td>Le parrainage devient une slide</td></tr>
+        <tr><td><b>P2</b></td><td>Import et revendication</td><td>On le démontre à la main sur un agent existant du mainnet</td></tr>
+        <tr><td><b>P3</b></td><td>Niveau Optimistic et contestations</td><td>On ne livre que Verified, en disant pourquoi ça suffit sur Monad</td></tr>
+        <tr><td><b>P3</b></td><td>Lecture cross-chain</td><td>Annoncé comme suite, pas codé</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note"><b>Le piège :</b> construire une console à quatre onglets et n'avoir rien à montrer du mécanisme. Le jury juge le mécanisme ; les surfaces servent à le rendre tangible, pas l'inverse. Le front ne démarre qu'une fois l'attaque et le disjoncteur visibles en ligne de commande.</div>
+</section>
+
+<section id="demo">
+  <h2>La démo, 5 minutes</h2>
+  <ol class="script">
+    <li><span class="t">0:00</span><div><b>Le vrai registre, classement naïf</b><p>9 188 avis. 83 % viennent d'une ferme de 7 665 faux agents créés en 48 heures. L'agent n°1 affiche une moyenne de 1,5 × 10³⁶. Ceci n'est pas une simulation.</p></div></li>
+    <li><span class="t">0:45</span><div><b>Les mêmes données, mes ancres</b><p>La ferme vaut zéro. Rien n'a été filtré à la main : c'est l'algorithme qui ne lui donne aucune masse.</p></div></li>
+    <li><span class="t">1:30</span><div><b>Domaine « ACME » : 3 ancres, une politique, 2 fournisseurs</b><p>Une entreprise ne veut pas d'un score mondial, elle veut le sien. Appartenance et score sont vérifiés par le contrat, pas par nous.</p></div></li>
+    <li><span class="t">2:15</span><div><b>Émission d'un agent parrainé</b><p>Il ne naît pas certifié. Il naît parrainé, plafonné à 2 %, avec 50 USDC en caution. Son score est 0,03.</p></div></li>
+    <li><span class="t">3:00</span><div><b>L'attaque, en direct</b><p>1 000 revues déposées pendant qu'on parle. Le classement naïf explose à l'écran ; le score du domaine ne bouge pas d'un chiffre.</p></div></li>
+    <li><span class="t">3:45</span><div><b>Le disjoncteur, en direct</b><p>Une ancre note négativement un fournisseur devenu défaillant. Chronomètre affiché : le routeur refuse au bloc suivant, 0,6 seconde. Sur Ethereum, c'est 12 secondes et trois blocs de confirmation.</p></div></li>
+    <li><span class="t">4:30</span><div><b>Le certificat</b><p>Vous ne nous croyez pas ? Voici le certificat. Le résidu est vérifié on-chain, la borne d'erreur est publiée, et vous pouvez tout recalculer sans nous.</p></div></li>
+  </ol>
+  <div class="note">Les trois chiffres à afficher en direct, jamais en slide : le délai entre l'event et le certificat publié, en millisecondes ; le gas consommé ; le nombre d'arêtes vérifiées.</div>
+</section>
+
+<section id="plan">
+  <h2>Le plan, et ce qu'on assume</h2>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Semaine</th><th>Livrable</th></tr></thead>
+      <tbody>
+        <tr><td><b>Jusqu'au 28/09</b></td><td>Indexer + solveur + <code>AnchoredReputation</code> niveau Verified, avec le <b>vrai rapport de gas</b> qui remplace les estimations</td></tr>
+        <tr><td><b>29/09 → 05/10</b></td><td><code>TrustDomain</code>, <code>TrustGatedRouter</code> et le paiement x402 ; registres de test ; script de ferme Sybil</td></tr>
+        <tr><td><b>06/10 → 12/10</b></td><td>Démo en direct, déploiement sur le mainnet 143, vidéo, profil de projet, <b>draft d'ERC publié</b> avec la réponse au fil officiel</td></tr>
+        <tr><td><b>13/10</b></td><td>Clôture des soumissions</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="sub" style="margin-top:16px">Bounties cumulables : indexation (Envio), plugin de wallet pour agents (MetaMask), et comptes passkey si les ancres sont des clés P256, ce que la précompile native de Monad rend réaliste.</p>
+
+  <h3>Les faiblesses, dites avant qu'on nous les dise</h3>
+  <div class="rules">
+    <div class="rule" style="border-left-color:var(--danger)"><b>Vérifier un point fixe n'est pas neuf</b><p>OpenRank l'a prototypé. La nouveauté est la combinaison : ancres du lecteur, lecture par contrat, cadence de la chaîne, données ERC-8004.</p></div>
+    <div class="rule" style="border-left-color:var(--danger)"><b>Le graphe réel est maigre</b><p>36 liens utiles. ANCRE élimine la ferme mais dira « inconnu » pour presque tout le monde. C'est aussi le message : aujourd'hui, la réputation d'agents ne vaut rien.</p></div>
+    <div class="rule" style="border-left-color:var(--danger)"><b>La complétude est optimiste</b><p>Faute de numéro de bloc dans le registre, un certificat peut omettre un avis récent. D'où la demande faite à ERC-8004.</p></div>
+    <div class="rule" style="border-left-color:var(--danger)"><b>Le choix des ancres est politique</b><p>C'est assumé : le lecteur choisit. On fournit des ensembles par défaut transparents, pas un score officiel.</p></div>
+  </div>
+</section>
+
+<footer class="wrap" style="border:0">
+  <p>Architecture produit d'ANCRE — le détail des contrats, des six flux et des risques est dans <code>ARCHITECTURE.md</code> du dépôt ; la découpe du back et les prompts sont dans <code>BACKEND-KIT.md</code>. Chiffres du registre mesurés le 21/09/2026 sur Monad mainnet, chainId 143.</p>
+</footer>
+
+</div>
