@@ -30,11 +30,12 @@
 
 ## 3. Ce qui est VÉRIFIÉ (ne pas re-vérifier)
 
-- Registres ERC-8004 **v2.0.0** déployés sur **Monad mainnet (143)**, **absents du testnet (10143)** : Identity `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`, Reputation `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63` (proxys ERC-1967).
+- Registres ERC-8004 **v2.0.0** sur **Monad mainnet (143)** : Identity `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`, Reputation `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63` (proxys ERC-1967). **Aussi sur le testnet (10143), à d'autres adresses** : Identity `0x8004A818BFB912233c491871b3d84c89A494BD9e`, Reputation `0x8004B663056A597Dffe9eCcC1965A193B7388713`, `getVersion()` = 2.0.0 (vérifié par `cast` le 27/09 ; les adresses mainnet n'ont pas de code sur le testnet).
 - `getSummary(agentId, [], "", "")` **revert** : la liste de noteurs est obligatoire. Le filtrage Sybil est délégué au lecteur, l'EIP le dit noir sur blanc.
 - Plus de `feedbackAuth` en v2.0.0 : n'importe qui note, gratuitement. Seul garde-fou : `!isAuthorizedOrOwner`.
 - Données Monad au 21/09 : **10 171 agents, 9 188 feedbacks, 84 agents notés**. Ferme « Spawn-8004 » : **7 665 feedbacks (83 %)** vers `Eve-8004` (#182), agents créés les 16-17/02/2026 à ~300/h, **117 notes à 1e38**. Agents #9 et #87 : 518 et 508 notes venant **du même wallet** `0xd8a01de3…e38c` (tag `elo`). **36 arêtes seulement** (= 36 couples, 37 avis) où le noteur est owner d'un agent noté : 33 vers Eve, 3 de `0xea0b…` (#18) vers #2/#3/#4. Après schéma de tags minimal : **3 arêtes utiles, une seule chaîne honnête** (2 sauts). **Aucun avis depuis le 2026-09-10**, 0 révoqué ; `valueDecimals = 0` sauf **24 avis à 2 décimales** (8004scan les affiche à 0 : **relire on-chain via `readAllFeedback`, ne pas se fier à l'API**, R4 27/09). 84 agents notés dont 10 absents de l'index 8004scan (mesuré 27/09, snapshot 21/09 identique avis par avis).
 - Registres (vérifié 27/09, source `erc-8004/erc-8004-contracts` master) : `readFeedback(agentId, client, uint64 idx)` renvoie `(value, decimals, tag1, tag2, isRevoked)`, **index à partir de 1** ; `getLastIndex` et **`getClients(agentId)` existent** ; pas d'index par client ; aucun bloc stocké. **Garde-fou anti-auto-notation = owner/opérateurs/approved, PAS `agentWallet`** (78 cas réels sur #8317). `agentWallet` **effacé (→ 0x0) à chaque transfert** ; **non unique** (178 wallets partagés par 1 773 agents). **Les deux registres sont des proxys UUPS upgradables par une seule EOA** `0x5472…2603` ; une v2.1.0 (wallet unique, index inverse) est prête en amont, non déployée.
+- **Temps de bloc mesuré : 0,302 s** sur 1 000 blocs (27/09) ; le 0,4 s venait de viem, périmé.
 - Facilitator x402 Monad : `https://x402-facilitator.molandak.org/supported` → v2, `exact` + `upto`, `eip155:143` et `eip155:10143`. USDC natif `0x754704Bc059F8C67012fEd69BC8A327a5aafb603` (6 décimales).
 - Aucun ERC ne couvre l'agrégation de réputation (vérifié dans `ethereum/ERCs` ; 3 PR fermées sans merge).
 - Post **#309** du fil ethereum-magicians #25098 demande exactement les ancres choisies par le lecteur, **sans réponse des auteurs**.
@@ -76,7 +77,7 @@
 - **Réserve de 10 MON par compte** : un compte en dessous n'envoie qu'une tx avec valeur tous les ~3 blocs (compte pour scripter une ferme de démo).
 - **`eth_getLogs` ≤ 100 blocs** par appel sur `rpc.monad.xyz` ; **`rpc1.monad.xyz` accepte tout l'historique** (mesuré 27/09). Indexeur maison obligatoire (l'index 8004scan est incomplet).
 - **MIP-8 actif depuis le 2026-09-02** : stockage facturé par page de 128 slots ; tableau contigu réécrit sur place ≈ 100 gas/slot, **chaque clé de `mapping` = une page** (8 100 à la lecture). **`eth_getProof` n'existe pas**, racine d'état non vérifiable à la Ethereum. EIP-2935 : 8 191 blocs. Temps de bloc 0,3 s ou 0,4 s selon la doc (non tranché).
-- **Registres 8004 absents du testnet** → déployer les nôtres sur testnet pour développer, lire le mainnet en lecture seule.
+- **Registres 8004 sur le testnet aux adresses `0x8004A818…` / `0x8004B663…`** (pas celles du mainnet) → on peut développer et répéter la démo sur le testnet sans redéployer de registre.
 - `ecrecover` coûte 6 000 gas (2× Ethereum) ; precompile **P256 à `0x0100`** à 6 900 (utile pour des ancres en passkey ; ⚠️ le bounty « passkeys » de la Monad Foundation vise **Mera**, pas le P256 en général — tour 5A, 27/09).
 - Foundry **≥ 1.8** pour `network = "monad"` (installé : 1.8.3 dans `~/.foundry/bin`, pas dans le PATH par défaut).
 

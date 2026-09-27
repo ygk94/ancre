@@ -66,3 +66,55 @@ Ils ne demandent aucune candidature :
 **Questions à trancher** :
 - Peut-on cumuler un prix de track et plusieurs bounties ? La règle n'est pas lue.
 - Quels critères exacts ? Il faut qu'Hugo se connecte à hackathon.monad.xyz et copie les fiches de Envio, MetaMask, Chainlink, Mera, Nansen, Cleanverse et Community.
+
+---
+
+## Fiches officielles des 3 bounties visés
+
+Copiées par Hugo depuis hackathon.monad.xyz le 2026-09-27 (DOC OFFICIELLE, verbatim condensé). **Date limite des trois : 14/10/2026 à 05:59 GMT+2.** Il faut créer le projet sur la plateforme avant de choisir tracks et bounties.
+
+### Envio : Best Use of Envio (1 000 $, un seul prix, toutes tracks, cumulable)
+
+- **Condition** : utiliser *réellement* HyperIndex, HyperSync ou HyperRPC pour alimenter une fonctionnalité centrale avec des données on-chain réelles, et pas seulement installer l'outil.
+- **Critères**
+  - **Profondeur d'usage** : indexation multichain, schéma non trivial, entités dérivées ou agrégées, usage créatif de HyperSync pour de l'analytique. Tout ça pèse plus qu'un simple indexeur ERC-20 à un event.
+  - **Produit qui marche** : les données sont live et correctes.
+  - **Originalité**.
+  - **Qualité** : code lisible, schéma sensé, dépôt reprenable par un tiers.
+- **Livrables**
+  - Un indexeur ou pipeline Envio, déployé sur Envio Cloud ou hébergé par nous, avec un dépôt public qui montre `config.yaml`, `schema.graphql` et les handlers (ou le code client HyperSync).
+  - Un frontend, dashboard, agent, bot ou API qui consomme ces données.
+  - Une démo courte (vidéo ou lien live) qui montre les données de bout en bout.
+- **Ressources** : docs.envio.dev (HyperIndex, HyperSync, HyperRPC, AI quickstart), token API gratuit sur envio.dev, Discord.
+
+### Monad Foundation : Mera, One Passkey, Many Keys (2 500 $, un seul prix, toutes tracks)
+
+- **Objet** : l'usage le plus créatif, **hors wallet**, du matériau de clé dérivé par PRF dans Mera.
+  - La sortie PRF est déterministe, et chaque sel est un espace de noms isolé.
+  - Un seul passkey peut donc produire une infinité de clés sans lien entre elles (chiffrement, identités, capacités), toutes reconstructibles à partir du passkey seul, sans aucun secret stocké.
+  - **Exclu : signer des transactions blockchain depuis un compte wallet.**
+- **Critères**
+  - **Nouveauté** : plus on s'éloigne du « passkey wallet », mieux c'est.
+  - **Usage correct des primitives** : chiffrement et dérivation employés à bon escient, sels réellement cloisonnés, rien de sensible persisté sur disque ou sur serveur.
+  - **Test multi-appareils, en live** : le même passkey sur un second appareil, ou un profil de navigateur neuf, reproduit les mêmes clés dérivées et déchiffre le même état.
+- **Livrable** : une soumission où au moins un espace de noms PRF fait un travail qui n'est pas celui d'un compte, démontré en live. Un wallet peut être présent, mais il ne doit pas être le sujet.
+- **Pistes suggérées** :
+  - état chiffré ou messagerie de bout en bout avec une clé par conversation ;
+  - mémoire d'agent chiffrée pour le passkey de l'utilisateur ;
+  - identités isolées par agent ou par application ;
+  - identités non reliables entre contextes ;
+  - identités SSH ou de développeur ;
+  - coffres de secrets.
+- **Ressources** : mera.category.xyz, pages concepts/passkeys-and-prf, concepts/secret-vaults, recipes/use-an-existing-secret, reference.
+
+### MetaMask : Best Agent Wallet Plugin (2 500 $, un seul prix, **track affichée : Onchain Finance & Trading**)
+
+- **Objet** : un plugin qui donne au MetaMask Agent Wallet un nouveau « super-pouvoir de trading », via son architecture de plugins et la commande `mm`.
+- **Critère** : un plugin fonctionnel et installable, qui fait passer **toutes** les transactions par l'Agent Wallet, sans contourner la signature, la politique ou le MFA.
+- **Livrables**
+  - Un plugin installable via l'Agent Wallet, sans aucune gestion de clé ou de token de notre côté.
+  - **`skills/<name>/SKILL.md`**, pour qu'un agent sache quand et comment l'utiliser.
+  - Un README et une démo (live ou vidéo de 5 minutes au plus) sur un vrai parcours.
+- **Pistes suggérées**, dont **n° 05 : « Agent-to-agent commerce — A2A trading, paid tool calls via x402 payments + ERC-8004 agent identity/reputation/validation registry »**. C'est exactement ANCRE.
+- **Note** : les plugins ne sont supportés qu'à partir de l'Agent Wallet **v6.2.0**. Ressources : docs.metamask.io, template et exemples de plugin sur GitHub.
+- ⚠️ **Question ouverte** : la fiche affiche la track « Onchain Finance & Trading ». Un projet soumis en track 04 est-il éligible ? À vérifier sur la plateforme ou auprès des organisateurs.

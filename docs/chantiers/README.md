@@ -16,6 +16,21 @@ Les briefs **orientent, ils ne résolvent pas**. Leur section « Pistes techniqu
 - contredire le brief quand la source le contredit ;
 - prendre le temps d'être précise sur son sujet. C'est pour ça qu'elle existe.
 
+## Skills à utiliser, et quand
+
+| Moment | Skill | Pour quoi |
+|---|---|---|
+| Décision difficile ou coûteuse à annuler (architecture, spec, arbitrage) | `/llm-council` | 5 experts, relecture croisée à l'aveugle, décision tranchée. C'est le protocole des tours 1 à 5 |
+| Trouver une idée **originale** : bounty Mera, angle Envio qui sort du lot, scène de démo | `/llm-cross-idea` | 5 explorateurs croisent l'idée de base avec une source (doc Mera, doc Envio, fiche du bounty), 4 juges notent, 1 président tranche |
+| Après chaque lot de code (contrat, router, payeur, plugin, indexeur) | `/code-review` (niveau `high` sur le chemin critique) | Bugs de correction ; `--fix` pour appliquer |
+| Avant tout déploiement, et avant la soumission | `/security-review` | Contrats et payeur ERC-1271 : réentrance, contournement de la garde, arrondis |
+| Code qui a grossi vite | `/simplify` | Réutilisation, simplification |
+| Graphiques de l'écran de démo, figures du pitch | `/dataviz` | Palette cohérente, lisibilité |
+| Page de démo partageable, ou dashboard | artefact (skills `artifact-design`, `artifact-capabilities`) | Page hébergée privée, avec lien |
+| Lancer l'appli ou l'écran pour vérifier | `/run` | Démarrer et contrôler l'application |
+| Indexeur Envio (chantier 03) | **skills Envio** : `envio skills update`, plus le serveur MCP de docs Envio (voir `docs/ressources/envio.md`) | Le guidage officiel d'Envio pour HyperIndex |
+| Plugin MetaMask (chantier 05) | **skills MetaMask** : https://github.com/MetaMask/agent-skills (`metamask-agent-wallet/SKILL.md`) | Modèle officiel, en plus du `SKILL.md` qu'on doit livrer |
+
 ## Les chantiers
 
 | # | Chantier | Résultat final | Dépend de |
