@@ -1,5 +1,14 @@
 # Chantier 06 — Ferme Sybil et scénarios de démo (acte 2)
 
+
+> **Amendements du tour 5 (27/09)** :
+> - Le bounty « passkeys » vise **Mera**, pas le P256 (AM-5.1).
+> - **Scène 5 réécrite (D33)** : le +1 est posté par **un autre noteur**, et le veto de l'ancre reste son dernier avis.
+> - Une ferme CREATE2 est triviale à détecter par provenance : dire ce qu'ANCRE démontre en plus (AM-5.5).
+> - Démo **figée sur un bloc** avec un état anvil exporté (D28).
+> - Ancres : deux EOA « demo », plus un tiers seulement s'il est confirmé avant le 03/10 (recommandation).
+> - Nouvelle scène possible : un certificat fabriqué est rejeté (Registry-verified) ou contesté (preuve v).
+
 ## 1. Objectif et résultat final attendu
 
 L'**acte 2 de la démo** (D19) doit être scripté, rejouable et chiffré, **sur le mainnet**, puisque les registres ERC-8004 n'existent que là. Les scènes sont les suivantes :

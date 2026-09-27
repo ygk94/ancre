@@ -1,5 +1,14 @@
 # Chantier 09 — Pitch, vidéo, soumission
 
+
+> **Amendements du tour 5 (27/09)** :
+> - Le scanner est un **service automatique de filtrage de risque**, jamais un complice (D29).
+> - D26 se présente comme **l'usage on-chain d'une borne classique**, pas comme un lemme nouveau (D30).
+> - **On ne pitche la garantie qu'avec son niveau** (Registry-verified ou Submitter-attested, voir D32).
+> - Modèle économique : le propriétaire de l'ensemble paie ; ANCRE opérateur = « oracle de réputation » (D27).
+> - Le règlement n'impose ni l'open source ni le mainnet (AM-5.7).
+> - Divulgation aux auteurs d'ERC-8004 : décision de Hugo (D29).
+
 ## 1. Objectif et résultat final attendu
 
 Préparer un **dossier de soumission Monad Metropolis complet, déposé le 12/10** (clôture le 13/10), qui gagne des points sur les critères du jury.

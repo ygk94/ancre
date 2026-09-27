@@ -12,7 +12,7 @@
 - **Angle qui sauve du « ERC-8004 de plus »** : on ne fait pas un registre, on fait **la couche que la norme délègue explicitement au lecteur sans lui donner d'outil**.
 - **Ambition supplémentaire** : ANCRE est l'**implémentation de référence d'un ERC** à écrire (draft rédigé, dans le README §7).
 - **Équipe** : 3 devs à l'aise en Solidity/EVM, un profil finance/quant.
-- **État** : recherche et spec terminées, 3 tours de conseil (`docs/conseil/CR-conseil.md`, décisions D1-D19 : elles **remplacent** les conventions du draft d'ERC là où elles divergent, ex. `score = t·N` abandonné). **Zéro ligne de code écrite** au 2026-09-27.
+- **État** : recherche et spec terminées, 3 tours de conseil (`docs/conseil/CR-conseil.md`, décisions D1-D37 : elles **remplacent** les conventions du draft d'ERC là où elles divergent, ex. `score = t·N` abandonné). **Zéro ligne de code écrite** au 2026-09-27.
 
 ## 2. Comment travailler avec Hugo (important)
 
@@ -77,7 +77,7 @@
 - **`eth_getLogs` ≤ 100 blocs** par appel sur `rpc.monad.xyz` ; **`rpc1.monad.xyz` accepte tout l'historique** (mesuré 27/09). Indexeur maison obligatoire (l'index 8004scan est incomplet).
 - **MIP-8 actif depuis le 2026-09-02** : stockage facturé par page de 128 slots ; tableau contigu réécrit sur place ≈ 100 gas/slot, **chaque clé de `mapping` = une page** (8 100 à la lecture). **`eth_getProof` n'existe pas**, racine d'état non vérifiable à la Ethereum. EIP-2935 : 8 191 blocs. Temps de bloc 0,3 s ou 0,4 s selon la doc (non tranché).
 - **Registres 8004 absents du testnet** → déployer les nôtres sur testnet pour développer, lire le mainnet en lecture seule.
-- `ecrecover` coûte 6 000 gas (2× Ethereum) ; precompile **P256 à `0x0100`** à 6 900 (utile pour des ancres en passkey, bounty Monad Foundation 2,5 k$).
+- `ecrecover` coûte 6 000 gas (2× Ethereum) ; precompile **P256 à `0x0100`** à 6 900 (utile pour des ancres en passkey ; ⚠️ le bounty « passkeys » de la Monad Foundation vise **Mera**, pas le P256 en général — tour 5A, 27/09).
 - Foundry **≥ 1.8** pour `network = "monad"` (installé : 1.8.3 dans `~/.foundry/bin`, pas dans le PATH par défaut).
 
 ## 8. Commandes utiles (testées)

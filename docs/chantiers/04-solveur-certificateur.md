@@ -1,5 +1,13 @@
 # Chantier 04 — Solveur et certificateur (service)
 
+
+> **Amendements du tour 5 (27/09)** :
+> - **Itération depuis 0 obligatoire** : `certify` de R4 viole la sous-solution de 1 wei sur `toy_alpha_1_3` (AM-5.12). Il faut régénérer les vecteurs.
+> - B⁺ déclaré par ligne (D32).
+> - Le niveau de certification (Registry-verified ou Submitter-attested) dépend de la mesure du chantier 02. Le soumetteur attesté par défaut est le propriétaire de l'ensemble (D27).
+> - Promouvoir `scratchpad/tour5B/t1-t3` dans `solver/tests` (D37).
+> - Prévoir un surveillant pendant la période de jugement (13 → 27/10).
+
 ## 1. Objectif et résultat final attendu
 
 Transformer le solveur de R4 (`solver/`, 95 tests) en **service** qui fait trois choses :

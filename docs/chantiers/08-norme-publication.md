@@ -1,5 +1,12 @@
 # Chantier 08 — Norme et publication
 
+
+> **Amendements du tour 5 (27/09)** :
+> - Niveaux **Registry-verified** et **Submitter-attested**, qui remplacent Residual-verified / Registry-contested (D32).
+> - Condition de domination de D26 ; preuve (v) ; B⁺ déclaré ; règle normative du veto pour les ancres, avec le tag `veto` RECOMMENDED (D33) ; mode strict par défaut (D35) ; eLow_max (D36).
+> - Rationale : lemmes L1-L5 (D37) ; ColinkaMir comme exemple d'`edgeFilterId`, trustgraphs en antériorité (D30).
+> - Brouillon de divulgation aux auteurs d'ERC-8004 (D29), non envoyé.
+
 ## 1. Objectif et résultat final attendu
 
 Amener `docs/erc/anchored-reputation.md` (R6, 775 lignes) à un **état soumettable** sur `ethereum/ERCs`, et préparer les publications **sans les publier**.

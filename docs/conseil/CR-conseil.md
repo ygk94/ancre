@@ -30,12 +30,23 @@
 | D18 | Encodage | arêtes groupées par ligne, indices de nœuds stables, **poids quantifié normatif** (grille 1e-4, troncature vers zéro) | 3 | 0,7 |
 | D19 | Démo | acte 1 = mainnet réel (ferme, fuite du scanner, contournement #8317) ; acte 2 = notre trafic ; α fixé par argument, mesuré sur graphes synthétiques à vérité connue | 3 | 0,7 |
 | D20 | Wallets partagés | copie de ligne : chaque agent du wallet émet avec sa propre masse ; règle « ancien owner » retirée de la norme | 4 | 0,7 |
-| D21 | Veto | bit de veto certifié dans la passe (lignes d'ancres non tronquables) + dernier avis lu en direct ; `MAX_SCAN` supprimé | 4 | 0,75 |
-| D22 | Élargissement | seules les preuves de diminution élargissent la borne de confiance ; plafond par ligne (R6) | 4 | 0,65 |
-| D23 | Permissions | certification sans permission ; entrée dans la table seulement par un certificat accepté ; zone de préparation par soumetteur | 4 | 0,7 |
+| D21 | Veto *(amendée par D33)* | bit de veto certifié dans la passe (lignes d'ancres non tronquables) + dernier avis lu en direct ; `MAX_SCAN` supprimé | 4 | 0,75 |
+| D22 | Élargissement *(complétée par D36)* | seules les preuves de diminution élargissent la borne de confiance ; plafond par ligne (R6) | 4 | 0,65 |
+| D23 | Permissions *(amendée par D32 : soumission ouverte seulement au niveau Registry-verified)* | certification sans permission ; entrée dans la table seulement par un certificat accepté ; zone de préparation par soumetteur | 4 | 0,7 |
 | D24 | α et tags | α par ensemble, RECOMMENDED 1/3 ; TAGS_MAX = 16 | 4 | 0,7 |
-| D25 | Coût de lecture | `TRANSFERRED` posé par preuve (mode rapide) ou `ownerOf` en direct (strict) ; cache de décision dans le router | 4 | 0,65 |
-| D26 | **Certificat** | **sous-solution : t ≤ F(t) composante par composante ⇒ borne inférieure exacte par agent ; e ne sert plus qu'à la méfiance et aux diminutions** | 4 | 0,75 |
+| D25 | Coût de lecture *(amendée par D35 : mode strict par défaut)* | `TRANSFERRED` posé par preuve (mode rapide) ou `ownerOf` en direct (strict) ; cache de décision dans le router | 4 | 0,65 |
+| D26 | **Certificat** *(confirmée comme lemme, amendée comme garantie par D32)* | **sous-solution : t ≤ F(t) composante par composante ⇒ borne inférieure exacte par agent ; e ne sert plus qu'à la méfiance et aux diminutions** | 4 | 0,75 |
+| D27 | Modèle économique | le propriétaire d'un ensemble paie la certification ; le consommateur lésé paie ses preuves ; ANCRE opérateur = « oracle de réputation » ; aucun frais dans la norme | 5A | 0,7 |
+| D28 | Plan B upgrade | test en fork de l'upgrade v2.1.0 (PR #80) ; recertification scriptée après `REGISTRY_CHANGED` ; démo figée sur un bloc (état anvil exporté) | 5A | 0,75 |
+| D29 | Divulgation *(recommandation, décision de Hugo)* | prévenir en privé les auteurs d'ERC-8004 avant le 05/10 (EOA d'upgrade, garde-fou vs `agentWallet`, PR #84) ; ne jamais présenter le scanner comme attaquant | 5A | 0,7 |
+| D30 | Positionnement | caméra témoin close ; ColinkaMir = exemple d'`edgeFilterId`, sans dépendance ; trustgraphs cité en antériorité ; D26 présenté comme usage on-chain d'une borne classique | 5A | 0,8 |
+| D31 | Exécution *(recommandation)* | un responsable par étape du chemin critique ; ordre de coupe écrit ; jamais coupés : acte 1 reproductible, scènes veto / ancre compromise, démo figée | 5A | 0,65 |
+| D32 | **Garantie du certificat** | D26 vaut **ssi C_engagé ≤ C_vrai entrée par entrée** ; B⁺ déclaré par ligne ; deux niveaux : **Registry-verified** (chaque arête relue dans le registre, seul niveau ouvert à tous) et **Submitter-attested** (liste de soumetteurs dans le `setId`, preuves d'écart actives) ; preuve (v) FABRICATION/GONFLEMENT ; contrat `t ≤ y` ; solveur depuis 0 | 5B | 0,8 |
+| D33 | Veto | le **dernier avis de l'ancre lu dans le registre** fait foi ; le bit certifié est un complément « best effort » ; règle normative pour les ancres (republier le veto) ; tag `veto` RECOMMENDED | 5B | 0,75 |
+| D34 | Copie de ligne | D20 confirmée : aucune amplification mesurée (masse Sybil 0,1481 pour M = 1 ou 100) | 5B | 0,75 |
+| D35 | Transfert | `ownerOf` en direct par défaut (strict) ; le cache du router amortit ; mode rapide optionnel | 5B | 0,6 |
+| D36 | Recertification | pas d'incrémental (réparation non locale mesurée) ; budget d'élargissement eLow_max engagé dans la politique, au-delà STALE | 5B | 0,6 |
+| D37 | Vérification | 5 lemmes écrits (L1-L5) ; fuzz Python contre fractions exactes ; test différentiel Foundry ; vecteurs normatifs des 4 violations ; pas de Lean avant le 13/10 | 5B | 0,8 |
 
 ---
 
@@ -98,6 +109,8 @@ Détail et formats d'échange : `docs/chantiers/README.md`. Chemin critique : **
 | 05/10 → 09/10 | 07 Écran de démo · déploiement mainnet le 09/10 au plus tard |
 | 09/10 → 12/10 | 09 Pitch, vidéo et soumission, **déposée le 12/10** |
 
+**Tour 5 (✅ 27/09)** : questions de fond et contre-expertise du tour 4, D27 à D37. **Conséquence sur le planning : le chantier 02 commence par D32** (relecture des arêtes dans le registre et mesure de son coût). C'est cette mesure qui fixe le niveau de certification de la démo.
+
 Les anciennes lignes R7 à R11 sont couvertes par les chantiers 03, 05, 06, 07, 08 et 09.
 
 Règles d'exécution : aucun commit, aucun push, aucune publication externe sans demande explicite. Les agents n'écrivent ni dans le vault ni hors de leur périmètre.
@@ -151,6 +164,24 @@ Règles d'exécution : aucun commit, aucun push, aucune publication externe sans
 | AM-4.6 | 4 | Un veto ne se lève qu'après recertification | assumé |
 | AM-4.7 | 4 | Fenêtre « slash puis +1 sous un autre tag » entre deux certificats | documenté |
 | AM-4.8 | 4 | Le veto certifié exige des lignes d'ancres non tronquées | MUST (D21) |
+| AM-5.1 | 5A | Le bounty « passkeys » de la Monad Foundation vise **Mera**, pas le P256 en général | corrigé (CLAUDE.md, brief 06) |
+| AM-5.2 | 5A | Le scanner `0xa06f907f` est un service automatique de filtrage de risque (24 `trust/oracle-screening`, 8 `liveness`, EOA sans agent), pas un complice | intégré (D29) |
+| AM-5.3 | 5A | La PR #84 (auto-notation), fermée sans fusion, montre que les auteurs d'ERC-8004 connaissent le sujet | intégré (D29) |
+| AM-5.4 | 5A | Prévenir les auteurs peut déclencher une upgrade avant le 13/10 : divulgation et plan B sont liés | intégré (D28) |
+| AM-5.5 | 5A | Une ferme de démo à déployeur unique (CREATE2) est triviale à détecter par provenance : ce n'est pas ce qu'ANCRE démontre | à documenter (chantier 06) |
+| AM-5.6 | 5A | Le lemme de D26 est classique (PPR locale) ; seul son usage comme certificat on-chain est neuf | intégré (D30) |
+| AM-5.7 | 5A | Pas de grille de notation publiée, pas d'exigence de mainnet (page officielle, 27/09) : l'acte 2 sur le mainnet est un choix | noté |
+| AM-5.8 | 5A | Rejouer la démo en fork exige un RPC d'archive ou un état exporté | intégré (D28) |
+| AM-5.9 | 5B | **CRITIQUE : un certificat fabriqué de même précision remplace le certificat honnête.** `submitCertificate` ne relit aucune arête ; mesuré sur le vecteur réel (0x0730→#4 fabriquée : t(#4) = 0,111 au lieu de 0, eUp identique) | résolu en spec (D32), à implémenter (chantier 02) |
+| AM-5.10 | 5B | Le bit de veto certifié se désarme par omission ; le seul négatif utile du mainnet est justement le cas invisible au veto en direct | intégré (D33) |
+| AM-5.11 | 5B | La dilution n'est pas marginale : 56 % des omissions avec dilution violent t ≤ t* (facteur 2 dans le contre-exemple minimal) | intégré (D32, B⁺ déclaré) |
+| AM-5.12 | 5B | Le `certify` de R4 ne produit pas toujours une sous-solution (1 wei sur `toy_alpha_1_3`) : les vecteurs R4 sont à régénérer | chantier 04 |
+| AM-5.13 | 5B | Réparation incrémentale non locale : 93 % des nœuds touchés, jusqu'à 14 % de masse perdue | intégré (D36) |
+| AM-5.14 | 5B | La preuve (v) FABRICATION/GONFLEMENT n'existe ni dans R5 ni au tour 4 | intégré (D32) |
+| AM-5.15 | 5B | « Lignes tronquées ou omises ne peuvent que l'augmenter » (tour 4) n'est vrai que pour des lignes entières, ou avec B⁺ déclaré | intégré (D32) |
+| AM-5.16 | 5B | Un vecteur nul est une sous-solution valide : après `REGISTRY_CHANGED` ou maxAge, n'importe qui peut publier t = 0 et mettre tout le monde en échec fermé | à traiter (chantier 02 : règle de remplacement par masse, pas seulement par eEff) |
+| AM-5.17 | 5B | eUp est confortable : écart réel ≤ 2/3 de la borne ; 3-5 itérations sur le mainnet, 79-82 sur le graphe de démo | confirmé |
+| AM-5.18 | 5 | **Angle mort de méthode** : l'ancien draft (21/09) prévoyait un défi « Fabrication » ; le tour 2 l'a perdu en listant les preuves (i)-(iv), et trois tours n'ont pas vu qu'aucune arête n'était relue. Renommer « Verified » en « Residual-verified » a nommé le problème sans le traiter | règle : pour chaque garantie, écrire l'attaque qui la falsifie et le test qui l'exclut |
 
 ---
 
@@ -1018,3 +1049,78 @@ LECTURE assess(j, set) :
 1. **Qui finance la recertification à long terme ?** C'est la question de modèle économique que le jury (des VC) posera.
 2. **Les ancres doivent-elles réserver un tag au veto ?** Avec D21, le dernier avis compte. Une ancre qui poste aussi des mesures sur le même agent masque son slash en direct (le certificat le garde). Il faut une consigne opérationnelle pour les ancres.
 3. **Faut-il vérifier formellement D26 ?** Un lemme de dix lignes, plus un test en fuzz contre des fractions exactes. C'est bon marché, et c'est un argument de sérieux pour le jury.
+
+---
+
+# Tour 5 — 2026-09-27 — questions de fond (5A) et contre-expertise du tour 4 (5B)
+
+Les deux conseils ont tourné **en parallèle, dans deux agents séparés**. Leurs délibérations complètes (phases 1 et 2, vérifications numériques, scripts) sont en annexe :
+- `docs/conseil/tour5A-fond.md` : modèle économique, risques du registre, positionnement, exécution, recommandations à Hugo ;
+- `docs/conseil/tour5B-revue-tour4.md` : contre-expertise adversariale de D20 à D26. Scripts dans `scratchpad/tour5B/`, à promouvoir dans `solver/tests` (D37).
+
+Leurs décisions sont renumérotées **D27 à D37** dans le journal : D-A1 à D-A5 → D27 à D31, D-B1 à D-B6 → D32 à D37. Leurs angles morts deviennent **AM-5.1 à 5.18** dans le tableau cumulatif.
+
+## Faits établis (27/09)
+
+- **Scanner `0xa06f907f`** (MESURÉ) : service automatique de filtrage de risque. 24 avis `trust/oracle-screening` et 8 `liveness`, sur 28 cibles, entre le 21 et le 25/03. C'est une EOA sans agent. Le lien avec un projet nommé est NON VÉRIFIÉ.
+- **v2.1.0 d'ERC-8004** (MESURÉ) : la PR #80 est ouverte depuis juin sans fusion, et `master` est inchangé depuis le 15/08. La PR #84 (auto-notation des owners) a été fermée sans fusion.
+- **Concurrents** (MESURÉ) : ColinkaMir vend un signal de provenance via x402 (dernier push le 22/09) ; trustgraphs fait du PageRank ancré avec preuve ZK sur EAS (dernier push le 15/09).
+- **Règlement Metropolis** (DOC, page officielle lue le 27/09) : l'open source est encouragé mais pas exigé. Aucune grille de notation n'est publiée, et aucun déploiement sur le mainnet n'est exigé.
+- **Bounty passkeys** de la Monad Foundation : il vise **Mera**, pas le P256 en général. CLAUDE.md est corrigé.
+- **D26, vérification numérique** (MESURÉ, 5B) :
+  - sur 300 graphes aléatoires, l'itération entière depuis 0 donne toujours t ≤ F_bas(t) et t ≤ t* ;
+  - l'écart à t* ne dépasse jamais 83 wei, soit au plus 2/3 de la borne ;
+  - le leave-one-out sur les bornes inférieures est valide dans 4 461 cas sur 4 461 ;
+  - convergence en 3 à 5 itérations sur le mainnet, 79 à 82 sur le graphe de démo ;
+  - **la garantie est violée** dans trois situations : dilution de B⁺ (164/294), arête fabriquée (341/400), poids gonflé (88/147).
+- **Faille réelle** (MESURÉ, vecteur `mainnet_slash_anchor`). Un certificat qui fabrique l'arête 0x0730 → #4 donne t(#4) = 0,111 au lieu de 0. Il a exactement le même eUp ([3,3] wei), donc il **remplace le certificat honnête**. Le trou existe depuis le tour 2 (AM-5.9, AM-5.18).
+
+## Ce que le tour 5 change
+
+1. **Le point le plus important : ANCRE était falsifiable.** Tant qu'aucune arête n'est relue dans le registre, un soumetteur quelconque peut publier un graphe inventé, et le certificat reste valide. D26 tient comme **lemme**, mais sa garantie exige C_engagé ≤ C_vrai. D'où D32, qui définit deux niveaux :
+   - **Registry-verified** : chaque arête est relue dans le registre (`readFeedback`, dernier index du tag, wallet, contrôleurs). C'est le seul niveau où la soumission reste ouverte à tous. Coût ESTIMÉ ≈ 13,6 M gas pour la démo, contre 0,84 M aujourd'hui, **à mesurer en priorité** dans le chantier 02.
+   - **Submitter-attested** : les soumetteurs sont listés dans le `setId`, et les preuves d'écart, y compris la nouvelle preuve (v) FABRICATION, restent actives.
+2. **Veto (D33, amende D21).** Seul le dernier avis de l'ancre, lu dans le registre, est garanti ; le bit certifié devient un complément. **La scène 5 de la démo est réécrite** : le +1 est posté par un autre noteur. Dans l'acte 1, il faut dire que le cas réel (0xea0b → #4) n'est vu que par la méfiance certifiée.
+3. **Transfert (D35, amende D25).** Le mode strict (`ownerOf` en direct) devient le défaut, amorti par le cache du router.
+4. **D20 (copie de ligne) est confirmée par la mesure (D34).**
+5. **Modèle économique (D27).** Le propriétaire d'un ensemble paie. Ça rejoint naturellement le niveau Submitter-attested : **le propriétaire de l'ensemble est le soumetteur attesté par défaut**, et Registry-verified reste l'option sans tiers de confiance.
+
+## Contradictions entre 5A et 5B (non lissées)
+
+| Sujet | 5A dit | 5B dit | Arbitrage |
+|---|---|---|---|
+| Pitch sur D26 | « certificat par sous-solution » comme argument technique (D30) | sans D32, ANCRE est falsifiable, avec ou sans D26 | **On ne pitche la garantie qu'avec son niveau** : Registry-verified si la mesure le permet, sinon « Submitter-attested, avec preuve de fabrication », dit tel quel |
+| Ordre de coupe (D31) | couper d'abord les preuves (ii) et (iii), garder (i) et (iv-b) | la preuve (v) FABRICATION manque et elle est indispensable en Submitter-attested | **(v) ne se coupe jamais** si la démo tourne en Submitter-attested. On l'ajoute à la liste « jamais coupé » |
+| Soumission ouverte (D23, tour 4) | — | seulement en Registry-verified | D23 est amendée par D32 |
+| Modèle économique et niveau | le propriétaire de l'ensemble paie (D27) | Submitter-attested demande une liste de soumetteurs | cohérents : le payeur est l'attesteur. Le choix du niveau de la démo reste ouvert, suspendu à la mesure du chantier 02 |
+
+## Désaccords non résolus (tour 5)
+
+1. **Niveau de la démo : Registry-verified (~13,6 M estimés) ou Submitter-attested.** La mesure du chantier 02 tranche. E et D exigent Registry-verified ; C accepte les deux s'ils sont nommés honnêtement.
+2. **Veto « dernier avis » contre D14 (dominance) pour une même ancre** : deux règles pour un même avis.
+3. **Mode strict ou rapide** pour un micropaiement, même avec le cache.
+4. **Calibrer eLow_max** (D36) sans données réelles.
+5. **Divulgation avant le pitch** : risque d'upgrade avant le 13/10, atténué par D28.
+6. **PR d'ERC avant le jugement**, alors que 9 ⟦OPEN⟧ restent (plus ceux ouverts par D32).
+7. **Ferme CREATE2** : moins chère, mais triviale à détecter par provenance.
+8. **« Oracle de réputation » sans jeton** : répond-il à un VC qui demande où se capte la valeur ?
+
+## Ce que vous auriez dû me demander (tour 5)
+
+1. **Qui fait quoi dans l'équipe, et combien d'heures par jour d'ici le 13/10 ?** La répartition de D31 est une hypothèse.
+2. **Qui surveille et prouve pendant le jugement (13 → 27/10) ?** Sans surveillant, les preuves d'écart ne protègent rien.
+3. **Faut-il vraiment une soumission ouverte à tous pour la démo ?** Si non, Submitter-attested coûte environ 16 fois moins (ESTIMÉ).
+4. **Le jury rejouera-t-il réellement quelque chose ?** Si non, la démo figée sert surtout de secours pour la vidéo.
+5. **Que demande exactement le bounty Mera ?** Personne ne l'a lu en détail.
+
+## Décisions qui restent à Hugo (recommandations des tours 5A et 5B)
+
+| Sujet | Recommandation |
+|---|---|
+| Dépôt public | privé jusqu'au 12/10, public à la soumission ; ERC en CC0, code en MIT ou Apache-2.0 (CHOIX) |
+| PR d'ERC | le 12/10, avec la réponse au #309, **si** les ⟦OPEN⟧ sont traités ; sinon après le jugement |
+| Divulgation (D29) | prévenir en privé les auteurs d'ERC-8004 avant le 05/10 |
+| Budget MON | deux enveloppes (frais, capital immobilisé), chiffrées par le chantier 06, validées avant toute transaction |
+| Ancres de démo | deux EOA « demo » à nous, plus un tiers seulement s'il est confirmé avant le 03/10 ; Mera seulement si le SDK s'intègre en moins d'une journée |
+| Nom | ANCRE (à garder), Keel, Mooring. Disponibilité NON VÉRIFIÉE |
+| Équipe | valider ou corriger la répartition de D31 |

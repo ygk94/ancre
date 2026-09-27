@@ -1,5 +1,16 @@
 # Chantier 02 — Contrat vérificateur `AnchoredReputation.sol`
 
+
+> **Amendements du tour 5 (27/09), prioritaires sur ce brief** :
+> - **D32, priorité n° 1** : le contrat ne relit aujourd'hui **aucune arête** dans le registre. Un certificat fabriqué remplace le certificat honnête (AM-5.9, mesuré). Implémenter le niveau **Registry-verified** (chaque arête relue : `readFeedback`, dernier index du tag, wallet, contrôleurs) et **mesurer son coût** (~13,6 M estimés pour la démo), ainsi que le niveau **Submitter-attested** (liste de soumetteurs dans le `setId`).
+> - Autres points de D32 : preuve **(v) FABRICATION/GONFLEMENT** ; B⁺ déclaré par ligne ; `t ≤ y` au lieu de `|t − y|`.
+> - D33 : veto garanti = dernier avis de l'ancre ; bit certifié = complément.
+> - D35 : `ownerOf` en direct par défaut.
+> - D36 : `eLow_max` dans la politique.
+> - D37 : lemmes L1-L5, test différentiel, vecteurs des 4 violations.
+> - D28 : test en fork de l'upgrade vers la PR #80.
+> - AM-5.16 : un vecteur nul est une sous-solution valide ; la règle de remplacement doit en tenir compte.
+
 ## 1. Objectif et résultat final attendu
 
 Faire passer le contrat de R5 (`contracts/`, 49 tests) de **prototype mesuré** à **contrat déployable sur le mainnet pour la démo**, conforme aux décisions du tour 4.
