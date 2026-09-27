@@ -11,7 +11,7 @@
 | # | Sujet | Décision | Tour | Confiance |
 |---|---|---|---|---|
 | D1 | Exposition du score | t_i en WAD (part de masse), plus de N ; politique engagée dans un `setId` immuable | 1 | 0,9 / 0,65 |
-| D2 | α | 1/3, unique par déploiement, engagé dans le certificat | 1, confirmé 2 | 0,55 |
+| D2 | α *(amendée par D24)* | 1/3, unique par déploiement, engagé dans le certificat | 1, confirmé 2 | 0,55 |
 | D3 | Paiement | ni poids ni condition dans le cœur ; `edgeFilterId` en extension | 1 | 0,85 |
 | D4 | Avis négatif | méfiance à un saut + veto direct des ancres lu dans le registre | 1, amendé 2 | 0,7 |
 | D5 | Nœuds sans arête sortante | convention absorbante (linéarité exacte en p) | 1 | 0,9 |
@@ -25,10 +25,17 @@
 | D13 | Ancres par défaut | aucune dans la norme ; ensembles de démo étiquetés ; motif « consommateur-ancre » recommandé | 2 | 0,6 |
 | D14 | Unité d'arête | **dernier avis non révoqué par (client, agent, tag1)**, puis combinaison par **dominance du négatif** entre tags du filtre | 3 | 0,7 |
 | D15 | Nature des tags | le schéma déclare `kind ∈ {endorsement, measurement}` ; **seuls les tags `endorsement` créent des arêtes** | 3 | 0,75 |
-| D16 | Identité des noteurs | wallet → agent unique sinon nœud-adresse ; rejet si noteur ∈ contrôleurs de j **ou ancien owner de j** | 3 | 0,7 |
+| D16 | Identité des noteurs *(amendée par D20)* | wallet → agent unique sinon nœud-adresse ; rejet si noteur ∈ contrôleurs de j **ou ancien owner de j** | 3 | 0,7 |
 | D17 | Registre upgradable | le certificat engage adresses + `keccak(getVersion())` ; statut `REGISTRY_CHANGED` ; surveillance hors chaîne de `Upgraded` | 3 | 0,6 |
 | D18 | Encodage | arêtes groupées par ligne, indices de nœuds stables, **poids quantifié normatif** (grille 1e-4, troncature vers zéro) | 3 | 0,7 |
 | D19 | Démo | acte 1 = mainnet réel (ferme, fuite du scanner, contournement #8317) ; acte 2 = notre trafic ; α fixé par argument, mesuré sur graphes synthétiques à vérité connue | 3 | 0,7 |
+| D20 | Wallets partagés | copie de ligne : chaque agent du wallet émet avec sa propre masse ; règle « ancien owner » retirée de la norme | 4 | 0,7 |
+| D21 | Veto | bit de veto certifié dans la passe (lignes d'ancres non tronquables) + dernier avis lu en direct ; `MAX_SCAN` supprimé | 4 | 0,75 |
+| D22 | Élargissement | seules les preuves de diminution élargissent la borne de confiance ; plafond par ligne (R6) | 4 | 0,65 |
+| D23 | Permissions | certification sans permission ; entrée dans la table seulement par un certificat accepté ; zone de préparation par soumetteur | 4 | 0,7 |
+| D24 | α et tags | α par ensemble, RECOMMENDED 1/3 ; TAGS_MAX = 16 | 4 | 0,7 |
+| D25 | Coût de lecture | `TRANSFERRED` posé par preuve (mode rapide) ou `ownerOf` en direct (strict) ; cache de décision dans le router | 4 | 0,65 |
+| D26 | **Certificat** | **sous-solution : t ≤ F(t) composante par composante ⇒ borne inférieure exacte par agent ; e ne sert plus qu'à la méfiance et aux diminutions** | 4 | 0,75 |
 
 ---
 
@@ -85,7 +92,7 @@ Détail et formats d'échange : `docs/chantiers/README.md`. Chemin critique : **
 
 | Dates | Chantiers |
 |---|---|
-| 28/09 | **01 Tour 4 du conseil** (bloquant). En parallèle : 03 (extraction brute) et 08 (relecture du draft) |
+| 28/09 | **01 Tour 4 du conseil** (✅ fait le 27/09 : D20 à D26). En parallèle : 03 (extraction brute) et 08 (relecture du draft) |
 | 29/09 → 03/10 | 02 Contrat · 03 Indexeur · 04 Solveur et certificateur · 08 en continu |
 | 02/10 → 06/10 | 05 Router x402 · 06 Ferme et scénarios (budget MON validé par Hugo avant toute transaction mainnet) |
 | 05/10 → 09/10 | 07 Écran de démo · déploiement mainnet le 09/10 au plus tard |
@@ -135,6 +142,15 @@ Règles d'exécution : aucun commit, aucun push, aucune publication externe sans
 | AM-3.12 | 3 | La doc Monad se contredit sur le temps de bloc (0,3 s ou 0,4 s) : tout calcul en blocs/jour est incertain d'un facteur 4/3 | noté ; paramètres en blocs, jamais en secondes |
 | AM-3.13 | 3 | **Angle mort de méthode** : le draft d'ERC du 21/09 contenait déjà `lastIndexRoot` et la demande de `block.number` à ERC-8004. Les tours 1 et 2 ont délibéré sans le relire | règle : relire le draft avant chaque tour |
 | AM-3.14 | 3 | CLAUDE.md §8 décrit une autre machine (cast/python3.12 absents, vault ailleurs) | résolu (R3) |
+| AM-R4/R5/R6 | 3 | Angles morts des chantiers : voir « Résultats des chantiers R4, R5 et R6 » et les fichiers `solver/RESULTS.md`, `contracts/GAS.md`, `docs/erc/CHANGES.md` | traités au tour 4 |
+| AM-4.1 | 4 | Le nœud-adresse sans masse pénalisait les wallets partagés sans aucun gain Sybil | résolu (D20) |
+| AM-4.2 | 4 | La règle « ancien owner » était invérifiable on-chain et fausse pour les plateformes | supprimée (D20) |
+| AM-4.3 | 4 | **Quatre tours ont certifié une norme du résidu alors qu'un signe suffisait** (monotonie de F ⇒ borne inférieure exacte par agent) | résolu (D26) |
+| AM-4.4 | 4 | La dilution de B⁺ fait d'un avis positif une diminution pour les autres entrées | intégré (D22) |
+| AM-4.5 | 4 | Une décision de paiement peut coûter plus cher que le micropaiement lui-même | cache (D25) |
+| AM-4.6 | 4 | Un veto ne se lève qu'après recertification | assumé |
+| AM-4.7 | 4 | Fenêtre « slash puis +1 sous un autre tag » entre deux certificats | documenté |
+| AM-4.8 | 4 | Le veto certifié exige des lignes d'ancres non tronquées | MUST (D21) |
 
 ---
 
@@ -763,3 +779,242 @@ Détails et commandes dans `solver/RESULTS.md`, `contracts/GAS.md`, `contracts/E
 5. **α = 1/4 ou 1/3** (R4 synthétique), et TAGS_MAX (AM-R4.4).
 6. **Coût de lecture** de 77 à 190 k : faut-il mettre `ownerOf` en cache dans le certificat, et quel budget accepter pour un routeur x402 ?
 7. **e < θ contre troncature** (AM-R4.5) : faut-il une borne par coordonnée, ou accepter de fournir tout le support ?
+
+---
+
+# Tour 4 — 2026-09-27 — les 7 questions bloquantes
+
+## Faits utilisés (relus avant de délibérer, règle AM-3.13)
+
+Tous sont MESURÉS le 27/09 et viennent de `solver/RESULTS.md`, `solver/out/synthetic.md`, `contracts/GAS.md` et `docs/erc/CHANGES.md` :
+- **Variante relais** (R4) : #2 et #3 reçoivent 0,049 par colonne, et #4 une méfiance de 0,099 ; support de 6 nœuds.
+- **α synthétique** (R4, deg = 5, g = 100, attaque aléatoire) : au seuil « 1 % de Sybil », la couverture honnête après leave-one-out vaut 0,752 / 0,712 / 0,668 pour α = 1/4 / 1/3 / 1/2. À θ fixe, les Sybil qui passent le leave-one-out sont 0,7 % / 0,3 % / 0 %.
+- **Truncation** (R4) : pour obtenir e ≤ θ, il faut fournir presque tout le support (ex. 1 973 lignes sur 1 996).
+- **Lecture** (R5) : `assess` coûte 77 k sans veto, dont ~36 k pour `ownerOf`. Le veto ajoute ~28 k pour la première ancre, ~11 k par ancre supplémentaire et ~15 k par avis lu.
+- **Preuves** (R5) : `proveOmission` coûte 220 541 gas facturés. Une mise à jour de certificat pour l'acte 2 coûte ≈ 840 k.
+- **Stockage** (R5) : α est déjà engagé **par ensemble** dans le `setId`, et les colonnes sont stockées par ensemble.
+- **Plafond d'élargissement** (R6, AM-R6.2) : la formule proposée est `cap = ‖C(L⁰)‖₁ + ‖D(L⁰)‖₁ + 2`.
+
+## Reformulation
+
+La question 7 (« e < θ contre troncature ») est mal posée. Elle suppose que le certificat doit borner une **norme** du résidu. On peut aussi exiger un **signe** : t ≤ F(t) composante par composante. On la repose donc ainsi : *quelle forme de certificat donne une borne par agent sans fournir tout le support ?* C'est elle qui décide Q3 et Q6. Elle passe donc en premier.
+
+## Phase 1 — Analyses indépendantes (condensées)
+
+### A. Théoricien
+- **Q7.** F est **monotone** : ses coefficients sont positifs, puisque la méfiance n'entre pas dans t. Si t ≤ F(t) composante par composante, alors t ≤ F(t) ≤ F²(t) ≤ … → t*, **donc t ≤ t\* partout**.
+  - C'est une borne inférieure **par coordonnée, exacte, sans e**.
+  - Une ligne omise ou tronquée ne fait que réduire F. La propriété reste donc vraie pour le vrai graphe, et **la troncature devient gratuite du côté de la confiance**.
+  - En arithmétique entière arrondie vers le bas, l'itération de puissance depuis 0 produit exactement une telle sous-solution, car F_bas est monotone.
+  - **Réserve** : un avis qui *diminue* une entrée (révocation, baisse, dilution de B⁺ par un nouvel avis positif, changement de wallet) peut casser la propriété. Seuls ces écarts-là doivent encore élargir la borne.
+- **Q1.** Il suffit de copier la ligne du wallet dans chaque agent qui le partage : **chaque agent émet avec sa propre masse**. Un wallet avec 762 agents de masse nulle ne transmet rien. Pas besoin de nœud-adresse, pas de saut de relais amorti.
+- **Q5.** Au seuil calibré, 1/4 domine faiblement ; à seuil fixe, il laisse passer plus de Sybil. Aucune valeur ne domine partout : α est un **paramètre du lecteur**.
+
+### B. Ingénieur EVM
+- **Q7.** Vérifier t_i ≤ y_i ne coûte qu'une comparaison de plus par nœud dans la passe existante.
+- **Q2.** Lire le **dernier** avis de l'ancre coûte `getLastIndex` + un `readFeedback`, soit ~26 k (estimé à partir de 11 k + 15 k). Le veto certifié, lui, se calcule **dans la passe** à partir des lignes d'ancres, qui sont déjà dans le calldata : c'est un bit par nœud.
+- **Q6.** Un indicateur `TRANSFERRED` posé par preuve (un SSTORE, rare) remplace le `ownerOf` en direct (−36 k à chaque lecture).
+- **Q4.** `addNodes` ne doit pas écrire dans la table de l'ensemble. Il faut une zone de préparation par soumetteur, consommée par son certificat.
+
+### C. Concepteur de normes
+- **Q7.** La norme doit définir le certificat comme une **sous-solution certifiée**. Le L1 ne reste que pour la borne supérieure. C'est plus simple à expliquer et à tester.
+- **Q1.** La règle « ancien owner » n'est pas prouvable on-chain (AM-R6.4) et rejette à tort les plateformes qui mintent puis transfèrent (AM-R4.3). Une règle normative invérifiable est une mauvaise règle.
+- **Q5.** α est déjà dans le `setId`. Le rendre libre ne coûte rien à la norme. On garde 1/3 en RECOMMENDED, et on documente le compromis mesuré.
+
+### D. Attaquant
+- **Q3.** Je contrôle un nœud du support. Après chaque certificat, je poste un avis, puis je le conteste. Avec la sous-solution, un avis **positif** ne fait rien, sauf s'il dilue ma ligne. Pour nuire, je dois **retirer** de la confiance. Le plafond par ligne borne mon dégât. Mon coût est de 220 k par preuve, contre ≈ 840 k pour la recertification du défenseur : ça reste un levier ×4.
+- **Q2.** Veto au dernier avis seulement : si je tiens une clé d'ancre, je peux lever un veto en direct en postant un +1. Mais le veto certifié par dominance le maintient. Je gagne au plus la fenêtre entre deux certificats, et seulement si le slash et le +1 tombent tous les deux avant la recertification.
+- **Q6.** Indicateur de transfert posé par preuve : j'achète un agent réputé et je me fais payer avant que quelqu'un prouve le transfert. La fenêtre dépend de la latence du surveillant.
+- **Q1.** Copie de ligne : la plateforme qui tient 100 agents réputés parle avec 100 masses. C'est de la concentration, pas du Sybil. Je n'y gagne que si j'ai déjà la masse.
+
+### E. Intégrateur
+- **Q6.** Une décision à 77-190 k gas peut coûter plus cher qu'un micropaiement. Il faut **mettre la décision en cache** dans le router, par (payé, fenêtre de blocs), et proposer un mode rapide par défaut.
+- **Q2.** Il faut que le disjoncteur tombe au bloc suivant **et** qu'il reste en place après un +1 posté sous un autre tag (scène 5). Le couple « veto certifié + dernier avis en direct » fait les deux.
+- **Q3.** Je veux savoir qui recertifie. Réponse attendue : un robot financé par le propriétaire de l'ensemble.
+
+## Phase 2 — Relecture croisée (ordre anonyme : 1 = D, 2 = C, 3 = A, 4 = E, 5 = B)
+
+- **A relit D (1)** : *vu* le levier ×4 du griefing. *Oubli* : il porte **uniquement** sur des retraits ou des dilutions. C'est bien moins que ce que permettait la règle du tour 2, où tout avis élargissait la borne.
+- **B relit A (3)** : la sous-solution est juste. *Oubli* : si l'on garde B⁺ = max(1, Σw⁺), un nouvel avis positif sur une ligne déjà pleine dilue ses entrées. Ce n'est donc pas « gratuit » partout (voir AM-4.4).
+- **C relit E (4)** : le cache de décision est une responsabilité du router, pas de la norme. Il faut l'écrire dans la section Security Considerations (fraîcheur).
+- **D relit B (5)** : l'indicateur de transfert par preuve ne vaut que si quelqu'un surveille. Il faut un mode strict (`ownerOf` en direct) au choix de la politique.
+- **E relit C (2)** : α libre, d'accord, mais avec **un seul** RECOMMENDED. Sinon personne ne choisit.
+- **A relit B (5)** : le veto certifié n'est exact que si les lignes d'ancres ne sont **jamais tronquées**. Il faut le rendre MUST.
+- **B relit D (1)** : la fenêtre « slash puis +1 avant recertification » est réelle mais étroite. On la documente, on ne la ferme pas en v1.
+- **C relit A (3)** : la copie de ligne duplique le calldata. Il faut un encodage « ligne alias » (un en-tête qui renvoie à une ligne déjà émise).
+- **D relit C (2)** : abandonner « ancien owner » rouvre le cas « le vendeur note l'agent vendu ». Ce n'est pas qualitativement pire qu'un tiers ami : le vendeur n'a de poids que s'il a de la masse.
+- **E relit A (3)** : la borne inférieure exacte simplifie ma politique : `trustRobust ≥ θ` sans e. C'est la meilleure nouvelle du tour.
+
+## Phase 3 — Décisions
+
+### D26 — Certificat par sous-solution *(Q7, décide aussi Q3 et Q6)*
+
+**Décision.**
+- Le contrat exige **t_i ≤ y_i pour tout nœud i**, où y = F_bas(t) est calculé avec l'arrondi vers le bas.
+- t est alors une **borne inférieure exacte de t\*, par coordonnée**, pour le vrai graphe. Les lignes tronquées ou omises ne peuvent que l'augmenter.
+- Le leave-one-out est calculé sur ces bornes inférieures. Il reste une borne inférieure valide, parce que « somme privée des m−1 plus grandes » est croissante en chaque argument.
+- **e ne sert plus que pour :**
+  - la borne supérieure de la méfiance : d* ≤ d(t) + (1−α)·e, avec e = ⌈‖y − t‖₁·αD/αN⌉ + la marge de troncature ;
+  - les élargissements dus aux preuves d'écart de type *diminution*.
+
+**Argument décisif.** La contrainte e < θ (AM-R4.5) disparaît du côté de la confiance. On peut tronquer librement, sans dépendre du support entier.
+
+**Ce qu'on perd.** L'itération doit partir de 0 (itération de puissance monotone). On ne peut pas publier un point fixe « à peu près juste » par au-dessus.
+
+**Confiance.** 0,75. La preuve mathématique est élémentaire. Le chantier 02 doit la tester en fuzz (sous-solution acceptée ⇒ t ≤ t* calculé en fractions exactes).
+
+### D20 — Wallets partagés : attribution par copie de ligne *(Q1)*
+
+**Décision.**
+- Si un wallet W est l'`agentWallet` de plusieurs agents A(W), la ligne des avis émis par W est **attribuée à chaque agent de A(W) qui a de la masse**. Chacun émet avec sa propre masse.
+- Un agent de masse nulle n'a pas besoin de ligne.
+- Un W qui n'est le wallet d'aucun agent reste un nœud-adresse, sans masse sauf s'il est une ancre.
+- Encodage : une ligne « alias » renvoie à la ligne déjà émise. Pas de duplication du calldata.
+- **La règle « ancien owner » est supprimée de la norme.** Le rejet porte sur les **contrôleurs actuels** de la cible (owner, agentWallet, token approuvé, opérateurs), ce qui est prouvable par (iv-b). Elle peut subsister comme filtre facultatif (`edgeFilterId`).
+
+**Argument décisif.**
+- Cela rétablit la seule chaîne honnête du mainnet sans l'amortissement du relais.
+- Un wallet partagé par des agents sans masse ne transmet rien.
+
+**Ce qu'on perd.** Un wallet de plateforme qui porte plusieurs agents réputés concentre de l'influence. C'est un désaccord non résolu.
+
+**Confiance.** 0,7.
+
+### D21 — Veto : bit certifié + dernier avis en direct *(Q2)*
+
+**Décision.**
+- **Veto certifié.** Pendant la passe, pour chaque ligne d'ancre, toute arête combinée (D14, dominance du négatif) dont w ≤ vMin met à 1 le **bit de veto** de la cible pour cet ensemble.
+  - Les lignes d'ancres MUST NOT être tronquées.
+  - Le bit est contestable par (i) et (ii).
+- **Veto en direct.** Pour chaque ancre, on fait `idx = getLastIndex(j, a)` puis un seul `readFeedback`. Si l'avis n'est pas révoqué, que son tag est `endorsement` et dans le filtre, et que w ≤ vMin, c'est un veto.
+- `vetoed = bitCertifié OU direct`. **`MAX_SCAN` est supprimé.**
+- **Levée d'un veto** : révocation par l'ancre, puis recertification. Il n'y a pas de levée instantanée (échec fermé, AM-4.6).
+
+**Argument décisif.**
+- La lecture est en O(1) par ancre, au lieu de 15 k par avis lu.
+- La sémantique exacte de D14 est tenue par le certificat.
+- La scène 5 de la démo fonctionne.
+
+**Ce qu'on perd.** Une fenêtre étroite (AM-4.7) : un slash puis un +1 sous un autre tag, tous deux avant une recertification, ne sont vus ni en direct ni par le certificat.
+
+**Confiance.** 0,75.
+
+### D22 — Élargissement plafonné par ligne *(Q3)*
+
+**Décision.**
+- Seules les preuves de type **diminution** élargissent la borne inférieure de la confiance : révocation, baisse de poids, dilution de B⁺, changement de contrôleur.
+- Les preuves d'omission d'une arête **négative** élargissent la borne de méfiance.
+- Le montant est cumulatif, calculé précisément (Δ), et **plafonné par ligne** à `(1−α)·t_u·(‖C(L⁰)‖₁ + ‖D(L⁰)‖₁ + 2)` (R6, solide par l'inégalité triangulaire).
+- Le propriétaire de l'ensemble finance un robot de recertification. Pour la démo, c'est nous.
+
+**Argument décisif.** Avec D26, un avis positif n'élargit rien, sauf par dilution. Le griefing se limite au **retrait de confiance**, qui est légitime et plafonné.
+
+**Ce qu'on perd.** Un nœud du support peut encore forcer une recertification, avec un rapport de coût d'environ 1 à 4 contre le défenseur (MESURÉ : 220 k contre 840 k).
+
+**Confiance.** 0,65.
+
+### D23 — Permissions *(Q4)*
+
+**Décision.**
+- `submitCertificate` reste **sans permission**, avec la règle de remplacement eEff (D6).
+- **Un nœud n'entre dans la table d'un ensemble que par un certificat accepté** qui lui donne une masse t > 0, ou qui est une ancre.
+- `addNodes` et `reserveCapacity` écrivent dans une **zone de préparation par soumetteur**, consommée par son `submitCertificate`. Une préparation non consommée ne coûte qu'à son auteur.
+
+**Argument décisif.** Cela ferme le gonflement de table (AM-R5.7) sans ajouter de permission.
+
+**Confiance.** 0,7.
+
+### D24 — α par ensemble, TAGS_MAX = 16 *(Q5)*
+
+**Décision.**
+- α est un paramètre du lecteur, engagé dans le `setId` (c'est déjà le cas dans R5).
+- **RECOMMENDED α = 1/3** (valeur de la démo). On documente 1/4 comme l'option « couverture », avec le compromis mesuré : plus de couverture au seuil calibré, plus de Sybil admis à θ fixe.
+- TAGS_MAX = 16. Pas de filtre par préfixe en v1.
+
+**Argument décisif.** Aucune valeur ne domine partout (R4), et la liberté ne coûte rien (stockage par ensemble).
+
+**Ce qu'on perd.** Deux ensembles avec des α différents ne sont pas comparables. C'était déjà vrai avec des ancres différentes.
+
+**Confiance.** 0,7.
+
+### D25 — Coût de lecture *(Q6)*
+
+**Décision.**
+- **Mode rapide par défaut** : l'indicateur `TRANSFERRED` est posé par une preuve (iv-b) à partir d'un owner engagé dans le certificat. `assess` ne fait plus d'`ownerOf`, ce qui économise ~36 k (MESURÉ).
+- **Mode strict** au choix de la politique : `ownerOf` en direct.
+- Le router **met la décision en cache** par (payé, `setId`, fenêtre de W blocs), avec W engagé dans sa configuration.
+- Budget cible, ESTIMÉ à partir des mesures R5 : ~41 k sans veto, ~95-135 k avec veto pour k = 3. À mesurer dans le chantier 02.
+
+**Argument décisif.** Une décision de paiement ne doit pas coûter plus que le paiement.
+
+**Ce qu'on perd.** En mode rapide, la fenêtre de transfert dure le temps que le surveillant prouve le transfert.
+
+**Confiance.** 0,65.
+
+## Spécification — D26 et D21 (à implémenter dans les chantiers 02 et 04)
+
+```
+SOLVEUR (hors chaîne), par colonne a :
+  t⁰ = 0
+  répéter : t^{n+1} = F_bas(t^n)          // mêmes arrondis que le contrat
+  jusqu'à ‖t^{n+1} − t^n‖₁ ≤ ε ou n = N_MAX
+  publier t = t^{n+1}                      // garantit t ≤ F_bas(t) par monotonie
+  les lignes d'ancres sont toujours fournies ; les autres MAY être tronquées
+
+VÉRIFICATION (on-chain), en plus du tour 2 :
+  pour tout nœud publié i :  require t_i ≤ y_i          // y arrondi vers le bas
+  rUp  = Σ_i (y_i − t_i) + ops + marge de troncature
+  eUp  = ⌈rUp · αD/αN⌉                                  // borne supérieure, méfiance
+  pour chaque ligne d'ancre a, chaque arête (a, j, w) : si w ≤ vMin → vetoBit[set][j] = 1
+  stocker t (bornes inférieures), d, eUp, vetoBit, ownerFp
+
+PREUVES D'ÉCART :
+  diminution (révoqué, baisse, dilution B⁺, contrôleur changé) → eLow[a] += Δ plafonné (D22)
+  omission d'arête négative → eUp[a] += Δ plafonné
+  omission d'arête positive sans dilution → aucun effet (t reste une sous-solution)
+  (iv-b) owner(j) ≠ ownerFp[j] → transferred[j] = 1
+
+LECTURE assess(j, set) :
+  c_a        = λ_a · t_j^(a)
+  trustLow   = Σ_a c_a − (somme des m−1 plus grands c_a) − Σ_a λ_a·eLow[a]
+  distrustUp = Σ_a λ_a·d_j^(a) + Σ_a λ_a·eUp[a]
+  veto       = vetoBit[set][j] ∨ (∃ ancre a : dernier avis de a sur j négatif, valide, filtré)
+  statut     : NO_CERT, STALE, TRANSFERRED (indicateur ou ownerOf en mode strict),
+               REGISTRY_CHANGED, VETOED, OK
+  OK ⇔ ¬veto ∧ trustLow ≥ θ ∧ ρD·distrustUp ≤ ρN·trustLow
+```
+
+## Changements pour le draft d'ERC (chantier 08)
+
+- §4 : certificat par **sous-solution**, avec le lemme de monotonie en Rationale. La borne L1 ne sert plus qu'à la borne supérieure.
+- §3 : copie de ligne pour les wallets partagés ; suppression de la règle « ancien owner » (déplacée en `edgeFilterId` facultatif) ; lignes d'ancres non tronquables.
+- Veto : bit certifié + dernier avis ; suppression de toute fenêtre de parcours.
+- Preuves : classification diminution / négatif / positif ; plafond par ligne.
+- α : paramètre de l'ensemble, RECOMMENDED 1/3 ; TAGS_MAX = 16.
+- Politique : mode strict ou rapide pour `TRANSFERRED` ; cache de décision côté consommateur, en Security Considerations.
+
+## Désaccords non résolus (tour 4)
+
+1. **Concentration par copie de ligne (D20)** : une plateforme qui porte beaucoup d'agents réputés parle avec leur masse cumulée. A et D l'acceptent (ce n'est pas du Sybil) ; C s'inquiète d'une « super-ancre » implicite.
+2. **Mode rapide ou strict pour le transfert (D25)** : D veut le mode strict par défaut, E et B le mode rapide.
+3. **Griefing par retrait (D22)** : le rapport de coût ×4 reste en faveur de l'attaquant. Faut-il une recertification incrémentale ? Elle est non spécifiée.
+4. **Fenêtre slash puis +1 (D21)** : documentée, pas fermée.
+
+## Angles morts découverts (tour 4)
+
+| Id | Angle mort | Statut |
+|---|---|---|
+| AM-4.1 | Le nœud-adresse sans masse de D16 pénalisait les wallets partagés sans gain Sybil : des agents de masse nulle ne transmettent rien de toute façon | résolu (D20) |
+| AM-4.2 | La règle « ancien owner » était invérifiable on-chain et fausse pour les plateformes qui mintent puis transfèrent | supprimée (D20) |
+| AM-4.3 | **Quatre tours ont certifié une norme du résidu alors qu'un signe suffisait.** La monotonie de F donne une borne inférieure exacte par agent. La « borne globale » (désaccord 5 du tour 2) et e < θ (AM-R4.5) venaient du choix de l'outil | résolu (D26) |
+| AM-4.4 | Avec B⁺ = max(1, Σw⁺), un avis positif sur une ligne déjà pleine **dilue** les autres entrées : tous les ajouts ne sont pas sans effet | intégré (D22) |
+| AM-4.5 | Le coût d'une décision (77-190 k gas mesurés) peut dépasser la valeur d'un micropaiement | cache de décision (D25) |
+| AM-4.6 | Un veto ne se lève qu'après recertification, même quand l'ancre révoque son slash | assumé (échec fermé) |
+| AM-4.7 | Un slash puis un +1 sous un autre tag, tous deux entre deux certificats, ne sont vus ni en direct ni par le certificat | documenté |
+| AM-4.8 | Le veto certifié exige que les lignes d'ancres ne soient jamais tronquées | MUST (D21) |
+
+## Ce que vous auriez dû me demander (tour 4)
+
+1. **Qui finance la recertification à long terme ?** C'est la question de modèle économique que le jury (des VC) posera.
+2. **Les ancres doivent-elles réserver un tag au veto ?** Avec D21, le dernier avis compte. Une ancre qui poste aussi des mesures sur le même agent masque son slash en direct (le certificat le garde). Il faut une consigne opérationnelle pour les ancres.
+3. **Faut-il vérifier formellement D26 ?** Un lemme de dix lignes, plus un test en fuzz contre des fractions exactes. C'est bon marché, et c'est un argument de sérieux pour le jury.

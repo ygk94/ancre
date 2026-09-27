@@ -3,6 +3,8 @@
 > Rédigé le 2026-09-27 (étape R6b de la feuille de route, `docs/conseil/CR-conseil.md`).
 > Clôture des soumissions Monad Metropolis : **2026-10-13**. Il reste 16 jours.
 
+> **Mise à jour du 27/09** : le tour 4 est fait. Les chantiers 02, 04 et 08 doivent appliquer **D20 à D26** (CR, section « Tour 4 »), qui priment sur les pistes de leur brief quand elles divergent (veto, relais, troncature, permissions).
+
 ## Comment utiliser ces briefs
 
 Un chantier se traite dans **une discussion Claude Code dédiée**. On l'ouvre avec :
@@ -18,7 +20,7 @@ Les briefs **orientent, ils ne résolvent pas**. Leur section « Pistes techniqu
 
 | # | Chantier | Résultat final | Dépend de |
 |---|---|---|---|
-| 01 | [Tour 4 du conseil](01-conseil-tour4.md) | 7 décisions bloquantes tranchées dans le CR | — |
+| 01 | [Tour 4 du conseil](01-conseil-tour4.md) | ✅ **fait le 27/09** : D20 à D26 dans le CR (dont D26, certificat par sous-solution, qui change le contrat et le solveur) | — |
 | 02 | [Contrat vérificateur](02-contrat-verificateur.md) | `AnchoredReputation.sol` complet, testé, déployable | 01 |
 | 03 | [Indexeur](03-indexeur.md) | Base locale fidèle au registre, reconstruite on-chain | 01 (règles D16) |
 | 04 | [Solveur et certificateur](04-solveur-certificateur.md) | Service qui publie et tient à jour les certificats ; surveillant de contestation | 01, 02, 03 |
