@@ -28,7 +28,7 @@
 | D16 | Identité des noteurs *(amendée par D20)* | wallet → agent unique sinon nœud-adresse ; rejet si noteur ∈ contrôleurs de j **ou ancien owner de j** | 3 | 0,7 |
 | D17 | Registre upgradable | le certificat engage adresses + `keccak(getVersion())` ; statut `REGISTRY_CHANGED` ; surveillance hors chaîne de `Upgraded` | 3 | 0,6 |
 | D18 | Encodage | arêtes groupées par ligne, indices de nœuds stables, **poids quantifié normatif** (grille 1e-4, troncature vers zéro) | 3 | 0,7 |
-| D19 | Démo | acte 1 = mainnet réel (ferme, fuite du scanner, contournement #8317) ; acte 2 = notre trafic ; α fixé par argument, mesuré sur graphes synthétiques à vérité connue | 3 | 0,7 |
+| D19 | Démo *(amendée par D40)* | acte 1 = mainnet réel (ferme, fuite du scanner, contournement #8317) ; acte 2 = notre trafic ; α fixé par argument, mesuré sur graphes synthétiques à vérité connue | 3 | 0,7 |
 | D20 | Wallets partagés | copie de ligne : chaque agent du wallet émet avec sa propre masse ; règle « ancien owner » retirée de la norme | 4 | 0,7 |
 | D21 | Veto *(amendée par D33)* | bit de veto certifié dans la passe (lignes d'ancres non tronquables) + dernier avis lu en direct ; `MAX_SCAN` supprimé | 4 | 0,75 |
 | D22 | Élargissement *(complétée par D36)* | seules les preuves de diminution élargissent la borne de confiance ; plafond par ligne (R6) | 4 | 0,65 |
@@ -48,6 +48,11 @@
 | D36 | Recertification | pas d'incrémental (réparation non locale mesurée) ; budget d'élargissement eLow_max engagé dans la politique, au-delà STALE | 5B | 0,6 |
 | D37 | Vérification | 5 lemmes écrits (L1-L5) ; fuzz Python contre fractions exactes ; test différentiel Foundry ; vecteurs normatifs des 4 violations ; pas de Lean avant le 13/10 | 5B | 0,8 |
 | D38 | Bounties sponsors *(décision de Hugo)* | viser **Envio** (indexeur du chantier 03 construit avec Envio), **MetaMask Agent Wallet Plugin** (chantier 05) et **Mera « One Passkey, Many Keys »** (ancres en passkey, chantiers 02 et 06). Aucun ne passe avant D32 ni avant la démo figée. Critères détaillés non lus (plateforme connectée) | 27/09 | — |
+| D39 | Statut ≠ confiance | θ, ρ, m, q, maxAge et eLow_max sont engagés dans le `setId` et appliqués par `isTrusted`. `assess` OK ne veut pas dire « payable » | vagues 1-2 | 0,9 |
+| D40 | Réseau de l'acte 2 *(amende D19, décision de Hugo)* | H-B : ferme et répétitions sur le testnet, une exécution minimale sur le mainnet (≈ 0,9 MON estimé) | vagues 1-2 | 0,7 |
+| D41 | Double garde de paiement | payeur ERC-1271 qui détient les USDC (`isTrusted` dans `isValidSignature`) + plugin `mm` qui appelle `decide()` avant de signer ; Guard Mode n'autorise que le payeur | vagues 1-2 | 0,75 |
+| D42 | Indexeur Envio | **indexeur de la norme + auditeur de certificats** : il calcule les arêtes selon D14/D15/D16/D20 (parité testée avec le solveur), audite chaque certificat ANCRE et produit une `Discrepancy` avec la preuve (v) prête à soumettre ; scan HyperSync de survie des avis par chaîne. Cloud : Monad 143, 10143 et une 3e chaîne. Coupé : wildcard, MCP, dashboard (réduit à `SetHealth`) | vague 3 (cross-idea) | 0,7 |
+| D43 | Concept Mera *(rouvre la coupe AM-2.13, décision de Hugo)* | **un passkey, deux familles de sels** : (1) clés d'époque pré-rotées, empreinte vérifiée par le contrat (récupération de clé d'ancre sans custody, `rotateBySig`) ; (2) coffres contenant le dossier de veto. Scène : clé volée → slash abusif → rotation depuis l'iPhone → payé à nouveau au bloc suivant | vague 3 (cross-idea) | 0,7 |
 
 ---
 
@@ -150,7 +155,7 @@ Règles d'exécution : aucun commit, aucun push, aucune publication externe sans
 | AM-3.6 | 3 | **Plancher EIP-7623 actif** : 40 gas/octet non nul. L'estimation de 350-400 gas/arête était fausse d'un facteur 4 à 7 à 64 octets/arête. La quantification du poids devient normative, car elle change t | résolu (D18) |
 | AM-3.7 | 3 | Sur Monad (MIP-8), **un tableau contigu mis à jour sur place coûte ~100 gas/slot** ; c'est le `mapping` (une page par clé) qui coûte cher. La preuve portée de D11 résolvait un problème qui n'existe pas | résolu (D11 renversée) |
 | AM-3.8 | 3 | **L'index de 8004scan est incomplet** : 10 agents notés absents de `agents.json` ; « 10 171 agents » est un minimum | indexeur maison obligatoire |
-| AM-3.9 | 3 | **Le registre est dormant** : aucun avis depuis le 2026-09-10 (bloc 103 696 240). Toute scène « live » sur mainnet sera notre propre trafic | intégré (D19) |
+| AM-3.9 | 3 | ~~**Le registre est dormant**~~ **faux depuis le 27/09** (95 nouveaux avis depuis le bloc 108 483 651) — : aucun avis depuis le 2026-09-10 (bloc 103 696 240). Toute scène « live » sur mainnet sera notre propre trafic | intégré (D19) |
 | AM-3.10 | 3 | **α ne peut pas être calibré sur le mainnet** : support ≤ 5 nœuds, une seule chaîne honnête de 2 sauts | intégré (D19) |
 | AM-3.11 | 3 | `rpc1.monad.xyz` accepte des `eth_getLogs` sur tout l'historique : la limite de 100 blocs (CLAUDE.md §7) dépend du fournisseur | à intégrer dans l'indexeur |
 | AM-3.12 | 3 | La doc Monad se contredit sur le temps de bloc (0,3 s ou 0,4 s) : tout calcul en blocs/jour est incertain d'un facteur 4/3 | noté ; paramètres en blocs, jamais en secondes |
@@ -1125,3 +1130,64 @@ Leurs décisions sont renumérotées **D27 à D37** dans le journal : D-A1 à D-
 | Ancres de démo | deux EOA « demo » à nous, plus un tiers seulement s'il est confirmé avant le 03/10 ; Mera seulement si le SDK s'intègre en moins d'une journée |
 | Nom | ANCRE (à garder), Keel, Mooring. Disponibilité NON VÉRIFIÉE |
 | Équipe | valider ou corriger la répartition de D31 |
+
+---
+
+# Vagues 1 et 2 de recherche — 2026-09-27
+
+Détails dans `docs/ressources/` : les fiches de la vague 1 (`envio.md`, `mera.md`, `metamask-agent-wallet.md`, `x402.md`, `monad-dev-et-soumission.md`) et les designs de la vague 2 (`design-*.md`).
+
+## Faits nouveaux (MESURÉ ou DOC, 27/09)
+
+- **Les registres ERC-8004 existent sur le testnet**, à d'autres adresses : Identity `0x8004A818BFB912233c491871b3d84c89A494BD9e`, Reputation `0x8004B663056A597Dffe9eCcC1965A193B7388713`, en v2.0.0, avec le même bytecode et la même clé d'upgrade. Le testnet est même plus actif (1 941 agents, 1 530 avis). Vérifié par `cast`.
+- **Le registre du mainnet n'est plus dormant** : 95 nouveaux avis de 20 clients depuis le bloc 108 483 651. Analyse dans `nouveaux-avis-mainnet.md`.
+- **Temps de bloc : 0,302 s**, mesuré sur 1 000 blocs.
+- **USDC Monad** : FiatToken v2.2. Il accepte ERC-1271 dans les deux variantes d'EIP-3009 dès que le compte payeur a du code. Constaté dans le code de Circle et en fork.
+- **Facilitator x402-rs** : pas de plafond de gas dans le code. Un refus au moment du règlement fait échouer l'estimation, donc **aucune trace on-chain**.
+- **Contrat payeur ERC-1271 testé en fork** (mainnet et testnet, `exact` et `upto`) : le fournisseur fiable est payé, la ferme est refusée, un veto posé entre la vérification et le règlement bloque le paiement. Un règlement gardé coûte 252 à 364 k gas, contre 144 k pour un EOA.
+- **Coûts mesurés en fork** : `register` 222 k, `giveFeedback` 271 k, déploiement d'ANCRE 4,37 M, `registerAnchorSet` 386 k. **L'acte 2 complet coûte ≈ 40 M gas ≈ 4,1 MON** ; une exécution minimale sur le mainnet coûte ≈ 0,9 MON (ESTIMÉ à partir de ces mesures).
+- **MetaMask Agent Wallet** : v7.0.0, supporte Monad 143 et 10143. Guard Mode ne compte pas les signatures. Il faut `minCliVersion ">=6.2.0 <8"`.
+- **Envio** :
+  - supporte Monad 143 et 10143 ;
+  - le même bytecode ERC-8004 est présent sur 20 chaînes, dont 19 avec HyperSync ;
+  - le plan Cloud gratuit est limité à 100 k events sur 30 jours ;
+  - Monad 143 représente ≈ 41 800 events ;
+  - les handlers s'exécutent deux fois, les appels réseau passent donc par l'Effect API.
+- **Mera** : `@category-labs/mera` v0.2.0 est une bibliothèque, pas un wallet. Seule la sortie PRF `first` est utilisée (un prompt par sel). La clé P-256 n'est pas exposée.
+- **Règles, NON CONFIRMÉES** (README de `precious-akpan/monad-metropolis-merchant-rails`, qui cite les Rules v3.0) :
+  - dépôt public sous licence OSI, pendant toute la durée ;
+  - vidéo de 3 minutes maximum ;
+  - usage d'outils IA à déclarer ;
+  - 5 critères à 20 %, dont « Monad Integration » ;
+  - **inscriptions closes le 06/10** ;
+  - formulaire ouvert le 02/10 ;
+  - mainnet ou testnet acceptés (Rules §9.2).
+- **Concurrents par bounty** :
+  - Envio : `Sireadell/headwater-indexer` ;
+  - Mera : `aliveevie/mandate` ;
+  - MetaMask : `Beltran12138/warrant`, complémentaire.
+
+## Décisions proposées (tranchées ici quand ce sont des corrections de conformité, sinon soumises à Hugo)
+
+| # | Sujet | Décision | Statut |
+|---|---|---|---|
+| D39 | **Statut ≠ confiance** | `assess` renvoie `OK` pour un agent inconnu, dont la confiance vaut 0 : le statut parle du certificat, pas de l'agent. **Les seuils θ et ρ, ainsi que m, q, maxAge et eLow_max, doivent être engagés dans le `setId`** (c'est ce que prévoyait D1, et l'implémentation R5 s'en écarte). Ils doivent être appliqués par `isTrusted`, que tout payeur doit appeler. | **Tranché** : correction de conformité, chantier 02 |
+| D40 | Réseau de l'acte 2 *(amende D19)* | **Option H-B** : ferme scriptée et répétitions sur le testnet ; **une seule exécution minimale sur le mainnet** (refus de payer Eve-8004, paiement d'un fournisseur « demo », disjoncteur), pour ≈ 0,9 MON (ESTIMÉ). Le mainnet reste la preuve du critère « Monad Integration ». | Recommandation, **décision de Hugo** (confiance 0,7) |
+| D41 | **Double garde de paiement** | **Garde dure** : un contrat payeur ERC-1271 détient les USDC et appelle `isTrusted` dans `isValidSignature`. **Garde douce** : le plugin `mm ancre` appelle `decide()` avant de signer. Guard Mode n'autorise que le payeur et l'USDC. Les refus sont reconstitués hors chaîne par `explain()`, plus une trace facultative `reportRefusal`. | Tranché sur le design ; **le test T1 sur le testnet reste à autoriser par Hugo** |
+| D42 | Indexeur Envio | Voir le journal et `cross-idea-envio.md` | Tranché (vague 3) |
+| D43 | Concept Mera | Voir le journal et `cross-idea-mera.md` | Tranché sous réserve de Hugo (pré-rotation revient dans la démo) |
+
+## Angles morts (vagues 1 et 2)
+
+| Id | Angle mort | Statut |
+|---|---|---|
+| AM-6.1 | **`assess` renvoie OK pour un agent inconnu** : un payeur qui ne teste que le statut paie n'importe qui | D39 |
+| AM-6.2 | **« Registres absents du testnet » n'a jamais été vérifié** : on l'a déduit de l'absence des adresses du mainnet. Ça a pesé sur D19 et sur trois briefs | corrigé (CLAUDE.md, briefs) |
+| AM-6.3 | Le registre n'est plus dormant : les chiffres « live » du pitch sont à recalculer au tournage | analyse en cours |
+| AM-6.4 | `solver/graph.py` applique encore la règle « ancien owner » (retirée par D20) et pas la copie de ligne | chantier 04 |
+| AM-6.5 | Rendre le dépôt public publie aussi tout son historique (CLAUDE.md, CR, veille, emails) | décision de Hugo (MUSTDO 5) |
+| AM-6.6 | Le code Solidity est en `CC0-1.0`, qui n'est pas une licence approuvée par l'OSI | MIT ou Apache-2.0 si §7.2 est confirmé |
+| AM-6.7 | Clôture des inscriptions le 06/10 (non confirmé) | MUSTDO 0 |
+| AM-6.8 | Un refus x402 ne laisse aucune trace on-chain : l'écran doit reconstituer les refus | D41 |
+| AM-6.9 | Le vrai contournement de la garde n'est pas EIP-7702, c'est un `USDC.transfer` par le détenteur de la clé : la garde dure exige que **seul le payeur détienne les USDC** | D41 |
+| AM-6.10 | La fiche MetaMask affiche la track 01 : l'éligibilité depuis la track 04 est douteuse | question aux organisateurs (MUSTDO 3) |

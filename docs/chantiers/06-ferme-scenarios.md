@@ -12,9 +12,27 @@
 
 > **Bounty visé (D38)** : *Mera: One Passkey, Many Keys*. Au moins une ancre de démo en passkey Mera, si le SDK s'intègre (seuil du tour 5A : moins d'une journée).
 
+
+## Méthode d'exécution et références (vague 3, 27/09)
+
+1. **Réseau (D40)** :
+   - ferme et répétitions sur le **testnet**, sur les registres `0x8004A818…` et `0x8004B663…` ;
+   - une seule exécution minimale sur le **mainnet**, après validation du budget par Hugo.
+2. **Budget** :
+   - mesuré en fork : `register` 222 k, `giveFeedback` 271 k, déploiement 4,37 M ;
+   - acte 2 complet ≈ 40 M gas ≈ 4,1 MON, soit ≈ 5,3 MON avec marge (ESTIMÉ) ;
+   - exécution minimale sur le mainnet ≈ 0,9 MON, soit ≈ 1,1 MON avec marge ;
+   - à détailler en deux enveloppes (frais, capital immobilisé) dans `demo/BUDGET.md`.
+3. **Scènes** (brief ci-dessus, avec la scène 5 réécrite par D33), plus, si le concept Mera est retenu, la **scène Mera** (rotation d'une clé d'ancre volée depuis un 2e appareil, voir `docs/ressources/cross-idea-mera.md`).
+4. **Démo figée sur un bloc** (D28) : exporter l'état anvil.
+
+**Skills** : `/run` pour enchaîner les scènes, `/code-review` sur les scripts.
+
+**Références** : `docs/ressources/design-payeur-et-reseau.md` et `docs/ressources/design-demo-et-soumission.md` (storyboard).
+
 ## 1. Objectif et résultat final attendu
 
-L'**acte 2 de la démo** (D19) doit être scripté, rejouable et chiffré, **sur le mainnet**, puisque les registres ERC-8004 n'existent que là. Les scènes sont les suivantes :
+L'**acte 2 de la démo** (D19) doit être scripté, rejouable et chiffré, sur un réseau à trancher (D19 amendée par la vague 2 : les registres existent aussi sur le testnet ; recommandation H-B dans `docs/ressources/design-payeur-et-reseau.md` : ferme sur le testnet, une exécution minimale sur le mainnet). Les scènes sont les suivantes :
 1. **Fournisseurs honnêtes** : notés par au moins deux ancres (m = 2), ils sont payés.
 2. **Une ferme Sybil** crée N agents qui se notent entre eux et notent une cible au maximum. La moyenne naïve de la cible explose, sa masse ANCRE reste à 0, et le router refuse de payer.
 3. **Une ancre compromise** approuve la ferme. Grâce au leave-one-out, la ferme n'est toujours pas payée.

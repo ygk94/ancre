@@ -3,6 +3,41 @@
 
 > **Bounty visé (D38)** : *MetaMask, Best Agent Wallet Plugin* (2,5 k$). Le wallet d'un agent consulte ANCRE (`assess`) avant de payer. Trouver le format exact du « plugin » (Snap ? kit de délégation ?) dans la doc MetaMask et sur la fiche du bounty (connexion requise). Voir `docs/conseil/bounties-sponsors.md`.
 
+
+## Méthode d'exécution et références (vague 3, 27/09)
+
+**Architecture tranchée (D41)** : une double garde.
+
+**Ordre de travail**
+1. **Contrat payeur ERC-1271**, selon `docs/ressources/design-payeur-et-reseau.md` :
+   - il détient les USDC ;
+   - il appelle `isTrusted` (D39) dans `isValidSignature`, qui est view ;
+   - il supporte `exact` (EIP-3009 sur FiatToken v2.2) et `upto` (Permit2) ;
+   - il expose `explain()` et `reportRefusal`, pour l'écran.
+   - Les tests en fork existent dans le scratchpad de la vague 2 ; **les promouvoir** dans `contracts/test`.
+2. **Test T1 sur le testnet**, **uniquement avec l'accord de Hugo** (MUSTDO 11) : ≈ 0,2 MON pour nous, 0,34 pour le facilitator (ESTIMÉ).
+3. **Plugin MetaMask** `mm ancre`, selon `docs/ressources/design-plugin-metamask.md` :
+   - 5 commandes : `check`, `inspect`, `pay`, `payer status`, `payer fund` ;
+   - `package.json` avec `mm.minCliVersion ">=6.2.0 <8"` ;
+   - `skills/ancre/SKILL.md`, dont le brouillon complet est dans le design ;
+   - un flux x402 implémenté par nous, sans le script Python ;
+   - une démo de 5 minutes maximum.
+4. **Garde client** (b), `onBeforePaymentCreation` : en repli.
+
+**Skills** :
+- les skills MetaMask (https://github.com/MetaMask/agent-skills) ;
+- `/security-review`, parce que le payeur détient des fonds ;
+- `/code-review high`.
+
+**Références**
+- `docs/ressources/x402.md`.
+- `docs/ressources/metamask-agent-wallet.md`.
+- Spec x402 v2 : https://github.com/x402-foundation/x402/blob/main/specs/x402-specification-v2.md.
+- Doc MetaMask : https://docs.metamask.io/agent-wallet/plugins/build-a-plugin/.
+- Template de plugin : https://github.com/MetaMask/agent-wallet-plugin-template.
+- Facilitator : https://github.com/monad-developers/x402-rs.
+- FiatToken : https://github.com/circlefin/stablecoin-evm.
+
 ## 1. Objectif et résultat final attendu
 
 Montrer ANCRE **là où il sert** : un contrat qui **refuse de payer** un fournisseur non fiable et paie un fournisseur fiable, via x402 sur Monad, en USDC.

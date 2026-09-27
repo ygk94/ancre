@@ -171,7 +171,7 @@ Limite `eth_call` / `estimateGas` (DOC) : 200M gas (QuickNode, Alchemy, MF), 1B 
 - API faucet non officielle : `POST https://agents.devnads.com/v1/faucet {"chainId":10143,"address":…}`, 1 MON annoncé (vault, gist portdeveloper, non testée avec succès). USDC testnet : https://faucet.circle.com.
 - RPC : `testnet-rpc.monad.xyz` (QuickNode, 50 rps dont 25 rps pour `eth_call`), `rpc.ankr.com/monad_testnet`, `rpc-testnet.monadinfra.com` (20 rps, WSS `monadLogs` OK).
 - Testnet **réinitialisé depuis la genèse le 2025-12-16** (DOC).
-- **Rappel : les registres ERC-8004 sont absents du testnet** (CLAUDE.md §3). Il faut y déployer les nôtres. Le facilitator x402 molandak accepte `eip155:10143`.
+- ~~Rappel : les registres ERC-8004 sont absents du testnet~~ **FAUX** (vérifié par `cast` le 27/09) : ils existent à `0x8004A818…BD9e` / `0x8004B663…8713`. Il faut y déployer les nôtres. Le facilitator x402 molandak accepte `eip155:10143`.
 - Selon les Rules (SECONDAIRE), une soumission testnet est acceptée. Elle ne sert pas notre thèse, qui s'appuie sur les données réelles du mainnet.
 
 ---

@@ -8,6 +8,25 @@
 > - Promouvoir `scratchpad/tour5B/t1-t3` dans `solver/tests` (D37).
 > - Prévoir un surveillant pendant la période de jugement (13 → 27/10).
 
+
+## Méthode d'exécution et références (vague 3, 27/09)
+
+1. **Corriger `graph.py`** (AM-6.4) :
+   - retirer la règle « ancien owner » (D20) ;
+   - implémenter la **copie de ligne** pour les wallets partagés, avec l'encodage « alias » à aligner sur le chantier 02.
+2. **Itération depuis 0** (D32, AM-5.12) : régénérer `solver/vectors/`, puis promouvoir `scratchpad/tour5B/t1-t3` dans `solver/tests` (D37).
+3. **Entrée depuis l'indexeur** : `solver/from_indexer.py` (lecture GraphQL, format dans `docs/ressources/design-indexeur-envio.md`), avec un **test de parité** entre les arêtes de l'indexeur et celles du solveur.
+4. **Service** :
+   - déclencheurs (voir le brief) ;
+   - gas limit = estimation + une marge serrée (on paie la limite) ;
+   - découpage avec `addNodes` et `reserveCapacity` ;
+   - soumetteur attesté = propriétaire de l'ensemble (D27).
+5. **Surveillant pendant le jugement** : il consomme les écarts que l'indexeur détecte (fabrication, omission) et soumet les preuves.
+
+**Skills** : `/code-review` et `/simplify`.
+
+**Références** : `solver/FORMAT.md`, `solver/RESULTS.md`, `docs/conseil/tour5B-revue-tour4.md` (vérifications V1 à V18).
+
 ## 1. Objectif et résultat final attendu
 
 Transformer le solveur de R4 (`solver/`, 95 tests) en **service** qui fait trois choses :

@@ -66,7 +66,7 @@ C'est la norme d'identité et de réputation des agents IA. Elle est déployée 
 ### Ce que montre le mainnet Monad
 Snapshot du 21/09, identique avis par avis le 27/09, relu on-chain au bloc 108 434 518. Tout est MESURÉ.
 
-- **9 188 avis, 84 agents notés**, plus de 10 000 agents enregistrés. Aucun avis depuis le **2026-09-10** : le registre est dormant.
+- **9 188 avis, 84 agents notés**, plus de 10 000 agents enregistrés. Aucun avis entre le 2026-09-10 et le bloc 108 483 651. ⚠️ corrigé le 27/09 (vague 2) : **le registre n'est plus dormant**, 95 nouveaux avis de 20 clients depuis le bloc 108 483 651 (analyse : `docs/ressources/nouveaux-avis-mainnet.md`).
 - **Une ferme** : 7 665 agents « Spawn-8004 », créés les 15, 16 et 17/02/2026 à environ 300 par heure, notent tous « Eve-8004 » (#182). Cela fait **83 % des avis**, dont **117 valeurs à 1e38**, la borne autorisée.
   - **Moyenne naïve d'Eve : 1,53 × 10³⁶.**
 - Les agents #9 et #87 ont reçu 518 et 508 avis, venant **du même wallet** (tag `elo`).
@@ -164,6 +164,7 @@ Le calcul se fait hors chaîne. Le contrat le **vérifie on-chain en une passe**
 
 ### 4.5 Lecture par un contrat
 
+- ⚠️ **D39 : statut ≠ confiance.** `assess` renvoie OK pour un agent inconnu (confiance nulle). **Un payeur appelle `isTrusted`**, qui applique θ, ρ, m, q, maxAge et eLow_max, **engagés dans le `setId`**.
 - `assess(agentId, setId)` ne revert jamais. Il renvoie un **statut** (OK, NO_CERT, STALE, TRANSFERRED, VETOED, REGISTRY_CHANGED), `trustRobust`, `distrust`, `e`, `certBlock`, `vetoCount` et le tag déclencheur.
 - **Politique**, engagée dans un `setId` immuable (ancres, poids λ, α, schéma, filtre, θ, ρ, m, q, maxAge, eLow_max) :
   > OK ⇔ ¬veto ∧ trustLow ≥ θ ∧ ρD·distrustUp ≤ ρN·trustLow
@@ -201,6 +202,7 @@ Ancres : clés « demo » ; Mera (PRF du passkey) pour un usage hors wallet ─�
 - **Schémas** : `exact` passe par EIP-3009 (`validAfter`/`validBefore` en secondes) ; `upto` passe **uniquement par Permit2** (l'adresse du facilitator est signée).
 - **Facilitator Monad** : `https://x402-facilitator.molandak.org`, un fork Rust de x402-rs. Il annonce `exact`, `upto` et `batch-settlement`. En cas d'erreur, il renvoie un **HTTP 500 opaque**.
 - **USDC Monad** : `0x754704Bc059F8C67012fEd69BC8A327a5aafb603`, FiatToken v2.2, 6 décimales, EIP-3009 avec une variante `bytes` qui passe par ERC-1271 (MESURÉ).
+- **Double garde (D41)** : la **garde dure** est un contrat payeur ERC-1271 qui détient les USDC et appelle `isTrusted` dans `isValidSignature`. La **garde douce** est le plugin `mm ancre`. Guard Mode n'autorise que le payeur. Les tests en fork passent (fiable payé, ferme refusée, veto posé entre la vérification et le règlement bloqué). Un règlement gardé coûte 252 à 364 k gas. Aucun refus ne laisse de trace on-chain : les refus sont reconstitués par `explain()`.
 - **Un contrat peut payer via ERC-1271** : c'est l'architecture (a), le contrat valide la signature seulement si ANCRE dit OK. `assess` doit être `view`, et aucun event de refus n'est émis dans ce chemin. **Test bloquant à faire sur le testnet**, sur accord de Hugo : le facilitator accepte-t-il d'avancer le gas ?
 - **Pièges** : une garde logée dans un délégué EIP-7702 est contournable ; ERC-7710 n'est pas supporté.
 - **Repli** (b) : une garde côté client via `onBeforePaymentCreation`.
@@ -222,7 +224,12 @@ Ancres : clés « demo » ; Mera (PRF du passkey) pour un usage hors wallet ─�
 - Chaque sel coûte une cérémonie, donc un prompt. La clé publique P-256 n'est pas exposée, donc **pas de lien direct avec le précompilé `0x0100`**.
 - **Le bounty exclut la signature de transactions depuis un wallet.** Il note la **nouveauté** (loin du « passkey wallet »), l'**usage correct** (sels cloisonnés, rien de persisté) et le **test multi-appareils en live**.
 - **Concurrent** : `aliveevie/mandate`, qui fait des identités d'agent dérivées et une politique chiffrée. L'angle « un passkey possède l'agent » est donc pris.
-- **Pistes** : pré-rotation des clés d'ancre (un sel par époque), ensemble d'ancres privé du lecteur dans un coffre. **Concept retenu : en vague 2**, voir `docs/ressources/design-mera.md`.
+- **Concept retenu (D43)** : **un passkey, deux familles de sels**.
+  1. **Clés d'époque pré-rotées.** Le contrat vérifie l'empreinte, ce qui permet de récupérer une clé d'ancre sans dépositaire (`rotateBySig`).
+  2. **Coffres** qui contiennent le dossier d'un veto, rouvrable lors d'un recours.
+  - **Scène** : une clé volée pose un slash abusif, le fournisseur est refusé. On fait tourner la clé depuis l'iPhone (le Face ID reconstruit la clé, et son empreinte correspond à celle que le Mac a engagée). Au bloc suivant, le fournisseur est de nouveau payé.
+  - **Première étape** : prototyper deux époques sur deux appareils. Si ça échoue, on se replie sur le seul dossier de veto.
+  - Détails : `docs/ressources/design-mera.md` et `cross-idea-mera.md`.
 - **Démo** : un domaine HTTPS fixe, et iCloud Keychain (iOS 18.4+) ou 1Password.
 
 ### 4.10 Indexeur Envio (DOC, `docs/ressources/envio.md`)
@@ -232,7 +239,13 @@ Ancres : clés « demo » ; Mera (PRF du passkey) pour un usage hors wallet ─�
 - **Pièges** :
   - les handlers s'exécutent deux fois, donc les appels RPC passent par l'**Effect API** ;
   - les nœuds Monad ne gardent l'état historique que sur ~40 k blocs, donc **wallets et owners se reconstruisent depuis les events**.
-- **Concurrent** : `Sireadell/headwater-indexer`, qui fait de la provenance de financement. Notre différence : un graphe PPR dérivé, du multichain et un certificat on-chain. **Conception en vague 2** : `docs/ressources/design-indexeur-envio.md`.
+- **Concurrent** : `Sireadell/headwater-indexer`, qui fait de la provenance de financement.
+- **Concept retenu (D42) : l'indexeur de la norme, qui audite aussi les certificats.**
+  - Il calcule les arêtes selon les règles D14, D15, D16 et D20, avec des tests de parité contre le solveur.
+  - Il audite chaque certificat ANCRE contre le registre, au bloc du certificat, et produit une `Discrepancy` avec la preuve (v) prête à soumettre. Cela ferme la faille AM-5.9.
+  - Un scan HyperSync mesure, chaîne par chaîne, la part des avis qui survivent aux règles.
+  - Cloud : Monad 143, testnet 10143 et une 3e chaîne.
+  - Détails : `docs/ressources/design-indexeur-envio.md` et `cross-idea-envio.md`.
 - Le bounty exige un **dépôt public**.
 
 ---
@@ -299,7 +312,7 @@ Ancres : clés « demo » ; Mera (PRF du passkey) pour un usage hors wallet ─�
   - Les 78 auto-notations de #8317 sont rejetées.
   - La seule chaîne honnête (#18 → #2, #3, #4) est présentée pour ce qu'elle est.
   - Le cas 0xea0b → #4 n'est vu que par la méfiance certifiée.
-- **Acte 2 : notre propre trafic.** Réseau à trancher : les **registres existent sur le testnet**, la question est rouverte en vague 2.
+- **Acte 2 : notre propre trafic.** Réseau recommandé **H-B (D40, décision de Hugo)** : la ferme et les répétitions sur le testnet, puis **une seule exécution minimale sur le mainnet**. Elle refuse de payer Eve-8004, paie un fournisseur « demo » et montre le disjoncteur, pour environ 0,9 MON (ESTIMÉ). L'acte 2 complet coûterait environ 4,1 MON.
   1. Des fournisseurs honnêtes, approuvés par au moins 2 ancres, sont payés.
   2. Une ferme Sybil : la moyenne naïve explose, la masse ANCRE reste à 0, et le paiement est refusé.
   3. Une ancre compromise approuve la ferme, et **la ferme n'est toujours pas payée** (leave-one-out).
@@ -454,9 +467,10 @@ Ancres : clés « demo » ; Mera (PRF du passkey) pour un usage hors wallet ─�
 
 ## 13. Questions ouvertes (état au 27/09)
 
+0. **Faits récents** : les registres existent sur le testnet ; le registre du mainnet n'est plus dormant (95 nouveaux avis) ; les inscriptions fermeraient le 06/10 (non confirmé).
 1. **Niveau de certification de la démo** : Registry-verified ou Submitter-attested. On tranche après la mesure du chantier 02.
-2. **Réseau de l'acte 2** : testnet, mainnet ou hybride (vague 2).
-3. **Concept Mera retenu** (vague 2).
+2. **Réseau de l'acte 2** : H-B recommandé (D40), à valider par Hugo.
+3. **Concept Mera (D43)** : il réintroduit la pré-rotation dans la démo, à valider par Hugo.
 4. **Éligibilité au bounty MetaMask** depuis la track 04.
 5. **Règles officielles** : le dépôt public est-il obligatoire ?
 6. **Qui surveille pendant le jugement**, et qui finance la recertification.

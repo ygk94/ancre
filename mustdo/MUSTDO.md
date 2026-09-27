@@ -6,6 +6,8 @@
 
 ## 🔴 Cette semaine, parce que ça bloque d'autres chantiers
 
+- [ ] **0. ⏰ S'inscrire AVANT LE 06/10.** Un concurrent qui cite les Rules v3.0 affirme que **les inscriptions ferment le 06/10** et que le formulaire de soumission ouvre le 02/10. C'est NON CONFIRMÉ, mais on ne prend pas le risque : inscris-toi et crée le projet dès maintenant (voir le point 2). Source : README de `precious-akpan/monad-metropolis-merchant-rails`, recopié dans `docs/ressources/design-demo-et-soumission.md` §1.
+
 - [ ] **1. Lire les règles officielles** sur hackathon.monad.xyz, modale « Rules & Guidelines », Rules v3.0.
   - Vérifier en particulier le **§7.2** : un dépôt GitHub public sous licence OSI est-il obligatoire ?
   - Vérifier aussi : vidéo de 3 minutes maximum ? outils IA à déclarer ? 5 critères notés à 20 % chacun, dont « Monad Integration » ?
@@ -18,7 +20,11 @@
 - [ ] **4. Créer le token Envio**, gratuit : https://envio.dev/app/api-tokens (connexion GitHub).
   - Le mettre dans un fichier `.env` local, **jamais dans le dépôt** : `.env` est déjà dans `.gitignore`.
   - Sans ce token, HyperSync répond 401 (mesuré).
-- [ ] **5. Décider du dépôt public**, et quand le publier.
+- [ ] **5. Décider du dépôt public**, et quand le publier. Deux points à connaître avant de décider :
+  - **L'historique Git part avec le dépôt** : CLAUDE.md, le CR du conseil, la veille, les emails de l'en-tête de CLAUDE.md. Faut-il un dépôt public propre, sans l'historique ?
+  - **La divulgation (point 7) doit passer avant** la mise en public.
+  - **Licence** : le code Solidity est aujourd'hui en `CC0-1.0`, qui **n'est pas approuvée par l'OSI**. Si la règle §7.2 est confirmée, il faut passer le code en MIT ou Apache-2.0. L'ERC reste en CC0.
+  - Détail du point, repris d'avant :, et quand le publier.
   - Le bounty Envio exige un dépôt public (config, schéma, handlers), et les règles le rendent peut-être obligatoire (point 1).
   - Recommandation (tour 5A) : **public à la soumission, le 12/10**. ERC en CC0 ; code en MIT ou Apache-2.0, à choisir.
   - Variante : publier `indexer/` plus tôt, dans un dépôt séparé.
@@ -54,13 +60,25 @@
   - Il faut aussi un **domaine HTTPS fixe** pour l'écran (hébergement à décider).
 - [ ] **14. Installer le MetaMask Agent Wallet** (`mm`, v7.x) sur ta machine pour tester le plugin. Il faut ton compte, ta politique et ton MFA ; les agents ne peuvent pas le faire.
 
+- [ ] **14b. Décisions issues de la vague 2** :
+  - **Réseau de l'acte 2 (D40)** : recommandation H-B, soit la ferme et les répétitions sur le testnet, puis une seule exécution minimale sur le mainnet (≈ 0,9 MON, estimé).
+  - **Adresses owner et treasury du contrat payeur** (D41) : quelle clé détient les USDC de démo ?
+  - **Plugin MetaMask** : faut-il publier le paquet sur npm alors que le dépôt est privé ? Faut-il garder la garde dure dans le périmètre du bounty ?
+  - **Dépôt `ancre-indexer`** : autoriser sa création et choisir sa licence. Installer la GitHub App Envio au moment du déploiement Cloud (entre le 06 et le 10/10). Envoyer une requête au moins tous les 7 jours pour éviter la suppression.
+  - **`mm login`** avec ton compte MetaMask, pour tester le plugin.
+
+- [ ] **14c. Décisions de la vague 3 (cross-idea)** :
+  - **Mera (D43)** : accepter que la **pré-rotation des clés d'ancre revienne dans la démo** (environ 1,5 jour, plus 0,3 jour pour le dossier de veto). Réserver **dès maintenant un domaine HTTPS fixe et le `rpId` WebAuthn** : le passkey y est attaché, et on ne pourra pas en changer ensuite.
+  - **Envio (D42)** : si le handler n'a pas accès au calldata, faut-il faire émettre les `rows` du certificat dans un event (surcoût en gas) ? Choisir la 3e chaîne (Arbitrum ou Optimism). Faut-il publier le tableau de survie des avis dans l'ERC ?
+
 ## 🟡 Avant le 12/10
 
 - [ ] **15. Déclarer le niveau de certification de la démo** après la mesure du chantier 02 : Registry-verified, chaque arête relue (~13,6 M gas estimés), ou Submitter-attested (D32).
 - [ ] **16. Prévoir qui surveille pendant le jugement** (13 → 27/10) : robot de recertification et preuves d'écart. C'est à financer (D27).
 - [ ] **17. Déployer sur Envio Cloud après le 28/09.** Le plan gratuit efface tout au bout de 30 jours, et le jugement court jusqu'au 27/10.
 - [ ] **18. Pousser ou fusionner la branche** `feat/conseil-solveur-contrat`. Je ne pousse jamais sans ta demande.
-- [ ] **19. Soumission**, le 12/10 : profil de projet, write-up, lien vers le code, **vidéo** (3 minutes maximum si c'est confirmé), déclaration des outils IA (Claude Code), sélection de la track 04 et des 3 bounties. Brouillons préparés par le chantier 09.
+- [ ] **19. Enregistrer la voix de la vidéo.** Le storyboard en 11 plans (2:55) est dans `docs/ressources/design-demo-et-soumission.md`.
+- [ ] **19b. Soumission**, le 12/10 : profil de projet, write-up, lien vers le code, **vidéo** (3 minutes maximum si c'est confirmé), déclaration des outils IA (Claude Code), sélection de la track 04 et des 3 bounties. Brouillons préparés par le chantier 09.
 - [ ] **20. Publications externes**, à décider : la PR sur `ethereum/ERCs`, la réponse au post #309 d'ethereum-magicians et le message à ColinkaMir. Brouillons dans le chantier 08, **rien n'est publié sans toi**.
 
 ## À lire

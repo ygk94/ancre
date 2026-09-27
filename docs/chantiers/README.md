@@ -79,7 +79,7 @@ Si un chantier change un format, il **met à jour le fichier de référence et l
 6. **Environnement** : `export PATH="$PATH:$HOME/.foundry/bin"` (forge et cast 1.8.3) ; `python3` = 3.14 ; `gh` absent.
    - RPC `https://rpc.monad.xyz` (25 rps, `eth_getLogs` ≤ 100 blocs) ;
    - `https://rpc1.monad.xyz` (accepte tout l'historique en `eth_getLogs`, mesuré le 27/09) ;
-   - testnet `https://testnet-rpc.monad.xyz` (les registres ERC-8004 y sont absents).
+   - testnet `https://testnet-rpc.monad.xyz` (registres ERC-8004 présents à d'autres adresses : Identity `0x8004A818…BD9e`, Reputation `0x8004B663…8713`).
 7. **En fin de session**, deux mises à jour :
    - dans le CR, **une section « Résultats du chantier NN »** : ce qui est livré, les chiffres, les angles morts numérotés `AM-NN.k`, les questions ouvertes ;
    - dans la **feuille de route**, le statut de l'étape.

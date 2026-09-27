@@ -14,6 +14,36 @@
 
 > **Bounty visé (D38)** : *Monad Foundation, Mera: One Passkey, Many Keys* (2,5 k$). Ancres en passkey via Mera (P256 à `0x0100`), en lien avec la rotation des clés d'ancre (D9). À faire après D32. Voir `docs/conseil/bounties-sponsors.md` et le chantier 06.
 
+
+## Méthode d'exécution et références (vague 3, 27/09)
+
+**Ordre de travail**
+1. **D39** : engager θ, ρ, m, q, maxAge et eLow_max dans le `setId`, et appliquer la politique dans `isTrusted`. `assess` OK ne doit plus suffire pour payer.
+2. **D32**, en deux niveaux :
+   - le niveau Registry-verified : relecture de chaque arête (`readFeedback`, dernier index par tag, `getAgentWallet`, contrôleurs) ;
+   - **mesurer** son coût avec `forge test --gas-report` et un contrat consommateur non-view (piège AM-R5.1). Si le coût dépasse le budget, passer au niveau Submitter-attested.
+3. Les autres points de D32 :
+   - la preuve (v) FABRICATION ;
+   - B⁺ déclaré par ligne ;
+   - `t ≤ y` au lieu de `|t − y|` ;
+   - la règle de remplacement (AM-5.16).
+4. **D33** (veto sur le dernier avis), puis **D35** (mode strict).
+5. **D37** : lemmes L1 à L5 en Rationale, fuzz, test différentiel contre `solver/`, vecteurs des 4 violations.
+6. **D28** : test en fork de l'upgrade vers la PR #80.
+7. **Mera (D38 et D43)** : `AnchorRegistry`, avec pré-rotation d'`anchorId`, si le concept Mera retenu en a besoin (**D43** : clés d'époque pré-rotées, empreinte vérifiée par le contrat, `rotateBySig`, plus les coffres de dossier de veto ; **première étape : prototyper la dérivation de 2 époques sur 2 appareils avant d'écrire le contrat**, sinon repli sur le seul dossier de veto ; voir `docs/ressources/cross-idea-mera.md`).
+8. Déploiement sur le testnet, sur les registres du testnet (`0x8004A818…` et `0x8004B663…`).
+
+**Skills** : `/code-review high` après chaque étape, et `/security-review` avant tout déploiement.
+
+**Références**
+- `contracts/GAS.md`, `contracts/ENCODING.md`.
+- `docs/ressources/design-payeur-et-reseau.md` (interface de `assess` / `isTrusted` utilisée par le payeur).
+- Doc Monad :
+  - coût des opcodes : https://docs.monad.xyz/developer-essentials/opcode-pricing ;
+  - Foundry : https://docs.monad.xyz/guides/deploy-smart-contract/foundry ;
+  - vérification : https://docs.monad.xyz/guides/verify-smart-contract/foundry.
+- Source des registres : https://github.com/erc-8004/erc-8004-contracts.
+
 ## 1. Objectif et résultat final attendu
 
 Faire passer le contrat de R5 (`contracts/`, 49 tests) de **prototype mesuré** à **contrat déployable sur le mainnet pour la démo**, conforme aux décisions du tour 4.
@@ -77,7 +107,7 @@ Faire passer le contrat de R5 (`contracts/`, 49 tests) de **prototype mesuré** 
 - Tous les tests passent, fuzz inclus, avec la commande et la sortie dans le rapport.
 - Chaque type de preuve est couvert par un test valide et un test invalide.
 - `GAS.md` donne, pour les tailles de la démo (acte 2 : environ 300 arêtes, 100 nœuds, k = 3), le coût d'une mise à jour, d'un premier certificat, d'une preuve de chaque type et d'un `assess` avec et sans veto.
-- Déploiement réussi sur le **testnet** avec des registres ERC-8004 déployés par nous, puisqu'ils sont absents du testnet. Le déploiement mainnet se fait dans le chantier 06 ou 09, **avec l'accord de Hugo**.
+- Déploiement réussi sur le **testnet** sur les registres ERC-8004 du testnet (Identity `0x8004A818…BD9e`, Reputation `0x8004B663…8713`, présents et en v2.0.0). Le déploiement mainnet se fait dans le chantier 06 ou 09, **avec l'accord de Hugo**.
 
 ## 8. Interfaces
 

@@ -1,5 +1,23 @@
 # Chantier 07 — Écran de démo
 
+
+## Méthode d'exécution et références (vague 3, 27/09)
+
+1. **Stack** : Vite, React et viem, sans wagmi (`docs/ressources/design-demo-et-soumission.md`).
+2. **Flux temps réel** avec `monadLogs` : états Proposed, Voted et Finalized, et **purge des blocs spéculatifs** abandonnés. Le code TypeScript est dans le design. Il est écrit comme une fonction pure, pour que le live et le rejeu passent par le même code.
+3. **Les refus x402 ne laissent aucune trace on-chain** (AM-6.8) : afficher `explain()` et `reportRefusal` depuis le payeur.
+4. **Les données viennent de l'indexeur Envio**, via l'API GraphQL. C'est ce qui rend le bounty Envio visible à l'écran.
+5. **Il faut un domaine HTTPS fixe** si la scène Mera tourne sur l'écran (test multi-appareils). À décider avec Hugo.
+
+**Skills** :
+- `/dataviz` pour les chiffres et les graphes ;
+- `/run` pour lancer et vérifier l'écran ;
+- les skills artefact, si une page publique est souhaitée.
+
+**Références** :
+- temps réel Monad : https://docs.monad.xyz/monad-arch/realtime-data/spec-realtime ;
+- abonnements WebSocket : https://docs.monad.xyz/reference/json-rpc/overview#websocket-subscriptions.
+
 ## 1. Objectif et résultat final attendu
 
 Faire **sentir** la démo au lieu de l'expliquer. C'est un retour de jury passé (CLAUDE.md §2) : « la partie analyse n'a concrètement rien apporté ».
@@ -27,7 +45,7 @@ L'écran montre en direct, côte à côte :
 
 ## 3. Ce qui est déjà tranché
 
-- On montre les chiffres réels, avec leur date. Ne rien afficher de « live » qui ne le soit pas : le registre est dormant depuis le 10/09 (AM-3.9).
+- On montre les chiffres réels, avec leur date. Ne rien afficher de « live » qui ne le soit pas : le registre n'est plus dormant depuis le 27/09, vérifier ce qui est réellement live au moment du tournage.
 - Pas de brique « IA » décorative (CLAUDE.md §2).
 
 ## 4. Pistes à creuser

@@ -3,6 +3,53 @@
 
 > **Bounty visé (D38)** : *Envio, Best Use of Envio* (1 k$). **Construire l'indexeur avec Envio (HyperIndex / HyperSync)**, sauf blocage mesuré et documenté. Critères détaillés à récupérer sur hackathon.monad.xyz (connexion requise). Voir `docs/conseil/bounties-sponsors.md`.
 
+
+## Méthode d'exécution et références (vague 3, 27/09)
+
+**Concept (D42)** : l'**indexeur de la norme** est aussi l'**auditeur de certificats**. Design dans `docs/ressources/design-indexeur-envio.md` ; le verdict du cross-idea est dans `docs/ressources/cross-idea-envio.md`.
+
+**Jour 1, les deux premières vérifications**
+1. **Un handler HyperIndex a-t-il accès au calldata de la transaction** (pour décoder `submitCertificate`) ?
+   - Si oui, on le décode directement.
+   - Si non, le contrat émet les `rows` dans un event. C'est un surcoût de gas à mesurer avec le chantier 02, et une décision de Hugo.
+2. **Scan HyperSync sur 3 chaînes** : quelle part des avis survit aux règles d'ANCRE ? Il faut savoir s'il y a une histoire à raconter.
+
+**Construction**
+1. `config.yaml` : Monad 143 (bloc de départ 52 952 790 pour Identity, 52 952 794 pour Reputation), 10143, et une 3e chaîne (Arbitrum ou Optimism, choix de Hugo).
+2. `schema.graphql` :
+   - les entités brutes ;
+   - les entités dérivées : arête combinée par (client, agent, tag), contrôleurs courants, wallets partagés ;
+   - `Discrepancy` et `SetHealth`.
+3. Handlers en TypeScript.
+   - Ils s'exécutent deux fois : on relit avant de réécrire.
+   - Les appels réseau passent par l'**Effect API**, et seulement en tête de chaîne.
+   - Wallets et owners se reconstruisent **à partir des events** : l'état historique ne remonte qu'environ 40 000 blocs.
+4. **Tests de parité** entre les arêtes de l'indexeur et celles du solveur : `solver/from_indexer.py`, avec le chantier 04.
+5. **Bot de preuves** : sur une `Discrepancy`, il soumet la preuve (v) (chantier 04).
+6. **Déploiement** :
+   - en local, du 28 au 30/09 ;
+   - sur Envio Cloud à partir du 01/10 ;
+   - déploiement final entre le 06 et le 10/10, dans un **dépôt public séparé `ancre-indexer`**.
+   - Il faut une requête au moins tous les 7 jours, sinon le déploiement est supprimé.
+
+**Coupé** : le wildcard en Cloud, le serveur MCP, un tableau de bord complet.
+
+**Démo, environ 40 s** :
+- un vrai avis modifie une arête au bloc suivant ;
+- un certificat fabriqué est démasqué et prouvé ;
+- une requête GraphQL renvoie les données de 2 à 3 chaînes ;
+- le tableau HyperSync ;
+- les tests de parité qui passent.
+
+**Skills** : les skills Envio (`envio skills update`) et le MCP de docs Envio, **pour développer** (pas dans le produit), plus `/code-review`.
+
+**Références**
+- `docs/ressources/envio.md` (toutes les pages de doc utiles, en `.md`).
+- Effect API : https://docs.envio.dev/docs/HyperIndex/effect-api.md.
+- Configuration : https://docs.envio.dev/docs/HyperIndex/configuration-file.md.
+- Déploiement Cloud : https://docs.envio.dev/docs/HyperIndex/hosted-service-deployment.md.
+- HyperSync : `https://143.hypersync.xyz`, `https://10143.hypersync.xyz`.
+
 ## 1. Objectif et résultat final attendu
 
 Construire une **base locale fidèle aux registres ERC-8004 du mainnet (chainId 143)**, reconstruite depuis la chaîne et jamais depuis 8004scan. Elle doit être tenue à jour en continu, et c'est la source unique du solveur (04) et de l'écran (07).
