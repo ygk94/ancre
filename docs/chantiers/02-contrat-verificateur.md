@@ -11,6 +11,9 @@
 > - D28 : test en fork de l'upgrade vers la PR #80.
 > - AM-5.16 : un vecteur nul est une sous-solution valide ; la règle de remplacement doit en tenir compte.
 
+
+> **Bounty visé (D38)** : *Monad Foundation, Mera: One Passkey, Many Keys* (2,5 k$). Ancres en passkey via Mera (P256 à `0x0100`), en lien avec la rotation des clés d'ancre (D9). À faire après D32. Voir `docs/conseil/bounties-sponsors.md` et le chantier 06.
+
 ## 1. Objectif et résultat final attendu
 
 Faire passer le contrat de R5 (`contracts/`, 49 tests) de **prototype mesuré** à **contrat déployable sur le mainnet pour la démo**, conforme aux décisions du tour 4.

@@ -47,6 +47,7 @@
 | D35 | Transfert | `ownerOf` en direct par défaut (strict) ; le cache du router amortit ; mode rapide optionnel | 5B | 0,6 |
 | D36 | Recertification | pas d'incrémental (réparation non locale mesurée) ; budget d'élargissement eLow_max engagé dans la politique, au-delà STALE | 5B | 0,6 |
 | D37 | Vérification | 5 lemmes écrits (L1-L5) ; fuzz Python contre fractions exactes ; test différentiel Foundry ; vecteurs normatifs des 4 violations ; pas de Lean avant le 13/10 | 5B | 0,8 |
+| D38 | Bounties sponsors *(décision de Hugo)* | viser **Envio** (indexeur du chantier 03 construit avec Envio), **MetaMask Agent Wallet Plugin** (chantier 05) et **Mera « One Passkey, Many Keys »** (ancres en passkey, chantiers 02 et 06). Aucun ne passe avant D32 ni avant la démo figée. Critères détaillés non lus (plateforme connectée) | 27/09 | — |
 
 ---
 

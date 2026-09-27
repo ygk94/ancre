@@ -1,5 +1,8 @@
 # Chantier 05 — Router x402 et politique consommateur
 
+
+> **Bounty visé (D38)** : *MetaMask, Best Agent Wallet Plugin* (2,5 k$). Le wallet d'un agent consulte ANCRE (`assess`) avant de payer. Trouver le format exact du « plugin » (Snap ? kit de délégation ?) dans la doc MetaMask et sur la fiche du bounty (connexion requise). Voir `docs/conseil/bounties-sponsors.md`.
+
 ## 1. Objectif et résultat final attendu
 
 Montrer ANCRE **là où il sert** : un contrat qui **refuse de payer** un fournisseur non fiable et paie un fournisseur fiable, via x402 sur Monad, en USDC.

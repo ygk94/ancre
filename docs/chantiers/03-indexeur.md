@@ -1,5 +1,8 @@
 # Chantier 03 — Indexeur
 
+
+> **Bounty visé (D38)** : *Envio, Best Use of Envio* (1 k$). **Construire l'indexeur avec Envio (HyperIndex / HyperSync)**, sauf blocage mesuré et documenté. Critères détaillés à récupérer sur hackathon.monad.xyz (connexion requise). Voir `docs/conseil/bounties-sponsors.md`.
+
 ## 1. Objectif et résultat final attendu
 
 Construire une **base locale fidèle aux registres ERC-8004 du mainnet (chainId 143)**, reconstruite depuis la chaîne et jamais depuis 8004scan. Elle doit être tenue à jour en continu, et c'est la source unique du solveur (04) et de l'écran (07).

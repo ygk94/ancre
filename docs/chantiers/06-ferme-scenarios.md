@@ -9,6 +9,9 @@
 > - Ancres : deux EOA « demo », plus un tiers seulement s'il est confirmé avant le 03/10 (recommandation).
 > - Nouvelle scène possible : un certificat fabriqué est rejeté (Registry-verified) ou contesté (preuve v).
 
+
+> **Bounty visé (D38)** : *Mera: One Passkey, Many Keys*. Au moins une ancre de démo en passkey Mera, si le SDK s'intègre (seuil du tour 5A : moins d'une journée).
+
 ## 1. Objectif et résultat final attendu
 
 L'**acte 2 de la démo** (D19) doit être scripté, rejouable et chiffré, **sur le mainnet**, puisque les registres ERC-8004 n'existent que là. Les scènes sont les suivantes :
