@@ -1,0 +1,219 @@
+{
+ "format": "ancre-cert-v0",
+ "label": "toy_truncated",
+ "notes": "Jouet, troncature des lignes de t <= 0,1 WAD : marge (1−α)·t_u ajoutée à r.",
+ "alignedWith": "contracts/src/AnchoredReputation.sol (R5), état lu le 2026-09-27 ~12:55 ; ENCODING.md non publié",
+ "identityBlock": null,
+ "set": {
+  "anchors": [
+   "0x1111111111111111111111111111111111111111",
+   "0x2222222222222222222222222222222222222222"
+  ],
+  "lambdas": [
+   "500000000000000000",
+   "500000000000000000"
+  ],
+  "alphaN": 1,
+  "alphaD": 3,
+  "minAnchors": 2,
+  "tags": [
+   {
+    "tag": "vouch",
+    "min": "0",
+    "neutral": "0",
+    "max": "100000000000000000000",
+    "kind": 0
+   },
+   {
+    "tag": "review",
+    "min": "-1000000000000000000",
+    "neutral": "0",
+    "max": "1000000000000000000",
+    "kind": 0
+   },
+   {
+    "tag": "slash",
+    "min": "-100000000000000000000",
+    "neutral": "0",
+    "max": "0",
+    "kind": 0
+   }
+  ]
+ },
+ "nCert": 5,
+ "nodes": [
+  {
+   "i": 0,
+   "kind": "anchor",
+   "address": "0x1111111111111111111111111111111111111111",
+   "hasRow": true
+  },
+  {
+   "i": 1,
+   "kind": "anchor",
+   "address": "0x2222222222222222222222222222222222222222",
+   "hasRow": true
+  },
+  {
+   "i": 2,
+   "kind": "agent",
+   "agentId": 1,
+   "hasRow": true
+  },
+  {
+   "i": 3,
+   "kind": "agent",
+   "agentId": 2,
+   "hasRow": true
+  },
+  {
+   "i": 4,
+   "kind": "agent",
+   "agentId": 3,
+   "hasRow": false
+  }
+ ],
+ "rows": [
+  {
+   "u": 0,
+   "wallet": null,
+   "bPlus": 15000,
+   "bMinus": 10000,
+   "edges": [
+    {
+     "dst": 2,
+     "w": 10000,
+     "feedbackIndex": 1,
+     "client": "0x1111111111111111111111111111111111111111",
+     "agentId": 1,
+     "tag1": "vouch"
+    },
+    {
+     "dst": 3,
+     "w": 5000,
+     "feedbackIndex": 1,
+     "client": "0x1111111111111111111111111111111111111111",
+     "agentId": 2,
+     "tag1": "vouch"
+    }
+   ]
+  },
+  {
+   "u": 1,
+   "wallet": null,
+   "bPlus": 10000,
+   "bMinus": 10000,
+   "edges": []
+  },
+  {
+   "u": 2,
+   "wallet": null,
+   "bPlus": 10000,
+   "bMinus": 10000,
+   "edges": [
+    {
+     "dst": 3,
+     "w": 3333,
+     "feedbackIndex": 2,
+     "client": "1",
+     "agentId": 2,
+     "tag1": "vouch"
+    },
+    {
+     "dst": 4,
+     "w": -10000,
+     "feedbackIndex": 1,
+     "client": "1",
+     "agentId": 3,
+     "tag1": "slash"
+    }
+   ]
+  },
+  {
+   "u": 3,
+   "wallet": null,
+   "bPlus": 10277,
+   "bMinus": 10000,
+   "edges": [
+    {
+     "dst": 2,
+     "w": 7777,
+     "feedbackIndex": 1,
+     "client": "2",
+     "agentId": 1,
+     "tag1": "vouch"
+    },
+    {
+     "dst": 4,
+     "w": 2500,
+     "feedbackIndex": 4,
+     "client": "2",
+     "agentId": 3,
+     "tag1": "vouch"
+    }
+   ]
+  }
+ ],
+ "vectors": {
+  "t": [
+   [
+    "333333333333333333",
+    "0",
+    "208939702171553543",
+    "120500475896593271",
+    "19542096574323452"
+   ],
+   [
+    "0",
+    "333333333333333333",
+    "0",
+    "0",
+    "0"
+   ]
+  ],
+  "ownerFp": [
+   "0",
+   "0",
+   "0",
+   "0",
+   "0"
+  ]
+ },
+ "expected": {
+  "residualMode": "contract",
+  "r": [
+   "13028064382882308",
+   "6"
+  ],
+  "e": [
+   "39084193148646924",
+   "18"
+  ],
+  "eEff": "19542096574323471",
+  "d": [
+   "0",
+   "0",
+   "0",
+   "0",
+   "69646567390517848"
+  ],
+  "graphRoot": "0x59004a1643040498da1ffcebcdae0bae02add8c76d7b3c76312baded17291c1e",
+  "vectorRoot": "0xed2574cf09004c4c4cb52d1f3ebe355e0ace87a67e4935a70a0029d67cfee893",
+  "tight": {
+   "r": [
+    "13028064382882306",
+    "1"
+   ],
+   "e": [
+    "39084193148646918",
+    "3"
+   ]
+  }
+ },
+ "calldata": {
+  "W": 2,
+  "newNodes": "0x010000000101000000020100000003",
+  "vectors": "0x04a03ce68d21555500000000000000000000000000000000000000000000000004a03ce68d215555000000000000000002e64d8d57694f070000000000000000000000000000000001ac1a8b5d14fb770000000000000000000000000000000000456d6eec7a9afc00000000000000000000000000000000",
+  "rows": "0x02000000040000000200022710000000010003138800000001000100000002000200030d05000000020004d8f0000000010003000200021e6100000001000409c400000004"
+ }
+}

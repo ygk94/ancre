@@ -1,0 +1,69 @@
+# Chantiers ANCRE — index, ordonnancement, règles communes
+
+> Rédigé le 2026-09-27 (étape R6b de la feuille de route, `docs/conseil/CR-conseil.md`).
+> Clôture des soumissions Monad Metropolis : **2026-10-13**. Il reste 16 jours.
+
+## Comment utiliser ces briefs
+
+Un chantier se traite dans **une discussion Claude Code dédiée**. On l'ouvre avec :
+
+> « Lis `CLAUDE.md`, `docs/chantiers/README.md` puis `docs/chantiers/NN-….md`, et prends en charge ce chantier. »
+
+Les briefs **orientent, ils ne résolvent pas**. Leur section « Pistes techniques » nomme des structures, des fonctions et des pièges, mais ce sont des **points de départ à vérifier**, pas des réponses. La session doit :
+- aller lire la source primaire : le code des registres, la doc Monad, les EIP, le code déjà écrit, les données on-chain ;
+- contredire le brief quand la source le contredit ;
+- prendre le temps d'être précise sur son sujet. C'est pour ça qu'elle existe.
+
+## Les chantiers
+
+| # | Chantier | Résultat final | Dépend de |
+|---|---|---|---|
+| 01 | [Tour 4 du conseil](01-conseil-tour4.md) | 7 décisions bloquantes tranchées dans le CR | — |
+| 02 | [Contrat vérificateur](02-contrat-verificateur.md) | `AnchoredReputation.sol` complet, testé, déployable | 01 |
+| 03 | [Indexeur](03-indexeur.md) | Base locale fidèle au registre, reconstruite on-chain | 01 (règles D16) |
+| 04 | [Solveur et certificateur](04-solveur-certificateur.md) | Service qui publie et tient à jour les certificats ; surveillant de contestation | 01, 02, 03 |
+| 05 | [Router x402 et politique](05-router-x402.md) | `TrustGatedRouter` : un paiement x402 refusé ou accepté selon `assess` | 02 |
+| 06 | [Ferme Sybil et scénarios](06-ferme-scenarios.md) | Acte 2 scripté et rejouable sur le mainnet, budget en MON chiffré | 02, 04, 05 |
+| 07 | [Écran de démo](07-ecran-demo.md) | Écran live : naïf contre ANCRE, disjoncteur visible | 03, 06 |
+| 08 | [Norme et publication](08-norme-publication.md) | ERC finalisé, vecteurs de test, brouillons de publication prêts (pas publiés) | 01 ; alimenté par 02 et 04 |
+| 09 | [Pitch, vidéo, soumission](09-pitch-soumission.md) | Dossier de soumission complet, acte 1 reproductible par le jury | tous |
+
+## Ordonnancement proposé (à réviser par chaque session)
+
+| Dates | En parallèle |
+|---|---|
+| **28/09** | **01**, qui bloque les autres. En même temps : 03 (partie « extraction brute », indépendante des règles) et 08 (relecture du draft) |
+| 29/09 → 03/10 | **02**, **03**, **04** ; 08 en continu |
+| 02/10 → 06/10 | **05**, **06** (script de ferme, budget MON) |
+| 05/10 → 09/10 | **07** ; déploiement mainnet le 09/10 au plus tard |
+| 09/10 → 12/10 | **09** : vidéo, dossier. **Soumission le 12/10**, un jour de marge |
+
+**Chemin critique** : 01 → 02 → 04 → 06 → 07 → 09. Tout retard sur 02 ou 04 se répercute sur la démo.
+**Peut glisser sans casser la démo** : 08 (la publication peut suivre la soumission), les preuves d'écart (ii) à (iv) du chantier 02, la pré-rotation d'`anchorId`.
+
+## Formats d'échange entre chantiers
+
+| Format | Producteur → consommateur | Fichier de référence |
+|---|---|---|
+| Base d'avis et état des registres | 03 → 04, 07 | à définir par 03 (`indexer/SCHEMA.md`) |
+| Certificat, calldata, vecteurs de test | 04 ↔ 02 | `solver/FORMAT.md` et `contracts/ENCODING.md` (alignés le 27/09) |
+| Interface `assess` / statuts | 02 → 05, 07 | `contracts/src/AnchoredReputation.sol`, `docs/erc/anchored-reputation.md` §6 |
+| Événements de démo | 06 → 07 | à définir par 06 |
+
+Si un chantier change un format, il **met à jour le fichier de référence et le signale** dans le CR.
+
+## Règles communes à toutes les sessions
+
+1. **Répondre en français.** Code, README et ERC en anglais.
+2. **Tout chiffre est sourcé et daté**, et marqué **MESURÉ / DOC / ESTIMÉ / NON VÉRIFIÉ**. Un chiffre du CR n'est pas une vérité : il a sa date et son statut.
+3. **Les décisions D1 à D19 du CR ne se rouvrent pas sans preuve chiffrée.** Si une mesure les contredit, on le dit franchement dans le CR.
+4. **Pas de commit, pas de push, pas de transaction réelle, pas de publication externe** sans accord explicite de Hugo. Les simulations, `eth_call` et forks sont libres.
+5. **Le vault** (`/Users/hugo/Projet/dataBlockchain`) est en lecture seule.
+6. **Environnement** : `export PATH="$PATH:$HOME/.foundry/bin"` (forge et cast 1.8.3) ; `python3` = 3.14 ; `gh` absent.
+   - RPC `https://rpc.monad.xyz` (25 rps, `eth_getLogs` ≤ 100 blocs) ;
+   - `https://rpc1.monad.xyz` (accepte tout l'historique en `eth_getLogs`, mesuré le 27/09) ;
+   - testnet `https://testnet-rpc.monad.xyz` (les registres ERC-8004 y sont absents).
+7. **En fin de session**, deux mises à jour :
+   - dans le CR, **une section « Résultats du chantier NN »** : ce qui est livré, les chiffres, les angles morts numérotés `AM-NN.k`, les questions ouvertes ;
+   - dans la **feuille de route**, le statut de l'étape.
+8. **Avant de coder**, relire le code et les docs déjà écrits dans le dépôt (angle mort AM-3.13 : on a déjà réinventé ce qui existait).

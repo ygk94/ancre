@@ -1,0 +1,765 @@
+# CR du conseil ANCRE — document cumulatif
+
+> Un tour = un passage du protocole à 5 experts (A théoricien graphes/Sybil, B ingénieur EVM, C concepteur de normes, D attaquant économique, E intégrateur).
+> Les cinq voix sont simulées par un seul modèle : l'indépendance est une discipline d'écriture, pas une garantie.
+> Conventions : **mesuré** = relevé du 21/09/2026 fourni par Hugo · **estimé** = calcul d'ordre de grandeur · **supposé** = hypothèse du conseil, non vérifiée · **choix** = paramètre fixé par décision, à calibrer.
+
+---
+
+## Journal des décisions (état courant)
+
+| # | Sujet | Décision | Tour | Confiance |
+|---|---|---|---|---|
+| D1 | Exposition du score | t_i en WAD (part de masse), plus de N ; politique engagée dans un `setId` immuable | 1 | 0,9 / 0,65 |
+| D2 | α | 1/3, unique par déploiement, engagé dans le certificat | 1, confirmé 2 | 0,55 |
+| D3 | Paiement | ni poids ni condition dans le cœur ; `edgeFilterId` en extension | 1 | 0,85 |
+| D4 | Avis négatif | méfiance à un saut + veto direct des ancres lu dans le registre | 1, amendé 2 | 0,7 |
+| D5 | Nœuds sans arête sortante | convention absorbante (linéarité exacte en p) | 1 | 0,9 |
+| D6 | Liaison calldata ↔ registre | **certificat à borne croissante** : toute preuve d'écart élargit e, pas de slashing | 2 | 0,7 |
+| D7 | Budgets | **budgets séparés** B⁺ et B⁻ (remplace le budget partagé du tour 1) | 2 | 0,75 |
+| D8 | Robustesse aux ancres | veto q = 1 **et** confiance *leave-one-out* (m = 2 ancres minimum) | 2 | 0,65 |
+| D9 | Identité des ancres | `anchorId` avec pré-rotation de clé ; nœud-ancre distinct du nœud-agent | 2 | 0,6 |
+| D10 | Transfert d'agent | pause sur transfert (owner engagé dans la feuille), pas de remise à zéro | 2 | 0,5 |
+| D11 | Lecture du score | ~~preuve portée~~ → **vecteurs stockés contigus + table de nœuds append-only**, `trustOf` lisible sans preuve (MIP-8 rend le stockage contigu bon marché) | 2, **renversée 3** | 0,7 |
+| D12 | Schéma de tags | engagé **par ensemble**, pas de registre global ; schéma de référence publié par ANCRE | 2 | 0,75 |
+| D13 | Ancres par défaut | aucune dans la norme ; ensembles de démo étiquetés ; motif « consommateur-ancre » recommandé | 2 | 0,6 |
+| D14 | Unité d'arête | **dernier avis non révoqué par (client, agent, tag1)**, puis combinaison par **dominance du négatif** entre tags du filtre | 3 | 0,7 |
+| D15 | Nature des tags | le schéma déclare `kind ∈ {endorsement, measurement}` ; **seuls les tags `endorsement` créent des arêtes** | 3 | 0,75 |
+| D16 | Identité des noteurs | wallet → agent unique sinon nœud-adresse ; rejet si noteur ∈ contrôleurs de j **ou ancien owner de j** | 3 | 0,7 |
+| D17 | Registre upgradable | le certificat engage adresses + `keccak(getVersion())` ; statut `REGISTRY_CHANGED` ; surveillance hors chaîne de `Upgraded` | 3 | 0,6 |
+| D18 | Encodage | arêtes groupées par ligne, indices de nœuds stables, **poids quantifié normatif** (grille 1e-4, troncature vers zéro) | 3 | 0,7 |
+| D19 | Démo | acte 1 = mainnet réel (ferme, fuite du scanner, contournement #8317) ; acte 2 = notre trafic ; α fixé par argument, mesuré sur graphes synthétiques à vérité connue | 3 | 0,7 |
+
+---
+
+## Feuille de route (mise à jour 2026-09-27)
+
+Clôture des soumissions : **2026-10-13** (16 jours).
+Légende : ✅ fait · 🔄 en cours · ⏭️ lancé automatiquement dès que l'étape précédente est finie · 🧑 attend une décision de Hugo.
+
+| # | Étape | Dépend de | Qui | Statut |
+|---|---|---|---|---|
+| R1 | Vérifier les faits : registres réputation et identité, gas Monad, snapshot | — | 4 agents en parallèle | ✅ |
+| R2 | **Tour 3 du conseil**, fondé sur les faits vérifiés : réviser D6, D9, D11 et l'encodage des arêtes | R1 | moi | ✅ |
+| R3 | Mettre à jour CLAUDE.md : environnement machine réel (pas de cast, forge, gh ni python3.12), #9 et #87 notés par le même wallet, `getClients`, clé d'upgrade unique, `eth_getLogs` en grande plage sur rpc1, EIP-7623, MIP-8 | R1 | moi | ✅ |
+| R4 | **Solveur PPR hors chaîne** (Python) sur le snapshot du 21/09 : règles d'arêtes du CR, convention absorbante, budgets séparés, leave-one-out. Mesure de α ∈ {1/4, 1/3, 1/2} (taille du support, taux de passage), et nombre d'arêtes qui survivent au schéma | R2 | agent | ✅ (95 tests ; voir solver/RESULTS.md) |
+| R5 | **`AnchoredReputation.sol`** (niveau Residual-verified) : encodage compact des arêtes, k colonnes jointes, `vectorRoot`, `assess`. Puis `forge test --gas-report` pour remplacer toutes les estimations | R2 + Foundry installé | agent | ✅ (49 tests ; voir contracts/GAS.md) |
+| R6 | **Réécrire le draft d'ERC** avec les décisions D1 à D13 et le tour 3. Nouveau fichier dans le dépôt, `docs/erc/anchored-reputation.md` ; le vault n'est pas modifié | R2 | agent | ✅ (docs/erc/, 28 incohérences AM-R6) |
+| R6b | **Découpage par partie en briefs de session** (✅ 27/09 : `docs/chantiers/`, 9 briefs + index) : un fichier par chantier dans `docs/chantiers/`, pour qu'une discussion Claude Code dédiée puisse le prendre en charge seule (détail ci-dessous) | R2 à R6 terminés et relus | moi | ✅ |
+| R7 | Indexeur des events : `NewFeedback`, `FeedbackRevoked`, `ResponseAppended`, `MetadataSet(agentWallet)`, `Transfer`, `Upgraded` | R2 | — | après R4 et R5 |
+| R8 | `TrustGatedRouter` (x402 `upto`, USDC) + script de ferme Sybil + scènes de démo (une ancre compromise ne fait pas payer ; une ancre bloque un fournisseur) | R5 | — | après R5 |
+| R9 | Écran de démo live | R7, R8 | — | — |
+| R10 | Publier : PR sur `ethereum/ERCs`, réponse au post #309, contact avec ColinkaMir | R6 | 🧑 (publication externe : validation de Hugo obligatoire) | — |
+| R11 | Déploiement mainnet, vidéo, profil de projet | R9 | 🧑 | — |
+
+### R6b — Découpage par partie : ce qui est attendu
+
+**But.** Répartir la suite du projet (R7 à R11, plus ce que R4 et R5 laisseront ouvert) en chantiers autonomes. Chaque chantier est traité dans **sa propre discussion**, avec assez de contexte pour être creusé à fond sans relire toute l'histoire. Les briefs **orientent sans tout résoudre** : ils nomment les structures, les parties techniques et les pièges connus, puis demandent explicitement à la session d'aller chercher les sources primaires (code, doc Monad, EIP, données). Un brief qui tranche tout serait moins précis qu'une session qui s'attarde sur son sujet.
+
+**Un fichier par chantier** (`docs/chantiers/NN-nom.md`), toujours avec la même structure :
+1. **Objectif et résultat final attendu** : le livrable concret (fichiers, contrats, scripts, mesures) et à quoi il sert dans la démo ou la norme.
+2. **Contexte minimal** : les décisions du CR qui s'appliquent (D1 à D13 et suivantes, par numéro) et les faits vérifiés utiles, avec leur statut mesuré ou supposé.
+3. **Ce qui est déjà tranché** et ne doit pas être rouvert sans preuve.
+4. **Pistes techniques à creuser**, présentées comme des pistes et non comme des réponses. Par exemple : structures de données, encodages, interfaces, events à suivre, précompilés, limites RPC. La consigne est de vérifier chaque piste dans la source primaire et de la contredire si besoin.
+5. **Pièges connus** : Monad, ERC-8004, arithmétique entière, environnement machine.
+6. **Questions ouvertes** que la session doit trancher et documenter.
+7. **Critères d'acceptation** vérifiables : tests, mesures de gas, sorties chiffrées, ce qui doit tourner.
+8. **Interfaces avec les autres chantiers** : ce que le chantier consomme, ce qu'il produit, et les formats d'échange.
+9. **Règles de la session** : français, sourcer et dater chaque chiffre, pas de commit ni de publication externe sans accord, mettre à jour le CR et la feuille de route à la fin.
+
+**Découpage pressenti**, à affiner quand R4 et R5 auront rendu :
+- contrat vérificateur et lecture ;
+- indexeur et reconstruction du graphe ;
+- solveur et certificateur ;
+- router x402 et politique consommateur ;
+- ferme Sybil et scénarios de démo ;
+- écran de démo ;
+- norme et publication ;
+- pitch, vidéo et soumission.
+
+**Résultat final de R6b** : les fichiers de briefs, plus un tableau d'ordonnancement (dépendances, chemin critique jusqu'au 13/10, ce qui peut tourner en parallèle) ajouté à cette feuille de route.
+
+### Ordonnancement après R6b (27/09)
+
+Détail et formats d'échange : `docs/chantiers/README.md`. Chemin critique : **01 → 02 → 04 → 06 → 07 → 09**.
+
+| Dates | Chantiers |
+|---|---|
+| 28/09 | **01 Tour 4 du conseil** (bloquant). En parallèle : 03 (extraction brute) et 08 (relecture du draft) |
+| 29/09 → 03/10 | 02 Contrat · 03 Indexeur · 04 Solveur et certificateur · 08 en continu |
+| 02/10 → 06/10 | 05 Router x402 · 06 Ferme et scénarios (budget MON validé par Hugo avant toute transaction mainnet) |
+| 05/10 → 09/10 | 07 Écran de démo · déploiement mainnet le 09/10 au plus tard |
+| 09/10 → 12/10 | 09 Pitch, vidéo et soumission, **déposée le 12/10** |
+
+Les anciennes lignes R7 à R11 sont couvertes par les chantiers 03, 05, 06, 07, 08 et 09.
+
+Règles d'exécution : aucun commit, aucun push, aucune publication externe sans demande explicite. Les agents n'écrivent ni dans le vault ni hors de leur périmètre.
+
+---
+
+## Angles morts découverts (cumulatif)
+
+| Id | Tour | Angle mort | Statut |
+|---|---|---|---|
+| AM-1.1 | 1 | N est choisi par le certificateur et gonflable gratuitement | résolu (D1) |
+| AM-1.2 | 1 | Renvoyer la masse sans issue vers p casse la linéarité en p | résolu (D5) |
+| AM-1.3 | 1 | Le levier « précision » de α n'existe pas : la vérification coûte une passe quel que soit α | clos |
+| AM-1.4 | 1 | La ferme n'entre jamais dans le calldata si on ne certifie que le support ; l'estimation 3,7 M gas est hors sujet | à mesurer |
+| AM-1.5 | 1 | « Verified » prouve le point fixe de la matrice soumise, pas du registre | traité (D6) |
+| AM-1.6 | 1 | Fenêtre de sortie entre méfait et recertification | traité (veto direct) |
+| AM-2.1 | 2 | **Le registre ne stocke pas le bloc des avis** : toute preuve de fraude « cet avis existait avant certBlock » est impossible. Un contestataire peut poster un avis après la certification puis « prouver une omission » et faire slasher un certificateur honnête | résolu (D6 : élargissement au lieu de slashing) |
+| AM-2.2 | 2 | Le registre est indexé par (agentId, client), **pas par client** : la complétude d'une ligne (tous les avis émis par u) n'est pas vérifiable on-chain, seulement contestable | accepté |
+| AM-2.3 | 2 | Certification sans permission ⇒ un attaquant soumet un certificat bâclé (T énorme, e énorme) et met l'ensemble en déni de service | résolu (règle de remplacement par e effectif) |
+| AM-2.4 | 2 | **L'argument du tour 1 pour le budget partagé était faux** : la borne sur la méfiance vient du saut unique (lignes de D ≤ 1), pas du partage. Le partage n'achète qu'un facteur ≤ 2 et punit les critiques | résolu (D7) |
+| AM-2.5 | 2 | Le débat sur le quorum du veto regardait la mauvaise direction : une clé d'ancre volée coûte surtout par **l'approbation de Sybil** (vol), pas par le veto (déni de service, échec fermé) | résolu (D8 leave-one-out) |
+| AM-2.6 | 2 | Pas de bloc ⇒ après rotation de clé, les avis de l'ancienne clé ne sont pas datables : le voleur peut poster des avis « anciens » | résolu (seuls les avis de la clé courante comptent) |
+| AM-2.7 | 2 | Pas de bloc ⇒ **le rachat d'un agent réputé ne peut pas être neutralisé on-chain** (impossible de séparer les avis reçus avant/après transfert) | partiel (D10) |
+| AM-2.8 | 2 | Une adresse qui est `agentWallet` d'un agent peut noter cet agent | **confirmé au tour 3** (source + 78 cas réels sur #8317) ; règle de rejet D16 |
+| AM-2.9 | 2 | Le coût dominant probable est l'écriture de t_i, d_i en stockage, et il se supprime en faisant porter la preuve par le payé | traité (D11) |
+| AM-2.10 | 2 | α change le coût via la **taille du support** (petit α ⇒ masse diffuse sur plus de nœuds) | noté |
+| AM-2.11 | 2 | Le leave-one-out aggrave davantage le goulot d'intégration de E que α ne le faisait : un fournisseur a besoin de deux ancres | noté, impacte la démo |
+| AM-2.12 | 2 | Échec fermé partout ⇒ ANCRE devient une **dépendance de vivacité** de chaque consommateur : si personne ne recertifie, tous les paiements s'arrêtent après maxAge | non résolu |
+| AM-2.13 | 2 | **Budget de complexité** : 16 jours avant la clôture (13/10) et la spec a doublé en un tour. Aucun découpage hackathon / norme n'existe | traité (découpage ci-dessous) |
+| AM-2.14 | 2 | Plusieurs signatures du registre sur lesquelles repose la spec ne sont pas vérifiées sur la v2.0.0 déployée | **résolu au tour 3** (faits vérifiés ci-dessous) |
+| AM-3.1 | 3 | **« Dernier avis par couple » efface un négatif posté sous un autre tag.** Cas réel : `0xea0b…` → #4, `slash −100` puis `review +1` ; le filtre garde +1. C'était la seule arête négative utile du registre | résolu (D14) |
+| AM-3.2 | 3 | **Les tags de mesure (liveness, uptime, trust de scanner) créent des arêtes d'attaque automatiques** : un scanner qui ping tout le monde « approuve » les Sybil. Cas réel : `0xa06f907f` note des agents Spawn, qui notent Eve | résolu (D15) |
+| AM-3.3 | 3 | Le garde-fou anti-auto-notation du registre est **contourné en pratique** (78 avis de #8317 par son propre wallet) et **rouvert après transfert** (ancien owner, anciens opérateurs) | résolu (D16) |
+| AM-3.4 | 3 | `agentWallet` **n'est pas unique** : 178 wallets pour 1 773 agents ; 91 avis à émetteur ambigu ; aucun index inverse on-chain | résolu (D16) |
+| AM-3.5 | 3 | **Une seule EOA (`0x5472…2603`) peut réécrire les deux registres**, sans délai ; un contrat ne peut pas lire le slot d'implémentation d'un autre contrat | partiel (D17) |
+| AM-3.6 | 3 | **Plancher EIP-7623 actif** : 40 gas/octet non nul. L'estimation de 350-400 gas/arête était fausse d'un facteur 4 à 7 à 64 octets/arête. La quantification du poids devient normative, car elle change t | résolu (D18) |
+| AM-3.7 | 3 | Sur Monad (MIP-8), **un tableau contigu mis à jour sur place coûte ~100 gas/slot** ; c'est le `mapping` (une page par clé) qui coûte cher. La preuve portée de D11 résolvait un problème qui n'existe pas | résolu (D11 renversée) |
+| AM-3.8 | 3 | **L'index de 8004scan est incomplet** : 10 agents notés absents de `agents.json` ; « 10 171 agents » est un minimum | indexeur maison obligatoire |
+| AM-3.9 | 3 | **Le registre est dormant** : aucun avis depuis le 2026-09-10 (bloc 103 696 240). Toute scène « live » sur mainnet sera notre propre trafic | intégré (D19) |
+| AM-3.10 | 3 | **α ne peut pas être calibré sur le mainnet** : support ≤ 5 nœuds, une seule chaîne honnête de 2 sauts | intégré (D19) |
+| AM-3.11 | 3 | `rpc1.monad.xyz` accepte des `eth_getLogs` sur tout l'historique : la limite de 100 blocs (CLAUDE.md §7) dépend du fournisseur | à intégrer dans l'indexeur |
+| AM-3.12 | 3 | La doc Monad se contredit sur le temps de bloc (0,3 s ou 0,4 s) : tout calcul en blocs/jour est incertain d'un facteur 4/3 | noté ; paramètres en blocs, jamais en secondes |
+| AM-3.13 | 3 | **Angle mort de méthode** : le draft d'ERC du 21/09 contenait déjà `lastIndexRoot` et la demande de `block.number` à ERC-8004. Les tours 1 et 2 ont délibéré sans le relire | règle : relire le draft avant chaque tour |
+| AM-3.14 | 3 | CLAUDE.md §8 décrit une autre machine (cast/python3.12 absents, vault ailleurs) | résolu (R3) |
+
+---
+
+# Tour 1 — 2026-09-27
+
+Décisions D1 à D5. Détail dans la conversation d'origine ; spécification Q4 du tour 1 amendée au tour 2 (budgets séparés, leave-one-out, lecture à preuve portée). Les points non modifiés restent valides : règle d'arête (dernier avis non révoqué par couple, rejet hors bornes, schéma par tag), convention absorbante, vérification en une passe avec arrondis majorés, troncature avec marge (1−α)·t_u, veto direct.
+
+---
+
+# Tour 2 — 2026-09-27
+
+## Reformulation
+
+Les 14 points (6 désaccords + 8 questions) sont regroupés en 5 questions. Deux points sont **fermés sans délibération** :
+
+- **Désaccord 6 (vérifiabilité du paiement).** C avait raison : une attestation signée du facilitator se vérifie par `ecrecover`. L'argument de B (« impossible ») est retiré. D3 ne change pas, car elle repose sur l'argument de D : le paiement se contourne par aller-retour et n'achète rien contre la ferme.
+- **Question 3 (convention sans arête sortante).** Déjà tranchée au tour 1 (D5).
+
+| Question du tour 2 | Points d'origine |
+|---|---|
+| Q1 — Qu'est-ce qui lie le certificat au registre, et qui en paie la fraîcheur ? **(la plus importante : c'est elle qui décide si « Verified » est un mensonge dans la démo)** | Q-oubliée 1, 2 |
+| Q2 — Qu'est-ce qu'un nœud, qu'est-ce qu'une ancre, et que se passe-t-il quand une clé ou un NFT change de main ? | désaccord 4 ; Q-oubliées 4, 5, 6 |
+| Q3 — Comment rendre le système robuste à une ancre compromise sans tuer la démo ni punir les critiques ? | désaccords 2, 3 |
+| Q4 — α et architecture de coût : qu'est-ce qui coûte vraiment, et α y joue-t-il ? | désaccord 1 ; Q-oubliée 7 |
+| Q5 — Qui écrit le schéma de tags, et que reste-t-il du graphe réel après lui ? | désaccord 5 ; Q-oubliée 8 |
+
+**Question mal posée.** La Q-oubliée 1 suppose qu'on veut *empêcher* l'omission. On ne peut pas : le registre n'indexe pas les avis par émetteur et ne les date pas (AM-2.1, AM-2.2). La bonne question est : *quelle garantie reste vraie même quand l'omission n'est pas détectée, et que coûte-t-il de la faire valoir quand elle l'est ?*
+
+---
+
+## Phase 1 — Analyses indépendantes
+
+### A. Théoricien des graphes et de la résistance Sybil
+
+**Q1.** Une omission est une troncature que le prouveur n'a pas déclarée. Or j'ai déjà la borne : remplacer la ligne u par une autre ligne u' change F(t) d'au plus (1−α)·t_u·‖C_u − C'_u‖₁ en L1. Il suffit donc qu'une preuve d'écart rejoue la ligne engagée, calcule ce Δ et l'**ajoute au résidu**. La garantie « ‖t − t*‖₁ ≤ r/α » redevient vraie pour le graphe réel, avec un r plus grand. Par inégalité triangulaire, les preuves successives sur une même ligne sont sommables et restent saines. Rien n'exige de dater l'omission : la borne ne parle que de l'état présent.
+
+**Q2.** Si l'ancre est un nœud-adresse distinct de son éventuel nœud-agent, le problème « l'ancre reçoit α·λ et passe tout seuil » disparaît sans exception : p charge l'adresse, et l'agent de l'ancre n'est noté que par des arêtes, comme les autres. Il faut une règle de rejet : aucune arête c → j si c est l'owner ou l'`agentWallet` de j.
+
+**Q3.** Le tour 1 s'est trompé. La méfiance émise par une région S vaut (1−α)·Σ_{u∈S} t_u·Σ_j D_uj. Elle est ≤ (1−α)·π(S) dès que **les lignes de D sont ≤ 1**, que D partage ou non le budget de C. Le partage ne fait gagner qu'un facteur 2 au maximum sur la capacité de nuisance, et il fait payer la critique honnête. Avec des budgets séparés B⁺ = max(1, Σw⁺) et B⁻ = max(1, Σw⁻), la borne tient et le critique garde son pouvoir d'approbation.
+
+Pour la compromission, la linéarité donne un outil gratuit : t_i = Σ_a λ_a·t_i^(a). Retirer la plus grosse contribution donne une confiance qu'**aucune ancre seule** ne peut produire.
+
+**Q4.** α n'est plus le levier principal. Leave-one-out et densité dominent la portée. α ne se tranche qu'avec une mesure : la taille du support et le taux de passage leave-one-out pour α ∈ {1/4, 1/3, 1/2} sur un graphe de démo.
+
+**Q5.** Le schéma de tags fait partie de la définition du graphe, au même titre que les ancres. S'il est engagé par ensemble, deux ensembles aux schémas différents calculent deux mesures différentes, exactement comme deux ensembles aux ancres différentes. Ce n'est pas un défaut d'interopérabilité, c'est la personnalisation elle-même.
+
+### B. Ingénieur EVM
+
+**Q1.** La vérification de complétude on-chain coûte une lecture de stockage par arête. Au prix de 8 100 gas par page touchée pour la première fois (chiffre fourni), un support de E arêtes coûte au moins 8 100·E, soit environ 3 700 arêtes dans 30 M (calcul, pas mesure). C'est faisable pour la fraîcheur des arêtes présentes. Ça ne prouve rien sur les **absentes**, puisqu'il n'y a pas d'index par client. Je préfère donc des preuves d'écart rares à une vérification systématique. Structure : `graphRoot` = Merkle des lignes, et une preuve d'écart = une ligne + un chemin de Merkle + une à trois lectures du registre. Coût borné par ligne, payé par le contestataire.
+
+**Q2.** La pré-rotation coûte une lecture de plus par ancre dans le veto (clé courante). Supportable si K_MAX reste à 16. Le propriétaire engagé dans la feuille, c'est un `ownerOf` par lecture de confiance. Les coûts exacts via le proxy ne sont pas mesurés.
+
+**Q3.** Le leave-one-out exige les k contributions par agent. Si une seule feuille Merkle contient t^(1..k) et d^(1..k), on n'a besoin que d'une preuve. La certification jointe des k colonnes multiplie le travail par arête par k dans la même transaction, avec un plafond à vérifier contre les 30 M par transaction (fait fourni).
+
+**Q4.** Écrire t_i et d_i pour chaque agent du support en stockage est le poste inconnu, et probablement dominant (supposé). Solution : ne rien écrire par agent. On stocke un `vectorRoot` par certificat et **le payé fournit sa feuille et son chemin** dans la requête x402. Une écriture par certificat au lieu d'une par agent. Coût de lecture : un chemin Merkle, soit log₂(n) hachages, non mesuré.
+
+**Q5.** La normalisation de `value/10^valueDecimals` en WAD doit se faire en entiers sans perte : x·10^(18−dec), puis produit en croisé avec (max − neutre). Les bornes du schéma sont des int256 à l'échelle WAD. Le schéma engagé par hash est lu hors chaîne ; on-chain, il ne sert que dans le veto et les preuves d'écart.
+
+### C. Concepteur de normes
+
+**Q1.** Le texte doit dire ce que le certificat garantit, **et rien de plus** : « point fixe du graphe engagé, avec une borne qui s'élargit de façon prouvable dès qu'on montre un écart avec le registre ». Sans slashing, il n'y a pas d'économie de caution à normer, et la norme reste portable. Je propose trois niveaux :
+- **Residual-verified** : le résidu est vérifié.
+- **Registry-contested** : le résidu est vérifié et des preuves d'écart sont acceptées.
+- **Optimistic** : rien n'est vérifié.
+
+**Q2.** Désigner les ancres par adresse rend la rotation impossible sans migrer tous les consommateurs. Les désigner par agentId ERC-8004 met les ancres en vente. Une troisième voie existe : un identifiant d'ancre auto-certifiant avec pré-rotation (engagement du hash de la clé suivante), motif connu de KERI. La norme définit le format, pas le contrat.
+
+**Q3.** Le leave-one-out doit être un paramètre de politique (`minAnchors`), engagé dans le `setId`, défaut 2. Un implémenteur qui l'ignore obtient un système où une clé volée suffit à faire payer des Sybil : c'est à écrire en MUST dans les considérations de sécurité.
+
+**Q4.** Changer l'interface de lecture vers une preuve portée casse le « `trustOf` lisible par n'importe quel contrat » du pitch. La norme doit garder les deux : une lecture à preuve portée (REQUIRED) et un cache optionnel.
+
+**Q5.** Pas de registre global de tags : ce serait une autorité. La norme fixe le **format** du schéma (tag → min, neutre, max, échelle) et l'engagement par hash. ANCRE publie un schéma de référence que chacun est libre d'adopter.
+
+### D. Attaquant économique
+
+**Q1.** Si l'omission est slashée, je gagne sans tricher : je poste un avis juste après la certification, je « prouve » l'omission et je touche la caution d'un certificateur honnête. Le registre n'ayant pas de bloc, personne ne peut me contredire. Si la certification est sans permission, je soumets un certificat valide mais bâclé, où je tronque tout : e explose et l'ensemble refuse tout le monde. Il faut une règle de remplacement : un nouveau certificat ne remplace l'ancien que s'il est au moins aussi précis, ou si l'ancien est périmé. Enfin, le spam de preuves d'écart sur une même ligne ne doit être facturé qu'une fois.
+
+**Q2.** Avec une clé d'ancre volée, je n'attaque pas par le veto, je fais **approuver mes Sybil** : chacune reçoit (1−α)·t_a divisé par le nombre d'arêtes. C'est du vol. Le veto n'est qu'un déni de service. Après rotation, si les avis de l'ancienne clé comptent encore, je continue à poster avec, et personne ne peut dater mes avis. Le rachat d'agent réputé reste ouvert : j'achète le NFT, je garde la réputation reçue.
+
+**Q3.** Si q = 1 et la confiance leave-one-out est à m = 2, ma clé volée me donne au mieux un déni de service, jamais un paiement. C'est la bonne asymétrie. Avec des budgets séparés, un Sybil peut approuver *et* dénigrer à pleine capacité : ma nuisance double, mais elle reste bornée par π(S). Accepté.
+
+**Q4.** Preuve portée par le payé : je fournis une feuille. Si le chemin est invalide, `isTrusted` renvoie faux ; rien à gagner. Mais si le cache optionnel existe, j'attaque sa fraîcheur. Il doit porter le `certBlock` et se soumettre aux mêmes règles d'élargissement.
+
+**Q5.** Si le schéma est engagé par ensemble, je crée mon propre ensemble avec un schéma complaisant. Ça ne sert à rien : personne ne consomme mon ensemble. Le seul vrai risque est qu'un intégrateur paresseux choisisse un `setId` sans lire son schéma. C'est une question d'ergonomie, pas de sécurité.
+
+### E. Intégrateur
+
+**Q1.** Je veux une garantie qui se dégrade proprement au lieu de basculer. Une borne qui s'élargit fait ça : mon fournisseur à forte confiance reste payé, le marginal ne l'est plus. Mais si personne ne recertifie, je finis bloqué après maxAge, et **ma production dépend d'un certificateur que je ne contrôle pas**. Il me faut soit pouvoir recertifier moi-même (sans permission), soit un mode dégradé explicite.
+
+**Q2.** Sur transfert d'un fournisseur, je préfère une pause à une remise à zéro silencieuse : je vois l'événement et je décide. La rotation de clé d'ancre ne doit rien me demander : mon `setId` pointe vers des `anchorId`, pas vers des clés.
+
+**Q3.** m = 2, c'est deux ancres à convaincre pour chaque nouveau fournisseur. Pour moi, c'est un coût d'intégration réel. J'accepte si je peux être moi-même une des ancres, le motif « consommateur-ancre » : je note ceux que j'ai payés et qui ont livré.
+
+**Q4.** Une preuve portée par le payé me convient pour x402 : le fournisseur l'envoie avec sa réponse de paiement. Mais pour mon monitoring et mes contrats sans flux x402, je veux une vue lisible sans preuve. Sur Monad, je paie la limite de gas (fait fourni) : la longueur de preuve doit être bornée et documentée.
+
+**Q5.** Je ne veux pas choisir un schéma, je veux choisir un `setId` qui a un nom et un auteur lisibles. Le schéma de référence est le seul que j'utiliserai.
+
+---
+
+## Phase 2 — Relecture croisée à l'aveugle
+
+Ordre anonyme de ce tour : **analyse 1 = C, 2 = E, 3 = A, 4 = D, 5 = B**.
+
+### A relit
+- **1 (C).** *Vu :* les trois niveaux nommés honnêtement. *Trop optimiste :* KERI suppose que la clé suivante est gardée hors ligne, et rien n'y oblige une ancre. *Oublié :* le sort des arêtes de l'ancienne clé après rotation.
+- **2 (E).** *Vu :* la dépendance de vivacité. *Faux :* « le marginal perd, le fort reste » est faux avec une borne L1 globale : un élargissement touche tout le monde de la même quantité, pas proportionnellement.
+- **4 (D).** *Vu :* le slashing inversé et le certificat bâclé. Ce sont les deux découvertes du tour. *Oublié :* la règle « au moins aussi précis » bloque une recertification légitime si le graphe réel s'est densifié et que son e est honnêtement plus grand.
+- **5 (B).** *Vu :* la feuille jointe à k colonnes. *Oublié :* l'arbre de Merkle se calcule on-chain dans la passe de vérification, et ce coût de hachage n'est ni mesuré ni estimé.
+
+### B relit
+- **1 (C).** *Faux :* « garder les deux lectures » double la surface de test. Le cache optionnel sera l'implémentation que tout le monde copie, et la mauvaise.
+- **2 (E).** *Vu :* la longueur de preuve à borner. *Oublié :* le consommateur-ancre doit payer du gas pour noter. Il faut dire combien, et qui le fait (automatiquement après livraison ?).
+- **3 (A).** *Vu :* Δ calculé sur la ligne, pas le pire cas 2·t_u. *Trop optimiste :* calculer Δ exige de recalculer B⁺ et B⁻ de la nouvelle ligne on-chain. C'est une passe sur la ligne, ce qui ouvre du griefing sur les lignes longues. Il faut plafonner la longueur de ligne, ou passer au pire cas au-delà.
+- **4 (D).** *Vu :* facturer une preuve une seule fois par ligne. *Oublié :* le stockage de l'état de ligne par preuve est un SSTORE, précisément ce qu'on essaie d'éviter. Acceptable parce que les preuves sont rares, à condition de le dire.
+
+### C relit
+- **2 (E).** *Vu :* le consommateur-ancre, meilleure réponse au goulot d'intégration. *Oublié :* le consommateur-ancre fait de chaque intégrateur une cible de corruption. Le fournisseur n'a plus qu'à convaincre son client, ce qui rouvre le problème de la ferme (le propriétaire finance ses noteurs).
+- **3 (A).** *Vu :* la correction du tour 1, sèche et nécessaire. *Trop fort :* « ce n'est pas un défaut d'interopérabilité ». Si deux implémentations calculent deux graphes différents *avec le même schéma*, c'en est un. Il faut des vecteurs de test normatifs.
+- **4 (D).** *Vu :* l'asymétrie vol / déni de service. *Oublié :* la méfiance à une ancre, elle, n'est pas leave-one-out. Une clé volée peut aussi dénigrer, pas seulement mettre un veto.
+- **5 (B).** *Vu :* la normalisation en entiers. *Oublié :* le signe. `valueDecimals` sur un int128 négatif, arrondi vers zéro ou vers −∞ : il faut le normer.
+
+### D relit
+- **1 (C).** *Vu :* le MUST sur `minAnchors`. *Oublié :* le niveau « Registry-contested » n'a de valeur que si quelqu'un conteste. Qui surveille, et pourquoi ?
+- **2 (E).** *Vu :* la pause sur transfert. *Trop optimiste :* elle ne sert à rien si le recertificateur réintègre la réputation telle quelle. Je paie une pause de maxAge pour acheter une réputation : c'est bon marché.
+- **3 (A).** *Vu :* l'ancre en nœud-adresse. *Oublié :* le rejet « c = `agentWallet` de j » ne tient que si `agentWallet` est à jour au moment de la certification ; je change de wallet après.
+- **5 (B).** *Vu :* la preuve portée me prive de toute attaque sur le stockage. *Oublié :* le rejeu. Une feuille valide d'un *ancien* certificat reste un chemin valide vers un ancien root. La lecture doit vérifier le root **courant**, pas n'importe quel root passé.
+
+### E relit
+- **1 (C).** *Vu :* `anchorId`, exactement ce que je voulais. *Oublié :* la découverte. Comment je trouve un `setId` fiable ? Un événement ne suffit pas.
+- **3 (A).** *Vu :* m = 2 sans ancre spéciale, élégant. *Faux pour moi :* « α ne se tranche qu'avec une mesure », mais la mesure proposée utilise un graphe de démo que *nous* construisons. Elle validera ce qu'on y met.
+- **4 (D).** *Vu :* « un attaquant avec mon setId obtient au mieux un déni de service ». *Oublié :* le déni de service est un coût pour moi, pas pour lui. Il faut une procédure de sortie : lever la pause, écarter une ancre.
+- **5 (B).** *Vu :* une écriture par certificat. *Oublié :* le payé doit pouvoir *obtenir* sa preuve. Un service hors chaîne la fournit, et c'est un nouveau composant à livrer.
+
+---
+
+## Phase 3 — Synthèse tranchée
+
+### Q1 — Liaison au registre : **certificat à borne croissante** (D6)
+
+**Décision.**
+- Pas de slashing, pas de fenêtre de contestation.
+- Toute preuve d'écart valide entre le graphe engagé et le registre **ajoute au résidu** (1−α)·t_u^(a)·Δ_u pour chaque colonne a, où Δ_u est la distance L1 entre la ligne engagée et la ligne réelle.
+- Chaque ligne est facturée au plus une fois par état.
+- Certification sans permission ; remplacement par précision effective.
+
+**Argument décisif.** C'est la seule construction dont la garantie reste vraie sans dater les avis (AM-2.1). Elle supprime l'attaque par slashing inversé et n'a besoin d'aucune économie de caution.
+
+**Ce qu'on perd.**
+- La borne est globale en L1 : un seul élargissement touche tous les agents (relecture de A sur E).
+- Une omission non contestée reste invisible. La garantie ne vaut que s'il existe un surveillant (relecture de D sur C).
+
+**Confiance.** 0,7.
+
+**Qui surveille ?** Le consommateur à qui profite la contestation : il protège son propre paiement. Coût : une transaction par ligne contestée. Aucune récompense en v1.
+
+### Q2 — Identité (D9, D10)
+
+**Décision.**
+- **Nœuds.**
+  - Agent : `agentId`.
+  - Émetteur : `agentId` unique dont `agentWallet` = c, sinon nœud-adresse c.
+  - Ancre : nœud-ancre `anchorId`, **toujours distinct** d'un nœud-agent.
+- **Rejet d'arête** si c ∈ {ownerOf(j), agentWallet(j)} dans l'état engagé.
+- **`anchorId`** = keccak(clé₀, hash(clé₁)), avec pré-rotation. Après rotation, **seuls les avis de la clé courante comptent**, et l'ancre republie ce qu'elle veut maintenir (AM-2.6).
+- **Transfert d'agent** : la feuille engage l'owner ; si ownerOf ≠ owner engagé, alors `TRANSFERRED` et non fiable, jusqu'à recertification. La norme n'impose pas de remise à zéro, puisqu'elle n'est pas vérifiable (AM-2.7). Les ancres réévaluent (veto disponible).
+
+**Argument décisif.** L'`anchorId` à pré-rotation concilie immuabilité du `setId` et rotation des clés sans mettre les ancres en vente.
+
+**Ce qu'on perd.** Le rachat de réputation ne coûte qu'une pause (relecture de D sur E). Il y a un contrat de plus à déployer.
+
+**Confiance.** 0,6 sur la rotation ; 0,5 sur le transfert.
+
+### Q3 — Robustesse aux ancres (D7, D8)
+
+**Décision.**
+- **Budgets séparés** : C_uj = w⁺/B⁺_u, D_uj = w⁻/B⁻_u.
+- **Veto q = 1**.
+- **Confiance leave-one-out, `minAnchors` m = 2** : on retire les m−1 plus grosses contributions par ancre avant de comparer au seuil.
+- La méfiance n'est pas leave-one-out, puisqu'elle va dans le sens de l'échec fermé.
+
+**Argument décisif.** Avec ces règles, une clé volée ne produit qu'un déni de service, jamais un paiement vers un Sybil (AM-2.5). Et la critique honnête ne coûte plus rien au critique (AM-2.4).
+
+**Ce qu'on perd.**
+- Chaque fournisseur a besoin de deux ancres ; la démo doit en avoir au moins deux (AM-2.11).
+- Une clé volée peut dénigrer et mettre des vetos jusqu'à sa rotation.
+
+**Confiance.** 0,65.
+
+### Q4 — α et coût (D2 confirmée, D11)
+
+**Décision.**
+- α = 1/3 est maintenu, unique par déploiement. La norme autorise α par certificat. Pas de choix par le lecteur en v1.
+- **Lecture à preuve portée** : un `vectorRoot` par certificat, une feuille (agentId, owner, t^(1..k), d^(1..k)) fournie par le payé, vérifiée contre le root **courant** (anti-rejeu, relecture de D sur B).
+- Le cache stocké est une extension optionnelle, pas dans l'implémentation de référence.
+
+**Argument décisif.** On passe d'une écriture par agent à une écriture par certificat. Le seul poste de coût inconnu disparaît de l'architecture au lieu d'être mesuré.
+
+**Ce qu'on perd.**
+- Le « tout contrat lit `trustOf(agentId)` sans rien fournir ».
+- Un service de preuves à livrer (relecture de E sur B).
+- Le coût de hachage on-chain de l'arbre, non mesuré.
+
+**Confiance.** 0,65 sur la preuve portée ; 0,55 sur α.
+
+**Mesure à faire.** Taille du support et taux de passage leave-one-out pour α ∈ {1/4, 1/3, 1/2}. Réserve de E : sur notre propre graphe, cette mesure valide ce qu'on y met. Elle doit donc aussi tourner sur le snapshot du 21/09.
+
+### Q5 — Schéma de tags et graphe réel (D12, D13)
+
+**Décision.**
+- Le schéma est engagé **par ensemble**. La norme fixe son format et impose des **vecteurs de test normatifs** (relecture de C sur A). ANCRE publie un schéma de référence.
+- **Arrondi normé** : la conversion `value/10^dec` → WAD se fait par troncature vers zéro, et les bornes sont comparées en valeur exacte avant arrondi (relecture de C sur B).
+- **Aucune ancre par défaut dans la norme.**
+- Pour la démo : des ensembles étiquetés « demo ».
+- Pour le produit : le motif consommateur-ancre, **combiné à m = 2**. Le consommateur ne suffit jamais seul, ce qui répond à l'objection de C sur la corruption du client.
+
+**Argument décisif.** Un schéma par ensemble est la personnalisation elle-même, pas une autorité.
+
+**Ce qu'on perd.** Il faut produire des vecteurs de test et un schéma de référence crédible.
+
+**Confiance.** 0,75.
+
+**Pitch.** Annoncer d'emblée que sur le mainnet ANCRE **supprime** la ferme (moyenne naïve d'Eve-8004 à 1,5 × 10^36, mesuré ; masse ANCRE à 0 pour tout ensemble qui n'approuve pas la ferme, supposé) et répond « inconnu » pour presque tous les autres agents. La démo positive se fait sur notre propre trafic, et on le dit.
+
+---
+
+## Spécification — Q1 : certificat à borne croissante
+
+```
+ÉTAT par setId
+  cert = { vectorRoot, graphRoot, αN, αD, k,
+           r[a], e[a]  (a = 1..k, WAD),
+           certBlock,
+           rowState: mapping(node → bytes32) }   // hash de ligne courant après preuves
+  eEff(set) = Σ_a λ_a · ⌈r[a]·αD/αN⌉
+
+SOUMISSION (sans permission)
+  1. passe de vérification du tour 1 (budgets séparés, arrondis majorés, troncature T),
+     jointe sur les k colonnes, calcul on-chain de :
+       graphRoot  = Merkle(lignes triées ; ligne = (u, [(c, j, feedbackIndex, w)...], B⁺_u, B⁻_u))
+       vectorRoot = Merkle(feuilles triées ; feuille = (node, owner, t[1..k], d[1..k]))
+     longueur de ligne ≤ ROW_MAX (choix : 256) ; au-delà : ligne obligatoirement tronquée
+  2. remplacement ssi
+       cert courant absent
+     ∨ block.number − cert.certBlock > maxAge
+     ∨ eEff(new) ≤ eEff(courant)
+     ∨ block.number − cert.certBlock > minRefresh ∧ eEff(new) ≤ eEff(courant) + slackRefresh
+       // dernière clause : laisse passer un graphe densifié honnêtement (relecture A sur D)
+       // minRefresh, slackRefresh : choix engagés dans la politique
+
+PREUVE D'ÉCART (sans permission)
+  entrée : ligne engagée L_u (+ chemin vers graphRoot, ou vers rowState[u] si déjà modifiée),
+           feuille de u (+ chemin vers vectorRoot) pour lire t_u[1..k],
+           un fait du registre parmi :
+    (i)   OMISSION : feedback (c, j, idx) avec node(c) = u, non révoqué, tag1 ∈ filtre,
+                     valeur dans les bornes, (c, j) absent de L_u
+    (ii)  PÉRIMÉ   : (c, j, idx) ∈ L_u et un feedback (c, j, idx2 > idx) valide, tag1 ∈ filtre
+    (iii) RÉVOQUÉ  : (c, j, idx) ∈ L_u et readFeedback(j, c, idx).isRevoked
+    (iv)  WALLET   : agentWallet(u) ≠ wallet engagé  →  L'_u = ligne vide (pire cas)
+  calcul :
+    L'_u  = L_u modifiée par le fait ; recalcul de B⁺, B⁻ sur L'_u (≤ ROW_MAX)
+    Δ⁺    = ‖C_u − C'_u‖₁ ,  Δ⁻ = ‖D_u − D'_u‖₁
+    pour a = 1..k :
+      r[a] += ⌈t_u[a]·(αD − αN)·(Δ⁺ + Δ⁻) / αD⌉
+    rowState[u] = hash(L'_u)
+  u ∈ T (déjà tronquée) : preuve rejetée (déjà payée par la marge)
+  // soundness : inégalité triangulaire sur les états successifs de la ligne ;
+  // chaque état n'est facturé qu'une fois
+
+LECTURE (ne revert jamais)
+  assess(agentId, setId, leaf, proof) → {status, trustRobust, distrust, e, certBlock, vetoCount}
+    status ∈ {OK, NO_CERT, STALE, BAD_PROOF, TRANSFERRED, VETOED}
+    BAD_PROOF   si proof ne mène pas au vectorRoot COURANT
+    TRANSFERRED si ownerOf(agentId) ≠ leaf.owner
+    contributions  c_a = λ_a · leaf.t[a]
+    trustRobust = Σ_a c_a − (somme des (m − 1) plus grands c_a)
+    distrust    = Σ_a λ_a · leaf.d[a]
+    e           = eEff(set)
+    veto        : tour 1 §6, avec clé courante de chaque anchorId
+  isTrusted ⇔ status = OK
+            ∧ trustRobust ≥ θ + e
+            ∧ ρD·(distrust + e) ≤ ρN·(trustRobust − e)
+```
+
+Paramètres **choix**, à calibrer : ROW_MAX = 256, m = 2, q = 1, ρ = 1/2, K_MAX = 16, maxAge, minRefresh, slackRefresh.
+
+**Hypothèses non vérifiées** (AM-2.14) : `readFeedback(agentId, client, index)` renvoie tags et `isRevoked` ; `getLastIndex(agentId, client)` existe en v2.0.0 ; effet d'un transfert sur `agentWallet`.
+
+---
+
+## Changements dans le texte de la norme (tour 2)
+
+**Certificat**
+- Remplacer la contestation avec slashing par des preuves d'écart qui élargissent la borne. Définir les types (i) à (iv), le calcul de Δ et la facturation une fois par état de ligne.
+- Définir `graphRoot` (Merkle des lignes) et `vectorRoot` (feuilles avec owner et k colonnes). Normer ROW_MAX et la troncature obligatoire au-delà.
+- Règle de remplacement des certificats et `eEff`.
+- Niveaux : **Residual-verified**, **Registry-contested**, **Optimistic**.
+
+**Graphe**
+- Budgets séparés B⁺ et B⁻ (remplace le budget partagé).
+- Nœud-ancre distinct du nœud-agent.
+- Rejet de c ∈ {owner, agentWallet} de j.
+- Émetteur multi-agents → nœud-adresse.
+- Arrondi de conversion vers zéro, comparaison aux bornes avant arrondi.
+
+**Ancres**
+- Format `anchorId` avec pré-rotation. Seuls les avis de la clé courante comptent.
+- `setId` engage des `anchorId`, pas des adresses.
+
+**Politique**
+- `minAnchors` (défaut 2, MUST en considérations de sécurité), `q`, `ρ`, `maxAge`, `minRefresh`, `slackRefresh`.
+
+**Interface**
+- `assess` / `isTrusted` à preuve portée (REQUIRED), vérifiée contre le root courant. Statuts énumérés.
+- Cache stocké en extension optionnelle, soumis aux mêmes règles.
+
+**Schéma de tags**
+- Format du schéma engagé par ensemble, vecteurs de test normatifs, schéma de référence non normatif.
+
+**Considérations de sécurité**
+- Rachat d'agent (pause seulement), clé d'ancre volée (déni de service borné, pas de vol si m ≥ 2).
+- Dépendance de vivacité (AM-2.12), rejeu de feuille.
+- Absence de bloc dans le registre et ses conséquences.
+
+**Suggestion à ERC-8004** (post #309 ou nouveau fil) : stocker `block.number` dans chaque avis. Ça rendrait datables les preuves d'omission, la rotation et le transfert.
+
+---
+
+## Découpage hackathon (16 jours) / norme — AM-2.13
+
+| Élément | Démo 13/10 | Norme |
+|---|---|---|
+| Vérification en une passe, k colonnes jointes, `vectorRoot` | **oui** | oui |
+| `assess` à preuve portée + leave-one-out + veto direct | **oui** | oui |
+| Pause sur transfert | **oui** (une lecture) | oui |
+| Preuves d'écart | **type (i) OMISSION seulement**, c'est celui qui sert la démo (négatif omis) | (i) à (iv) |
+| Pré-rotation d'`anchorId` | non (adresses fixes, étiquetées « demo ») | oui |
+| Cache stocké | non | extension |
+| Mesure α ∈ {1/4, 1/3, 1/2} | oui, sur le snapshot et sur le graphe de démo | — |
+
+---
+
+## Désaccords non résolus (tour 2)
+
+1. **Dépendance de vivacité (AM-2.12).** E exige un mode dégradé. A et D refusent tout mode qui paie sans certificat frais. La certification sans permission n'est une réponse que si l'intégrateur sait recertifier, ce qui suppose l'indexeur et le solveur publiés.
+2. **Rachat de réputation.** D juge la pause inutile (elle ne coûte qu'un délai). C et B affirment qu'on ne peut rien faire de mieux sans le bloc dans le registre. La seule vraie solution est hors de notre portée (changer ERC-8004).
+3. **Leave-one-out m = 2 contre goulot d'intégration.** E l'accepte seulement avec le motif consommateur-ancre. C affirme que ce motif fait du client la nouvelle cible de corruption. Avec m = 2, le client seul ne suffit pas, mais un client plus une ancre complaisante, si.
+4. **Deux lectures ou une.** C veut garder un cache lisible sans preuve pour le pitch. B affirme que le cache optionnel deviendra l'implémentation copiée, et la mauvaise.
+5. **Borne globale.** A et E constatent qu'un élargissement touche tout le monde. Une borne par coordonnée plus fine exigerait une information sur la propagation que personne n'a su certifier en une passe.
+6. **α.** Toujours aucune donnée. La mesure proposée est partiellement circulaire (relecture de E sur A).
+
+---
+
+## Ce que vous auriez dû me demander (tour 2)
+
+1. **Les signatures du registre déployé sont-elles celles que la spec suppose ?** `readFeedback`, `getLastIndex`, `isRevoked`, `agentWallet` après transfert, et le garde-fou `isAuthorizedOrOwner` face à l'`agentWallet`. Dix minutes de `cast` sur l'implémentation derrière le proxy. Toute la Q1 en dépend (AM-2.14).
+2. **Qui fournit sa preuve au payé ?** Un service de preuves est un composant de plus, avec sa propre disponibilité, et il n'est pas dans votre liste d'actions.
+3. **Quel est le coût de hachage de deux arbres de Merkle dans la passe de vérification ?** Il remplace le poste « écritures » comme inconnue principale.
+4. **Qui a intérêt à contester ?** Sans récompense, seul le consommateur lésé conteste. Il faut vérifier que c'est suffisant pour le scénario de démo : le négatif omis doit être contesté par le contrat de démo lui-même.
+5. **Le consommateur-ancre note-t-il automatiquement après livraison ?** Si oui, c'est un flux on-chain de plus (gas, réserve de 10 MON par compte d'après CLAUDE.md). Si non, personne ne notera.
+6. **Combien d'ancres, et lesquelles, dans la démo ?** m = 2 impose au moins deux ancres honnêtes, plus une qui dépose le négatif. Le script de ferme Sybil doit aussi montrer qu'**une** ancre compromise ne suffit pas à faire payer la ferme : c'est une scène de démo que le tour 1 n'avait pas.
+7. **La mesure de α sur le snapshot a-t-elle un sens si les 36 arêtes utiles sont hors schéma ?** À mesurer avant de mesurer α.
+
+---
+
+# Tour 3 — 2026-09-27 — sur faits vérifiés
+
+## Faits vérifiés entre les tours 2 et 3
+
+Quatre agents, le 2026-09-27, au bloc ≈ 108,43 M. Les scripts et les sorties sont dans le scratchpad de la session.
+
+**ReputationRegistry** (proxy `0x8004BAa1…9b63`, implémentation `0x16e0fa7f…da34`, `getVersion()` = "2.0.0", source : `erc-8004/erc-8004-contracts` master, commit `b9e466c`)
+- `readFeedback(uint256 agentId, address client, uint64 idx) → (int128 value, uint8 valueDecimals, string tag1, string tag2, bool isRevoked)`. **L'index commence à 1.** `endpoint`, `feedbackURI` et `feedbackHash` ne sont pas stockés (seulement dans l'event). VÉRIFIÉ on-chain + source.
+- `getLastIndex(agentId, client)` = nombre d'avis de ce client sur cet agent, révoqués inclus. **Les index sont ordonnés par couple, tous tags confondus.** VÉRIFIÉ.
+- `getClients(agentId)` **existe** (7 665 pour #182). `readAllFeedback(agentId, clients[], tag1, tag2, includeRevoked)` existe. **Pas d'index par client.** VÉRIFIÉ.
+- Garde-fou `giveFeedback` : `!isAuthorizedOrOwner(msg.sender, agentId)`, c'est-à-dire owner, opérateurs et token approuvé, **mais pas `agentWallet`**. VÉRIFIÉ source + simulation.
+- Aucun bloc ni timestamp stocké. Seul l'auteur d'un avis peut le révoquer. `appendResponse` est ouvert à tous. VÉRIFIÉ.
+- Bornes : `valueDecimals ≤ 18`, `|value| ≤ 1e38` (borne incluse). VÉRIFIÉ.
+- Events : `NewFeedback` (agentId, client et keccak(tag1) indexés ; `feedbackIndex` non indexé), `FeedbackRevoked`, `ResponseAppended`. VÉRIFIÉ.
+- **Proxy UUPS, `onlyOwner` = EOA `0x5472…2603`**, sans multisig ni timelock. VÉRIFIÉ.
+
+**IdentityRegistry** (proxy `0x8004A169…a432`, implémentation `0x7274e874…9c02`. Bytecode recompilé : 14 474 octets, identique au master hors immutables et métadonnées)
+- `getAgentWallet` vaut owner au mint et **`0x0` après un transfert**. L'effacement se produit à chaque transfert (l.188-199). Il a eu lieu sur les 72 transferts de l'historique ; 70 agents sur 71 ne sont jamais re-vérifiés. VÉRIFIÉ source + simulation + historique.
+- `setAgentWallet` exige une signature EIP-712 ou ERC-1271 **du nouveau wallet**, avec un délai de 5 minutes au plus sur `block.timestamp`. VÉRIFIÉ.
+- **Pas d'unicité, pas d'index inverse** : 8 596 wallets distincts, dont **178 partagés par 1 773 agents** (jusqu'à 762 agents par wallet). MESURÉ.
+- `register` ne coûte que du gas, sans limite (≈ 146 k gas estimés). VÉRIFIÉ.
+- **Cas réel de contournement** : #8317 a reçu **78 avis de son propre agentWallet**. Après un transfert, l'ancien owner et les anciens opérateurs peuvent de nouveau noter l'agent. VÉRIFIÉ.
+- Même EOA owner et même mécanisme d'upgrade. **Une v2.1.0** (unicité du wallet, index inverse) est prête en amont, dans la branche `feat/unique-reverse-lookup`, et n'est pas déployée. VÉRIFIÉ source.
+- agentWallet == owner pour 10 189 agents sur 10 261 ; 70 sont à zéro ; 2 sont différents (#8316 et #8317). MESURÉ.
+
+**Gas Monad** (doc officielle + mesures par opcode `GAS` dans `eth_call`, client Monad/0.16.2)
+- **MIP-8 est actif depuis le 2026-09-02.**
+  - SLOAD : 8 100 à la première lecture d'une page, 100 ensuite.
+  - SSTORE 0→x : 27 900 sur une page froide, 17 100 sur une page déjà écrite.
+  - SSTORE x→y : 10 900 sur une page froide, **100** sur une page déjà écrite.
+  - Chaque clé de `mapping` tombe dans sa propre page.
+  - MESURÉ.
+- **Plancher EIP-7623 actif** : gas ≥ 21 000 + 10 × (octets nuls + 4 × octets non nuls), soit **40 gas par octet non nul**. MESURÉ.
+- KECCAK : 30 + 6 par mot. ecrecover : 6 000. P256 (0x0100) : 6 900. Accès à un compte froid : 10 100. DOC + MESURÉ.
+- On paie la gas limit : `receipt.gasUsed == tx.gas`. MESURÉ.
+- BLOCKHASH couvre 256 blocs ; EIP-2935 couvre **8 191 blocs**. **`eth_getProof` n'existe pas.** La racine d'état n'est plus vérifiable à la manière d'Ethereum (BLAKE3 par page, racine retardée de 3 blocs). MESURÉ + DOC.
+- Temps de bloc : 0,3 s ou 0,4 s selon la page de doc. NON TRANCHÉ.
+- `rpc1.monad.xyz` accepte des `eth_getLogs` sur tout l'historique. MESURÉ.
+
+**Données** (snapshot du 21/09 dans le vault, identique avis par avis au snapshot frais du 27/09)
+- 9 188 avis, égal à Σ `getLastIndex` on-chain. **Aucun nouvel avis depuis le 2026-09-10.** 0 révoqué. ~~100 % des avis ont `valueDecimals = 0`~~ **faux : 24 avis ont 2 décimales on-chain**, 8004scan les affiche à 0 (corrigé par R4, relecture on-chain des 9 188 avis au bloc 108 434 518). MESURÉ.
+- 7 771 couples, dont 55 ont plus d'un avis. #9 et #87 sont notés par le **même** wallet `0xd8a0…e38c`. MESURÉ.
+- **84 agents notés**, dont 10 absents de l'index 8004scan (lequel en compte 74). MESURÉ.
+- **36 arêtes** = 36 couples (37 avis) où le noteur est owner d'un agent noté.
+  - **33 vont vers Eve** : ce sont des agents Spawn notés par des scanners.
+  - **3 partent de `0xea0b…`**, owner de #18, #22 et #23, vers #2, #3 et #4.
+  - MESURÉ.
+- 109 valeurs négatives, venant de 7 noteurs, presque toutes issues de jeux. **Une seule tombe sur une arête utile** : `slash −100` sur #4, **effacé par la règle « dernier avis par couple »**, puisqu'un `review +1` a suivi sous un autre tag. MESURÉ.
+- Avec un schéma minimal (`vouch`, `review`, `slash`), il reste **3 arêtes utiles**. **Une seule chaîne honnête existe**, sur 2 sauts : `0x0730…` ou `0xf7d5…` → #18 → {#2, #3, #4}. MESURÉ ; le schéma est notre choix.
+- **Arête d'attaque réelle** : le scanner `0xa06f907f` note des agents Spawn (tags trust / oracle-screening), et ces agents notent Eve. Prendre ce scanner comme ancre fait fuir la confiance vers la ferme. MESURÉ.
+
+## Reformulation
+
+Le tour 3 ne rouvre que ce que les faits contredisent. Quatre questions :
+- Q1 — **Unité d'arête et rôle des tags**, question la plus importante. Le seul négatif utile du registre est effacé par notre propre règle, et la seule arête d'attaque réelle passe par un tag de mesure.
+- Q2 — **Stockage ou preuve portée, et encodage**. Deux mesures (MIP-8 et EIP-7623) contredisent D11 et l'estimation de gas.
+- Q3 — **Identité des noteurs et confiance dans le registre**. Wallet non unique, contournement réel du garde-fou, clé d'upgrade unique.
+- Q4 — **Ce que la démo et le pitch peuvent affirmer**, et comment fixer α, puisque le mainnet n'offre ni trafic ni graphe.
+
+## Phase 1 — Analyses indépendantes
+
+### A. Théoricien
+- **Q1.** Un tag est un **type de relation**, pas une étiquette : un ping de disponibilité ne délègue aucune confiance. Faire propager une mesure revient à fabriquer des arêtes d'attaque, et la borne Sybil ne vaut plus rien si les arêtes d'attaque sont gratuites. Le cas `0xa06f907f` en est la démonstration réelle. Il faut une **dichotomie normative** : endorsement (propage) ou measurement (ne propage jamais). Côté négatif, la règle « dernier par couple » confond deux énoncés distincts. Garder un dernier avis par (couple, tag), puis combiner en conservant le pire tant qu'il n'est pas révoqué : c'est la seule combinaison monotone du côté du refus.
+- **Q2.** La quantification du poids modifie C, donc t*. Elle doit être normative, sinon deux certificateurs honnêtes produisent deux points fixes différents. L'erreur de quantification n'entre pas dans la borne : elle *définit* le graphe.
+- **Q3.** Un wallet partagé par 762 agents, c'est un nœud qui agrège la masse de 762 agents s'il est fusionné. Il ne faut pas fusionner : si le wallet est ambigu, on crée un nœud-adresse sans masse propre, ce qui est la règle du tour 2, et les faits la valident.
+- **Q4.** Sur le mainnet, il n'y a rien à calibrer. La bonne mesure de α se fait sur des graphes synthétiques **à vérité connue** : une communauté honnête, une région Sybil, g arêtes d'attaque contrôlées. On y mesure la masse qui fuit et la couverture honnête en fonction de α. Ce n'est pas circulaire : la vérité est fixée par construction, et le résultat dépend du modèle, ce qu'on doit dire.
+
+### B. Ingénieur EVM
+- **Q1.** « Dernier par (couple, tag) » ne se lit pas directement : `getLastIndex` est tous tags confondus. Hors chaîne, l'indexeur a tous les avis, donc aucun problème. On-chain, dans le veto, il faut `readAllFeedback(j, [ancre], tag, "", false)` pour chaque tag du filtre, à un coût proportionnel au nombre d'avis de l'ancre sur j (petit en pratique, supposé). Il faut plafonner le nombre de tags du filtre par ensemble.
+- **Q2.** Les mesures inversent D11.
+  - Un vecteur tassé de 4 × uint64 par slot, mis à jour sur place, coûte **~100 gas/slot** (MESURÉ).
+  - Une lecture coûte un mapping agentId → index, puis un slot du vecteur, soit environ 16 k gas (ESTIMÉ à partir des 8 100 par page).
+  - Une preuve portée coûte ≈ 320 octets de calldata, soit 12,8 k gas au plancher, plus les hachages. Elle n'est pas moins chère, et elle est plus compliquée.
+  - **Conclusion : une table de nœuds append-only**, où l'index d'un nœud reste stable d'un certificat à l'autre. Le mapping n'est écrit qu'une fois par nouveau nœud (27 900).
+  - Encodage : arêtes groupées par ligne, dst en u16/u32, poids en int16 sur une grille de 1e-4, feedbackIndex en u32, soit **~8 octets/arête**. Au plancher, ~320 gas/arête (ESTIMÉ).
+- **Q3.** `getVersion()` coûte un appel froid (10 100) + un delegatecall, par lecture. C'est trop cher à chaque `trustOf` d'un router très sollicité. Mieux vaut le vérifier à la certification et dans une fonction `checkRegistry()` que n'importe qui peut appeler pour basculer l'état en `REGISTRY_CHANGED`.
+- **Q4.** Pour une démo sur le mainnet, notre ferme et nos fournisseurs paient la gas limit. La réserve de 10 MON impose au plus ~3 transactions pleines par compte toutes les 3 blocs (DOC). Il faut plusieurs comptes financés.
+
+### C. Concepteur de normes
+- **Q1.** Le `kind` doit être dans le **format** du schéma, pas laissé à l'appréciation : un implémenteur qui fait propager `liveness` refabriquera la fuite. MUST : un tag `measurement` ne crée jamais d'arête. MAY : un tag `measurement` peut servir de filtre de politique (par exemple, refuser un agent dont l'uptime est sous un seuil).
+- **Q2.** Si la quantification et l'encodage des feuilles de `graphRoot` ne sont pas normés, il n'y a pas d'interopérabilité des certificats. L'encodage du calldata, lui, est un détail d'implémentation.
+- **Q3.** La norme ne peut pas corriger la gouvernance d'ERC-8004. Elle doit l'**exposer** : le certificat engage le registre et sa version, et les considérations de sécurité citent l'upgradabilité. La demande à ERC-8004 existe déjà dans le draft (`block.number` par avis). Il faut y ajouter trois demandes : unicité de `agentWallet`, garde-fou étendu à `agentWallet`, et timelock sur l'upgrade.
+- **Q4.** Le pitch doit s'appuyer sur ce qui est mesurable par le jury. Trois faits on-chain sont reproductibles : la ferme (moyenne à 1,5e36), la fuite par le scanner, et le contournement #8317. C'est plus fort qu'une démo synthétique.
+
+### D. Attaquant
+- **Q1.** Aujourd'hui, je fais noter mes Sybil par un scanner public (ils sont en ligne, donc « trust 85 »), et ce scanner est une ancre plausible. Avec D15, cette voie est fermée. Avec « dernier par couple », je peux aussi **effacer le slash d'une ancre** si je la convaincs de poster n'importe quel avis positif sous un autre tag. Dominance du négatif : fermé. Reste le coût pour l'honnête : un slash erroné colle tant qu'il n'est pas révoqué. C'est acceptable, puisque la révocation existe et que seul son auteur peut révoquer.
+- **Q2.** Table append-only : je peux la gonfler en enregistrant des agents gratuitement. Mais seuls les nœuds du support y entrent, et le support exige de la masse. Pas d'attaque.
+- **Q3.** Je rachète un agent réputé : le wallet est effacé, donc l'agent n'a plus de nœud émetteur tant que je n'ai pas re-signé. Ses arêtes **sortantes** disparaissent, ses arêtes entrantes restent. La pause D10 tient. Autre voie : l'owner des registres peut tout changer. Je ne l'attaque pas, je **l'attends**. La v2.1.0 prévue changera le mapping des wallets, et un certificateur qui ne le voit pas certifiera un graphe faux.
+- **Q4.** Si la démo dit « live », le jury verra un registre dormant depuis le 10/09. Mieux vaut le dire avant qu'il ne le voie.
+
+### E. Intégrateur
+- **Q1.** La dominance du négatif me va : je préfère un faux refus à un faux paiement. Je veux savoir **quel** tag a déclenché le refus, dans le retour de `assess`.
+- **Q2.** Enfin un `trustOf(agentId, setId)` en vue simple. C'est ce que j'intègre. La preuve portée m'obligeait à changer le protocole x402 côté fournisseur.
+- **Q3.** `REGISTRY_CHANGED` doit être un état explicite, pas un revert. Et je veux un event, pour que mon monitoring le voie.
+- **Q4.** Une démo où l'acte 1 est le mainnet réel et l'acte 2 notre trafic me paraît honnête. Il faut que l'acte 2 tourne sur le mainnet, pas sur le testnet (où les registres sont absents), sinon ce n'est pas le même registre.
+
+## Phase 2 — Relecture croisée à l'aveugle
+
+Ordre anonyme : **1 = B, 2 = D, 3 = E, 4 = A, 5 = C**.
+
+- **A relit B (1)** : juste sur l'inversion de D11. *Oubli* : une table append-only ne rétrécit jamais, donc un nœud qui sort du support garde sa ligne. Il faut une valeur « hors support » explicite (0) et pas de nettoyage.
+- **A relit D (2)** : *vu* l'attente de la v2.1.0, qui est un vrai risque. *Trop optimiste* sur « seul l'auteur révoque » : si la clé de l'auteur est perdue, le slash est éternel. Il faut une échéance ou un mécanisme de levée.
+- **B relit A (4)** : la dichotomie endorsement / measurement est juste. *Faux* : « l'erreur de quantification n'entre pas dans la borne » ne vaut que si le contrat recalcule la quantification lui-même. Il la reçoit en calldata, donc il faut vérifier que chaque poids est sur la grille (w mod 1e14 == 0 en WAD).
+- **B relit C (5)** : *oubli* : un `kind` par tag, c'est un octet de plus par tag dans le schéma, sans aucun coût on-chain. Rien à objecter.
+- **C relit E (3)** : « acte 2 sur le mainnet » a un coût réel (MON, réserve de 10 MON par compte) que E ne chiffre pas.
+- **C relit B (1)** : `checkRegistry()` que n'importe qui appelle, c'est de la vivacité par bonne volonté. Il faut que le certificateur l'appelle à chaque certification (MUST).
+- **D relit A (4)** : *vu* le refus de fusionner les wallets. *Oubli* : sans fusion, un noteur ambigu a un nœud-adresse **sans masse**, sauf s'il est une ancre. Si j'enregistre un second agent sur le wallet d'une ancre-agent, je rends ses avis ambigus… mais l'ancre est un nœud-ancre séparé (D9). Pas d'attaque, à écrire explicitement.
+- **D relit E (3)** : « quel tag a déclenché le refus » donne à un attaquant un oracle gratuit pour tester ses avis. C'est mineur, puisque l'état est public de toute façon.
+- **E relit D (2)** : *vu* le registre dormant, à dire en premier. *Oubli* : le slash « éternel » est un risque juridique pour un fournisseur honnête. Il faut un chemin de contestation hors protocole, via `appendResponse`, qui existe (VÉRIFIÉ).
+- **E relit C (5)** : les trois demandes à ERC-8004 sont bonnes. *Trop optimiste* : aucune ne sera en place le 13/10, donc le produit doit fonctionner sans elles.
+
+## Phase 3 — Synthèse tranchée
+
+### Q1 — Unité d'arête et rôle des tags (D14, D15)
+
+**Décision.**
+- L'arête de base est le **dernier avis non révoqué par (client, agent, tag1)**.
+- Entre les tags du filtre d'un ensemble : **si un poids est négatif, w = le plus négatif ; sinon w = le plus grand**.
+- Le schéma déclare `kind` : **seuls les tags `endorsement` créent des arêtes**. Un tag `measurement` MAY servir de filtre de politique et MUST NOT se propager.
+- Le filtre d'un ensemble compte au plus TAGS_MAX tags (choix : 8).
+
+**Argument décisif.** Ce sont deux défauts réels, mesurés sur le mainnet : la règle du tour 2 effaçait le seul négatif utile du registre, et la seule fuite réelle vers la ferme passait par un tag de mesure.
+
+**Ce qu'on perd.**
+- Un négatif colle jusqu'à sa révocation, et une clé perdue le rend permanent. Le chemin de recours du fournisseur est `appendResponse`, hors score.
+- Les tags de réputation « trust » posés par des scanners automatiques ne comptent plus.
+
+**Confiance.** 0,7 (D14) ; 0,75 (D15).
+
+### Q2 — Stockage et encodage (D11 renversée, D18)
+
+**Décision.**
+- **Stockage.** Table de nœuds **append-only** : un mapping `nodeKey → index` écrit une seule fois. Vecteurs par colonne d'ancre, tassés 4 × uint64 par slot, **réécrits sur place**. Un nœud hors support vaut 0.
+- **Lecture.** Retour de `trustOf(agentId, setId)` en vue simple. La racine `vectorRoot` est conservée, car elle sert à l'export et aux preuves d'écart.
+- **Encodage du calldata.** Arêtes groupées par ligne, destinations en indices stables, **poids int16 sur une grille de 1e-4, normatif**. Le contrat vérifie que chaque poids est sur la grille. `feedbackIndex` en u32.
+- **Coût.** Cible estimée ≈ 320 gas/arête au plancher. À mesurer au `forge test --gas-report` (R5).
+
+**Argument décisif.** Sur Monad, l'écriture contiguë sur place coûte ~100 gas/slot (MESURÉ). La preuve portée coûtait plus cher et obligeait à modifier x402 côté fournisseur.
+
+**Ce qu'on perd.**
+- Le premier certificat est cher : 17 100 à 27 900 gas par slot neuf, MESURÉ.
+- La table ne rétrécit jamais.
+
+**Confiance.** 0,7.
+
+### Q3 — Identité et registre (D16, D17)
+
+**Décision.**
+- **Nœud émetteur.**
+  - Wallet c → l'unique agentId dont `agentWallet == c`.
+  - Sinon (0 ou plusieurs agents) → nœud-adresse c, sans masse sauf s'il est une ancre.
+  - Un nœud-ancre reste distinct de tout nœud-agent (D9).
+  - L'index wallet → agent est reconstruit par l'indexeur à partir de `MetadataSet(agentWallet)`, `Transfer` et `Registered`.
+- **Rejet d'arête** si c appartient à l'ensemble {owner, agentWallet, token approuvé, opérateurs de l'owner} de j au moment du certificat, **ou si c a été owner de j** (d'après les events `Transfer`). Ce rejet est contestable par une preuve d'écart de type (iv).
+- **Transfert.** Le wallet effacé supprime les arêtes sortantes de l'agent, et la pause D10 s'applique à ses arêtes entrantes. C'est cohérent avec le comportement mesuré.
+- **Registre upgradable.**
+  - Le certificat engage `(identityRegistry, reputationRegistry, keccak(getVersion()) de chacun)`.
+  - Le certificateur MUST vérifier la version à chaque certification.
+  - `checkRegistry()`, appelable par tous, bascule l'état en `REGISTRY_CHANGED` et émet un event.
+  - Un moniteur hors chaîne suit `Upgraded`.
+- **Demandes à ERC-8004**, à ajouter au draft : `block.number` par avis (déjà présent), garde-fou étendu à `agentWallet`, unicité du wallet (v2.1.0 en préparation), timelock sur l'upgrade.
+
+**Argument décisif.** Chaque règle répond à un fait mesuré : 178 wallets partagés, 78 auto-notations, 72 transferts sur 72 avec effacement, une EOA unique.
+
+**Ce qu'on perd.**
+- Une upgrade qui garde la même chaîne de version passe inaperçue on-chain. Seule la surveillance hors chaîne la voit.
+- Les agents transférés restent muets tant qu'ils ne re-signent pas.
+
+**Confiance.** 0,7 (D16) ; 0,6 (D17).
+
+### Q4 — Démo, pitch et α (D19)
+
+**Décision.**
+- **Acte 1, mainnet réel, reproductible par le jury.**
+  - Eve-8004 : moyenne naïve 1,5e36 → masse ANCRE 0.
+  - Le scanner `0xa06f907f` comme ancre : fuite visible vers la ferme, bornée et supprimée par D15.
+  - Le contournement du garde-fou sur #8317 (78 avis), détecté.
+  - La seule chaîne honnête (#18 → #2, #3, #4), présentée comme telle.
+- **Acte 2, notre trafic, sur le mainnet** et non sur le testnet, puisque les registres n'existent que sur le mainnet.
+  - Trois ancres, des fournisseurs, une ferme scriptée.
+  - Scène « une ancre compromise ne fait pas payer la ferme ».
+  - Scène « une ancre dépose un slash → refus au bloc suivant ».
+  - Scène « un review +1 sous un autre tag n'efface pas le slash ».
+- **Pitch.** Dire d'emblée que **le registre est dormant depuis le 10/09** et que le graphe honnête compte 3 arêtes utiles.
+- **α = 1/3 maintenu.** R4 le mesure sur des graphes synthétiques à vérité connue (fuite et couverture en fonction de α et du nombre d'arêtes d'attaque) et **ne cherche pas à le calibrer sur le mainnet**.
+
+**Argument décisif.** Trois faits on-chain vérifiables valent mieux qu'une démo synthétique pour ce jury.
+
+**Ce qu'on perd.**
+- Du MON pour l'acte 2. Coût à chiffrer en R8, avec la contrainte de la réserve de 10 MON par compte.
+- Aucune démonstration positive sur un trafic tiers.
+
+**Confiance.** 0,7.
+
+## Changements dans le draft d'ERC (tour 3, en plus des tours 1 et 2)
+
+- §2 `TagSchema` : ajouter `kind` (endorsement | measurement) et `neutral` ; supprimer `higherIsBetter` (le couple min / neutral / max le remplace). MUST NOT faire propager un tag `measurement`.
+- §3 : arête = dernier avis non révoqué par (client, agent, tag1), dominance du négatif, rejet des contrôleurs **et des anciens owners**, nœud-adresse pour un wallet ambigu. Supprimer « every node A controlled by clientAddress », qui fusionnait les agents.
+- §4 : grille de quantification normative. Remplacer `score = t·N`, `Σt = 1e18` et la masse sans issue renvoyée vers p (tours 1 et 2).
+- §5 : `Certificate` engage les versions des registres ; supprimer `nodeCount` ; `lastIndexRoot` est conservé comme base des preuves d'écart (le draft l'avait déjà).
+- §6 : `trustOf` ne revert plus. Il renvoie un statut (`OK`, `NO_CERT`, `STALE`, `TRANSFERRED`, `VETOED`, `REGISTRY_CHANGED`) et le tag déclencheur. Ajouter `checkRegistry()` et l'event associé.
+- Backwards Compatibility : ajouter les trois demandes à ERC-8004.
+- Security Considerations : upgradabilité par EOA, contournement réel du garde-fou (78 cas), wallets partagés, négatif permanent en cas de clé perdue, et le recours `appendResponse`.
+- Motivation : corriger avec les faits mesurés (84 agents notés dont 10 hors index 8004scan, registre dormant depuis le 10/09).
+
+## Désaccords non résolus (tour 3)
+
+1. **Négatif permanent.** A et E veulent une échéance ou une levée. D refuse toute échéance (j'attendrais son expiration). Rien n'est tranché : la révocation par l'auteur reste le seul mécanisme.
+2. **Coût de vérification de la version.** B veut une vérification à la certification plus `checkRegistry()`. C juge ça trop faible (vivacité par bonne volonté). E veut un event. La décision retient les deux, mais ne protège pas contre une upgrade qui garde la même version.
+3. **Acte 2 sur le mainnet.** C et B signalent un coût en MON non chiffré. E l'exige pour la cohérence. La décision est prise sous réserve du chiffrage R8.
+4. **Oracle de refus.** D juge que renvoyer le tag déclencheur aide l'attaquant, E en a besoin pour exploiter le service. La décision le retient, parce que l'état est public.
+
+## Ce que vous auriez dû me demander (tour 3)
+
+1. **Qui tient `0xa06f907f` ?** C'est un scanner qui note des agents Spawn. Est-il complice ou victime ? La démo le présente comme une arête d'attaque. Il faut vérifier ce qu'il est avant de le nommer publiquement.
+2. **Que devient ANCRE si la v2.1.0 est déployée avant le 13/10 ?** Unicité du wallet et index inverse simplifient D16, mais chaque certificat de démo devient `REGISTRY_CHANGED`.
+3. **Combien de MON coûte l'acte 2 ?** Nombre de comptes, gas limits, réserve. À chiffrer avant d'écrire le script de ferme.
+4. **Le jury peut-il rejouer l'acte 1 en 5 minutes ?** Un script reproductible (`cast` + solveur) vaut plus qu'une vidéo.
+5. **Faut-il notifier le propriétaire de #8317** (contournement du garde-fou) et l'équipe ERC-8004 (EOA unique) avant de le montrer au jury ? C'est une question de divulgation responsable. Elle est mineure ici (le comportement est public et documenté dans la source), mais elle vaut d'être posée.
+
+---
+
+# Résultats des chantiers R4, R5 et R6 — 2026-09-27
+
+Détails et commandes dans `solver/RESULTS.md`, `contracts/GAS.md`, `contracts/ENCODING.md`, `solver/FORMAT.md`, `docs/erc/CHANGES.md`. Tous les chiffres ci-dessous sont MESURÉS sauf mention contraire.
+
+**R4, solveur (`solver/`, 95 tests)**
+- Eve-8004 : moyenne naïve 1,53·10³⁶, **masse ANCRE 0**, même avec un schéma où tous les tags propagent.
+- Scanner `0xa06f907f` comme ancre : **34,6 % de fuite sans D15, 0 avec**. Deux scanners corrélés font passer Eve malgré m = 2 (AM-R4.8) : **D15 n'est pas redondante avec D8**.
+- #8317 : les 78 auto-notations sont rejetées. D14 conserve le slash sur #4.
+- **D16 coupe la seule chaîne honnête** (AM-R4.1) : `0xea0b` est le wallet de #18, #22 et #23, donc un nœud-adresse sans masse. La variante « relais » la rétablit ; elle n'est pas décidée.
+- α sur graphes synthétiques (dépend du modèle) : la borne de fuite est **atteinte** (rapport 1,00). Avec un seuil réglé à 1 % de Sybil admis, la couverture honnête vaut 0,64 / 0,55 / 0,44 pour α = 1/4, 1/3, 1/2. **1/2 est dominé, 1/4 est un candidat sérieux.**
+- 8004scan fausse 24 `valueDecimals` (AM-R4.2) : relire les avis on-chain.
+- Autres : la règle « ancien owner » rejette 9 notes d'execution.market (AM-R4.3) ; TAGS_MAX = 8 est trop petit (AM-R4.4) ; e < θ oblige à fournir presque tout le support (AM-R4.5) ; un nœud absorbant doit avoir une ligne vide (AM-R4.7) ; une note de 40/100 avec neutre à 50 devient de la méfiance (AM-R4.9).
+
+**R5, contrat (`contracts/`, 49 tests dont 6 en fork mainnet)**
+- **Le projet tient pour la démo.** L'acte 2 (300 arêtes, 100 nœuds, 3 ancres) coûte ≈ 840 k gas, soit ≈ 0,084 MON par mise à jour. Le graphe réel du mainnet coûte 133 à 146 k.
+- **L'estimation du CR (~320 gas/arête) est fausse d'un facteur 5 à 13 : c'est l'exécution qui domine**, pas le calldata (le plancher EIP-7623 n'est jamais atteint). Une mise à jour coûte 1 600 / 2 470 / 4 250 gas par arête pour k = 1 / 3 / 8.
+- Tailles limites dans 30 M (extrapolation linéaire) : ~18,7 k / 12,1 k / 7 k arêtes pour k = 1 / 3 / 8. L'hypothèse de R4 (2 000 nœuds) coûte **14,8 M** gas, pas 7,6 M.
+- Premier certificat : 28,7 k par nœud et 17,1 k par slot neuf. Au-delà de ~1 000 nœuds, il faut le découper (`addNodes`, `reserveCapacity`).
+- **Lecture : `assess` coûte 77 k sans veto et 115 à 190 k avec veto** (CR : ~16 k). Le seul `ownerOf` via le proxy froid coûte ~36 k (AM-R5.5).
+- forge 1.8.3 avec `network = "monad"` reproduit MIP-8 au gas près. Piège : les appels `view` ne sont pas isolés dans un test (AM-R5.1).
+- Écarts assumés : vecteurs entrelacés par groupes de 4 nœuds (une page lue au lieu de k), `vectorRoot` = keccak plat, d calculée sur la combinaison des ancres.
+- **Ouverts** :
+  - veto limité aux 32 derniers avis d'un couple : faux OK possible, cas réel avec 73 avis (AM-R5.6 = AM-R4.6) ;
+  - `addNodes` sans permission : gonflement de la table (AM-R5.7) ;
+  - `ownerFp` non vérifié (AM-R5.8) ;
+  - preuves (ii) à (iv) non écrites ;
+  - la preuve d'omission ignore la règle « ancien owner » (AM-R5.11).
+- Corrigé : un registre hostile pouvait vider le gas d'un `assess` ; chaque appel est maintenant plafonné à 120 k (AM-R5.9).
+
+**R6, norme (`docs/erc/`)**
+- Draft réécrit (775 lignes, EIP-1). 9 points ⟦OPEN⟧. 28 incohérences, AM-R6.1 à .28. La plus grave : **AM-R6.2**, l'élargissement de e sans limite par de nouveaux avis après chaque certification, qui mène à un déni de service. Le plafond par ligne proposé reste à valider.
+- AM-R6.1 était en partie faux : CLAUDE.md avait bien été mis à jour. Seul le §5 était resté obsolète ; il est corrigé.
+
+## Questions pour le tour 4 (bloquantes pour les chantiers)
+
+1. **D16 et le relais** : faut-il faire circuler la masse agent → wallet partagé, pour rétablir la seule chaîne honnête (AM-R4.1) ? Cela touche aussi à la règle « ancien owner » (AM-R4.3, AM-R5.11, AM-R6.4).
+2. **Veto en O(1) ou fenêtre** : D14 (dernier avis par tag) impose de parcourir tout l'historique. Options : fenêtre plus large, tag de veto réservé lu en O(1), veto certifié hors chaîne avec seulement le dernier avis lu en direct (AM-R5.6).
+3. **Élargissement non borné de e** (AM-R6.2) : faut-il un plafond par ligne, et qui paie la recertification ?
+4. **Permissions** de `addNodes` et `submitCertificate` (AM-R5.7, AM-2.3).
+5. **α = 1/4 ou 1/3** (R4 synthétique), et TAGS_MAX (AM-R4.4).
+6. **Coût de lecture** de 77 à 190 k : faut-il mettre `ownerOf` en cache dans le certificat, et quel budget accepter pour un routeur x402 ?
+7. **e < θ contre troncature** (AM-R4.5) : faut-il une borne par coordonnée, ou accepter de fournir tout le support ?

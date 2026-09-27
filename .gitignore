@@ -1,0 +1,11 @@
+# Foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+# Python
+solver/.venv/
+__pycache__/
+.pytest_cache/
+# Env / secrets
+.env
+*.env

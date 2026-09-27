@@ -1,0 +1,235 @@
+{
+ "format": "ancre-cert-v0",
+ "label": "toy_alpha_1_4",
+ "notes": "Jouet : ancre A2 sans arête (colonne triviale), arête négative, poids non ronds, cycle 1<->2.",
+ "alignedWith": "contracts/src/AnchoredReputation.sol (R5), état lu le 2026-09-27 ~12:55 ; ENCODING.md non publié",
+ "identityBlock": null,
+ "set": {
+  "anchors": [
+   "0x1111111111111111111111111111111111111111",
+   "0x2222222222222222222222222222222222222222"
+  ],
+  "lambdas": [
+   "500000000000000000",
+   "500000000000000000"
+  ],
+  "alphaN": 1,
+  "alphaD": 4,
+  "minAnchors": 2,
+  "tags": [
+   {
+    "tag": "vouch",
+    "min": "0",
+    "neutral": "0",
+    "max": "100000000000000000000",
+    "kind": 0
+   },
+   {
+    "tag": "review",
+    "min": "-1000000000000000000",
+    "neutral": "0",
+    "max": "1000000000000000000",
+    "kind": 0
+   },
+   {
+    "tag": "slash",
+    "min": "-100000000000000000000",
+    "neutral": "0",
+    "max": "0",
+    "kind": 0
+   }
+  ]
+ },
+ "nCert": 5,
+ "nodes": [
+  {
+   "i": 0,
+   "kind": "anchor",
+   "address": "0x1111111111111111111111111111111111111111",
+   "hasRow": true
+  },
+  {
+   "i": 1,
+   "kind": "anchor",
+   "address": "0x2222222222222222222222222222222222222222",
+   "hasRow": true
+  },
+  {
+   "i": 2,
+   "kind": "agent",
+   "agentId": 1,
+   "hasRow": true
+  },
+  {
+   "i": 3,
+   "kind": "agent",
+   "agentId": 2,
+   "hasRow": true
+  },
+  {
+   "i": 4,
+   "kind": "agent",
+   "agentId": 3,
+   "hasRow": true
+  }
+ ],
+ "rows": [
+  {
+   "u": 0,
+   "wallet": null,
+   "bPlus": 15000,
+   "bMinus": 10000,
+   "edges": [
+    {
+     "dst": 2,
+     "w": 10000,
+     "feedbackIndex": 1,
+     "client": "0x1111111111111111111111111111111111111111",
+     "agentId": 1,
+     "tag1": "vouch"
+    },
+    {
+     "dst": 3,
+     "w": 5000,
+     "feedbackIndex": 1,
+     "client": "0x1111111111111111111111111111111111111111",
+     "agentId": 2,
+     "tag1": "vouch"
+    }
+   ]
+  },
+  {
+   "u": 1,
+   "wallet": null,
+   "bPlus": 10000,
+   "bMinus": 10000,
+   "edges": []
+  },
+  {
+   "u": 2,
+   "wallet": null,
+   "bPlus": 10000,
+   "bMinus": 10000,
+   "edges": [
+    {
+     "dst": 3,
+     "w": 3333,
+     "feedbackIndex": 2,
+     "client": "1",
+     "agentId": 2,
+     "tag1": "vouch"
+    },
+    {
+     "dst": 4,
+     "w": -10000,
+     "feedbackIndex": 1,
+     "client": "1",
+     "agentId": 3,
+     "tag1": "slash"
+    }
+   ]
+  },
+  {
+   "u": 3,
+   "wallet": null,
+   "bPlus": 10277,
+   "bMinus": 10000,
+   "edges": [
+    {
+     "dst": 2,
+     "w": 7777,
+     "feedbackIndex": 1,
+     "client": "2",
+     "agentId": 1,
+     "tag1": "vouch"
+    },
+    {
+     "dst": 4,
+     "w": 2500,
+     "feedbackIndex": 4,
+     "client": "2",
+     "agentId": 3,
+     "tag1": "vouch"
+    }
+   ]
+  },
+  {
+   "u": 4,
+   "wallet": null,
+   "bPlus": 10000,
+   "bMinus": 10000,
+   "edges": [
+    {
+     "dst": 2,
+     "w": 1,
+     "feedbackIndex": 1,
+     "client": "3",
+     "agentId": 1,
+     "tag1": "vouch"
+    }
+   ]
+  }
+ ],
+ "vectors": {
+  "t": [
+   [
+    "250000000000000000",
+    "0",
+    "187004766116768098",
+    "109246516410039105",
+    "19931616061965877"
+   ],
+   [
+    "0",
+    "250000000000000000",
+    "0",
+    "0",
+    "0"
+   ]
+  ],
+  "ownerFp": [
+   "0",
+   "0",
+   "0",
+   "0",
+   "0"
+  ]
+ },
+ "expected": {
+  "residualMode": "contract",
+  "r": [
+   "7",
+   "7"
+  ],
+  "e": [
+   "28",
+   "28"
+  ],
+  "eEff": "28",
+  "d": [
+   "0",
+   "0",
+   "0",
+   "0",
+   "70126787293788037"
+  ],
+  "graphRoot": "0x3aa28ccc59b6180a68959ef18e1a04601bc262f68e5e64b7ffd92d34107d1032",
+  "vectorRoot": "0xe7b1bdf4e4980104fddd0b26c73c75eabece794075670d43a2336e9edaca8e32",
+  "tight": {
+   "r": [
+    "4",
+    "0"
+   ],
+   "e": [
+    "16",
+    "0"
+   ]
+  }
+ },
+ "calldata": {
+  "W": 2,
+  "newNodes": "0x010000000101000000020100000003",
+  "vectors": "0x03782dace9d9000000000000000000000000000000000000000000000000000003782dace9d90000000000000000000002985fd80fb1e9620000000000000000000000000000000001841f20bb91bb41000000000000000000000000000000000046cfb2ff2c463500000000000000000000000000000000",
+  "rows": "0x02000000050000000200022710000000010003138800000001000100000002000200030d05000000020004d8f0000000010003000200021e6100000001000409c400000004000400010002000100000001"
+ }
+}
