@@ -1,0 +1,227 @@
+=========================================================================
+PROMPT A ENVOYER TEL QUEL — conseil technique sur 4 decisions irreversibles
+Projet ANCRE / hackathon Monad Metropolis — prepare le 2026-09-27
+Aucune skill, aucun outil, aucun agent requis : le protocole est decrit dedans.
+Copie tout ce qui suit la ligne de tirets.
+=========================================================================
+-------------------------------------------------------------------------
+
+Tu es mon conseil technique sur quatre decisions irreversibles. Tu n'as
+besoin d'aucun outil : tout le contexte necessaire est dans ce message.
+
+PROTOCOLE A SUIVRE, DANS CET ORDRE, EN UNE SEULE REPONSE
+
+Phase 1 — Cinq analyses independantes. Tu incarnes successivement cinq
+experts, sans qu'aucun ne lise les autres. Chacun traite les quatre
+questions depuis son angle et uniquement le sien, en 250 mots maximum par
+question :
+  A. Theoricien des graphes et de la resistance Sybil.
+  B. Ingenieur EVM, obsede par le cout en gas et l'arithmetique entiere.
+  C. Concepteur de normes, qui pense adoption, compatibilite et
+     ce qu'un tiers implementera de travers.
+  D. Attaquant economique, qui cherche a manipuler le systeme a moindre
+     cout, ou a nuire a un concurrent honnete.
+  E. Integrateur, qui doit lire ce score dans SON contrat, en production,
+     et vivre avec ce choix pendant deux ans.
+
+Phase 2 — Relecture croisee a l'aveugle. Chaque expert relit les quatre
+autres analyses presentees anonymement (« analyse 1 » a « analyse 5 »),
+et dit pour chacune : ce qu'elle voit et que je n'avais pas vu, ce qui est
+faux ou trop optimiste, et ce qu'elle a oublie. Sois dur. Une relecture
+qui approuve tout n'a aucune valeur.
+
+Phase 3 — Synthese tranchee. Une decision par question, pas un menu.
+
+REGLES
+- Reponds en francais.
+- Ne reprends aucun chiffre que je n'ai pas fourni sans preciser qu'il
+  n'est pas verifie. Marque explicitement ce qui est mesure, estime ou
+  suppose.
+- Si une de mes questions est mal posee, dis-le et repose-la avant d'y
+  repondre.
+- Pas de flatterie, pas de resume de mon propre message.
+
+=========================================================================
+LE CONTEXTE
+=========================================================================
+
+Je construis ANCRE, pour le hackathon Monad Metropolis (cloture le
+13/10/2026, track « Trust, Identity & AI Infra », jury Paradigm,
+Dragonfly, Electric Capital, cofondateurs de Monad).
+
+ANCRE est une couche d'agregation de reputation au-dessus d'ERC-8004, la
+norme d'identite et de reputation des agents IA, deployee a la meme
+adresse sur plus de 40 chaines. ERC-8004 stocke les avis mais delegue
+explicitement le filtrage anti-Sybil au lecteur : sa fonction getSummary
+exige que l'appelant fournisse lui-meme la liste des noteurs a croire, et
+la spec ecrit noir sur blanc « Sybil attacks are possible ».
+
+Notre reponse : un PageRank personnalise (famille EigenTrust) calcule
+hors chaine et verifie on-chain, relatif aux ancres choisies par le
+lecteur, lisible par un contrat via trustOf(agentId, anchorSetId) avant
+qu'il paie.
+
+LES MATHS
+- Point fixe : t = (1 - alpha) * C^T t + alpha * p, ou C est normalisee
+  par ligne, p est la distribution uniforme sur les ancres du lecteur, et
+  la masse des noeuds sans arete sortante est renvoyee vers p.
+- F est une contraction de facteur (1 - alpha) en norme L1, donc pour
+  tout vecteur publie : ||t - t*||_1 <= ||t - F(t)||_1 / alpha.
+  Verifier un point fixe coute donc UNE multiplication matrice creuse
+  par vecteur, la ou le calculer coute des dizaines d'iterations.
+- Borne Sybil : la masse qui entre dans une region Sybil S ne traverse
+  que les aretes d'attaque, pi(S) <= ((1-alpha)/alpha) * somme des
+  pi(u) * c_uv sur les aretes d'attaque. Cheng & Friedman (2005) : seules
+  les fonctions asymetriques ancrees sur des graines peuvent etre
+  Sybil-resistantes.
+- PPR est lineaire en p : une colonne par ancre suffit, et tout ensemble
+  d'ancres est une combinaison lineaire de ces colonnes. Notre cache en
+  depend.
+
+=========================================================================
+LES FAITS — tous mesures le 21/09/2026 sur le mainnet Monad (chainId 143),
+sauf mention contraire
+=========================================================================
+
+Les registres ERC-8004 v2.0.0 sont deployes sur le mainnet Monad, et
+absents du testnet.
+
+- 10 171 agents enregistres, 9 188 avis deposes, mais 84 agents notes
+  seulement.
+- 7 665 avis, soit 83 % du total, viennent d'une seule ferme : 7 665
+  agents « Spawn-8004 » crees les 16 et 17 fevrier 2026 a environ 300 par
+  heure, notant tous le meme agent, « Eve-8004 », a 100.
+- 117 de ces avis valent 1e38, la borne de l'int128 utilisee.
+- Moyenne naive d'Eve-8004 : 1,5 x 10^36.
+- Deux autres agents ont 518 et 508 avis, venant chacun d'un seul wallet
+  (tag « elo », valeurs autour de 1 600).
+- Le registre melange donc des notes sur 100, des Elo a 1 600, des +-1 et
+  du 1e38.
+- 36 aretes seulement ou le noteur est lui-meme un agent note. Le graphe
+  honnete est quasi vide.
+- Zero avis revoque.
+- Un projet concurrent (ColinkaMir/monad-agent-trust) a mesure que 16
+  avis sur 9 188 seulement sont « propres » : la ferme payait bien ses
+  cibles, mais les noteurs avaient d'abord ete finances par le
+  proprietaire de l'agent note.
+- Etude externe (arXiv 2606.26028) : comportement Sybil coordonne chez
+  73,5 % des noteurs sur Ethereum, 59,2 % sur BSC, 90,6 % sur Base.
+
+FORMAT D'UN AVIS ERC-8004 v2.0.0
+int128 value, plus uint8 valueDecimals (0 a 18), deux tags texte libres,
+un URI et un hash hors chaine. Pas de feedbackAuth : n'importe qui note
+gratuitement, sans l'accord de l'agent. Un champ proofOfPayment optionnel
+existe dans le fichier hors chaine, que rien ne verifie. Le registre ne
+stocke PAS le numero de bloc de chaque avis.
+
+CONTRAINTES MONAD
+Blocs de 0,3 s, finalite environ 0,6 s, 150 M de gas par bloc, 30 M par
+transaction, base fee plancher 100 gwei, on paie la gas limit et non le
+gas consomme, stockage facture par pages de 128 slots (8 100 de gas a la
+premiere lecture d'une page, 100 ensuite).
+
+ESTIMATIONS, NON MESUREES
+Environ 350 a 400 gas par arete verifiee en calldata, donc environ 3,7 M
+de gas et 0,37 MON pour certifier le graphe reel entier en une seule
+transaction.
+
+=========================================================================
+CE QUI EST DEJA TRANCHE — ne le rouvre pas sans preuve forte
+=========================================================================
+
+1. PageRank personnalise plutot qu'Advogato, SybilGuard/SybilLimit ou
+   SybilRank : seul candidat avec a la fois une borne formelle et un
+   certificat en une passe.
+2. Ancres choisies par le lecteur, pas de score global unique.
+3. Matrice passee en calldata, pas relue depuis le storage du registre.
+4. Norme chain-agnostique : Monad n'y est pas cite.
+5. Valeur hors bornes rejetee, jamais plafonnee.
+
+=========================================================================
+LES QUATRE QUESTIONS
+=========================================================================
+
+Q1 — COMMENT EXPOSER LE SCORE ?
+
+Ma convention actuelle : score = t_i * N, ou N est le nombre de noeuds du
+graphe, de sorte que 1e18 represente la moyenne uniforme, accompagne de
+errorBound = (r/alpha) * N. Un contrat tiers ecrit alors
+require(score - errorBound >= seuil).
+
+A trancher : le score depend de N, donc un seuil ecrit en dur dans un
+contrat tiers vieillit-il mal quand le graphe grandit ? Un attaquant peut-
+il gonfler N pour diluer les autres ? Faut-il plutot un rang percentile
+(mais il faut trier, donc c'est cher on-chain), une part de la masse des
+ancres, une normalisation par le maximum, ou une echelle logarithmique ?
+Faut-il un score par tag plutot qu'un score global par agent ?
+
+Q2 — QUELLE VALEUR D'ALPHA ?
+
+Alpha gouverne trois choses a la fois, et je veux savoir si elles tirent
+dans le meme sens :
+  - la resistance Sybil, via la borne (1-alpha)/alpha : un alpha grand
+    reduit la masse qui fuit vers une region Sybil ;
+  - la precision certifiee, via r/alpha : un alpha grand rend la
+    certification moins chere pour une meme garantie ;
+  - l'utilite : un alpha grand ecrase la propagation, donc sur un graphe
+    a 36 aretes utiles, presque personne ne recoit de confiance au-dela
+    des ancres elles-memes.
+Donne une valeur, ou une regle de choix en fonction de la densite du
+graphe, et dis ce qu'on perd.
+
+Q3 — LE POIDS D'UNE ARETE DOIT-IL DEPENDRE DU PAIEMENT ?
+
+Options : la valeur normalisee seule ; la valeur multipliee par le montant
+paye via x402 ; le paiement comme condition necessaire mais pas comme
+poids ; min(montant, plafond) pour eviter qu'un gros payeur ecrase tout.
+
+Le fait qui doit peser : la ferme payait, et le proprietaire de l'agent
+note financait les noteurs. Le paiement est-il un signal legitime, ou une
+complexite qui achete peu ?
+
+Q4 — LA QUESTION LA PLUS IMPORTANTE : COMMENT UN AVIS NEGATIF FAIT-IL
+BAISSER UN SCORE ?
+
+Un PageRank travaille sur des poids positifs. Or toute notre demonstration
+repose sur ceci : un fournisseur honnete se met a mal se comporter, UNE
+ancre depose un avis negatif, et au bloc suivant tous les contrats du
+domaine refusent de le payer.
+
+Mecaniquement, un avis negatif ne peut pas reduire la masse propagee dans
+un graphe stochastique. Il faut donc un mecanisme, et je veux que le
+conseil le choisisse :
+  (a) deux graphes separes, confiance et mefiance, propages
+      independamment puis combines — avec quelle formule, et que devient
+      la borne d'erreur ?
+  (b) l'avis negatif retire les aretes positives existantes vers cet
+      agent, il agit comme une revocation ;
+  (c) une « alarme » signee par une ancre, propagee hors du score et
+      verifiee separement par la politique du contrat consommateur : le
+      score reste positif, mais trustOf renvoie un drapeau ;
+  (d) autre chose.
+
+Criteres de jugement :
+  - est-ce que ca reste verifiable on-chain par un residu, en une passe ?
+  - est-ce que ca reste Sybil-resistant : un attaquant ne doit pas
+    pouvoir faire tomber un concurrent honnete ;
+  - est-ce que ca garde la linearite en p, dont depend notre cache par
+    ancre ?
+
+=========================================================================
+CE QUE JE VEUX EN SORTIE
+=========================================================================
+
+1. Une decision par question, avec l'argument qui l'emporte, ce qu'on
+   perd, et ton niveau de confiance.
+2. Pour Q4, une specification en pseudo-code ou en formule, assez precise
+   pour etre implementee sans nouvelle decision.
+3. La liste de ce qui doit changer dans le texte de la norme que j'ecris :
+   interface, certificat, semantique des tags.
+4. Une section « desaccords non resolus » : ce sur quoi les cinq analyses
+   ne convergent pas, sans le lisser.
+5. Une section « ce que vous auriez du me demander » : les hypotheses que
+   j'ai posees sans les justifier et qui meritent d'etre attaquees.
+
+-------------------------------------------------------------------------
+FIN DU PROMPT
+=========================================================================
