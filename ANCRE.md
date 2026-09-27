@@ -66,7 +66,7 @@ C'est la norme d'identité et de réputation des agents IA. Elle est déployée 
 ### Ce que montre le mainnet Monad
 Snapshot du 21/09, identique avis par avis le 27/09, relu on-chain au bloc 108 434 518. Tout est MESURÉ.
 
-- **9 188 avis, 84 agents notés**, plus de 10 000 agents enregistrés. Aucun avis entre le 2026-09-10 et le bloc 108 483 651. ⚠️ corrigé le 27/09 (vague 2) : **le registre n'est plus dormant**, 95 nouveaux avis de 20 clients depuis le bloc 108 483 651 (analyse : `docs/ressources/nouveaux-avis-mainnet.md`).
+- **9 188 avis, 84 agents notés**, plus de 10 000 agents enregistrés. Aucun avis entre le 2026-09-10 et le bloc 108 483 651. ⚠️ corrigé le 27/09 : le registre n'est plus dormant. **95 nouveaux avis d'execution.market** (un rattrapage automatique, posté par un relayer unique) portent le total à **9 283 avis**. Ils ajoutent **0 arête utile**, et l'acte 1 ne change pas. Source : `docs/ressources/nouveaux-avis-mainnet.md`.
 - **Une ferme** : 7 665 agents « Spawn-8004 », créés les 15, 16 et 17/02/2026 à environ 300 par heure, notent tous « Eve-8004 » (#182). Cela fait **83 % des avis**, dont **117 valeurs à 1e38**, la borne autorisée.
   - **Moyenne naïve d'Eve : 1,53 × 10³⁶.**
 - Les agents #9 et #87 ont reçu 518 et 508 avis, venant **du même wallet** (tag `elo`).
@@ -353,6 +353,7 @@ Ancres : clés « demo » ; Mera (PRF du passkey) pour un usage hors wallet ─�
 | Sireadell/headwater-indexer | Indexeur Envio des registres 8004 de Monad (provenance) | Concurrent sur le bounty Envio |
 | Beltran12138/warrant | Plugin `mm` qui écrit des avis ERC-8004 | Complémentaire : il produit, on consomme |
 | aliveevie/mandate | Mera, ERC-8004, CRE, disjoncteur | Concurrent sur le bounty Mera : éviter l'angle « le passkey possède l'agent » |
+| Kanmani/Sentinel (#10252, #10256, #10257, repéré le 27/09) | Verdict daté par bloc avant d'embaucher un agent | **Le plus proche d'ANCRE.** Notre différence reste à établir : ancres choisies par le lecteur, certificat vérifiable, veto, norme |
 | ~18 clones « passeport d'agent » | Produisent des signaux | ANCRE **agrège** pour le lecteur |
 
 **Le message** : *« la couche que la norme délègue au lecteur, et la preuve sur le mainnet que la moyenne ment »*.
