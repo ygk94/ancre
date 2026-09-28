@@ -49,21 +49,31 @@ HDR_NE_MASK = 0x0FFF
 ROW_ALIAS_MAX = 64          # D44 (choice): max alias rows sharing one ref; beyond, a new full row starts
 
 
-def row_bytes(cert: Certificate, u: int, W: int, alias_of: dict[int, int]) -> bytes:
-    """Bytes of one row (FORMAT.md §2). Alias row: u ‖ hdr ‖ ref. Full row: u ‖ hdr ‖ [source] ‖ [sPlus] ‖ edges."""
+class NotEncodable(Exception):
+    pass
+
+
+def row_bytes(cert: Certificate, u: int, W: int, alias_of: dict[int, int], version: str = "v1") -> bytes:
+    """Bytes of one row (FORMAT.md §2). v1 alias row: u ‖ hdr ‖ ref. Full row: u ‖ hdr ‖ [source] ‖ [sPlus] ‖ edges.
+    v0 (contracts/ENCODING.md): no ALIAS / VIA_OWNER / SPLUS bits, the source (wallet or owner) in the wallet
+    field; a row whose declared sPlus differs from its committed sum is NotEncodable (never silently dropped)."""
     src, via = cert.row_src.get(u, (None, "address"))
-    hdr = HDR_VIA_OWNER if via == "owner" else 0
-    if u in alias_of:
-        return u.to_bytes(W, "big") + (hdr | HDR_ALIAS).to_bytes(2, "big") + alias_of[u].to_bytes(W, "big")
     edges = cert.rows[u]
     has_src = via in ("wallet", "owner")
-    committed_plus = sum(q for _, q, _ in edges if q > 0)
-    has_splus = cert.splus[u] != committed_plus
-    hdr |= len(edges) | (HDR_SRC if has_src else 0) | (HDR_SPLUS if has_splus else 0)
+    has_splus = cert.splus[u] != sum(q for _, q, _ in edges if q > 0)
+    if version == "v0":
+        if has_splus:
+            raise NotEncodable(f"row {u} has a declared sPlus (ROW_MAX cap): v0 cannot express it")
+        hdr = len(edges) | (HDR_SRC if has_src else 0)
+    else:
+        hdr = HDR_VIA_OWNER if via == "owner" else 0
+        if u in alias_of:
+            return u.to_bytes(W, "big") + (hdr | HDR_ALIAS).to_bytes(2, "big") + alias_of[u].to_bytes(W, "big")
+        hdr |= len(edges) | (HDR_SRC if has_src else 0) | (HDR_SPLUS if has_splus else 0)
     rb = u.to_bytes(W, "big") + hdr.to_bytes(2, "big")
     if has_src:
         rb += bytes.fromhex(src[2:])
-    if has_splus:
+    if has_splus and version != "v0":
         rb += cert.splus[u].to_bytes(4, "big")
     for dst, q, fi in edges:
         rb += dst.to_bytes(W, "big") + (q & 0xFFFF).to_bytes(2, "big") + fi.to_bytes(4, "big")
@@ -90,26 +100,28 @@ def aliases(cert: Certificate) -> dict[int, int]:
     return out
 
 
-def encode(cert: Certificate, nodes: list[tuple[str, object]], identity: Identity | None):
-    """Calldata (FORMAT.md §2, v1): newNodes, vectors, rows; + graphRoot, vectorRoot."""
+def node_entry(key: tuple[str, object]) -> bytes:
+    kind, v = key
+    if kind == AGENT:
+        return bytes([1]) + int(v).to_bytes(4, "big")
+    if kind == ADDR:
+        return bytes([2]) + bytes.fromhex(str(v)[2:])
+    raise ValueError("anchors are created by registerAnchorSet, not as new nodes")
+
+
+def encode(cert: Certificate, nodes: list[tuple[str, object]], identity: Identity | None, version: str = "v1"):
+    """Calldata (FORMAT.md §2 v1, or v0): newNodes, vectors, rows; + graphRoot, vectorRoot."""
     n, k = cert.n, cert.k
     W = 2 if n <= 0xFFFF else 4
-    new_nodes = b""
-    for kind, key in nodes[k:]:
-        if kind == AGENT:
-            new_nodes += bytes([1]) + int(key).to_bytes(4, "big")
-        elif kind == ADDR:
-            new_nodes += bytes([2]) + bytes.fromhex(str(key)[2:])
-        else:
-            raise ValueError("an anchor outside the first k nodes")
+    new_nodes = b"".join(node_entry(x) for x in nodes[k:])
     fps = [owner_fp(identity.owner.get(int(key))) if (kind == AGENT and identity) else 0 for kind, key in nodes]
     vectors = b"".join(b"".join(cert.t[a][v].to_bytes(8, "big") for a in range(k)) + fps[v].to_bytes(8, "big")
                        for v in range(n))
-    al = aliases(cert)
+    al = aliases(cert) if version == "v1" else {}
     rows = bytes([W]) + len(cert.rows).to_bytes(4, "big")
     leaves = []
     for u in sorted(cert.rows):
-        rb = row_bytes(cert, u, W, al)
+        rb = row_bytes(cert, u, W, al, version)
         rows += rb
         leaves.append(keccak(rb))
     return {"W": W, "newNodes": new_nodes, "vectors": vectors, "rows": rows, "aliases": al,
