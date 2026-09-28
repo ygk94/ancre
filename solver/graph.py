@@ -1,21 +1,37 @@
-"""ANCRE R4 — construction du graphe de confiance à partir des avis ERC-8004.
+"""ANCRE — signed trust graph built from ERC-8004 feedback. NORMATIVE REFERENCE for the edge rules.
 
-Règles appliquées (CR du conseil, décisions citées par numéro) :
-  D14  unité d'arête = dernier avis non révoqué par (client, agent, tag1) ; puis, entre les tags
-       du filtre, dominance du négatif (un poids < 0 => le plus négatif ; sinon le plus grand).
-  D15  seuls les tags `kind = endorsement` du schéma créent des arêtes.
-  D12  schéma (tag -> min, neutre, max, kind) engagé par ensemble, chargé depuis un JSON.
-  D16  nœud émetteur = l'unique agentId dont agentWallet == client, sinon nœud-adresse ;
-       rejet si client ∈ {owner, agentWallet, approved, opérateurs de l'owner} de la cible,
-       ou si client a été owner de la cible (logs Transfer).
-  D9   nœud-ancre toujours distinct d'un nœud-agent.
-  D18  poids quantifié normatif : int16 sur la grille 1e-4, troncature vers zéro.
-  CR   valeur hors bornes => rejetée (jamais plafonnée) ; comparaison aux bornes en valeur exacte.
+This module is the reference implementation of the edge rules (chantier 04). The indexer (chantier 03)
+ports them to TypeScript; `tests/test_indexer_parity.py` is the judge. Decisions cited by number (CR du conseil).
 
-Toute l'arithmétique normative est en entiers (WAD = 1e18), comme le fera le contrat.
+  R1 (D12)  Tag schema per anchor set: tag -> (min, neutral, max, kind), bounds in WAD. Filter <= TAGS_MAX = 16 (D24).
+  R2 (D15)  Only tags of kind `endorsement` create edges. `measurement` tags never propagate.
+  R3 (D14)  Per (client, agent, tag1): the non-revoked feedback with the highest feedbackIndex.
+            If that feedback is out of bounds, this tag yields nothing (no fallback to an older feedback).
+  R4 (D18)  Weight q = quantize(value, decimals, spec): int16 on the 1e-4 grid, truncated toward zero.
+            Out of bounds => rejected, never clamped.
+  R5 (D14)  Per (client, agent): combine the tags of the filter by negative dominance:
+            q = min over tags if some q < 0, else max. q == 0 => no edge.
+  R6 (D20)  Reject the pair if the client is a CURRENT controller of the target agent:
+            owner, agentWallet, getApproved, or an approved-for-all operator of the owner.
+            (The "past owner" rule of D16 is REMOVED: unverifiable on-chain, false for platforms, AM-4.2.)
+  R7 (D20, D44)  Emitter resolution. For an agent j:
+                src(j) = agentWallet(j)            if agentWallet(j) != 0
+                       = ownerOf(j)                if agentWallet(j) == 0 and OWNER FALLBACK is on (D44)
+                       = none                      otherwise
+            The wallet always wins: an agent with a wallet never emits its owner's row (D44).
+            A(c) = {j : src(j) = c}. ROW COPY (D20): every agent j of A(c) that is a node of the graph carries
+            the row of c (the combined edges of client c), each with its own mass. No mass is created (D34).
+            A client with A(c) empty is an ADDRESS node (never rated, hence never massive unless an anchor).
+  R8 (D9)   Anchor nodes are distinct from agent nodes: the anchor row is the row of the anchor address,
+            carried by the anchor node, in addition to any agent copy.
+
+OWNER FALLBACK (D44) is behind the `owner_fallback` flag, default OFF until Hugo confirms (tour 6, conf. 0,65).
+
+All normative arithmetic is integer (WAD = 1e18), exactly as the contract does it.
 """
 from __future__ import annotations
 
+import gzip
 import json
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -28,7 +44,7 @@ GRID_WAD = WAD // GRID       # 1e14
 Q_MAX = GRID                 # |q| <= 10000 tient dans un int16
 ZERO = "0x" + "0" * 40
 VALUE_ABS_MAX = 10**38       # borne du registre v2.0.0 (incluse)
-TAGS_MAX = 8                 # D14 : taille max du filtre d'un ensemble (choix)
+TAGS_MAX = 16                # D24: max tags in the filter of a set
 ROW_MAX = 256                # spec Q1 tour 2 : longueur max d'une ligne (choix)
 
 # ----------------------------------------------------------------------------- données
@@ -78,7 +94,9 @@ def load_feedbacks(path: str | Path) -> list[Feedback]:
 def load_feedbacks_onchain(path: str | Path) -> list[Feedback]:
     """Relecture on-chain (readAllFeedback, includeRevoked = true) : {"block", "feedbacks": [{a, c, i, v, d, t1, t2, r}]}.
     Source à préférer : 8004scan écrit valueDecimals = 0 pour 24 avis qui ont 2 décimales on-chain (AM-R4.2)."""
-    raw = json.load(open(path))
+    p = Path(path)
+    with (gzip.open if p.suffix == ".gz" else open)(p, "rt") as fh:
+        raw = json.load(fh)
     return [Feedback(agent_id=int(x["a"]), client=x["c"].lower(), index=int(x["i"]), value=int(x["v"]),
                      decimals=int(x["d"]), tag1=x["t1"], tag2=x["t2"], revoked=bool(x["r"]))
             for x in raw["feedbacks"]]
@@ -92,7 +110,7 @@ class Identity:
     wallet: dict[int, str]
     approved: dict[int, str] = field(default_factory=dict)
     operators: dict[str, set[str]] = field(default_factory=dict)     # owner -> opérateurs actifs
-    past_owners: dict[int, set[str]] = field(default_factory=dict)   # agentId -> détenteurs passés
+    past_owners: dict[int, set[str]] = field(default_factory=dict)   # agentId -> past holders (reports only, not a rule)
     past_wallets: dict[int, set[str]] = field(default_factory=dict)  # agentId -> wallets déclarés un jour
     _w2a: dict[str, list[int]] | None = None
 
@@ -105,8 +123,19 @@ class Identity:
             self._w2a = {k: sorted(v) for k, v in m.items()}
         return self._w2a
 
+    def source_of(self, agent_id: int, owner_fallback: bool = False) -> tuple[str | None, str]:
+        """R7: (src(j), "wallet" | "owner" | ""). The wallet always wins over the owner (D44)."""
+        w = self.wallet.get(agent_id, ZERO) or ZERO
+        if w != ZERO:
+            return w, "wallet"
+        if owner_fallback:
+            o = self.owner.get(agent_id)
+            if o and o != ZERO:
+                return o, "owner"
+        return None, ""
+
     def controllers(self, agent_id: int) -> dict[str, str]:
-        """{adresse: raison} des adresses qui contrôlent l'agent au bloc du certificat (D16)."""
+        """R6: {address: reason} of the CURRENT controllers of the agent at the certificate block (D20)."""
         c: dict[str, str] = {}
         o = self.owner.get(agent_id)
         if o:
@@ -119,8 +148,6 @@ class Identity:
         ap = self.approved.get(agent_id)
         if ap and ap != ZERO:
             c.setdefault(ap, "approved")
-        for po in self.past_owners.get(agent_id, ()):
-            c.setdefault(po, "past_owner")
         return c
 
 
@@ -172,6 +199,79 @@ def load_identity(state_path, logs_path=None, approved_path=None) -> Identity:
                 pw[int(l["topics"][1], 16)].add("0x" + v.hex())
         idn.past_wallets = dict(pw)
     return idn
+
+
+TOPIC_APPROVAL = "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925"
+TOPIC_APPROVAL_FOR_ALL = "0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31"
+
+
+def replay_identity_events(idn: Identity, events: list[dict], after_block: int, to_block: int) -> Identity:
+    """Roll an Identity forward with decoded IdentityRegistry events (scratchpad nv/dec.json format:
+    {ev, block, li, agent, frm/to | key/val | owner}). Applies Transfer (owner, approval reset, past holder)
+    MetadataSet(agentWallet) (20 bytes or empty = cleared), Approval and ApprovalForAll (R6 inputs); an
+    undecoded approval topic raises. URIUpdated / MetadataUpdate / other metadata keys do not change R6/R7.
+    Events must cover (after_block, to_block] completely; the caller vouches for that."""
+    for e in sorted(events, key=lambda e: (e["block"], e["li"])):
+        if not after_block < e["block"] <= to_block:
+            continue
+        a = e.get("agent")
+        if e["ev"] == "Transfer":
+            frm, to = e["frm"].lower(), e["to"].lower()
+            if frm != ZERO:
+                idn.past_owners.setdefault(a, set()).add(frm)
+            idn.owner[a] = to
+            idn.approved.pop(a, None)                       # ERC-721: a transfer clears getApproved
+        elif e["ev"] == "MetadataSet" and e.get("key") == "agentWallet":
+            v = e["val"].lower()
+            idn.wallet[a] = ("0x" + v[2:]) if len(v) == 42 else ZERO
+            if len(v) == 42:
+                idn.past_wallets.setdefault(a, set()).add(idn.wallet[a])
+        elif e["ev"] == "Approval":                       # approve(approved, tokenId)
+            ap = e["approved"].lower()
+            if ap == ZERO:
+                idn.approved.pop(a, None)
+            else:
+                idn.approved[a] = ap
+        elif e["ev"] == "ApprovalForAll":
+            ops = idn.operators.setdefault(e["owner"].lower(), set())
+            (ops.add if e["approved_all"] else ops.discard)(e["operator"].lower())
+        elif e["ev"] in (TOPIC_APPROVAL, TOPIC_APPROVAL_FOR_ALL):
+            raise ValueError(f"undecoded approval event at block {e['block']}: decode it before replaying (R6 input)")
+        elif e["ev"] == "Registered":
+            idn.owner.setdefault(a, e["owner"].lower())
+            idn.wallet.setdefault(a, ZERO)
+    idn.block = to_block
+    idn._w2a = None
+    return idn
+
+
+def load_identity_json(path_or_obj) -> Identity:
+    """identity.json of the indexer interface (design-indexeur-envio.md §7), also the format of the versioned
+    snapshot solver/data/: {"block", "owner": {id: addr}, "wallet": {id: addr}, "approved": {id: addr},
+    "operators": {owner: [op]}, "pastOwners": {id: [addr]}, "pastWallets": {id: [addr]}}."""
+    if isinstance(path_or_obj, (str, Path)):
+        p = Path(path_or_obj)
+        op = gzip.open if p.suffix == ".gz" else open
+        with op(p, "rt") as fh:
+            obj = json.load(fh)
+    else:
+        obj = path_or_obj
+    lo = lambda d: {int(k): v.lower() for k, v in d.items()}
+    return Identity(block=int(obj["block"]), owner=lo(obj["owner"]), wallet=lo(obj["wallet"]),
+                    approved={k: v for k, v in lo(obj.get("approved", {})).items() if v != ZERO},
+                    operators={o.lower(): {x.lower() for x in ops} for o, ops in obj.get("operators", {}).items() if ops},
+                    past_owners={int(k): {x.lower() for x in v} for k, v in obj.get("pastOwners", {}).items()},
+                    past_wallets={int(k): {x.lower() for x in v} for k, v in obj.get("pastWallets", {}).items()})
+
+
+def identity_to_json(idn: Identity) -> dict:
+    return {"block": idn.block,
+            "owner": {str(k): v for k, v in sorted(idn.owner.items())},
+            "wallet": {str(k): v for k, v in sorted(idn.wallet.items())},
+            "approved": {str(k): v for k, v in sorted(idn.approved.items()) if v != ZERO},
+            "operators": {o: sorted(s) for o, s in sorted(idn.operators.items()) if s},
+            "pastOwners": {str(k): sorted(s) for k, s in sorted(idn.past_owners.items()) if s},
+            "pastWallets": {str(k): sorted(s) for k, s in sorted(idn.past_wallets.items()) if s}}
 
 
 # ----------------------------------------------------------------------------- schéma
@@ -232,36 +332,53 @@ def quantize(value: int, decimals: int, spec: TagSpec) -> int | None:
     return -(((spec.neutral_wad - v) * GRID) // den)            # troncature vers zéro du négatif
 
 
-# ----------------------------------------------------------------------------- graphe
+# ----------------------------------------------------------------------------- graph
 
 AGENT, ADDR, ANCHOR = "agent", "addr", "anchor"
 
 
 @dataclass(frozen=True)
 class Edge:
-    dst: int            # index du nœud destination (toujours un nœud-agent)
-    q: int              # poids int16, grille 1e-4, != 0
+    dst: int            # destination node index (always an agent node)
+    q: int              # int16 weight on the 1e-4 grid, != 0
     client: str
     agent_id: int
-    tag1: str           # tag qui a déterminé q (dominance du négatif)
+    tag1: str           # tag that decided q (negative dominance)
+    feedback_index: int
+
+
+@dataclass(frozen=True)
+class PairEdge:
+    """Combined edge of a (client, agent) pair after R2-R6, independent of emitter resolution.
+    This is the unit compared with the indexer's `SetEdge` (parity test)."""
+    client: str
+    agent_id: int
+    q: int
+    tag1: str
     feedback_index: int
 
 
 @dataclass
 class Graph:
-    nodes: list[tuple[str, object]]                 # (kind, agentId | adresse)
+    nodes: list[tuple[str, object]]                 # (kind, agentId | address)
     index: dict[tuple[str, object], int]
-    rows: dict[int, list[Edge]]                     # src -> arêtes (triées par dst)
-    anchors: list[int]                              # indices des nœuds-ancres (une colonne chacun)
-    log: dict[str, int]                             # compteurs de filtrage
-    rejected: list[dict]                            # détail des avis/couples rejetés (pour les rapports)
+    rows: dict[int, list[Edge]]                     # src node -> edges sorted by dst (the FULL row)
+    anchors: list[int]                              # anchor node indices (one column each)
+    log: dict[str, int]                             # filtering counters
+    rejected: list[dict]                            # rejected feedback/pairs (reports)
+    row_src: dict[int, tuple[str, str]] = field(default_factory=dict)  # u -> (client, "anchor"|"address"|"wallet"|"owner")
+    pairs: dict[tuple[str, int], PairEdge] = field(default_factory=dict)
 
     @property
     def n(self) -> int:
         return len(self.nodes)
 
+    def splus(self, u: int) -> int:
+        """True positive sum of the full row of u (the value declared as sPlus in a certificate, D32)."""
+        return sum(e.q for e in self.rows.get(u, ()) if e.q > 0)
+
     def bplus(self, u: int) -> int:
-        return max(GRID, sum(e.q for e in self.rows.get(u, ()) if e.q > 0))
+        return max(GRID, self.splus(u))
 
     def bminus(self, u: int) -> int:
         return max(GRID, sum(-e.q for e in self.rows.get(u, ()) if e.q < 0))
@@ -278,44 +395,32 @@ class Graph:
         return self.index.get((AGENT, a))
 
 
-def build_graph(feedbacks: list[Feedback], identity: Identity, schema: dict[str, TagSpec],
-                filter_tags: list[str] | None, anchors: list[str],
-                *, selection: str = "latest_then_reject", combine: str = "neg_dominance",
-                reject_controllers: bool = True, ambiguous_wallet: str = "address",
-                keep_detail: bool = True) -> Graph:
-    """Construit le graphe signé.
-
-    selection      "latest_then_reject" (défaut, = contrat R5 _registryEdge) : par (client, agent, tag1), l'avis
-                                     non révoqué d'index maximal ; s'il est hors bornes, ce tag ne donne rien ;
-                   "latest_valid"  : l'avis non révoqué ET dans les bornes d'index maximal (lecture littérale
-                                     de la preuve d'écart (ii) « un feedback valide plus récent »).
-    combine        "neg_dominance" (D14) | "latest_pair" (règle du tour 2 : dernier avis du couple, tous tags).
-    ambiguous_wallet "address" (D16) | "relay" (variante étudiée AM-R4.1, pas une décision du CR).
-    filter_tags    tags du filtre de l'ensemble (<= TAGS_MAX) ; None = tous les tags du schéma.
-    """
+def combine_pairs(feedbacks: list[Feedback], identity: Identity, schema: dict[str, TagSpec],
+                  filter_tags: list[str] | None, *, selection: str = "latest_then_reject",
+                  combine: str = "neg_dominance", reject_controllers: bool = True,
+                  log: dict | None = None, rejected: list | None = None) -> dict[tuple[str, int], PairEdge]:
+    """R1-R6: one combined edge per (client, agent). Normative defaults; the options exist only to measure
+    the rules that were replaced (tour 2 `latest_pair`, `latest_valid` reading of proof (ii))."""
     if filter_tags is None:
         filter_tags = sorted(schema)
     if len(filter_tags) > TAGS_MAX:
-        raise ValueError(f"filtre de {len(filter_tags)} tags > TAGS_MAX={TAGS_MAX}")
+        raise ValueError(f"filter of {len(filter_tags)} tags > TAGS_MAX={TAGS_MAX}")
     ftags = set(filter_tags)
-    log: dict[str, int] = defaultdict(int)
-    rejected: list[dict] = []
-    anchors = sorted({a.lower() for a in anchors})     # R5 : adresses d'ancres strictement croissantes
+    log = log if log is not None else defaultdict(int)
+    rejected = rejected if rejected is not None else []
 
-    # 1. sélection par (client, agent, tag1)
-    per_triple: dict[tuple[str, int, str], Feedback] = {}
-    if combine == "latest_pair":
-        # règle du tour 2 : dernier avis non révoqué par couple, tous tags confondus
+    if combine == "latest_pair":                     # tour-2 rule: last non-revoked feedback of the pair, any tag
         best: dict[tuple[str, int], Feedback] = {}
         for f in feedbacks:
-            if f.revoked:
-                continue
-            k = (f.client, f.agent_id)
-            if k not in best or f.index > best[k].index:
-                best[k] = f
+            if not f.revoked:
+                k = (f.client, f.agent_id)
+                if k not in best or f.index > best[k].index:
+                    best[k] = f
         cand = list(best.values())
     else:
         cand = feedbacks
+    # R3: latest per (client, agent, tag1)
+    per_triple: dict[tuple[str, int, str], Feedback] = {}
     for f in cand:
         log["avis_lus"] += 1
         if f.revoked:
@@ -324,97 +429,116 @@ def build_graph(feedbacks: list[Feedback], identity: Identity, schema: dict[str,
         if f.tag1 not in ftags or f.tag1 not in schema:
             log["hors_filtre_ou_schema"] += 1
             continue
-        spec = schema[f.tag1]
-        if spec.kind != "endorsement":
+        if schema[f.tag1].kind != "endorsement":                           # R2
             log["rejet_measurement_D15"] += 1
             continue
-        q = quantize(f.value, f.decimals, spec)
         k = (f.client, f.agent_id, f.tag1)
-        if selection == "latest_valid":
-            if q is None:
-                log["rejet_hors_bornes"] += 1
-                if keep_detail:
-                    rejected.append({"raison": "hors_bornes", "client": f.client, "agent": f.agent_id,
-                                     "tag1": f.tag1, "index": f.index, "value": str(f.value)})
-                continue
-            if k not in per_triple or f.index > per_triple[k].index:
-                per_triple[k] = f
-        else:
-            if k not in per_triple or f.index > per_triple[k].index:
-                per_triple[k] = f
-    # 2. rejet des contrôleurs (D16) puis combinaison entre tags (D14)
-    pairs: dict[tuple[str, int], list[tuple[int, Feedback]]] = defaultdict(list)
-    for (c, a, t), f in per_triple.items():
-        q = quantize(f.value, f.decimals, schema[t])
-        if q is None:                                   # seulement en mode latest_then_reject
+        if selection == "latest_valid" and quantize(f.value, f.decimals, schema[f.tag1]) is None:
             log["rejet_hors_bornes"] += 1
             continue
-        pairs[(c, a)].append((q, f))
-    combined: dict[tuple[str, int], tuple[int, Feedback]] = {}
-    for (c, a), lst in pairs.items():
-        if reject_controllers:
+        if k not in per_triple or f.index > per_triple[k].index:
+            per_triple[k] = f
+    by_pair: dict[tuple[str, int], list[tuple[int, Feedback]]] = defaultdict(list)
+    for (c, a, t), f in per_triple.items():
+        q = quantize(f.value, f.decimals, schema[t])                        # R4
+        if q is None:
+            log["rejet_hors_bornes"] += 1
+            if rejected is not None:
+                rejected.append({"raison": "hors_bornes", "client": c, "agent": a, "tag1": t,
+                                 "index": f.index, "value": str(f.value)})
+            continue
+        by_pair[(c, a)].append((q, f))
+    out: dict[tuple[str, int], PairEdge] = {}
+    for (c, a), lst in by_pair.items():
+        if reject_controllers:                                              # R6
             ctl = identity.controllers(a)
             if c in ctl:
                 log[f"rejet_controleur_{ctl[c]}"] += 1
-                if keep_detail:
-                    rejected.append({"raison": "controleur_" + ctl[c], "client": c, "agent": a,
-                                     "avis": len(lst)})
+                rejected.append({"raison": "controleur_" + ctl[c], "client": c, "agent": a, "avis": len(lst)})
                 continue
-        neg = [x for x in lst if x[0] < 0]
-        if neg:
-            q, f = min(neg, key=lambda x: (x[0], x[1].tag1))
-        else:
-            q, f = max(lst, key=lambda x: (x[0], x[1].tag1))
+        neg = [x for x in lst if x[0] < 0]                                  # R5
+        q, f = min(neg, key=lambda x: (x[0], x[1].tag1)) if neg else max(lst, key=lambda x: (x[0], x[1].tag1))
         if q == 0:
             log["poids_nul"] += 1
             continue
-        combined[(c, a)] = (q, f)
-    log["aretes_couple"] = len(combined)
+        out[(c, a)] = PairEdge(c, a, q, f.tag1, f.index)
+    log["aretes_couple"] = len(out)
+    return out
 
-    # 3. nœuds : ancres d'abord (ordre donné), puis agents triés, puis adresses triées
-    w2a = identity.wallet_to_agents()
+
+def build_graph(feedbacks: list[Feedback], identity: Identity, schema: dict[str, TagSpec],
+                filter_tags: list[str] | None, anchors: list[str], *, owner_fallback: bool = False,
+                selection: str = "latest_then_reject", combine: str = "neg_dominance",
+                reject_controllers: bool = True, keep_detail: bool = True) -> Graph:
+    """Signed graph of one anchor set (R1-R8).
+
+    Nodes, in canonical order: anchors (addresses ascending), rated agents (agentId ascending), address nodes
+    (ascending). Only RATED agents are agent nodes: an agent nobody rates has no incoming edge and is not an
+    anchor, so its mass is 0 and its copy of a row would carry nothing (D20: "un agent de masse nulle n'a pas
+    besoin de ligne").
+    owner_fallback  D44 (default OFF, pending Hugo): src(j) = owner(j) when agentWallet(j) == 0.
+    """
+    log: dict[str, int] = defaultdict(int)
+    rejected: list[dict] = []
+    anchors = sorted({a.lower() for a in anchors})     # contract: anchor addresses strictly increasing
+    pairs = combine_pairs(feedbacks, identity, schema, filter_tags, selection=selection, combine=combine,
+                          reject_controllers=reject_controllers, log=log, rejected=rejected)
+
+    out_rows: dict[str, list[PairEdge]] = defaultdict(list)                # client -> combined edges
+    for (c, _), pe in pairs.items():
+        out_rows[c].append(pe)
+    rated = sorted({a for (_, a) in pairs})
+    # R7: A(c) restricted to graph nodes (rated agents)
+    carriers: dict[str, list[tuple[int, str]]] = defaultdict(list)
+    for j in rated:
+        s, via = identity.source_of(j, owner_fallback)
+        if s is not None and s in out_rows:
+            carriers[s].append((j, via))
+    # a client is an address node iff A(c) is empty over ALL agents (not only rated ones)
+    has_agent = set(identity.wallet_to_agents())
+    if owner_fallback:
+        has_agent |= {o for a, o in identity.owner.items() if (identity.wallet.get(a, ZERO) or ZERO) == ZERO}
+    # R8: an anchor address is carried by its anchor node, never by an extra address node
+    addrs = sorted(c for c in out_rows if c not in has_agent and c not in anchors)
+    for c in out_rows:
+        if c in has_agent and c not in carriers:
+            log["emetteur_agents_non_notes"] += 1       # row of c carried by nobody: its agents have no mass
     nodes: list[tuple[str, object]] = [(ANCHOR, a) for a in anchors]
-    agents_needed: set[int] = set()
-    addrs_needed: set[str] = set()
-    emitter: dict[str, tuple[str, object]] = {}
-    for (c, a) in combined:
-        agents_needed.add(a)
-        if c not in emitter:
-            owners = w2a.get(c, [])
-            if len(owners) == 1:
-                emitter[c] = (AGENT, owners[0])
-                agents_needed.add(owners[0])
-            else:
-                emitter[c] = (ADDR, c)
-                addrs_needed.add(c)
-                log["emetteur_adresse_ambigu" if len(owners) > 1 else "emetteur_adresse_sans_agent"] += 1
-    relay_edges: list[tuple[int, str]] = []
-    if ambiguous_wallet == "relay":
-        # variante : chaque agent X dont le wallet ambigu c émet vers le nœud-adresse c (poids 1)
-        for c, (kind, _) in emitter.items():
-            if kind == ADDR and len(w2a.get(c, [])) > 1:
-                for x in w2a[c]:
-                    agents_needed.add(x)
-                    relay_edges.append((x, c))
-    nodes += [(AGENT, a) for a in sorted(agents_needed)]
-    nodes += [(ADDR, c) for c in sorted(addrs_needed)]
+    nodes += [(AGENT, a) for a in rated] + [(ADDR, c) for c in addrs]
     index = {k: i for i, k in enumerate(nodes)}
 
-    rows: dict[int, list[Edge]] = defaultdict(list)
-    for (c, a), (q, f) in combined.items():
-        e = Edge(dst=index[(AGENT, a)], q=q, client=c, agent_id=a, tag1=f.tag1, feedback_index=f.index)
-        rows[index[emitter[c]]].append(e)
-        if c in anchors:                                  # D9 : la ligne de l'ancre est portée par son nœud-ancre
-            rows[index[(ANCHOR, c)]].append(e)
-    for x, c in relay_edges:
-        # arête de relais : poids plein, pas un avis (feedbackIndex = 0)
-        # le nœud-adresse c n'est pas un nœud-agent : dst pointe vers le nœud-adresse
-        rows[index[(AGENT, x)]].append(Edge(dst=index[(ADDR, c)], q=Q_MAX, client=c, agent_id=x,
-                                            tag1="<relay>", feedback_index=0))
-    for u in rows:
-        rows[u].sort(key=lambda e: (e.dst, e.feedback_index))
-    for u, row in rows.items():
+    def row_of(c: str, u: int) -> list[Edge]:
+        r = []
+        for pe in out_rows[c]:
+            v = index[(AGENT, pe.agent_id)]
+            if v == u:                                  # impossible under R6 (src(j) controls j); kept as a guard
+                log["boucle_ignoree"] += 1
+                continue
+            r.append(Edge(v, pe.q, c, pe.agent_id, pe.tag1, pe.feedback_index))
+        return sorted(r, key=lambda e: e.dst)
+
+    rows: dict[int, list[Edge]] = {}
+    row_src: dict[int, tuple[str, str]] = {}
+    for j in rated:                                     # every agent node records src(j), even with an empty row:
+        s_, via_ = identity.source_of(j, owner_fallback)  # its (possibly empty) row stays challengeable (SRC)
+        row_src[index[(AGENT, j)]] = (s_, via_) if s_ is not None else (None, "none")
+    for a in anchors:                                   # R8
+        if a in out_rows:
+            u = index[(ANCHOR, a)]
+            rows[u], row_src[u] = row_of(a, u), (a, "anchor")
+    for c, lst in carriers.items():                     # R7 row copy
+        for j, via in lst:
+            u = index[(AGENT, j)]
+            rows[u], row_src[u] = row_of(c, u), (c, via)
+            log["ligne_" + via] += 1
+        if len(lst) > 1:
+            log["lignes_copiees_D20"] += len(lst) - 1
+    for c in addrs:
+        u = index[(ADDR, c)]
+        rows[u], row_src[u] = row_of(c, u), (c, "address")
+    log["emetteur_adresse"] = len(addrs)
+    for row in rows.values():
         if len(row) > ROW_MAX:
             log["lignes_sup_ROW_MAX"] += 1
-    return Graph(nodes=nodes, index=index, rows=dict(rows), anchors=[index[(ANCHOR, a)] for a in anchors],
-                 log=dict(log), rejected=rejected)
+    return Graph(nodes=nodes, index=index, rows=rows, anchors=[index[(ANCHOR, a)] for a in anchors],
+                 log=dict(log), rejected=rejected if keep_detail else [], row_src=row_src, pairs=pairs)

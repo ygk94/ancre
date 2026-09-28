@@ -1,9 +1,9 @@
 {
- "format": "ancre-cert-v0",
+ "format": "ancre-cert-v1",
  "label": "mainnet_slash_anchor",
- "notes": "Acte 1 (e) : ancres {0xea0b, 0x0730}, D14 : l'arête 0xea0b->#4 vaut -10000 (slash), le review +1 ne l'efface pas.",
- "alignedWith": "contracts/src/AnchoredReputation.sol (R5), état lu le 2026-09-27 ~12:55 ; ENCODING.md non publié",
- "identityBlock": 108434518,
+ "notes": "Acte 1 (e) : ancres {0xea0b, 0x0730}, D14 : l'arête 0xea0b->#4 vaut -10000 (slash), le review +1 ne l'efface pas. La ligne de 0xea0b est portée par le nœud-ancre ET par la copie de #18 (D9 + D20).",
+ "alignedWith": "solver/FORMAT.md v1 (2026-09-28). contracts/ENCODING.md still v0 (27/09): alias rows, VIA_OWNER, sPlus and t <= y are PROPOSED to chantier 02, not yet in the contract.",
+ "identityBlock": 108835675,
  "set": {
   "anchors": [
    "0x0730536018541c5149a049d35528a76c2c8f1e6b",
@@ -90,7 +90,10 @@
  "rows": [
   {
    "u": 0,
-   "wallet": null,
+   "source": null,
+   "via": "anchor",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
@@ -106,7 +109,10 @@
   },
   {
    "u": 1,
-   "wallet": null,
+   "source": null,
+   "via": "anchor",
+   "aliasOf": null,
+   "sPlus": 20000,
    "bPlus": 20000,
    "bMinus": 10000,
    "edges": [
@@ -138,24 +144,58 @@
   },
   {
    "u": 2,
-   "wallet": "0x8df64bacf6b70f7787f8d14429b258b3ff958ec1",
+   "source": "0x8df64bacf6b70f7787f8d14429b258b3ff958ec1",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 0,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": []
   },
   {
    "u": 3,
-   "wallet": "0xe4cdd1ad7fae7d54441ef12db1a68ab9a4c2d7b5",
+   "source": "0xe4cdd1ad7fae7d54441ef12db1a68ab9a4c2d7b5",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 0,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": []
   },
   {
    "u": 5,
-   "wallet": "0xea0b21fb2441464f4920ce3e34d478235605816b",
-   "bPlus": 10000,
+   "source": "0xea0b21fb2441464f4920ce3e34d478235605816b",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 20000,
+   "bPlus": 20000,
    "bMinus": 10000,
-   "edges": []
+   "edges": [
+    {
+     "dst": 2,
+     "w": 10000,
+     "feedbackIndex": 1,
+     "client": "0xea0b21fb2441464f4920ce3e34d478235605816b",
+     "agentId": 2,
+     "tag1": "vouch"
+    },
+    {
+     "dst": 3,
+     "w": 10000,
+     "feedbackIndex": 1,
+     "client": "0xea0b21fb2441464f4920ce3e34d478235605816b",
+     "agentId": 3,
+     "tag1": "review"
+    },
+    {
+     "dst": 4,
+     "w": -10000,
+     "feedbackIndex": 1,
+     "client": "0xea0b21fb2441464f4920ce3e34d478235605816b",
+     "agentId": 4,
+     "tag1": "slash"
+    }
+   ]
   }
  ],
  "vectors": {
@@ -163,8 +203,8 @@
    [
     "333333333333333333",
     "0",
-    "0",
-    "0",
+    "74074074074074074",
+    "74074074074074074",
     "0",
     "222222222222222222"
    ],
@@ -188,25 +228,27 @@
  },
  "expected": {
   "residualMode": "contract",
+  "subSolution": true,
+  "iterationsFromZero": 4,
   "r": [
-   "4",
-   "4"
+   "6",
+   "6"
   ],
   "e": [
-   "12",
-   "12"
+   "18",
+   "18"
   ],
-  "eEff": "12",
+  "eEff": "18",
   "d": [
    "0",
    "0",
    "0",
    "0",
-   "111111111111111112",
+   "185185185185185186",
    "0"
   ],
-  "graphRoot": "0xadf20596d1d67e75a515d2e8034baa3f644e7cfd24bdb0a2bd67e3bf1cb06f7a",
-  "vectorRoot": "0xc7bd2b141e841d1fa67bf50cc1f52dcff7e8c6790a225aed11f368f15624a439",
+  "graphRoot": "0x83de2321c43f8724d6d443fd3f90f065397bf761df425f324392e53814c33b63",
+  "vectorRoot": "0xf1bf6a6e53149837836ec1aeceef59626bfb6b74788384483ff893ca1ba6fc8b",
   "tight": {
    "r": [
     "1",
@@ -221,7 +263,7 @@
  "calldata": {
   "W": 2,
   "newNodes": "0x0100000002010000000301000000040100000012",
-  "vectors": "0x04a03ce68d21555500000000000000000000000000000000000000000000000004a03ce68d21555500000000000000000000000000000000018abef7846071c729b258b3ff958ec10000000000000000018abef7846071c731a68ab9a4c2d7b50000000000000000000000000000000034245dd312ddf13403157def08c0e38e000000000000000034d478235605816b",
-  "rows": "0x020000000500000001000527100000000100010003000227100000000100032710000000010004d8f000000001000280008df64bacf6b70f7787f8d14429b258b3ff958ec100038000e4cdd1ad7fae7d54441ef12db1a68ab9a4c2d7b500058000ea0b21fb2441464f4920ce3e34d478235605816b"
+  "vectors": "0x04a03ce68d21555500000000000000000000000000000000000000000000000004a03ce68d2155550000000000000000010729fa58404bda018abef7846071c729b258b3ff958ec1010729fa58404bda018abef7846071c731a68ab9a4c2d7b50000000000000000000000000000000034245dd312ddf13403157def08c0e38e000000000000000034d478235605816b",
+  "rows": "0x020000000500000001000527100000000100010003000227100000000100032710000000010004d8f000000001000280008df64bacf6b70f7787f8d14429b258b3ff958ec100038000e4cdd1ad7fae7d54441ef12db1a68ab9a4c2d7b500058003ea0b21fb2441464f4920ce3e34d478235605816b000227100000000100032710000000010004d8f000000001"
  }
 }

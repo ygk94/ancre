@@ -1,8 +1,8 @@
 {
- "format": "ancre-cert-v0",
+ "format": "ancre-cert-v1",
  "label": "toy_alpha_1_2",
  "notes": "Jouet : ancre A2 sans arête (colonne triviale), arête négative, poids non ronds, cycle 1<->2.",
- "alignedWith": "contracts/src/AnchoredReputation.sol (R5), état lu le 2026-09-27 ~12:55 ; ENCODING.md non publié",
+ "alignedWith": "solver/FORMAT.md v1 (2026-09-28). contracts/ENCODING.md still v0 (27/09): alias rows, VIA_OWNER, sPlus and t <= y are PROPOSED to chantier 02, not yet in the contract.",
  "identityBlock": null,
  "set": {
   "anchors": [
@@ -76,7 +76,10 @@
  "rows": [
   {
    "u": 0,
-   "wallet": null,
+   "source": null,
+   "via": "anchor",
+   "aliasOf": null,
+   "sPlus": 15000,
    "bPlus": 15000,
    "bMinus": 10000,
    "edges": [
@@ -100,14 +103,20 @@
   },
   {
    "u": 1,
-   "wallet": null,
+   "source": null,
+   "via": "anchor",
+   "aliasOf": null,
+   "sPlus": 0,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": []
   },
   {
    "u": 2,
-   "wallet": null,
+   "source": null,
+   "via": "address",
+   "aliasOf": null,
+   "sPlus": 3333,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
@@ -131,7 +140,10 @@
   },
   {
    "u": 3,
-   "wallet": null,
+   "source": null,
+   "via": "address",
+   "aliasOf": null,
+   "sPlus": 10277,
    "bPlus": 10277,
    "bMinus": 10000,
    "edges": [
@@ -155,7 +167,10 @@
   },
   {
    "u": 4,
-   "wallet": null,
+   "source": null,
+   "via": "address",
+   "aliasOf": null,
+   "sPlus": 1,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
@@ -197,6 +212,8 @@
  },
  "expected": {
   "residualMode": "contract",
+  "subSolution": true,
+  "iterationsFromZero": 32,
   "r": [
    "7",
    "7"

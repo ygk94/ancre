@@ -1,5 +1,7 @@
 # R4 — Solveur PPR hors chaîne : résultats (2026-09-27)
 
+> **Mise à jour du 28/09 (chantier 04-E1)** : les règles ont changé (D20 copie de ligne, règle « ancien owner » supprimée, D44 derrière un drapeau, certificat par itération depuis 0, sPlus déclaré). Les chiffres à jour, sur **9 283 avis** au bloc 108 835 675, sont dans `out/mainnet.md` (commande `run_mainnet.py`) et résumés dans `docs/chantiers/journal/04.md`. Ce qui suit est l'état R4, conservé pour l'historique ; les §1 (d), la variante relais et la règle « ancien owner » sont périmés.
+
 Tous les chiffres sont **MESURÉS** par les commandes indiquées, lancées depuis `solver/`, sauf mention **ESTIMÉ**. Sorties complètes : `out/mainnet.md`, `out/synthetic.md`, `vectors/*.json`.
 
 Données : avis relus **on-chain** par `readAllFeedback` au bloc 108 434 518 (script `scratchpad/fetch_readall_r4.py`, sortie `onchain_feedbacks_r4.json`), identité au même bloc (`agents_state.json`, `logs.json`, `approved_r4.json` produit par `scratchpad/fetch_approved_r4.py`). Les 9 188 clés (agent, client, index) sont identiques à celles du snapshot 8004scan du 21/09.
