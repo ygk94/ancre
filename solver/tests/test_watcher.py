@@ -76,3 +76,37 @@ def test_liveness_alerts():
     assert Wt.liveness(oc(100), 1050, cfg).startswith("REFRESH_DUE")
     assert Wt.liveness(oc(100), 1200, cfg).startswith("STALE")
     assert Wt.liveness(oc(100, True), 500, cfg) == "REGISTRY_CHANGED"
+
+
+def test_audit_sign_flip_deflated_and_prepared_proof(tmp_path, monkeypatch):
+    """Lowered weights in a full row and flipped signs are reported; without a signer a proof is only prepared."""
+    from export import encode
+    from graph import Identity, Feedback, build_graph
+    from ppr import certify
+    from fractions import Fraction
+    A, W = "0x" + "a" * 40, "0x" + "b" * 40
+    idn = Identity(block=0, owner={1: W, 2: "0x" + "2" * 40, 3: "0x" + "3" * 40, 4: "0x" + "4" * 40},
+                   wallet={1: W, 2: "0x" + "2" * 40, 3: "0x" + "3" * 40, 4: "0x" + "4" * 40})
+    f = lambda a, c, v: Feedback(a, c, 1, v, 0, "vouch", "", False)
+    fbs = [f(1, A, 100), f(2, W, 90), f(3, W, 80), f(4, W, 30)]
+    cfg = C.SetConfig(name="s", anchors=[A, "0x" + "c" * 40], lambdas=[5 * 10**17] * 2, alphaN=1, alphaD=3,
+                      filter_tags=["vouch"])
+    g = build_graph(fbs, idn, cfg.schema(), cfg.filter_tags, cfg.anchors)
+    c = certify(g, Fraction(1, 3))
+    nodes = [g.nodes[i] for i in c.node_map]
+    u1 = nodes.index(("agent", 1))
+    i2, i3 = nodes.index(("agent", 2)), nodes.index(("agent", 3))
+    c.rows[u1] = [(d, (-9000 if d == i2 else 5000 if d == i3 else q), fi) for d, q, fi in c.rows[u1]]
+    c.splus[u1] = sum(q for _, q, _ in c.rows[u1] if q > 0)
+    enc = encode(c, nodes, idn, version="v0")
+    kinds = {d.kind for d in Wt.audit("0x" + enc["rows"].hex(), nodes, fbs, idn, cfg)}
+    assert {"SIGN_FLIP"} <= kinds
+    c.rows[u1] = [(d, q, fi) for d, q, fi in c.rows[u1] if d != i2]           # now committed S+ = 5000 + 3000 < GRID
+    c.rows[u1] = [(d, (9500 if d == i3 else q), fi) for d, q, fi in c.rows[u1]]
+    c.splus[u1] = sum(q for _, q, _ in c.rows[u1] if q > 0)
+    enc = encode(c, nodes, idn, version="v0")
+    disc = Wt.audit("0x" + enc["rows"].hex(), nodes, fbs, idn, cfg)
+    assert {d.kind for d in disc} >= {"INFLATED", "DILUTION"}
+    om = next(d for d in disc if d.kind == "DILUTION")
+    r = Wt.prove(C.Chain("http://unused"), "0x0", "0x0", om, C.GasPolicy())
+    assert r["status"] == "prepared" and r["args"][6] == "2"

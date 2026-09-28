@@ -210,8 +210,8 @@ class Chain:
     def send(self, to: str, sig: str, *args: str, gas_limit: int) -> dict:
         return json.loads(self._run("send", to, sig, *args, "--gas-limit", str(gas_limit), "--json", sign=True))
 
-    def logs(self, address: str, event_sig: str, from_block: int, *topics: str) -> list[dict]:
-        out = self._run("logs", "--address", address, "--from-block", str(from_block), "--to-block", "latest",
+    def logs(self, address: str, event_sig: str, from_block: int, *topics: str, to_block: int | str = "latest") -> list[dict]:
+        out = self._run("logs", "--address", address, "--from-block", str(from_block), "--to-block", str(to_block),
                         "--json", event_sig, *topics)
         return json.loads(out) if out else []
 

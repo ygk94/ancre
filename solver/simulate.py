@@ -265,14 +265,33 @@ def scenario_split(chain: C.Chain, contract: str, n_agents: int = 1300) -> list[
     return [reg, {"journal": [json.loads(l) for l in jr.read_text().splitlines()]}, last]
 
 
+def two_omissions_vector(fbs, idn) -> dict:
+    """The anchor row of 0xea0b with BOTH its slash (#4) and its vouch (#2) omitted: two proofs on one row, the
+    second one chained with `added` (review E5, finding 7)."""
+    import copy
+    from export import export_certificate
+    from graph import build_graph, load_schema
+    from ppr import certify
+    from fractions import Fraction
+    raw = json.load(open(HERE / "schema_reference.json"))
+    ref, core = load_schema(raw), raw["filters"]["core"]
+    ea0b, h1 = R.resolve(R.EA0B, fbs), R.resolve(R.HONEST1, fbs)
+    g = copy.deepcopy(build_graph(fbs, idn, ref, core, [ea0b, h1]))
+    ua, n2, n4 = g.index[(ANCHOR, ea0b)], g.index[(AGENT, 2)], g.index[(AGENT, 4)]
+    g.rows[ua] = [e for e in g.rows[ua] if e.dst not in (n2, n4)]
+    return export_certificate(g, certify(g, Fraction(1, 3)), idn, schema=ref, filter_tags=core, label="two_omissions")
+
+
 def scenario_watch(chain: C.Chain, contract: str) -> list[dict]:
     """Violation vectors (D37) published on the fork, then audited by the watcher; the v0-provable ones are
     proven ON THE FORK (send=True against anvil only): OmissionProven, eEff widened."""
     import watcher as Wt
     fbs, idn = R.load_mainnet()
     out = []
-    for name in ("fabricated", "omitted_negative", "inflated", "dilution"):
-        obj = json.loads((HERE / "vectors" / "violations" / f"{name}.json").read_text())
+    objs = {n: json.loads((HERE / "vectors" / "violations" / f"{n}.json").read_text())
+            for n in ("fabricated", "omitted_negative", "inflated", "dilution")}
+    objs["two_omissions_one_row"] = two_omissions_vector(fbs, idn)
+    for name, obj in objs.items():
         cert, nodes, enc = vector_calldata(obj)
         cfg = cfg_from_vector(obj, "viol_" + name)
         set_id, _ = register(chain, contract, cfg)

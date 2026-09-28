@@ -87,26 +87,40 @@ def row_slices(rows_hex: str) -> list[bytes]:
     return out
 
 
+MAX_SCAN_V0 = 32     # AnchoredReputation v0 _registryEdge reads only the last 32 feedbacks of a (client, agent) pair
+
+
 def audit(rows_hex: str, nodes: list, fbs, idn: Identity, cfg: C.SetConfig) -> list[Discrepancy]:
-    """nodes: on-chain node table (index -> (kind, value)). v0 rows: bit 0x8000 = source present, no alias/sPlus."""
+    """nodes: on-chain node table (index -> (kind, value)). v0 rows: bit 0x8000 = source present, no alias/sPlus.
+
+    Committed edge vs registry edge q (R1-R6, full history):
+      no registry edge                    FABRICATED
+      w > q                               INFLATED   (t or d no longer bounded)
+      q > 0 > w                           SIGN_FLIP  (invented distrust, and the row's B⁺ shrinks)
+      0 < w < q and committed S⁺ > GRID   DEFLATED   (B⁺ shrinks: the other edges of the row are inflated)
+    Registry edge missing from a provided row: OMITTED_NEGATIVE, DILUTION (committed S⁺ + q > GRID, the
+    condition of the contract's _widen), OMITTED_POSITIVE. On v0 every omission widens r (proveOmission), so all
+    are provable, except pairs with more than MAX_SCAN_V0 feedbacks (the contract may see another weight)."""
     g = build_graph(fbs, idn, cfg.schema(), cfg.filter_tags, cfg.anchors, owner_fallback=cfg.owner_fallback)
     pairs = g.pairs
     rejected = {(r["client"], r["agent"]) for r in g.rejected if r["raison"].startswith("controleur")}
     by_client: dict[str, dict[int, object]] = {}
     for (c, a), pe in pairs.items():
         by_client.setdefault(c, {})[a] = pe
+    history = {}
+    for f in fbs:
+        history[(f.client, f.agent_id)] = history.get((f.client, f.agent_id), 0) + 1
     rows, splus, meta, leaves = decode_rows(rows_hex)
     slices = row_slices(rows_hex)
-    order = sorted(rows)
     out: list[Discrepancy] = []
-    for pos, u in enumerate(order):
+    for pos, u in enumerate(sorted(rows)):
         kind, val = nodes[u]
         src = meta[u][0]
         if kind == AGENT:
             want, _ = idn.source_of(int(val), cfg.owner_fallback)
-            client = src
             if src != want:
                 out.append(Discrepancy("SOURCE", u, None, str(src), int(val), None, None))
+            client = src
         else:
             client = str(val)
         if client is None:                             # agent without source: its row must be empty
@@ -115,6 +129,7 @@ def audit(rows_hex: str, nodes: list, fbs, idn: Identity, cfg: C.SetConfig) -> l
             continue
         reg = by_client.get(client, {})
         committed = {}
+        s_plus = sum(w for _, w, _ in rows[u] if w > 0)
         for dst, w, fi in rows[u]:
             a = nodes[dst][1] if nodes[dst][0] == AGENT else None
             committed[a] = w
@@ -127,37 +142,51 @@ def audit(rows_hex: str, nodes: list, fbs, idn: Identity, cfg: C.SetConfig) -> l
                 out.append(Discrepancy("INFLATED", u, dst, client, a, w, pe.q, fi,
                                        proof={"hint": "proof (v): readFeedback gives a lower weight",
                                               "feedbackIndex": pe.feedback_index}))
-        true_plus = sum(pe.q for pe in reg.values() if pe.q > 0)
-        committed_bplus = max(GRID, splus[u])
+            elif pe.q > 0 > w:
+                out.append(Discrepancy("SIGN_FLIP", u, dst, client, a, w, pe.q, fi,
+                                       proof={"hint": "proof (v)/(ii): registry weight is positive"}))
+            elif 0 < w < pe.q and s_plus > GRID:
+                out.append(Discrepancy("DEFLATED", u, dst, client, a, w, pe.q, fi,
+                                       proof={"hint": "proof (ii): lower committed weight shrinks B⁺"}))
         for a, pe in sorted(reg.items()):
             if a in committed or (AGENT, a) == nodes[u]:
                 continue
             if pe.q < 0:
                 k = "OMITTED_NEGATIVE"
-            elif committed_bplus < max(GRID, true_plus):
+            elif s_plus + pe.q > GRID:
                 k = "DILUTION"
             else:
                 k = "OMITTED_POSITIVE"
-            d = Discrepancy(k, u, None, client, a, None, pe.q, pe.feedback_index, provable_v0=k != "OMITTED_POSITIVE")
-            if d.provable_v0 and meta[u][2] is None:
+            scan_ok = history.get((client, a), 0) <= MAX_SCAN_V0
+            d = Discrepancy(k, u, None, client, a, None, pe.q, pe.feedback_index,
+                            provable_v0=scan_ok and meta[u][2] is None)
+            if not scan_ok:
+                d.proof = {"hint": f"more than {MAX_SCAN_V0} feedbacks on the pair: v0 may read another weight"}
+            elif d.provable_v0:
                 d.proof = {"fn": "proveOmission", "rowPos": pos, "row": "0x" + slices[pos].hex(),
                            "proof": ["0x" + p.hex() for p in merkle_proof(leaves, pos)], "added": "0x",
-                           "nodeKeyU": node_key(nodes[u]), "agentJ": a}
+                           "nodeKeyU": node_key(nodes[u]), "agentJ": a, "w": pe.q}
             out.append(d)
     return out
 
 
 PROVE_SIG = "proveOmission(bytes32,uint256,bytes,bytes32[],bytes,bytes32,uint256)"
+PRIORITY = {"OMITTED_NEGATIVE": 0, "DILUTION": 1, "OMITTED_POSITIVE": 2}
 
 
-def prove(chain: C.Chain, contract: str, set_id: str, d: Discrepancy, gas: C.GasPolicy, *, send: bool = False) -> dict:
-    """Estimate (and only with send=True, submit) the v0 proof of one discrepancy. Several omissions on the same
-    row need the `added` chain of previous amendments: this bot proves the first one per row per certificate."""
+def prove(chain: C.Chain, contract: str, set_id: str, d: Discrepancy, gas: C.GasPolicy, *, added: bytes = b"",
+          send: bool = False) -> dict:
+    """Estimate (and only with send=True, submit) the v0 proof of one omission. `added` = the amendments already
+    proven on this row in this certificate, (agentId:u32 ‖ w:int16)*, as the contract chains them. Without a
+    signer the proof is only prepared (estimating needs a sender)."""
     p = d.proof
-    args = [set_id, str(p["rowPos"]), p["row"], "[" + ",".join(p["proof"]) + "]", p["added"], p["nodeKeyU"],
-            str(p["agentJ"])]
+    args = [set_id, str(p["rowPos"]), p["row"], "[" + ",".join(p["proof"]) + "]", "0x" + added.hex(),
+            p["nodeKeyU"], str(p["agentJ"])]
+    res = {"kind": d.kind, "agentJ": d.agent_id, "u": d.u}
+    if chain.signer is None:
+        return {**res, "status": "prepared", "args": args}
     est = chain.estimate(contract, PROVE_SIG, *args)
-    res = {"kind": d.kind, "agentJ": d.agent_id, "estimate": est, "gasLimit": gas.limit(est)}
+    res.update(estimate=est, gasLimit=gas.limit(est))
     if send:
         rc = chain.send(contract, PROVE_SIG, *args, gas_limit=gas.limit(est))
         res.update(tx=rc["transactionHash"], status=rc["status"] in ("0x1", 1), gasUsed=int(rc["gasUsed"], 16))
@@ -166,34 +195,55 @@ def prove(chain: C.Chain, contract: str, set_id: str, d: Discrepancy, gas: C.Gas
 
 def decode_submission(chain: C.Chain, tx_hash: str) -> dict:
     """submitCertificate arguments of a transaction (direct call only; a call through a multisig is undecodable)."""
-    inp = chain._run("tx", tx_hash, "input")
-    import subprocess
-    out = subprocess.run([chain.cast, "decode-calldata", C.SUBMIT_SIG, inp], check=True, capture_output=True,
-                         text=True).stdout.strip().split("\n")
+    out = chain.decode(C.SUBMIT_SIG, chain.tx_input(tx_hash))
     return {"setId": out[0], "nCert": int(out[1].split()[0]), "eMax": int(out[2].split()[0]), "newNodes": out[3],
             "vectors": out[4], "rows": out[5]}
 
 
 def watch_once(chain: C.Chain, contract: str, cfg: C.SetConfig, set_id: str, nodes: list, fbs, idn: Identity,
-               journal: C.Journal, from_block: int, *, send: bool = False) -> list[dict]:
-    """One polling round: every CertificateSubmitted of the set since from_block is audited; provable
-    discrepancies are estimated (sent only with send=True)."""
+               journal: C.Journal, from_block: int, to_block: int | None = None, *, send: bool = False) -> list[dict]:
+    """One polling round over (from_block, to_block]: only the CURRENT certificate of the set is audited (a
+    replaced one can no longer be proven: its graphRoot is gone). Every error is journaled, never fatal: the
+    round goes on and the caller advances from_block. Omissions of a row are proven in priority order (negative,
+    dilution, positive), chaining `added` after each success."""
+    to_block = to_block if to_block is not None else chain.block_number()
     logs = chain.logs(contract, "CertificateSubmitted(bytes32 indexed,uint64 indexed,uint256,bytes32,bytes32,"
-                                "bytes32,uint32,uint32)", from_block)
+                                "bytes32,uint32,uint32)", from_block, set_id, to_block=to_block)
+    current = C.OnChain.read(chain, contract, set_id).graph_root
     events = []
     for lg in logs:
-        if lg["topics"][1].lower() != set_id.lower():
+        root = "0x" + lg["data"][2 + 64:2 + 128].lower()
+        if root != current:
+            events.append(journal.log(action="skip_replaced", set=cfg.name, tx=lg["transactionHash"]))
             continue
-        sub = decode_submission(chain, lg["transactionHash"])
+        try:
+            sub = decode_submission(chain, lg["transactionHash"])
+        except Exception as e:                          # multisig / router: not decodable
+            events.append(journal.log(action="undecodable", set=cfg.name, tx=lg["transactionHash"], error=str(e)[:300]))
+            continue
         disc = audit(sub["rows"], nodes, fbs, idn, cfg)
         ev = journal.log(action="audit", set=cfg.name, tx=lg["transactionHash"], block=int(lg["blockNumber"], 16),
-                         discrepancies=[d.to_json() for d in disc if d.kind != "OMITTED_POSITIVE"],
-                         info=sum(1 for d in disc if d.kind == "OMITTED_POSITIVE"))
-        proved_rows = set()
+                         discrepancies=[d.to_json() for d in disc], proofs=[])
+        by_row: dict[int, list[Discrepancy]] = {}
         for d in disc:
-            if d.provable_v0 and d.proof and d.u not in proved_rows:
-                proved_rows.add(d.u)
-                ev.setdefault("proofs", []).append(prove(chain, contract, set_id, d, cfg.gas, send=send))
+            if d.provable_v0 and d.proof.get("fn"):
+                by_row.setdefault(d.u, []).append(d)
+        for u, lst in by_row.items():
+            added = b""
+            for d in sorted(lst, key=lambda d: (PRIORITY[d.kind], -abs(d.w_registry or 0))):
+                try:
+                    r = prove(chain, contract, set_id, d, cfg.gas, added=added, send=send)
+                except Exception as e:
+                    r = {"kind": d.kind, "agentJ": d.agent_id, "u": u, "status": "error",
+                         "error": C.revert_reason(str(e))}
+                ev["proofs"].append(r)
+                if r.get("status") is True:
+                    added += int(d.agent_id).to_bytes(4, "big") + (d.proof["w"] & 0xFFFF).to_bytes(2, "big")
+                elif send:
+                    break                               # the chain of amendments is broken for this row
+                else:
+                    break                               # estimate-only: later proofs depend on this one
+        journal.log(action="proofs", set=cfg.name, tx=lg["transactionHash"], proofs=ev["proofs"])
         events.append(ev)
     return events
 
@@ -224,7 +274,7 @@ def main(argv=None):
     ap.add_argument("--set-config", required=True, help="SetConfig JSON (certifier.SetConfig.load)")
     ap.add_argument("--set-id", required=True)
     ap.add_argument("--data", help="from_indexer.py output directory; default: versioned snapshot")
-    ap.add_argument("--from-block", type=int, default=0)
+    ap.add_argument("--from-block", type=int, required=True, help="start of the watched window (e.g. deployment)")
     ap.add_argument("--interval", type=float, default=30.0)
     ap.add_argument("--journal", default="watch.jsonl")
     ap.add_argument("--from", dest="sender", help="address of the prover (keystore signer)")
@@ -247,12 +297,18 @@ def main(argv=None):
             import run_mainnet as R
             fbs, idn = R.load_mainnet()
         head = chain.block_number()
-        nodes = C.chain_table(chain, a.contract, a.set_id, cfg.anchors)
-        watch_once(chain, a.contract, cfg, a.set_id, nodes, fbs, idn, jr, frm, send=a.send and signer is not None)
-        alert = liveness(C.OnChain.read(chain, a.contract, a.set_id), head, cfg)
-        if alert:
-            jr.log(action="alert", set=cfg.name, alert=alert, head=head)
-        frm = head + 1
+        try:
+            nodes = C.chain_table(chain, a.contract, a.set_id, cfg.anchors)
+            watch_once(chain, a.contract, cfg, a.set_id, nodes, fbs, idn, jr, frm, head,
+                       send=a.send and signer is not None)
+            alert = liveness(C.OnChain.read(chain, a.contract, a.set_id), head, cfg)
+            if alert:
+                jr.log(action="alert", set=cfg.name, alert=alert, head=head)
+        except Exception as e:                          # never die: journal and retry the same window next round
+            jr.log(action="error", set=cfg.name, error=str(e)[:500], fromBlock=frm, head=head)
+            time.sleep(a.interval)
+            continue
+        frm = head + 1                                  # logs were read up to head exactly: no double processing
         if a.once:
             return 0
         time.sleep(a.interval)
