@@ -27,6 +27,9 @@
 
 **Références** : `solver/FORMAT.md`, `solver/RESULTS.md`, `docs/conseil/tour5B-revue-tour4.md` (vérifications V1 à V18).
 
+
+> **Tour 6 (D44)** : dans `graph.py`, A(c) = {j : wallet(j) = c} ∪ {j : wallet(j) = 0 ∧ owner(j) = c} ; geler les lignes sortantes des agents en `TRANSFERRED`. À mesurer sur le mainnet : environ 48 arêtes de plus (execution.market), toujours 0 masse depuis les ancres honnêtes.
+
 ## 1. Objectif et résultat final attendu
 
 Transformer le solveur de R4 (`solver/`, 95 tests) en **service** qui fait trois choses :

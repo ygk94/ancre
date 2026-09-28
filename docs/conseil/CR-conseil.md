@@ -53,6 +53,9 @@
 | D41 | Double garde de paiement | payeur ERC-1271 qui détient les USDC (`isTrusted` dans `isValidSignature`) + plugin `mm` qui appelle `decide()` avant de signer ; Guard Mode n'autorise que le payeur | vagues 1-2 | 0,75 |
 | D42 | Indexeur Envio | **indexeur de la norme + auditeur de certificats** : il calcule les arêtes selon D14/D15/D16/D20 (parité testée avec le solveur), audite chaque certificat ANCRE et produit une `Discrepancy` avec la preuve (v) prête à soumettre ; scan HyperSync de survie des avis par chaîne. Cloud : Monad 143, 10143 et une 3e chaîne. Coupé : wildcard, MCP, dashboard (réduit à `SetHealth`) | vague 3 (cross-idea) | 0,7 |
 | D43 | Concept Mera *(rouvre la coupe AM-2.13, décision de Hugo)* | **un passkey, deux familles de sels** : (1) clés d'époque pré-rotées, empreinte vérifiée par le contrat (récupération de clé d'ancre sans custody, `rotateBySig`) ; (2) coffres contenant le dossier de veto. Scène : clé volée → slash abusif → rotation depuis l'iPhone → payé à nouveau au bloc suivant | vague 3 (cross-idea) | 0,7 |
+| D44 | Repli owner *(amende D16/D20)* | A(c) = {j : wallet(j) = c} ∪ {j : wallet(j) = 0 ∧ owner(j) = c}. **Le wallet est prioritaire.** Pendant `TRANSFERRED`, on gèle aussi les arêtes **sortantes**. Deux lectures par agent concerné, ROW_ALIAS_MAX = 64, et une preuve (iv-a) pour le passage du wallet de 0 à une adresse | 6 | 0,65 |
+| D45 | Positionnement | *« A receipt can be true and still come from a farm… »* On ne demande pas si le paiement a eu lieu, on demande si quelqu'un en qui **toi** tu as confiance se porte garant. **Scène de moins de 20 s** : notre ferme sur le testnet se paie vraiment (100 % de reçus vrais), mais sa masse ANCRE est nulle et `isTrusted` refuse dans le payeur. On n'affirme jamais le verdict d'un tiers. Dans le pitch, une diapositive « complementary layers » | 6 | 0,75 |
+| D46 | Kanmani / Sentinel | cité comme exemple d'`edgeFilterId` dans l'ERC, et son constat (73 déclarations fausses sur 85, auto-déclaré) en Motivation ; **aucune dépendance** ; **pas de filtre « reçu vrai » par défaut**, parce qu'il récompense une ferme qui s'auto-paie | 6 | 0,7 |
 
 ---
 
@@ -1194,3 +1197,42 @@ Détails dans `docs/ressources/` : les fiches de la vague 1 (`envio.md`, `mera.m
 | AM-6.11 | Les 95 nouveaux avis viennent d'**execution.market**, un rattrapage automatique posté par un relayer unique `0x10304054` avec des EOA délégués EIP-7702. **Ils ajoutent 0 arête utile** (D15 : 10 tags sur 11 hors schéma ; D16 : aucun client n'est `agentWallet`). L'acte 1 ne change pas. Le registre compte maintenant **9 283 avis** : la part de la ferme passe à 82,6 % | intégré ; le pitch doit dater « 83 % de 9 188 » du 21/09 |
 | AM-6.12 | **D16 ne voit pas le seul graphe du mainnet où les noteurs sont eux-mêmes notés.** Les agents « worker » ont `agentWallet = 0` après leur transfert. Un repli « owner si `agentWallet = 0` » donnerait 48 arêtes émises par des agents, mais **toujours 0 masse** depuis les ancres honnêtes | question pour le conseil |
 | AM-6.13 | **Concurrent non répertorié : Kanmani/Sentinel** (#10252, #10256, #10257). Il rend un verdict daté par bloc avant d'embaucher un agent. C'est l'angle le plus proche d'ANCRE vu à ce jour. ColinkaMir est désormais inscrit on-chain (#10253) | ajouté à la concurrence (ANCRE.md §9) |
+
+
+---
+
+# Tour 6 — 2026-09-28 — repli owner et positionnement face à Sentinel
+
+Délibération complète en annexe : `docs/conseil/tour6.md`. Décisions : **D44 à D46** (dans le journal).
+
+**Faits établis** (MESURÉ on-chain, DOC sur leurs sites) :
+- **Kanmani (#10252), Sentinel (#10256) et Assay (#10257) ont un seul owner et un seul wallet**, `0xDB6c…7777`.
+- Leur pile repose sur la confiance par le prix :
+  - Kanmani vérifie que le paiement cité dans un document de preuve a bien eu lieu ;
+  - Sentinel rend un verdict daté par bloc avant l'embauche d'un agent, avec une limite de fraîcheur. Il est vendu via une API x402 (0,01 USDC) et **n'est pas lisible par un contrat** ;
+  - la caution est on-chain (`0x57aF…eaf`).
+- **Aucune ancre ni aucun graphe de confiance n'est visible.**
+- Leur constat, auto-déclaré : 73 déclarations de paiement sur 85 citent une transaction absente de la chaîne annoncée.
+
+**Ce qu'il ne faut pas prétendre** : que Sentinel, Kanmani ou Assay paieraient notre ferme ; qu'ils n'ont rien on-chain ; qu'ANCRE est le premier « verdict daté par bloc », ou le premier sur la fraîcheur ou la caution.
+
+**Ce qui nous est propre et vérifiable** : les ancres choisies par le lecteur, la borne Sybil formelle, le certificat vérifié on-chain, la lecture **dans le contrat payeur**, le veto d'ancre, la norme ouverte.
+
+**Désaccords non résolus** :
+1. Faut-il geler les arêtes sortantes en mode rapide ?
+2. Faut-il citer Kanmani dans le pitch ?
+3. La valeur de ROW_ALIAS_MAX est arbitraire.
+4. Vaut-il la peine de coder le repli owner avant la soumission ?
+
+**Ce que vous auriez dû me demander** : Kanmani concourt-il en track 04 ? Faut-il le contacter ? Notre ferme de démo doit-elle vraiment se payer, avec le surcoût que ça ajoute au budget ?
+
+## Angles morts (tour 6)
+
+| Id | Angle mort | Statut |
+|---|---|---|
+| AM-7.1 | **Kanmani, Sentinel et Assay forment une pile concurrente de « confiance par le prix »** (escrow, reçu, caution), sur le même mot « trust ». Elle était absente de nos analyses de concurrence | intégré (D45) |
+| AM-7.2 | Leur constat (73 fausses déclarations sur 85) confirme notre Motivation par un autre chemin | D46 |
+| AM-7.3 | Le repli owner élargit le support, donc le coût de Registry-verified | ROW_ALIAS_MAX (D44) |
+| AM-7.4 | La pause `TRANSFERRED` ne gelait que la confiance **entrante** : un agent racheté pouvait émettre dès le certificat suivant | D44 |
+| AM-7.5 | Un filtre « reçu vrai » par défaut récompenserait une ferme qui s'auto-paie | D46 |
+| AM-7.6 | Temps de bloc : 266 ms selon Sentinel, 302 ms mesurés par nous. Ça dépend de la fenêtre : aucune valeur ne doit être codée en dur | noté |

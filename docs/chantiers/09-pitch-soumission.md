@@ -21,6 +21,9 @@
 
 **Skills** : `/dataviz` pour les figures du pitch. `anthropic-skills:pptx` seulement si un deck `.pptx` est demandé ; sinon, un artefact.
 
+
+> **Tour 6 (D45)** : phrase de positionnement *« A receipt can be true and still come from a farm. ANCRE doesn't ask whether the payment happened — it asks whether anyone **you** trust vouches for who made it, and your contract reads the answer before it pays. »* Une diapositive « complementary layers » (Kanmani : reçus ; ColinkaMir : provenance ; ANCRE : garants). Une ligne par concurrent de bounty, sans attaque. **À ne pas prétendre** : voir le CR, tour 6.
+
 ## 1. Objectif et résultat final attendu
 
 Préparer un **dossier de soumission Monad Metropolis complet, déposé le 12/10** (clôture le 13/10), qui gagne des points sur les critères du jury.

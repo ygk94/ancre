@@ -30,6 +30,9 @@
 
 **Références** : `docs/ressources/design-payeur-et-reseau.md` et `docs/ressources/design-demo-et-soumission.md` (storyboard).
 
+
+> **Tour 6 (D45)** : nouvelle scène de moins de 20 s, **la ferme qui se paie vraiment**. Sur le testnet, les agents de la ferme se paient entre eux via x402 : 100 % de reçus vrais, vérifiés on-chain à l'écran. Leur masse ANCRE est pourtant nulle, et `isTrusted` refuse dans le payeur. C'est un surcoût à chiffrer dans `demo/BUDGET.md`, et à valider par Hugo.
+
 ## 1. Objectif et résultat final attendu
 
 L'**acte 2 de la démo** (D19) doit être scripté, rejouable et chiffré, sur un réseau à trancher (D19 amendée par la vague 2 : les registres existent aussi sur le testnet ; recommandation H-B dans `docs/ressources/design-payeur-et-reseau.md` : ferme sur le testnet, une exécution minimale sur le mainnet). Les scènes sont les suivantes :

@@ -71,6 +71,11 @@
   - **Mera (D43)** : accepter que la **pré-rotation des clés d'ancre revienne dans la démo** (environ 1,5 jour, plus 0,3 jour pour le dossier de veto). Réserver **dès maintenant un domaine HTTPS fixe et le `rpId` WebAuthn** : le passkey y est attaché, et on ne pourra pas en changer ensuite.
   - **Envio (D42)** : si le handler n'a pas accès au calldata, faut-il faire émettre les `rows` du certificat dans un event (surcoût en gas) ? Choisir la 3e chaîne (Arbitrum ou Optimism). Faut-il publier le tableau de survie des avis dans l'ERC ?
 
+- [ ] **14d. Décisions du tour 6** :
+  - Faut-il **coder le repli owner (D44) avant la soumission** ? Sur la démo, il n'ajoute aucune masse.
+  - La scène « **la ferme qui se paie vraiment** » (D45) : accepter le surcoût en paiements x402 entre les agents de la ferme, sur le testnet.
+  - Kanmani, Sentinel et Assay (`0xDB6c…7777`) : faut-il **les contacter**, et les citer dans le pitch ? Concourent-ils en track 04 ?
+
 ## 🟡 Avant le 12/10
 
 - [ ] **15. Déclarer le niveau de certification de la démo** après la mesure du chantier 02 : Registry-verified, chaque arête relue (~13,6 M gas estimés), ou Submitter-attested (D32).

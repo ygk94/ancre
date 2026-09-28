@@ -7,6 +7,9 @@
 > - Rationale : lemmes L1-L5 (D37) ; ColinkaMir comme exemple d'`edgeFilterId`, trustgraphs en antériorité (D30).
 > - Brouillon de divulgation aux auteurs d'ERC-8004 (D29), non envoyé.
 
+
+> **Tour 6 (D46)** : dans la Rationale, citer Kanmani et ColinkaMir comme exemples d'`edgeFilterId`. Dans la Motivation, citer le constat de Kanmani (73 sur 85, auto-déclaré, daté). **Pas de filtre « reçu vrai » par défaut.**
+
 ## 1. Objectif et résultat final attendu
 
 Amener `docs/erc/anchored-reputation.md` (R6, 775 lignes) à un **état soumettable** sur `ethereum/ERCs`, et préparer les publications **sans les publier**.

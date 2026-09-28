@@ -102,7 +102,7 @@ Le calcul se fait hors chaîne. Le contrat le **vérifie on-chain en une passe**
 | Normalisation | Schéma par tag (min, neutre, max) : w = (x − neutre)/(max − neutre) si x ≥ neutre, sinon (x − neutre)/(neutre − min), donc w ∈ [−1, 1]. **Une valeur hors bornes est rejetée, jamais plafonnée.** Tag inconnu : pas d'arête | T1, D12 |
 | Quantification | Normative : int16 sur une grille de 1e-4, troncature vers zéro. Elle change le point fixe, donc elle fait partie de la norme | D18 |
 | Schéma de tags | Engagé **par ensemble d'ancres**, sans registre global. ANCRE publie un schéma de référence (`solver/schema_reference.json` : 58 tags, dont 15 `endorsement`). TAGS_MAX = 16 | D12, D24 |
-| Émetteur | Wallet c → les agents dont `agentWallet == c`. **Copie de ligne** : chaque agent qui partage ce wallet et qui a de la masse émet la ligne de c avec sa propre masse, sans amplification (MESURÉ). Wallet qui n'appartient à aucun agent : nœud-adresse, sans masse sauf s'il est une ancre | D16, D20, D34 |
+| Émetteur | Wallet c → les agents dont `agentWallet == c`, **ou dont le wallet vaut 0 et l'owner vaut c** (repli owner, D44 ; le wallet reste prioritaire). **Copie de ligne** : chaque agent qui partage ce wallet et qui a de la masse émet la ligne de c avec sa propre masse, sans amplification (MESURÉ). Wallet qui n'appartient à aucun agent : nœud-adresse, sans masse sauf s'il est une ancre | D16, D20, D34 |
 | Rejet | Arête rejetée si c est un **contrôleur actuel** de la cible : owner, agentWallet, token approuvé ou opérateur. La règle « ancien owner » est retirée de la norme (invérifiable, fausse pour les plateformes) | D16, D20 |
 | Ancres | Nœud-ancre **toujours distinct** d'un nœud-agent. `anchorId` avec **pré-rotation** de clé (engagement du hash de la clé suivante). Après une rotation, seuls les avis de la clé courante comptent | D9 |
 | Paiement | **N'entre pas dans le poids.** Il se contourne par aller-retour, et la ferme payait. Un point d'extension `edgeFilterId` est prévu (ColinkaMir peut s'y brancher) | D3, D30 |
@@ -353,10 +353,10 @@ Ancres : clés « demo » ; Mera (PRF du passkey) pour un usage hors wallet ─�
 | Sireadell/headwater-indexer | Indexeur Envio des registres 8004 de Monad (provenance) | Concurrent sur le bounty Envio |
 | Beltran12138/warrant | Plugin `mm` qui écrit des avis ERC-8004 | Complémentaire : il produit, on consomme |
 | aliveevie/mandate | Mera, ERC-8004, CRE, disjoncteur | Concurrent sur le bounty Mera : éviter l'angle « le passkey possède l'agent » |
-| Kanmani/Sentinel (#10252, #10256, #10257, repéré le 27/09) | Verdict daté par bloc avant d'embaucher un agent | **Le plus proche d'ANCRE.** Notre différence reste à établir : ancres choisies par le lecteur, certificat vérifiable, veto, norme |
+| Kanmani / Sentinel / Assay (#10252, #10256, #10257, un seul owner) | « Confiance par le prix » : reçu de paiement vérifié, verdict daté par bloc **via une API x402 payante, non lisible par un contrat**, caution on-chain. Pas d'ancres ni de graphe | **D45** : *« A receipt can be true and still come from a farm »*. Nous : ancres du lecteur, borne Sybil, certificat on-chain, lecture dans le payeur, veto, norme. Complémentaire (D46) : exemple d'`edgeFilterId`, sans dépendance |
 | ~18 clones « passeport d'agent » | Produisent des signaux | ANCRE **agrège** pour le lecteur |
 
-**Le message** : *« la couche que la norme délègue au lecteur, et la preuve sur le mainnet que la moyenne ment »*.
+**Le message** : *« la couche que la norme délègue au lecteur, et la preuve sur le mainnet que la moyenne ment »*. Face à la pile « confiance par le prix » (D45) : *« A receipt can be true and still come from a farm. ANCRE doesn't ask whether the payment happened — it asks whether anyone **you** trust vouches for who made it, and your contract reads the answer before it pays. »*
 
 **Modèle économique** (D27) :
 - le propriétaire d'un ensemble d'ancres paie la certification ;

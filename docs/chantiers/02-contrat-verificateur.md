@@ -44,6 +44,9 @@
   - vérification : https://docs.monad.xyz/guides/verify-smart-contract/foundry.
 - Source des registres : https://github.com/erc-8004/erc-8004-contracts.
 
+
+> **Tour 6 (D44)** : repli owner pour identifier l'émetteur quand le wallet vaut 0 (le wallet reste prioritaire) ; gel des arêtes **sortantes** pendant `TRANSFERRED` ; ROW_ALIAS_MAX = 64 ; preuve (iv-a) pour le passage du wallet de 0 à une adresse. **Priorité après D39 et D32**, sous réserve du désaccord « faut-il le coder avant la soumission ».
+
 ## 1. Objectif et résultat final attendu
 
 Faire passer le contrat de R5 (`contracts/`, 49 tests) de **prototype mesuré** à **contrat déployable sur le mainnet pour la démo**, conforme aux décisions du tour 4.
