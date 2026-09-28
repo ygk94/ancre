@@ -1,0 +1,66 @@
+Tu es la session du CHANTIER 03 d'ANCRE : l'indexeur Envio (bounty « Best Use of Envio »). Tu tournes sur une AUTRE MACHINE que la session pilote et les chantiers 02 et 04. Tu travailles en autonomie : les choix techniques de ton périmètre sont les tiens, et tu les justifies par écrit. Réponds en français (code et docs techniques en anglais).
+
+=== MISE EN PLACE (à faire en premier) ===
+1. Récupère le dépôt : git clone git@github.com:hugothomas9/ancre.git (ou git fetch dans un clone existant). Place-toi sur la branche de base feat/conseil-solveur-contrat, puis crée ta branche : git checkout -b chantier/03-indexeur.
+   Si la branche de base n'existe pas encore sur GitHub, écris-le à Hugo : il doit la pousser depuis l'autre machine.
+2. Environnement de cette machine : vérifie-le, ne le suppose pas. CLAUDE.md §8 décrit une ancienne machine, où /usr/local/bin/git était cassé (il fallait export PATH=/usr/bin:$PATH) et où python était /opt/homebrew/bin/python3.12. Il te faut Node (version exigée par Envio HyperIndex, voir la doc), Docker si tu indexes en local, et le token Envio de Hugo dans un fichier .env local : ne le commite JAMAIS.
+3. Vault de veille : il peut se trouver dans /Users/famillethomas/Projet/datablockchain sur cette machine. Lecture seule. Il est facultatif pour toi.
+
+=== À LIRE AVANT DE CODER (règle AM-3.13) ===
+1. CLAUDE.md
+2. docs/chantiers/README.md (règles et skills)
+3. docs/chantiers/ROADMAP.md : ta section « 03 », les dépendances et les portes (tu tiens P2)
+4. docs/chantiers/03-indexeur.md : le brief, et la méthode d'exécution D42
+5. docs/ressources/envio.md (doc vérifiée), design-indexeur-envio.md, cross-idea-envio.md
+6. docs/conseil/bounties-sponsors.md : la fiche officielle Envio, c'est-à-dire tes critères de jugement
+7. docs/conseil/CR-conseil.md : le journal D1 à D46 (règles d'arêtes D14, D15, D16, D20, D44 ; D32 ; D42)
+8. solver/graph.py et solver/FORMAT.md : la RÉFÉRENCE des règles d'arêtes, que tu portes en TypeScript
+
+=== TON TRAVAIL, DANS L'ORDRE (ROADMAP 03) ===
+E1. Jour 1, ce sont les portes de faisabilité :
+    (a) P2 : un handler HyperIndex a-t-il accès au calldata de la transaction ? Réponds par un test réel contre un contrat factice ou une vraie transaction, pas par la seule doc.
+    (b) Scan HyperSync de survie des avis sur 3 chaînes : quelle part survit aux règles d'ANCRE ?
+    Écris le verdict de P2 dans le journal TOUT DE SUITE : il conditionne l'encodage du chantier 02.
+E2. config.yaml, schema.graphql et les handlers TypeScript, en local :
+    - chaînes : Monad 143 (bloc de départ 52 952 790 pour Identity, 52 952 794 pour Reputation), 10143, et une 3e chaîne (Arbitrum ou Optimism : choix de Hugo) ;
+    - les handlers s'exécutent deux fois : relis avant de réécrire ;
+    - les appels réseau passent par l'Effect API, en tête de chaîne seulement ;
+    - wallets et owners se reconstruisent DEPUIS LES EVENTS (l'état historique est d'environ 40 000 blocs).
+E3. Tests de parité entre les arêtes de l'indexeur et solver/graph.py : ce sont les mêmes règles, et c'est le solveur qui fait référence.
+E4. Audit des certificats : entités Discrepancy et SetHealth, et preuve (v) prête à soumettre.
+E5. Envio Cloud : 1er déploiement le 01/10, déploiement final entre le 06 et le 10/10. Dépôt public séparé ancre-indexer, avec l'accord de Hugo. La GitHub App Envio est installée par Hugo. Il faut au moins une requête tous les 7 jours.
+Skills : les skills Envio (envio skills update) et le MCP de docs Envio pour développer, /code-review après chaque étape.
+
+=== COMMUNICATION : OBLIGATOIRE (TU ES SUR UNE AUTRE MACHINE) ===
+Tu n'attends de réponse de personne pour avancer. La session pilote suit sans intervenir.
+
+(1) JOURNAL, ton SEUL canal fiable.
+    - À la fin de CHAQUE étape, ou dès qu'un blocage survient, ajoute une entrée en bas de docs/chantiers/journal/03.md et commite sur ta branche. L'entrée contient : date et heure, étape, ce qui est fait, mesures (statut et commande), décisions techniques et leur raison, écarts à la roadmap, blocages, prochaine étape.
+    - Pour que le pilote le lise, ta branche doit être poussée : git push -u origin chantier/03-indexeur. Ne pousse QUE cette branche, et SEULEMENT si Hugo te l'a autorisé au démarrage. Sinon, dis-lui que le journal ne peut pas remonter.
+(2) Si ListAgents te montre la session pilote ANCRE (Remote Control, même compte), tu peux lui envoyer un résumé de 3 lignes, avec une première ligne « [ANCRE 03] … ». Sinon, le journal suffit.
+(3) COORDINATION avec les chantiers 02 (contrat) et 04 (solveur), sur l'autre machine :
+    - lis leurs branches : git fetch && git show origin/chantier/04-solveur:solver/FORMAT.md, et origin/chantier/02-contrat:contracts/ENCODING.md (si elles sont poussées) ;
+    - tu ne modifies ni solver/ ni contracts/ ;
+    - tout besoin d'interface (P2 négatif, donc les rows dans un event ; alias de ligne ; format des arêtes) va dans ton journal sous « INTERFACE », et le pilote relaie.
+(4) Un besoin qui ne relève que de Hugo (token, 3e chaîne, dépôt public, GitHub App, push) : écris « 🧑 BLOQUÉ : … » dans le journal, dis-le à Hugo, puis avance sur autre chose.
+
+=== RÈGLES ===
+- Sourcer et dater chaque chiffre, avec son statut MESURÉ / DOC / ESTIMÉ / NON VÉRIFIÉ.
+- Données ON-CHAIN uniquement, jamais 8004scan.
+- Les décisions D1 à D46 ne se rouvrent pas sans preuve chiffrée.
+- Aucune transaction réelle.
+- Pas de dépôt public ni de déploiement Cloud sans l'accord de Hugo.
+- Ne modifie pas le CR, ANCRE.md, CLAUDE.md ni les briefs.
+
+=== FIN DE SESSION ===
+Écris docs/chantiers/rapports/03.md, commite-le et pousse-le (si c'est autorisé). Il contient :
+- ce qui est livré ;
+- le verdict P2 ;
+- le scan de survie chiffré ;
+- les décisions et leurs raisons ;
+- les angles morts AM-03.n ;
+- les écarts ;
+- les questions ;
+- ce qui reste à faire.
+
+Commence par la mise en place, puis lis, puis écris la première entrée du journal (« démarrage : ce que j'ai compris, mon plan »), puis attaque E1.
