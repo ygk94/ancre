@@ -136,3 +136,18 @@ reading: c_a = ⌊λ_a·t^(a)/WAD⌋ ; trustLow = Σ c_a − (m−1 largest c_a)
 | toy_truncated | 5 | 6 | 4 | 0 | 41 | [3.9e16, 18] | truncated node margin |
 
 The large `e[0]` of `toy_alias_owner_rowmax` is the declared-omission margin of the capped row (44 positive edges omitted): expected, and harmless for trust (t stays a lower bound).
+
+## 6. Violation vectors (D37) — `vectors/violations/*.json`
+
+Arithmetically valid certificates (they pass `verify`, t ≤ y) whose committed graph is **not dominated** by the
+registry, built on the real `mainnet_slash_anchor` graph. Registry-verified MUST reject them at submission;
+Submitter-attested MUST make them provable. Extra JSON block `violation`: `kind`, `graphNode {u, dst}`,
+`wRegistry`, `wCommitted`, `feedbackIndex`, `affects` (`t` = Σλt of dst, `d` = distrust of dst), `honestValue`,
+`committedValue` (WAD, MEASURED 28/09).
+
+| kind | what is wrong | honest → committed |
+|---|---|---|
+| fabricated (V5) | 0x0730 → #4 (+10000, index 7) with no feedback | t(#4) 0 → 0.0556 |
+| dilution (V4) | #18 → #3 omitted, sPlus not declared | t(#2) 0.0926 → 0.1296 |
+| inflated (V6) | #18 → #4 slash committed as −1 | d(#4) 0.1852 → 0.1111 |
+| omitted_negative (V13) | the slash 0xea0b → #4 omitted (anchor row and copy) | d(#4) 0.1852 → 0 |

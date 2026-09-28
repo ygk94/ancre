@@ -297,6 +297,63 @@ def toy_identity_graph():
     return fbs, idn, [A, B]
 
 
+def violation_vectors(fbs, idn, schema, filt, anchors, outdir: Path) -> list[Path]:
+    """D37: one normative vector per violation of C_committed ≤ C_true (V4 dilution, V5 fabrication,
+    V6 inflation, V13 omitted negative), on the real mainnet_slash_anchor graph. Each certificate is
+    ARITHMETICALLY valid (it passes verify: t ≤ y), but its committed graph is not dominated by the registry.
+    Registry-verified must reject it at submission; Submitter-attested must make it provable (proof (v) or (i))."""
+    import copy
+    from graph import Edge, build_graph
+    outdir.mkdir(exist_ok=True)
+    for p in outdir.glob("*.json"):
+        p.unlink()
+    g0 = build_graph(fbs, idn, schema, filt, anchors)
+    honest = certify(g0, Fraction(1, 3))
+    n18, n2, n3, n4 = (g0.index[(AGENT, j)] for j in (18, 2, 3, 4))
+    a0730 = g0.index[(ANCHOR, "0x0730536018541c5149a049d35528a76c2c8f1e6b")]
+    aea0b = g0.index[(ANCHOR, "0xea0b21fb2441464f4920ce3e34d478235605816b")]
+
+    def value(c, gi, what):
+        ci = c.node_map.index(gi) if gi in c.node_map else None
+        if ci is None:
+            return 0
+        return c.d[ci] if what == "d" else sum(c.lambdas[a] * c.t[a][ci] for a in range(c.k)) // WAD
+
+    cases = []
+    g = copy.deepcopy(g0)                                      # V5 fabrication: 0x0730 -> #4, +1, no such feedback
+    g.rows[a0730] = sorted(g.rows[a0730] + [Edge(n4, GRID, g0.nodes[a0730][1], 4, "vouch", 7)], key=lambda e: e.dst)
+    cases.append(("fabricated", g, a0730, n4, None, GRID, 7, "t", "committed edge with no registry feedback: "
+                  "readFeedback(4, 0x0730, 7) does not exist"))
+    g = copy.deepcopy(g0)                                      # V13 omitted negative: the slash disappears everywhere
+    for u in (aea0b, n18):
+        g.rows[u] = [e for e in g.rows[u] if e.dst != n4]
+    cases.append(("omitted_negative", g, aea0b, n4, -GRID, None, 1, "d", "the anchor's slash (index 1) is omitted: "
+                  "distrust of #4 falls to 0 and the certified veto bit is disarmed (V13)"))
+    g = copy.deepcopy(g0)                                      # V6 inflation: slash -10000 committed as -1
+    g.rows[n18] = [Edge(e.dst, -1, e.client, e.agent_id, e.tag1, e.feedback_index) if e.dst == n4 else e
+                   for e in g.rows[n18]]
+    cases.append(("inflated", g, n18, n4, -GRID, -1, 1, "d", "committed weight above the registry weight "
+                  "(-1 > -10000): distrust of #4 shrinks"))
+    g = copy.deepcopy(g0)                                      # V4 dilution: omit #18 -> #3 without declaring sPlus
+    g.rows[n18] = [e for e in g.rows[n18] if e.dst != n3]
+    cases.append(("dilution", g, n18, n2, GRID, GRID, 1, "t", "edge #18 -> #3 omitted and sPlus NOT declared: "
+                  "B⁺ shrinks from 20000 to 10000 and #2 receives twice its share (V4/V7)"))
+    out = []
+    for kind, g, u, dst, w_reg, w_com, fi, what, why in cases:
+        c = certify(g, Fraction(1, 3))
+        obj = export_certificate(g, c, idn, schema=schema, filter_tags=filt, label=f"violation_{kind}",
+                                 notes="D37 normative violation vector (mainnet_slash_anchor). " + why)
+        obj["violation"] = {"kind": kind, "graphNode": {"u": g.nodes[u][1], "dst": g.nodes[dst][1]},
+                            "wRegistry": w_reg, "wCommitted": w_com, "feedbackIndex": fi, "affects": what,
+                            "honestValue": str(value(honest, dst, what)), "committedValue": str(value(c, dst, what)),
+                            "mustBe": "rejected at submission (Registry-verified) or provable (Submitter-attested)"}
+        p = outdir / f"{kind}.json"
+        p.write_text(json.dumps(obj, indent=1, ensure_ascii=False))
+        check_file(p)
+        out.append(p)
+    return out
+
+
 def main():
     import run_mainnet as R
     from graph import build_graph, load_schema
@@ -348,6 +405,7 @@ def main():
     dump("toy_alias_owner_rowmax", g, certify(g, Fraction(1, 3)), sch_t, core,
          "Jouet R7 : wallet partagé W (#1, #2 : ligne alias), repli owner (#3 VIA_OWNER ; #4 a un wallet, qui "
          "l'emporte), ligne de #6 à 300 arêtes plafonnée à ROW_MAX = 256 avec sPlus déclaré.", idn_=idn_t)
+    violation_vectors(fbs, idn, ref, core, [ea0b, h1], outdir / "violations")
     A1, A2 = "0x" + "11" * 20, "0x" + "22" * 20
     toy = _toy_graph({(ANCHOR, A1): [(1, 10000, 1), (2, 5000, 1)], (AGENT, 1): [(2, 3333, 2), (3, -10000, 1)],
                       (AGENT, 2): [(1, 7777, 1), (3, 2500, 4)], (AGENT, 3): [(1, 1, 1)]},

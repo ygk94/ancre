@@ -422,3 +422,15 @@ def test_replay_refuses_undecoded_approval():
         replay_identity_events(idn, [{"ev": TOPIC_APPROVAL, "block": 5, "li": 0}], 0, 10)
     replay_identity_events(idn, [{"ev": "Approval", "block": 5, "li": 0, "agent": 1, "approved": "0x" + "B" * 40}], 0, 10)
     assert idn.approved[1] == "0x" + "b" * 40
+
+
+def test_violation_vectors_are_valid_but_false():
+    """D37: each violation vector passes the arithmetic (t ≤ y) yet moves trust up or distrust down."""
+    vdir = Path(__file__).resolve().parents[1] / "vectors" / "violations"
+    files = sorted(vdir.glob("*.json"))
+    assert {p.stem for p in files} == {"dilution", "fabricated", "inflated", "omitted_negative"}
+    for p in files:
+        X.check_file(p)
+        v = json.loads(p.read_text())["violation"]
+        h, c = int(v["honestValue"]), int(v["committedValue"])
+        assert (c > h) if v["affects"] == "t" else (c < h), p
