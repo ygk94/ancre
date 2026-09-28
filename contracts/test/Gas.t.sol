@@ -68,13 +68,13 @@ contract GasTest is AncreBase {
         uint256 ctr;
         for (uint256 u; u < n; ++u) {
             uint256 d = base + (u < extra ? 1 : 0);
-            if (d > n - 1) d = n - 1;
+            if (d > n - k - 1) d = n - k - 1;
             if (d > 256) d = 256;
             uint256[] memory dst = new uint256[](d);
             int256[] memory w = new int256[](d);
             uint256 got;
             while (got < d) {
-                uint256 c = _rand(seed, ctr++) % n;
+                uint256 c = k + (_rand(seed, ctr++) % (n - k)); // targets are agents
                 if (c == u) continue;
                 bool dup;
                 for (uint256 q; q < got; ++q) {

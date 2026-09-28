@@ -144,6 +144,11 @@ contract Consumer {
         emit Seen(st);
     }
 
+    function trusted(AnchoredReputation ar, uint256 id, bytes32 setId, bool) external returns (uint8 st) {
+        st = ar.isTrusted(id, setId) ? 1 : 0;
+        emit Seen(st);
+    }
+
     function baseline(AnchoredReputation, uint256, bytes32, bool) external returns (uint8) {
         emit Seen(0);
         return 0;

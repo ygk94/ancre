@@ -16,10 +16,10 @@ contract ARHarness is AnchoredReputation {
         _versionHash();
         gVersion = g - gasleft();
         g = gasleft();
-        (, uint256[] memory d,,,) = _verifyPass(s, nCert, vectors, rows);
+        Pass memory P = _verifyPass(s, nCert, vectors, rows);
         gVerify = g - gasleft();
         g = gasleft();
-        _storeVectors(s, setId, nCert, s.k, vectors, d);
+        _storeVectors(s, setId, nCert, s.k, vectors, P.d, P.veto);
         gStore = g - gasleft();
     }
 }

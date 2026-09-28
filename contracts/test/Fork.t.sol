@@ -72,7 +72,7 @@ contract ForkTest is AncreBase {
         assertEq(IIdentityRegistry8004(ID).getVersion(), "2.0.0");
         assertEq(IReputationRegistry8004(REP).getVersion(), "2.0.0");
         _certify(false);
-        (,,,, bytes32 vh,,,) = ar.certificate(setId);
+        (,,,,, bytes32 vh,,,) = ar.certificate(setId);
         assertEq(vh, keccak256(abi.encode(ID, keccak256("2.0.0"), REP, keccak256("2.0.0"))));
         assertFalse(ar.checkRegistry(setId));
     }
@@ -80,8 +80,11 @@ contract ForkTest is AncreBase {
     function test_fork_vetoOnRealSlash() public {
         _certify(false);
         AnchoredReputation.Assessment memory x4 = ar.assess(4, setId, true);
-        assertEq(uint8(x4.status), uint8(AnchoredReputation.Status.VETOED), "#4 vetoed by the real slash");
-        assertEq(x4.triggerTag, bytes32("slash"));
+        // D33: EA's LAST feedback on #4 is `review +1` (idx 2), so the live veto does not fire; the
+        // certified bit (EA's row: slash -100 dominates -> -1) does. This is AM-5.10, on real data.
+        assertEq(uint8(x4.status), uint8(AnchoredReputation.Status.VETOED), "#4 vetoed by the certified bit");
+        assertEq(x4.triggerTag, bytes32(0), "no live veto: only the certified bit");
+        assertEq(x4.vetoCount, 1);
         emit log_named_uint("assess(#4, veto) billed gas (isolated tx)", vm.lastCallGas().gasTotalUsed);
 
         AnchoredReputation.Assessment memory x3 = ar.assess(3, setId, true);
@@ -89,15 +92,6 @@ contract ForkTest is AncreBase {
         assertGt(x3.trust, 0);
         assertGt(ar.assess(4, setId, false).distrust, 0, "#4 also receives one-hop distrust");
         emit log_named_uint("#3 trust (WAD)", x3.trust);
-    }
-
-    function test_fork_omissionOnRealFeedback() public {
-        (CertLib.Graph memory gg,) = _certify(true); // EA -> #3 (review +1) omitted
-        uint256 r1 = ar.residual(setId, 1);
-        bytes32[] memory lv = CertLib.leaves(gg, 2);
-        ar.proveOmission(setId, 1, CertLib.rowBytes(gg, 1, 2), CertLib.merkleProof(lv, 1), "", bytes32((uint256(3) << 248) | uint160(EA)), 3);
-        emit log_named_uint("proveOmission billed gas (fork, real registry)", vm.lastCallGas().gasTotalUsed);
-        assertGt(ar.residual(setId, 1), r1, "bound widened from a real registry fact");
     }
 
     function test_fork_upgradeDetected() public {
