@@ -23,10 +23,10 @@ indexer.onEvent(
     });
     const outOfRange = p.value >= VALUE_ABS_MAX || p.value <= -VALUE_ABS_MAX;
     await bumpStats(context, block, { feedbacks: 1, selfRatings: ctl ? 1 : 0, outOfRange: outOfRange ? 1 : 0 });
-    if (!isRefTag(p.tag1)) return;
     // feedbackIndex grows per (client, agent): a new feedback is always the latest of its triple (D14).
+    // Kept for every tag: an anchor set may commit its own filter (D12), which the certificate audit replays.
     context.TripleLatest.set({ id: triple, client, agent_id: agentId, tag1: p.tag1, feedback_id: id });
-    await recomputeRefEdge(context, client, agentId, block);
+    if (isRefTag(p.tag1)) await recomputeRefEdge(context, client, agentId, block);
   },
 );
 
@@ -39,7 +39,6 @@ indexer.onEvent({ contract: "ReputationRegistry", event: "FeedbackRevoked" }, as
   if (!fb || fb.revokedAtBlock !== undefined) return;
   context.Feedback.set({ ...fb, revokedAtBlock: BigInt(block) });
   await bumpStats(context, block, { revoked: 1 });
-  if (!isRefTag(fb.tag1)) return;
   const tl = await context.TripleLatest.get(fb.triple);
   if (tl?.feedback_id !== id) return;
   // Fall back to the latest non-revoked feedback of the triple (none -> null).
@@ -50,5 +49,5 @@ indexer.onEvent({ contract: "ReputationRegistry", event: "FeedbackRevoked" }, as
     if (!best || f.feedbackIndex > best.feedbackIndex) best = f;
   }
   context.TripleLatest.set({ ...tl, feedback_id: best?.id });
-  await recomputeRefEdge(context, client, agentId, block);
+  if (isRefTag(fb.tag1)) await recomputeRefEdge(context, client, agentId, block);
 });

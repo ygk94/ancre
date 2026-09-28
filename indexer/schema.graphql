@@ -111,9 +111,9 @@ type Operator {                      # id = owner-operator
 
 ############ Layer 3 — normative edges (reference set)
 
-type TripleLatest {                  # D14: latest non-revoked feedback per (client, agent, tag1)
+type TripleLatest {                  # D14: latest non-revoked feedback per (client, agent, tag1), every tag
   id: ID!                            # client-agentId-tag1
-  client: String!
+  client: String! @index
   agent: Agent!
   tag1: String!
   feedback: Feedback                 # null when every feedback of the triple is revoked

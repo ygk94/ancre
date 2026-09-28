@@ -44,10 +44,15 @@ export const REF_SCHEMA = loadSchema(schemaJson);
 export const REF_FILTER: readonly string[] = schemaJson.filters.reference;
 const REF_FILTER_SET = new Set(REF_FILTER);
 
-/** True when a feedback with this tag1 can contribute to a reference edge (D15 + filter). */
-export function isRefTag(tag1: string): boolean {
-  return REF_FILTER_SET.has(tag1) && REF_SCHEMA.get(tag1)?.kind === "endorsement";
+/** A set's edge schema: tag -> bounds/kind (D12) and the tags of its filter. */
+export type EdgeSchema = { specs: Map<string, TagSpec>; filter: ReadonlySet<string> };
+export const REF: EdgeSchema = { specs: REF_SCHEMA, filter: REF_FILTER_SET };
+
+/** True when a feedback with this tag1 can contribute to an edge of the set (D15 + filter). */
+export function isEdgeTag(tag1: string, schema: EdgeSchema = REF): boolean {
+  return schema.filter.has(tag1) && schema.specs.get(tag1)?.kind === "endorsement";
 }
+export const isRefTag = (tag1: string) => isEdgeTag(tag1, REF);
 
 /** graph.quantize: q in [-10000, 10000] or undefined when out of bounds. */
 export function quantize(value: bigint, decimals: number, spec: TagSpec): number | undefined {
@@ -72,16 +77,16 @@ export type Combined =
 
 /**
  * D14 combination for one (client, agent) pair.
- * `latest` holds, for each reference tag, the latest non-revoked feedback of the triple (any bounds).
+ * `latest` holds, for each tag of the set's filter, the latest non-revoked feedback of the triple (any bounds).
  * Returns undefined when no tag of the filter has a feedback (no RefEdge row needed).
  */
-export function combine(latest: TagCandidate[]): Combined | undefined {
+export function combine(latest: TagCandidate[], schema: EdgeSchema = REF): Combined | undefined {
   const scored: { q: number; c: TagCandidate }[] = [];
   let any = false;
   for (const c of latest) {
-    if (!isRefTag(c.tag1)) continue;
+    if (!isEdgeTag(c.tag1, schema)) continue;
     any = true;
-    const q = quantize(c.value, c.decimals, REF_SCHEMA.get(c.tag1)!);
+    const q = quantize(c.value, c.decimals, schema.specs.get(c.tag1)!);
     if (q !== undefined) scored.push({ q, c });
   }
   if (!any) return undefined;
