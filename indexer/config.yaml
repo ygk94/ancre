@@ -37,3 +37,11 @@ chains:
         address: "0x8004a818bfb912233c491871b3d84c89a494bd9e"
       - name: ReputationRegistry
         address: "0x8004b663056a597dffe9eccc1965a193b7388713"
+  - id: 10                          # Optimism: 3rd chain (chantier 03 recommendation 28/09, reversible; see journal E1b)
+    start_block: 147514947          # Identity proxy deployment, MESURÉ 27/09
+    max_reorg_depth: 200            # Envio defaults to 0 (no rollback) on OP chains
+    contracts:
+      - name: IdentityRegistry
+        address: "0x8004a169fb4a3325136eb29fa0ceb6d2e539a432"
+      - name: ReputationRegistry
+        address: "0x8004baa17c55a88189ae136b182e5fda19de9b63"
