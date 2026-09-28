@@ -5,6 +5,10 @@
 > **Skills** : voir `README.md` pour le détail.
 > Les étapes marquées 🧑 attendent une action de Hugo (`mustdo/MUSTDO.md`).
 
+## 01 — Tour 4 du conseil : ✅ terminé le 27/09
+
+Décisions D20 à D26. Les tours 5 et 6, les vagues de recherche et la décision D38 ont suivi hors chantier (D27 à D46 dans le CR). Il n'y a plus d'étape à planifier.
+
 ## Jour 0 : prérequis de Hugo (bloquants)
 
 MUSTDO 0 à 4 : inscription avant le 06/10, relecture des règles, projet et bounties sur la plateforme, question sur l'éligibilité MetaMask, token Envio. Sans eux, les chantiers 03 et 09 ne peuvent pas finir.
@@ -98,3 +102,45 @@ Il faut aussi, **pour le 29/09** : un domaine HTTPS fixe et le `rpId` (Mera), et
   - environ 4-5 ensuite.
 - **Chemin critique** : 02-E1 → 02-E2 (mesure) → 04-E4 → 06-E2 → 07-E2 → 09-E4.
 - **Tests qui décident de l'architecture** : 02-E2 (coût de Registry-verified), 05-E2 (T1 via le facilitator), 06-E3 (Mera sur deux appareils), 03-E1 (accès au calldata).
+
+## Dépendances entre chantiers
+
+```
+                 ┌──────────── 03-E1 accès au calldata ?────────────┐
+                 │ non → le contrat émet les rows dans un event        │
+                 ▼                                                   │
+02-E1 D39 ──▶ 02-E2 D32 mesure ──▶ niveau de certification ─────────┤
+   │            │  Registry-verified ?                                │
+   │            │   oui → soumission ouverte, fabrication impossible  │
+   │            │   non → Submitter-attested + preuve (v) obligatoire │
+   │            ▼                                                   ▼
+   │        ENCODING.md ◀──── alias de ligne (D20/D44) ────▶ solver/FORMAT.md (04-E1)
+   │                                                               │
+   ├──▶ 05-E1 payeur (isTrusted) ──▶ 05-E2 T1 facilitator ──▶ garde dure oui/non
+   │                                                               │
+   │   règles d'arêtes (D14/15/16/20/44) : solveur = référence ──▶ 03-E2 indexeur (port TS)
+   │                                        parité 03-E3 ⇄ 04-E3   │
+   ▼                                                               ▼
+02-E9 déploiement testnet ──▶ 04-E4 certificateur ──▶ 06-E2 scènes ──▶ 07 écran ──▶ 09 vidéo
+06-E3 prototype Mera ──▶ oui : 02-E8 AnchorRegistry · non : dossier de veto seul (pas de contrat)
+03-E4 audit ⇄ niveau de 02-E2 (voir ci-dessous) · 08 ⇐ décisions de 02 et 04, vecteurs de 04
+```
+
+## Portes de faisabilité : à passer en premier, en parallèle
+
+| Porte | Ce qu'on ne sait pas | Si elle passe | Si elle échoue | Ce qui en dépend |
+|---|---|---|---|---|
+| **P1 = 02-E2**, coût de Registry-verified | Relire chaque arête on-chain. ESTIMÉ ≈ 13,6 M gas pour la démo, à partir de coûts mesurés (≈ 11 k pour `getLastIndex` et ≈ 15 k par avis lu, à travers le proxy). **Inconnue majeure** : « dernier index **du tag** » peut obliger à lire tous les index intermédiaires d'un couple, ce qui n'est pas borné (execution.market a des couples à plusieurs avis) | Soumission ouverte à tous ; la fabrication devient impossible | Submitter-attested (le propriétaire de l'ensemble soumet, D27), et la preuve (v) devient **indispensable** | 04-E4, 03-E4, 08, 09 (ce que l'on promet dans le pitch) |
+| **P2 = 03-E1**, accès au calldata dans un handler Envio | La doc ne dit pas clairement si le champ `input` de la transaction est sélectionnable | L'audit décode directement `submitCertificate` | Le contrat émet les lignes dans un event : gas en plus, et l'encodage change (02-E2 et ENCODING) | 02-E2 (mesure à refaire avec l'event), 03-E4 |
+| **P3 = 05-E2**, test T1 du facilitator | Le facilitator accepte-t-il de payer le gas d'un `isValidSignature` qui appelle `isTrusted` (77 à 190 k) ? Le code x402-rs n'a pas de plafond, mais ce n'est pas testé | Garde dure : « le contrat refuse de payer » | Garde côté client seulement (b). Le plugin MetaMask reste possible, mais le message du pitch s'affaiblit | 05-E3, 06-E2, 09 |
+| **P4 = 06-E3**, Mera sur deux appareils | Le PRF est-il reproduit sur iCloud Keychain ou 1Password, avec notre `rpId` ? | 02-E8 (`AnchorRegistry`, `rotateBySig`) et la scène de rotation | Repli sur le seul dossier de veto, sans travail de contrat | 02-E8, 06-E2, bounty Mera |
+
+**Découplages à exploiter**
+- **P3 n'a pas besoin du vrai contrat.** Un payeur ERC-1271 dont la garde est un simple bouchon qui brûle environ 190 k gas suffit à tester le facilitator. On peut donc le faire **dès le 29/09**, en parallèle de 02, avec l'accord de Hugo.
+- **P2 se teste avec un contrat factice** qui émet un `submitCertificate` sur le testnet. Il ne dépend pas de 02.
+- **Règles d'arêtes** : le solveur (04-E1) fait **référence**. L'indexeur (03-E2) les porte en TypeScript, et la parité (03-E3 ⇄ 04-E3) sert de juge. Il faut donc finir 04-E1 **avant** de figer 03-E2.
+
+**Interactions à surveiller**
+- **02-E2 ⇄ 03-E4.** Si Registry-verified est abordable, la fabrication devient impossible on-chain. L'audit Envio garde alors surtout les **omissions** et les arêtes **périmées**, et son intérêt pour le bounty baisse un peu (il reste l'analytique multichain et la parité). Si c'est Submitter-attested, l'audit devient central, puisque c'est lui qui déclenche la preuve (v).
+- **D20 et D44 (copie de ligne, repli owner) ⇄ encodage.** L'« alias de ligne » doit être défini **une seule fois**, dans ENCODING.md et FORMAT.md, avant 02-E3 et 04-E1.
+- **02-E1 (D39) change le `setId`**, puisque la politique y est désormais engagée. Les vecteurs de test (04, 08) et le payeur (05) doivent attendre cette version.
