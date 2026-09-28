@@ -8,6 +8,7 @@ contracts:
     abi_file_path: abis/IdentityRegistry.json
     events:
       - event: "Registered(uint256 indexed agentId, string agentURI, address indexed owner)"
+      - event: "URIUpdated(uint256 indexed agentId, string newURI, address indexed updatedBy)"
       - event: "Transfer(address indexed from, address indexed to, uint256 indexed tokenId)"
       - event: "MetadataSet(uint256 indexed agentId, string indexed indexedMetadataKey, string metadataKey, bytes metadataValue)"
       - event: "Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)"
@@ -30,7 +31,7 @@ chains:
       - name: ReputationRegistry
         address: "0x8004baa17c55a88189ae136b182e5fda19de9b63"
   - id: 10143                       # Monad testnet: ERC-8004 v2.0.0 at the "testnet" addresses
-    start_block: 0
+    start_block: 10391697           # first Upgraded of the proxies (HyperSync, MESURÉ 28/09)
     contracts:
       - name: IdentityRegistry
         address: "0x8004a818bfb912233c491871b3d84c89a494bd9e"

@@ -9,7 +9,7 @@ export const lc = (a: string) => a.toLowerCase();
 
 export function blankAgent(id: string): Agent {
   return { id, owner: ZERO, wallet: ZERO, approved: ZERO, uri: "", registeredBlock: undefined,
-    registeredTxFrom: undefined, transferCount: 0, lastTransferBlock: undefined };
+    registeredTxFrom: undefined, transferCount: 0, lastTransferBlock: undefined, refEdgeRows: 0 };
 }
 
 export async function getAgent(context: Ctx, id: string): Promise<Agent> {
@@ -75,19 +75,21 @@ export async function recomputeRefEdge(context: Ctx, client: string, agentId: st
   if (!c && !prev) return;
   let next: RefEdge;
   const base = { id: edgeId, client, agent_id: agentId, updatedAtBlock: BigInt(block) };
+  const none = { w: 0, decidingTag: undefined, feedbackIndex: undefined };
   if (!c) {
-    next = { ...base, w: 0, decidingTag: undefined, feedbackIndex: undefined, rejected: "OUT_OF_BOUNDS_ONLY" };
+    next = { ...base, ...none, rejected: "NO_ACTIVE_FEEDBACK" }; // every reference feedback of the pair is revoked
   } else if (c.kind === "none" && c.reason === "OUT_OF_BOUNDS_ONLY") {
-    next = { ...base, w: 0, decidingTag: undefined, feedbackIndex: undefined, rejected: "OUT_OF_BOUNDS_ONLY" };
+    next = { ...base, ...none, rejected: "OUT_OF_BOUNDS_ONLY" };
   } else {
     const why = controllerReason(client, agent, await isOperator(context, agent.owner, client));
-    if (why) next = { ...base, w: 0, decidingTag: undefined, feedbackIndex: undefined, rejected: REJECT_OF[why] };
-    else if (c.kind === "none") next = { ...base, w: 0, decidingTag: undefined, feedbackIndex: undefined, rejected: "ZERO_WEIGHT" };
+    if (why) next = { ...base, ...none, rejected: REJECT_OF[why] };
+    else if (c.kind === "none") next = { ...base, ...none, rejected: "ZERO_WEIGHT" };
     else next = { ...base, w: c.w, decidingTag: c.tag1, feedbackIndex: c.feedbackIndex, rejected: "NONE" };
   }
   if (prev && prev.w === next.w && prev.rejected === next.rejected && prev.decidingTag === next.decidingTag &&
       prev.feedbackIndex === next.feedbackIndex) return;
   context.RefEdge.set(next);
+  if (!prev) context.Agent.set({ ...agent, refEdgeRows: agent.refEdgeRows + 1 }); // lets recomputeEdgesInto skip edge-less agents
   const was = prev && prev.w !== 0 ? 1 : 0;
   const is = next.w !== 0 ? 1 : 0;
   if (was !== is) await bumpStats(context, block, { refEdges: is - was });
@@ -95,6 +97,7 @@ export async function recomputeRefEdge(context: Ctx, client: string, agentId: st
 
 /** Controllers of `agentId` changed: recompute every reference edge pointing to it. */
 export async function recomputeEdgesInto(context: Ctx, agentId: string, block: number) {
+  if ((await getAgent(context, agentId)).refEdgeRows === 0) return; // fresh mints, farm agents: no query
   const edges = await context.RefEdge.getWhere({ agent_id: { _eq: agentId } });
   for (const e of edges) await recomputeRefEdge(context, e.client, agentId, block);
 }

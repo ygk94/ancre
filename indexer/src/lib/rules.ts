@@ -79,10 +79,9 @@ export function combine(latest: TagCandidate[]): Combined | undefined {
   const scored: { q: number; c: TagCandidate }[] = [];
   let any = false;
   for (const c of latest) {
-    const spec = REF_SCHEMA.get(c.tag1);
-    if (!spec || spec.kind !== "endorsement" || !REF_FILTER_SET.has(c.tag1)) continue;
+    if (!isRefTag(c.tag1)) continue;
     any = true;
-    const q = quantize(c.value, c.decimals, spec);
+    const q = quantize(c.value, c.decimals, REF_SCHEMA.get(c.tag1)!);
     if (q !== undefined) scored.push({ q, c });
   }
   if (!any) return undefined;

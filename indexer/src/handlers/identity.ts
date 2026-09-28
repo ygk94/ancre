@@ -15,6 +15,11 @@ indexer.onEvent(
   },
 );
 
+indexer.onEvent({ contract: "IdentityRegistry", event: "URIUpdated" }, async ({ event, context }) => {
+  const agent = await getAgent(context, event.params.agentId.toString());
+  context.Agent.set({ ...agent, uri: event.params.newURI });
+});
+
 indexer.onEvent({ contract: "IdentityRegistry", event: "Transfer" }, async ({ event, context }) => {
   const id = event.params.tokenId.toString();
   const from = lc(event.params.from);

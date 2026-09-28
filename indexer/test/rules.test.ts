@@ -1,6 +1,7 @@
 // Unit tests on simulated events: the normative edge rules (D14, D15, bounds, D16/D20) inside the indexer.
 import { describe, it } from "vitest";
 import { createTestIndexer } from "envio";
+import { readFileSync, existsSync } from "node:fs";
 import { quantize, REF_SCHEMA, decToWad } from "../src/lib/rules.js";
 
 type Hex = `0x${string}`;
@@ -34,6 +35,15 @@ describe("quantize (graph.quantize port)", () => {
     t.expect(quantize(10n ** 38n, 0, s("vouch"))).toBeUndefined();
     t.expect(quantize(0n, 0, s("vouch"))).toBe(0);
     t.expect(decToWad("-0.5")).toBe(-(5n * 10n ** 17n));
+  });
+});
+
+describe("schema copy", () => {
+  // The Cloud forbids imports outside the indexer folder, so the schema is copied. In the monorepo, it must
+  // stay byte-identical to the solver's (the reference). Skipped in the standalone ancre-indexer repo.
+  const solver = new URL("../../solver/schema_reference.json", import.meta.url);
+  it.runIf(existsSync(solver))("src/lib/schema_reference.json == solver/schema_reference.json", (t) => {
+    t.expect(readFileSync(new URL("../src/lib/schema_reference.json", import.meta.url), "utf8")).toBe(readFileSync(solver, "utf8"));
   });
 });
 
@@ -127,5 +137,18 @@ describe("reference edges (RefEdge)", () => {
     const e = await ix.RefEdge.getOrThrow(`${EA0B}-2`);
     t.expect([e.w, e.feedbackIndex]).toEqual([10000, 1n]);
     t.expect((await ix.ChainStats.getOrThrow("stats")).revoked).toBe(1);
+  });
+
+  it("revoking every reference feedback of a pair gives NO_ACTIVE_FEEDBACK, not OUT_OF_BOUNDS_ONLY", async (t) => {
+    const ix = createTestIndexer();
+    await ix.process({ chains: { 143: { simulate: [
+      mint(2n, OWNER4),
+      fb(2n, EA0B, 1n, 80n, "vouch"),
+      { contract: "ReputationRegistry" as const, event: "FeedbackRevoked" as const,
+        params: { agentId: 2n, clientAddress: EA0B, feedbackIndex: 1n } },
+    ] } } });
+    const e = await ix.RefEdge.getOrThrow(`${EA0B}-2`);
+    t.expect([e.w, e.rejected]).toEqual([0, "NO_ACTIVE_FEEDBACK"]);
+    t.expect((await ix.ChainStats.getOrThrow("stats")).refEdges).toBe(0);
   });
 });

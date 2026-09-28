@@ -82,8 +82,12 @@ def stream_logs(url: str, selections: list[dict], from_block: int, to_block: int
             try:
                 d = json.load(urllib.request.urlopen(req, timeout=120))
                 break
-            except urllib.error.HTTPError as e:  # 429: token budget per 60 s window
-                if e.code != 429 or attempt == 5:
+            except urllib.error.HTTPError as e:  # 429 (token budget per 60 s window) and 5xx are retried
+                if (e.code != 429 and e.code < 500) or attempt == 5:
+                    raise
+                time.sleep(10 * (attempt + 1))
+            except (urllib.error.URLError, TimeoutError):
+                if attempt == 5:
                     raise
                 time.sleep(10 * (attempt + 1))
         for b in d["data"]:

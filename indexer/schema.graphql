@@ -91,6 +91,7 @@ type Agent {                         # id = agentId (decimal)
   registeredTxFrom: String           # deployer EOA (registration bursts)
   transferCount: Int!
   lastTransferBlock: BigInt          # D10 / D35 (TRANSFERRED)
+  refEdgeRows: Int!                  # RefEdge rows pointing to this agent (0 = skip recomputation on controller changes)
   feedbacks: [Feedback!]! @derivedFrom(field: "agent")
   edgesIn: [RefEdge!]! @derivedFrom(field: "agent")
 }
@@ -120,6 +121,7 @@ type TripleLatest {                  # D14: latest non-revoked feedback per (cli
 
 enum EdgeReject {
   NONE
+  NO_ACTIVE_FEEDBACK                 # every reference feedback of the pair has been revoked
   OUT_OF_BOUNDS_ONLY                 # every filter tag's latest feedback is out of bounds
   ZERO_WEIGHT
   CONTROLLER_OWNER

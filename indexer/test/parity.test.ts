@@ -25,7 +25,12 @@ describe.runIf(process.env.PARITY === "1")("parity with solver/graph.py on Monad
       agentsMinted: s.agents, transfers: s.transfers, sharedWallets: s.sharedWallets,
       agentsOnSharedWallets: s.agentsOnSharedWallets, feedbacks: s.feedbacks, revoked: s.revoked, absValueGe1e38: s.outOfRange,
     }).toEqual((({ couples: _c, ...rest }) => rest)(REF.counts));
-    t.expect(s.selfRatings).toBe(REF.selfRatingsByController.agentWallet); // 78, all on #8317
+    // Self-ratings: the indexer evaluates controllers at each feedback's block, the scan at the final block.
+    // They coincide on Monad (78 feedbacks of #8317 by its own agentWallet, no transfer in between); checked explicitly.
+    const self = (await ix.Feedback.getAll()).filter((f) => f.clientWasController !== undefined);
+    t.expect(self.length).toBe(78);
+    t.expect(new Set(self.map((f) => `${f.agent_id}:${f.clientWasController}`))).toEqual(new Set(["8317:agentWallet"]));
+    t.expect(s.selfRatings).toBe(78);
 
     const couples = new Set((await ix.Feedback.getAll()).map((f) => `${f.client}-${f.agent_id}`));
     t.expect(couples.size).toBe(REF.counts.couples);
