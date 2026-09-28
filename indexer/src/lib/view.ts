@@ -33,8 +33,14 @@ export function storeView(s: Store): RegistryView {
 export function setSchema(tags: { tag: string; min: string | bigint; neutral: string | bigint; max: string | bigint; kind: number }[]): EdgeSchema {
   const specs = new Map<string, TagSpec>();
   for (const t of tags) {
-    specs.set(t.tag, { minWad: BigInt(t.min), neutralWad: BigInt(t.neutral), maxWad: BigInt(t.max),
-      kind: (t.kind === 0 ? "endorsement" : "measurement") as TagKind });
+    if (t.kind !== 0 && t.kind !== 1) throw new Error(`${t.tag}: kind ${t.kind} not in {0, 1}`);
+    const spec = { minWad: BigInt(t.min), neutralWad: BigInt(t.neutral), maxWad: BigInt(t.max),
+      kind: (t.kind === 0 ? "endorsement" : "measurement") as TagKind };
+    // same checks as registerAnchorSet (ENCODING §1): min <= neutral <= max, min < max
+    if (!(spec.minWad <= spec.neutralWad && spec.neutralWad <= spec.maxWad && spec.minWad < spec.maxWad)) {
+      throw new Error(`${t.tag}: bounds must satisfy min <= neutral <= max and min < max`);
+    }
+    specs.set(t.tag, spec);
   }
   return { specs, filter: new Set(tags.map((t) => t.tag)) };
 }

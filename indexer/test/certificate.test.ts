@@ -31,5 +31,7 @@ describe("certificate calldata: structural rejects (as the contract)", () => {
     t.expect(() => decodeRows("0x02" + "00000001" + "0000" + "0002" + "0002" + "2710" + "00000001" + "0001" + "2710" + "00000001")).toThrow(EncodingError);
     t.expect(() => decodeRows("0x02" + "00000000" + "ff")).toThrow(EncodingError);
     t.expect(graphRoot([])).toBe("0x" + "00".repeat(32));
+    t.expect(() => decodeRows("0x02zz")).toThrow(EncodingError);
+    t.expect(() => decodeRows("0x02" + "00000000", 70_000)).toThrow(EncodingError);
   });
 });

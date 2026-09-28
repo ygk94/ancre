@@ -1,6 +1,6 @@
 // Certificate calldata decoding (contracts/ENCODING.md, format ancre-cert-v0, aligned with solver/FORMAT.md).
 // Pure functions: no network, safe to run in both handler phases.
-import { keccak256, type Hex } from "viem";
+import { bytesToHex, hexToBytes as viemHexToBytes, isHex, keccak256, type Hex } from "viem";
 
 export type CertEdge = { dst: number; w: number; feedbackIndex: number };
 export type CertRow = { u: number; wallet?: string; edges: CertEdge[]; leaf: Hex };
@@ -10,13 +10,10 @@ export type NewNode = { kind: "agent"; agentId: bigint } | { kind: "address"; ad
 export class EncodingError extends Error {}
 
 const hexToBytes = (h: string): Uint8Array => {
-  const s = h.startsWith("0x") ? h.slice(2) : h;
-  if (s.length % 2) throw new EncodingError("odd hex length");
-  const out = new Uint8Array(s.length / 2);
-  for (let i = 0; i < out.length; i++) out[i] = parseInt(s.substr(2 * i, 2), 16);
-  return out;
+  if (!isHex(h, { strict: true }) || h.length % 2) throw new EncodingError("invalid hex");
+  return viemHexToBytes(h as Hex);
 };
-const toHex = (b: Uint8Array): Hex => ("0x" + Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("")) as Hex;
+const toHex = (b: Uint8Array): Hex => bytesToHex(b);
 const uint = (b: Uint8Array, o: number, n: number) => {
   if (o + n > b.length) throw new EncodingError(`truncated at ${o}`);
   let v = 0;
@@ -33,6 +30,7 @@ export function decodeRows(hex: string, nCert?: number): DecodedRows {
   const b = hexToBytes(hex);
   const W = uint(b, 0, 1);
   if (W !== 2 && W !== 4) throw new EncodingError(`bad W ${W}`);
+  if (W === 2 && nCert !== undefined && nCert > 0xffff) throw new EncodingError("W = 2 with nCert > 65 535"); // BadRows(1)
   const numRows = uint(b, 1, 4);
   let o = 5;
   const rows: CertRow[] = [];

@@ -1,7 +1,9 @@
 // Shared state helpers used by the identity and reputation handlers.
 // Every helper reads before it writes (handlers run twice: preload, then processing).
 import type { EvmOnEventContext, Agent, ChainStats, RefEdge } from "envio";
-import { REF_FILTER, ZERO, combine, controllerReason, REJECT_OF, type TagCandidate } from "./rules.js";
+import { REF, ZERO } from "./rules.js";
+import { edgeDecision } from "./edges.js";
+import { storeView } from "./view.js";
 
 type Ctx = EvmOnEventContext;
 
@@ -58,34 +60,20 @@ export async function isOperator(context: Ctx, owner: string, client: string): P
   return (await context.Operator.get(`${owner}-${client}`))?.active ?? false;
 }
 
-/** D14 + D15 + bounds + D16/D20 for one (client, agent) pair, written to RefEdge. */
+/** D14 + D15 + bounds + D16/D20 for one (client, agent) pair, written to RefEdge (reference schema). */
 export async function recomputeRefEdge(context: Ctx, client: string, agentId: string, block: number) {
   const edgeId = `${client}-${agentId}`;
-  const [agent, prev, ...triples] = await Promise.all([
+  const [agent, prev, d] = await Promise.all([
     getAgent(context, agentId),
     context.RefEdge.get(edgeId),
-    ...REF_FILTER.map((t) => context.TripleLatest.get(`${client}-${agentId}-${t}`)),
+    edgeDecision(storeView(context as never), REF, client, agentId),
   ]);
-  const fbs = await Promise.all(triples.map((t) => (t?.feedback_id ? context.Feedback.get(t.feedback_id) : undefined)));
-  const cands: TagCandidate[] = [];
-  for (const f of fbs) {
-    if (f) cands.push({ tag1: f.tag1, value: f.value, decimals: f.valueDecimals, feedbackIndex: f.feedbackIndex });
-  }
-  const c = combine(cands);
-  if (!c && !prev) return;
-  let next: RefEdge;
-  const base = { id: edgeId, client, agent_id: agentId, updatedAtBlock: BigInt(block) };
-  const none = { w: 0, decidingTag: undefined, feedbackIndex: undefined };
-  if (!c) {
-    next = { ...base, ...none, rejected: "NO_ACTIVE_FEEDBACK" }; // every reference feedback of the pair is revoked
-  } else if (c.kind === "none" && c.reason === "OUT_OF_BOUNDS_ONLY") {
-    next = { ...base, ...none, rejected: "OUT_OF_BOUNDS_ONLY" };
-  } else {
-    const why = controllerReason(client, agent, await isOperator(context, agent.owner, client));
-    if (why) next = { ...base, ...none, rejected: REJECT_OF[why] };
-    else if (c.kind === "none") next = { ...base, ...none, rejected: "ZERO_WEIGHT" };
-    else next = { ...base, w: c.w, decidingTag: c.tag1, feedbackIndex: c.feedbackIndex, rejected: "NONE" };
-  }
+  if (!d && !prev) return;
+  const next: RefEdge = d
+    ? { id: edgeId, client, agent_id: agentId, updatedAtBlock: BigInt(block), w: d.w, decidingTag: d.tag1,
+        feedbackIndex: d.feedbackIndex, rejected: d.rejected }
+    : { id: edgeId, client, agent_id: agentId, updatedAtBlock: BigInt(block), w: 0, decidingTag: undefined,
+        feedbackIndex: undefined, rejected: "NO_ACTIVE_FEEDBACK" }; // every reference feedback of the pair is revoked
   if (prev && prev.w === next.w && prev.rejected === next.rejected && prev.decidingTag === next.decidingTag &&
       prev.feedbackIndex === next.feedbackIndex) return;
   context.RefEdge.set(next);

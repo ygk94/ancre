@@ -127,9 +127,18 @@ async function main() {
   report.getLastIndex = { couples: couples.length, sumOnChain: Number(sumChain), mismatches: lastMismatch };
   if (sumChain !== BigInt(fbs.length)) failures.push(`Σ getLastIndex ${sumChain} != indexed feedbacks ${fbs.length}`);
 
-  // 4 + 5. agents
-  const idx = (await all<{ id: string; owner: string; wallet: string; registeredBlock: string | null }>(
-    "Agent", "owner wallet registeredBlock")).filter((a) => a.owner !== "0x0000000000000000000000000000000000000000");
+  // 4 + 5. agents: owner and wallet AT the checked block, replayed from the layer-1 history (the live indexer may
+  // already be past `blockNumber` while we page through GraphQL)
+  const key = (x: { blockNumber: string; logIndex: number }) => BigInt(x.blockNumber) * 1_000_000n + BigInt(x.logIndex);
+  const byOrder = <T extends { blockNumber: string; logIndex: number }>(a: T, b: T) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0);
+  const owners = (await all<{ id: string; agent_id: string; to: string; blockNumber: string; logIndex: number }>(
+    "OwnerChange", "agent_id to blockNumber logIndex")).filter((x) => BigInt(x.blockNumber) <= blockNumber).sort(byOrder);
+  const wallets = (await all<{ id: string; agent_id: string; wallet: string; blockNumber: string; logIndex: number }>(
+    "WalletChange", "agent_id wallet blockNumber logIndex")).filter((x) => BigInt(x.blockNumber) <= blockNumber).sort(byOrder);
+  const state = new Map<string, { owner: string; wallet: string }>();
+  for (const o of owners) state.set(o.agent_id, { owner: o.to, wallet: state.get(o.agent_id)?.wallet ?? "0x0000000000000000000000000000000000000000" });
+  for (const w of wallets) { const st = state.get(w.agent_id); if (st) st.wallet = w.wallet; }
+  const idx = [...state].map(([id, st]) => ({ id, ...st })).filter((a) => a.owner !== "0x0000000000000000000000000000000000000000");
   const maxId = idx.reduce((m, a) => (BigInt(a.id) > m ? BigInt(a.id) : m), 0n);
   const [top, next] = await call<Address>([
     { address: cfg.identity, functionName: "ownerOf", args: [maxId] }, { address: cfg.identity, functionName: "ownerOf", args: [maxId + 1n] }]);

@@ -24,14 +24,14 @@ describe.runIf(process.env.PARITY === "1" && existsSync(VEC))("certificate audit
 
     // The vector predates D20: agent #18 (wallet 0xea0b, shared with #22/#23) got an empty row. Under D20 (row
     // copy) #18 speaks for 0xea0b, so its row omits 0xea0b's slash on #4: the audit reports it (INTERFACE 04-E1).
-    const asIs = await auditRows(view, schema, nodes, vectorRows);
+    const asIs = await auditRows(view, schema, nodes, v.nCert, vectorRows);
     t.expect(asIs.discrepancies.map((d) => [d.kind, d.u, d.client, d.agentId, d.wRegistry])).toEqual([
       ["OMITTED_NEG", node(18), "0xea0b21fb2441464f4920ce3e34d478235605816b", "4", -10_000]]);
 
     // D20-honest certificate: #18's row copies 0xea0b's row (explicit copy; the alias encoding is not specified yet).
     const rows: CertRow[] = vectorRows.map((r) => (r.u === node(18) ? { ...r, edges: vectorRows.find((x) => x.u === 1)!.edges } : r));
     const clone = (): CertRow[] => rows.map((r) => ({ ...r, edges: r.edges.map((e) => ({ ...e })) }));
-    const honest = await auditRows(view, schema, nodes, rows);
+    const honest = await auditRows(view, schema, nodes, v.nCert, rows);
     t.expect(honest.discrepancies).toEqual([]);
     t.expect(honest.edgesChecked).toBe(7); // 0x0730: 1 ; 0xea0b as anchor: 3 ; #18 (row copy of 0xea0b): 3
 
@@ -39,26 +39,60 @@ describe.runIf(process.env.PARITY === "1" && existsSync(VEC))("certificate audit
     const fab = clone();
     fab[0]!.edges.push({ dst: node(4), w: 10_000, feedbackIndex: 1 });
     fab[0]!.edges.sort((a, b) => a.dst - b.dst);
-    const a1 = await auditRows(view, schema, nodes, fab);
+    const a1 = await auditRows(view, schema, nodes, v.nCert, fab);
     t.expect(a1.discrepancies.map((d) => [d.kind, d.client, d.agentId, d.wCommitted, d.wRegistry])).toEqual([
       ["FABRICATED", "0x0730536018541c5149a049d35528a76c2c8f1e6b", "4", 10_000, 0]]);
+
+    // dilution (AM-5.11): 0xea0b's honest +10000 on #2 lowered to +1 shrinks B+ from 20000 to 10001, so the
+    // untouched +10000 on #3 now carries ~100 % of the row instead of 50 %: INFLATED on #3, not on #2
+    const dil = clone();
+    dil.find((r) => r.u === 1)!.edges.find((e) => e.dst === node(2))!.w = 1;
+    t.expect((await auditRows(view, schema, nodes, v.nCert, dil)).discrepancies.map((d) => [d.kind, d.u, d.agentId, d.bCommitted, d.bRegistry]))
+      .toEqual([["INFLATED", 1, "3", 10_001, 20_000]]);
+
+    // opposite sign: a slash invented where the registry holds a +10000 vouch -> FABRICATED (not silently accepted)
+    const opp = clone();
+    opp.find((r) => r.u === 1)!.edges.find((e) => e.dst === node(2))!.w = -10_000;
+    t.expect((await auditRows(view, schema, nodes, v.nCert, opp)).discrepancies.map((d) => [d.kind, d.agentId, d.wRegistry]))
+      .toContainEqual(["FABRICATED", "2", 10_000]);
+
+    // an agent row with its wallet flag removed: not contestable on-chain (BadProof(7)) -> WALLET_MISSING
+    const wm = clone();
+    wm.find((r) => r.u === node(2))!.wallet = undefined;
+    t.expect((await auditRows(view, schema, nodes, v.nCert, wm)).discrepancies.map((d) => d.kind)).toEqual(["WALLET_MISSING"]);
+
+    // a row for an agent node that was never minted -> UNKNOWN_AGENT, and its edges are FABRICATED (no silent skip)
+    const ghostNodes = nodes.map((n, i) => (i === node(3) ? { kind: "agent" as const, agentId: 999_999n } : n));
+    const ghost = clone();
+    ghost.find((r) => r.u === node(3))!.edges = [{ dst: node(4), w: 10_000, feedbackIndex: 1 }];
+    // (the edges of 0xea0b and of #18 pointing to that node become fabricated too)
+    t.expect((await auditRows(view, schema, ghostNodes, v.nCert, ghost)).discrepancies.map((d) => [d.kind, d.u]))
+      .toEqual([["FABRICATED", 1], ["UNKNOWN_AGENT", node(3)], ["FABRICATED", node(3)], ["FABRICATED", node(18)]]);
+
+    // a wrong wallet must not hide the omissions of the true client (#18 speaks for 0xea0b under D20)
+    const hide = clone();
+    const r18 = hide.find((r) => r.u === node(18))!;
+    r18.wallet = "0x000000000000000000000000000000000000dead";
+    r18.edges = [];
+    t.expect((await auditRows(view, schema, nodes, v.nCert, hide)).discrepancies.map((d) => [d.kind, d.agentId])).toEqual([
+      ["WALLET", "18"], ["OMITTED_NEG", "4"]]);
 
     // the slash of 0xea0b on #4 softened from -10000 to -2000 -> INFLATED
     const inf = clone();
     const slash = inf.find((r) => r.u === 1)!.edges.find((e) => e.dst === node(4))!;
     slash.w = -2000;
-    t.expect((await auditRows(view, schema, nodes, inf)).discrepancies.map((d) => d.kind)).toEqual(["INFLATED"]);
+    t.expect((await auditRows(view, schema, nodes, v.nCert, inf)).discrepancies.map((d) => d.kind)).toEqual(["INFLATED"]);
 
     // the slash dropped from 0xea0b's row -> OMITTED_NEG
     const om = clone();
     const r1 = om.find((r) => r.u === 1)!;
     r1.edges = r1.edges.filter((e) => e.dst !== node(4));
-    t.expect((await auditRows(view, schema, nodes, om)).discrepancies.map((d) => [d.kind, d.u, d.agentId, d.wRegistry])).toEqual([
+    t.expect((await auditRows(view, schema, nodes, v.nCert, om)).discrepancies.map((d) => [d.kind, d.u, d.agentId, d.wRegistry])).toEqual([
       ["OMITTED_NEG", 1, "4", -10_000]]);
 
     // an agent row committing a wallet that is not the agent's -> WALLET
     const wal = clone();
     wal.find((r) => r.u === node(2))!.wallet = "0x000000000000000000000000000000000000dead";
-    t.expect((await auditRows(view, schema, nodes, wal)).discrepancies.map((d) => [d.kind, d.agentId])).toEqual([["WALLET", "2"]]);
+    t.expect((await auditRows(view, schema, nodes, v.nCert, wal)).discrepancies.map((d) => [d.kind, d.agentId])).toEqual([["WALLET", "2"]]);
   }, 900_000);
 });
