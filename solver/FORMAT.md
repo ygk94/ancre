@@ -151,3 +151,17 @@ Submitter-attested MUST make them provable. Extra JSON block `violation`: `kind`
 | dilution (V4) | #18 → #3 omitted, sPlus not declared | t(#2) 0.0926 → 0.1296 |
 | inflated (V6) | #18 → #4 slash committed as −1 | d(#4) 0.1852 → 0.1111 |
 | omitted_negative (V13) | the slash 0xea0b → #4 omitted (anchor row and copy) | d(#4) 0.1852 → 0 |
+
+## 7. Indexer interface (chantier 03 → 04), `from_indexer.py`
+
+Read side of `docs/ressources/design-indexeur-envio.md` §5/§7. **To be relayed to chantier 03 by the pilot.**
+
+- **Entities and fields read** (Hasura names; a relation `agent` is read as `agent_id`): `Feedback {id, agent_id, client, feedbackIndex, value, valueDecimals, tag1, tag2, blockNumber, logIndex, revokedAtBlock}`, `OwnerChange {id, agent_id, from, to, isMint, blockNumber, logIndex}`, `WalletChange {id, agent_id, wallet, blockNumber, logIndex}`, `ApprovalChange {id, agent_id, approved, blockNumber, logIndex}`, `OperatorChange {id, owner, operator, approved, blockNumber, logIndex}`, `SetEdge {id, set_id, client, agent_id, w, decidingTag, feedbackIndex, rejected, updatedAtBlock}`. Filters used: `blockNumber: {_lte}`, `set_id: {_eq}`, keyset `id: {_gt}` with `order_by: {id: asc}`, `limit: 1000`.
+- **Per chain.** Every query filters `chainId: {_eq: C}` (multichain indexer, ids are `(id, chainId)`); rows of other chains must never mix (block numbers are not comparable across chains).
+- **Head check.** The export refuses a block the indexer has not processed: it reads `chain_metadata(where: {chain_id: {_eq: C}}) { latest_processed_block }` (Envio table, field names NON VÉRIFIÉ against a live endpoint) and fails if head < B. A fixture declares its block in `BLOCK`.
+- **Pagination** stops on an empty page (a server-side row cap below 1 000 must not truncate silently).
+- `value` MUST be the exact int128 as a decimal string (never `1.00E+38`); addresses lowercase.
+- **Identity replay** in `(blockNumber, logIndex)` order: an `OwnerChange` clears the approval; the registry's own `MetadataSet(agentWallet, "")` at transfer MUST be indexed as a `WalletChange` to `0x0` (MEASURED 72/72, design §5).
+- **SetEdge semantics expected by the parity test.** One row per `(set, client, agent)`: retained iff `rejected == null` and `w != 0`; `w`, `decidingTag`, `feedbackIndex` = R3-R5 (tie order in §0 R5). `OUT_OF_BOUNDS` is a **per-tag** outcome in R3: a pair is `OUT_OF_BOUNDS` only if no tag of the filter yields a weight; one out-of-bounds tag next to a valid tag still gives an edge. `CONTROLLER_*` = R6 on **current** controllers (no past-owner reason). The emitter (R7) is **not** part of SetEdge: the solver resolves it.
+- **When parity is meaningful**: SetEdge is current state only, so compare at the indexer's head (or with the indexer stopped at B).
+- **Handing over a dump from another machine**: one `<Entity>.json` per entity (list of rows, GraphQL shape) plus a `BLOCK` file, in `solver/tests/fixtures/indexer/`; `test_parity_real_indexer_dump` then runs automatically. CLI: `.venv/bin/python from_indexer.py --fixture DIR --block B --out OUT --parity` (exit code 1 on any difference).
