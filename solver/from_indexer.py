@@ -140,30 +140,18 @@ def identity_file(src, block: int) -> dict:
     ev += [("approval", r) for r in src.rows("ApprovalChange", block)]
     ev += [("operator", r) for r in src.rows("OperatorChange", block)]
     idn = Identity(block=block, owner={}, wallet={})
-    for kind, r in sorted(ev, key=lambda x: _order(x[1])):
+    for kind, r in sorted(ev, key=lambda x: _order(x[1])):          # same transitions as graph.Identity (R6/R7)
         if kind == "operator":
-            ops = idn.operators.setdefault(r["owner"].lower(), set())
-            (ops.add if r["approved"] else ops.discard)(r["operator"].lower())
+            idn.apply_operator(r["owner"], r["operator"], r["approved"])
             continue
         a = int(r["agent_id"])
         if kind == "owner":
-            frm = r["from"].lower()
-            if frm != ZERO:
-                idn.past_owners.setdefault(a, set()).add(frm)
-            idn.owner[a] = r["to"].lower()
+            idn.apply_transfer(a, r["from"], r["to"])
             idn.wallet.setdefault(a, ZERO)
-            idn.approved.pop(a, None)
         elif kind == "wallet":
-            w = (r["wallet"] or ZERO).lower()
-            idn.wallet[a] = w
-            if w != ZERO:
-                idn.past_wallets.setdefault(a, set()).add(w)
+            idn.apply_wallet(a, r["wallet"])
         else:
-            ap = (r["approved"] or ZERO).lower()
-            if ap == ZERO:
-                idn.approved.pop(a, None)
-            else:
-                idn.approved[a] = ap
+            idn.apply_approval(a, r["approved"])
     for a, s in idn.past_owners.items():                  # past holders, excluding the current owner
         s.discard(idn.owner.get(a))
     return identity_to_json(idn)

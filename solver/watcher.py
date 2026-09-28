@@ -20,15 +20,13 @@ Sending a proof is a real transaction: `prove(..., send=False)` only estimates. 
 """
 from __future__ import annotations
 
-import json
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import certifier as C
-from export import decode_rows, keccak
-from graph import ADDR, AGENT, ANCHOR, GRID, Identity, build_graph
-
-KIND = {ANCHOR: 3, AGENT: 1, ADDR: 2}
+from export import decode_rows, keccak, merkle_proof, node_key
+from graph import AGENT, GRID, Identity, build_graph
 
 
 @dataclass
@@ -45,46 +43,7 @@ class Discrepancy:
     proof: dict = field(default_factory=dict)
 
     def to_json(self) -> dict:
-        return {k: v for k, v in self.__dict__.items()}
-
-
-def node_key(key) -> str:
-    kind, v = key
-    val = int(v) if kind == AGENT else int(str(v), 16)
-    return "0x" + ((KIND[kind] << 248) | val).to_bytes(32, "big").hex()
-
-
-def merkle_proof(leaves: list[bytes], pos: int) -> list[bytes]:
-    """Path for AnchoredReputation._verifyMerkle (pairs keccak(l ‖ r), an odd last element goes up unhashed)."""
-    proof, level = [], list(leaves)
-    while len(level) > 1:
-        if pos & 1:
-            proof.append(level[pos - 1])
-        elif pos + 1 < len(level):
-            proof.append(level[pos + 1])
-        nxt = [keccak(level[2 * i] + level[2 * i + 1]) for i in range(len(level) // 2)]
-        if len(level) % 2:
-            nxt.append(level[-1])
-        level, pos = nxt, pos >> 1
-    return proof
-
-
-def row_slices(rows_hex: str) -> list[bytes]:
-    """Raw bytes of each row in the calldata (leaves are keccak of these), v0 and v1 layouts."""
-    from export import HDR_ALIAS, HDR_NE_MASK, HDR_SPLUS, HDR_SRC
-    b = bytes.fromhex(rows_hex[2:])
-    W, n = b[0], int.from_bytes(b[1:5], "big")
-    off, out = 5, []
-    for _ in range(n):
-        start = off
-        hdr = int.from_bytes(b[off + W:off + W + 2], "big")
-        off += W + 2
-        if hdr & HDR_ALIAS:
-            off += W
-        else:
-            off += (20 if hdr & HDR_SRC else 0) + (4 if hdr & HDR_SPLUS else 0) + (hdr & HDR_NE_MASK) * (W + 6)
-        out.append(b[start:off])
-    return out
+        return dict(self.__dict__)
 
 
 MAX_SCAN_V0 = 32     # AnchoredReputation v0 _registryEdge reads only the last 32 feedbacks of a (client, agent) pair
@@ -103,15 +62,13 @@ def audit(rows_hex: str, nodes: list, fbs, idn: Identity, cfg: C.SetConfig) -> l
     are provable, except pairs with more than MAX_SCAN_V0 feedbacks (the contract may see another weight)."""
     g = build_graph(fbs, idn, cfg.schema(), cfg.filter_tags, cfg.anchors, owner_fallback=cfg.owner_fallback)
     pairs = g.pairs
-    rejected = {(r["client"], r["agent"]) for r in g.rejected if r["raison"].startswith("controleur")}
+    rejected = g.r6_pairs
     by_client: dict[str, dict[int, object]] = {}
     for (c, a), pe in pairs.items():
         by_client.setdefault(c, {})[a] = pe
-    history = {}
-    for f in fbs:
-        history[(f.client, f.agent_id)] = history.get((f.client, f.agent_id), 0) + 1
-    rows, splus, meta, leaves = decode_rows(rows_hex)
-    slices = row_slices(rows_hex)
+    history = Counter((f.client, f.agent_id) for f in fbs)
+    rows, splus, meta, slices = decode_rows(rows_hex)
+    leaves = [keccak(x) for x in slices]
     out: list[Discrepancy] = []
     for pos, u in enumerate(sorted(rows)):
         kind, val = nodes[u]
@@ -189,7 +146,7 @@ def prove(chain: C.Chain, contract: str, set_id: str, d: Discrepancy, gas: C.Gas
     res.update(estimate=est, gasLimit=gas.limit(est))
     if send:
         rc = chain.send(contract, PROVE_SIG, *args, gas_limit=gas.limit(est))
-        res.update(tx=rc["transactionHash"], status=rc["status"] in ("0x1", 1), gasUsed=int(rc["gasUsed"], 16))
+        res.update(tx=rc["transactionHash"], status=rc["ok"], gasUsed=int(rc["gasUsed"], 16))
     return res
 
 
@@ -207,8 +164,7 @@ def watch_once(chain: C.Chain, contract: str, cfg: C.SetConfig, set_id: str, nod
     round goes on and the caller advances from_block. Omissions of a row are proven in priority order (negative,
     dilution, positive), chaining `added` after each success."""
     to_block = to_block if to_block is not None else chain.block_number()
-    logs = chain.logs(contract, "CertificateSubmitted(bytes32 indexed,uint64 indexed,uint256,bytes32,bytes32,"
-                                "bytes32,uint32,uint32)", from_block, set_id, to_block=to_block)
+    logs = chain.logs(contract, C.CERT_SUBMITTED, from_block, set_id, to_block=to_block)
     current = C.OnChain.read(chain, contract, set_id).graph_root
     events = []
     for lg in logs:
@@ -237,12 +193,9 @@ def watch_once(chain: C.Chain, contract: str, cfg: C.SetConfig, set_id: str, nod
                     r = {"kind": d.kind, "agentJ": d.agent_id, "u": u, "status": "error",
                          "error": C.revert_reason(str(e))}
                 ev["proofs"].append(r)
-                if r.get("status") is True:
-                    added += int(d.agent_id).to_bytes(4, "big") + (d.proof["w"] & 0xFFFF).to_bytes(2, "big")
-                elif send:
-                    break                               # the chain of amendments is broken for this row
-                else:
-                    break                               # estimate-only: later proofs depend on this one
+                if r.get("status") is not True:
+                    break                               # later proofs of this row depend on this one
+                added += int(d.agent_id).to_bytes(4, "big") + (d.proof["w"] & 0xFFFF).to_bytes(2, "big")
         journal.log(action="proofs", set=cfg.name, tx=lg["transactionHash"], proofs=ev["proofs"])
         events.append(ev)
     return events
@@ -289,6 +242,7 @@ def main(argv=None):
     chain = C.Chain(a.rpc, signer)
     jr = C.Journal(Path(a.journal))
     frm = a.from_block
+    table, table_block = None, -1                       # append-only node table, synced incrementally
     while True:
         if a.data:
             fbs = load_feedbacks_onchain(Path(a.data) / "onchain_feedbacks.json")
@@ -298,7 +252,8 @@ def main(argv=None):
             fbs, idn = R.load_mainnet()
         head = chain.block_number()
         try:
-            nodes = C.chain_table(chain, a.contract, a.set_id, cfg.anchors)
+            nodes = C.chain_table(chain, a.contract, a.set_id, cfg.anchors, table_block + 1, head, table)
+            table, table_block = nodes, head
             watch_once(chain, a.contract, cfg, a.set_id, nodes, fbs, idn, jr, frm, head,
                        send=a.send and signer is not None)
             alert = liveness(C.OnChain.read(chain, a.contract, a.set_id), head, cfg)

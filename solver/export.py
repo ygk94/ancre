@@ -31,17 +31,39 @@ def owner_fp(owner: str | None) -> int:
     return (int(owner, 16) & LANE_MASK) if owner and owner != ZERO else 0
 
 
-def merkle_root(leaves: list[bytes]) -> bytes:
-    """_merkleRoot du contrat R5 : paires keccak(g || d), l'élément impair remonte tel quel."""
-    if not leaves:
-        return b"\x00" * 32
-    p = list(leaves)
-    while len(p) > 1:
+def merkle_levels(leaves: list[bytes]) -> list[list[bytes]]:
+    """Levels of the contract's tree (_merkleRoot / _verifyMerkle): pairs keccak(l ‖ r), an odd last element goes
+    up unhashed. levels[0] = leaves, levels[-1] = [root]."""
+    levels = [list(leaves)]
+    while len(levels[-1]) > 1:
+        p = levels[-1]
         nxt = [keccak(p[2 * i] + p[2 * i + 1]) for i in range(len(p) // 2)]
         if len(p) % 2:
             nxt.append(p[-1])
-        p = nxt
-    return p[0]
+        levels.append(nxt)
+    return levels
+
+
+def merkle_root(leaves: list[bytes]) -> bytes:
+    """_merkleRoot of the contract; 0 if there is no row."""
+    return merkle_levels(leaves)[-1][0] if leaves else b"\x00" * 32
+
+
+def merkle_proof(leaves: list[bytes], pos: int) -> list[bytes]:
+    """Path checked by AnchoredReputation._verifyMerkle for leaf `pos`."""
+    proof = []
+    for level in merkle_levels(leaves)[:-1]:
+        if pos & 1:
+            proof.append(level[pos - 1])
+        elif pos + 1 < len(level):
+            proof.append(level[pos + 1])
+        pos >>= 1
+    return proof
+
+
+def sorted_tags(tags: list[str]) -> list[str]:
+    """Order required by registerAnchorSet: keccak(tag) strictly increasing."""
+    return sorted(tags, key=lambda t: keccak(t.encode()))
 
 
 HDR_SRC, HDR_ALIAS, HDR_VIA_OWNER, HDR_SPLUS = 0x8000, 0x4000, 0x2000, 0x1000
@@ -61,19 +83,17 @@ def row_bytes(cert: Certificate, u: int, W: int, alias_of: dict[int, int], versi
     edges = cert.rows[u]
     has_src = via in ("wallet", "owner")
     has_splus = cert.splus[u] != sum(q for _, q, _ in edges if q > 0)
-    if version == "v0":
-        if has_splus:
-            raise NotEncodable(f"row {u} has a declared sPlus (ROW_MAX cap): v0 cannot express it")
-        hdr = len(edges) | (HDR_SRC if has_src else 0)
-    else:
-        hdr = HDR_VIA_OWNER if via == "owner" else 0
-        if u in alias_of:
-            return u.to_bytes(W, "big") + (hdr | HDR_ALIAS).to_bytes(2, "big") + alias_of[u].to_bytes(W, "big")
-        hdr |= len(edges) | (HDR_SRC if has_src else 0) | (HDR_SPLUS if has_splus else 0)
+    v1 = version != "v0"
+    if has_splus and not v1:
+        raise NotEncodable(f"row {u} has a declared sPlus (ROW_MAX cap): v0 cannot express it")
+    owner_bit = HDR_VIA_OWNER if v1 and via == "owner" else 0
+    if u in alias_of:                                   # aliases are only computed for v1
+        return u.to_bytes(W, "big") + (owner_bit | HDR_ALIAS).to_bytes(2, "big") + alias_of[u].to_bytes(W, "big")
+    hdr = owner_bit | len(edges) | (HDR_SRC if has_src else 0) | (HDR_SPLUS if has_splus else 0)
     rb = u.to_bytes(W, "big") + hdr.to_bytes(2, "big")
     if has_src:
         rb += bytes.fromhex(src[2:])
-    if has_splus and version != "v0":
+    if has_splus:
         rb += cert.splus[u].to_bytes(4, "big")
     for dst, q, fi in edges:
         rb += dst.to_bytes(W, "big") + (q & 0xFFFF).to_bytes(2, "big") + fi.to_bytes(4, "big")
@@ -100,13 +120,24 @@ def aliases(cert: Certificate) -> dict[int, int]:
     return out
 
 
+KIND_BYTE = {AGENT: 1, ADDR: 2, ANCHOR: 3}             # contract node kinds (KIND_AGENT / KIND_ADDRESS / KIND_ANCHOR)
+
+
 def node_entry(key: tuple[str, object]) -> bytes:
+    """newNodes / addNodes entry: 0x01 ‖ agentId:u32 or 0x02 ‖ address:20."""
     kind, v = key
     if kind == AGENT:
-        return bytes([1]) + int(v).to_bytes(4, "big")
+        return bytes([KIND_BYTE[AGENT]]) + int(v).to_bytes(4, "big")
     if kind == ADDR:
-        return bytes([2]) + bytes.fromhex(str(v)[2:])
+        return bytes([KIND_BYTE[ADDR]]) + bytes.fromhex(str(v)[2:])
     raise ValueError("anchors are created by registerAnchorSet, not as new nodes")
+
+
+def node_key(key: tuple[str, object]) -> str:
+    """bytes32 node key of the contract: kind << 248 | agentId or address."""
+    kind, v = key
+    val = int(v) if kind == AGENT else int(str(v), 16)
+    return "0x" + ((KIND_BYTE[kind] << 248) | val).to_bytes(32, "big").hex()
 
 
 def encode(cert: Certificate, nodes: list[tuple[str, object]], identity: Identity | None, version: str = "v1"):
@@ -151,7 +182,7 @@ def export_certificate(g: Graph, cert: Certificate, identity: Identity | None, *
             "minAnchors": min_anchors,
             "tags": [{"tag": t, "min": str(schema[t].min_wad), "neutral": str(schema[t].neutral_wad),
                       "max": str(schema[t].max_wad), "kind": 0 if schema[t].kind == "endorsement" else 1}
-                     for t in sorted(filter_tags, key=lambda t: keccak(t.encode()))],
+                     for t in sorted_tags(filter_tags)],
         },
         "nCert": cert.n,
         "nodes": [],
@@ -181,6 +212,7 @@ def export_certificate(g: Graph, cert: Certificate, identity: Identity | None, *
             nd["address"] = str(key)
         nd["hasRow"] = i in cert.rows
         out["nodes"].append(nd)
+    bplus, bminus = cert.bplus, cert.bminus                 # properties rebuild a dict: read them once
     for u in sorted(cert.rows):
         erow = []
         for dst, q, fi in cert.rows[u]:
@@ -189,8 +221,8 @@ def export_certificate(g: Graph, cert: Certificate, identity: Identity | None, *
                          **({"client": e.client, "agentId": e.agent_id, "tag1": e.tag1} if e else {})})
         src, via = cert.row_src.get(u, (None, "anchor" if u < cert.k else "address"))
         out["rows"].append({"u": u, "source": src if via in ("wallet", "owner") else None, "via": via,
-                            "aliasOf": enc["aliases"].get(u), "sPlus": cert.splus[u], "bPlus": cert.bplus[u],
-                            "bMinus": cert.bminus[u], "edges": erow})
+                            "aliasOf": enc["aliases"].get(u), "sPlus": cert.splus[u], "bPlus": bplus[u],
+                            "bMinus": bminus[u], "edges": erow})
     return out
 
 
@@ -208,10 +240,11 @@ def load_certificate(obj: dict, mode: str | None = None) -> Certificate:
 
 def decode_rows(hexrows: str) -> tuple[dict[int, list[tuple[int, int, int]]], dict[int, int], dict[int, tuple]]:
     """Independent decoder of the `rows` calldata (encoder check). Returns (rows with aliases expanded,
-    declared sPlus per row, {u: (source | None, via_owner, alias_ref | None)}, Merkle leaves)."""
+    declared sPlus per row, {u: (source | None, via_owner, alias_ref | None)}, raw bytes of each row = the
+    preimages of the Merkle leaves)."""
     b = bytes.fromhex(hexrows[2:])
     W, nrows = b[0], int.from_bytes(b[1:5], "big")
-    off, rows, splus, meta, leaves = 5, {}, {}, {}, []
+    off, rows, splus, meta, slices = 5, {}, {}, {}, []
     prev = -1
     for _ in range(nrows):
         start = off
@@ -225,7 +258,7 @@ def decode_rows(hexrows: str) -> tuple[dict[int, list[tuple[int, int, int]]], di
             ref = int.from_bytes(b[off:off + W], "big"); off += W
             assert ref < u and ref in rows and meta[ref][2] is None and meta[ref][0] is not None, "bad alias ref"
             rows[u], splus[u], meta[u] = list(rows[ref]), splus[ref], (meta[ref][0], via_owner, ref)
-            leaves.append(keccak(b[start:off]))
+            slices.append(b[start:off])
             continue
         assert not (via_owner and not hdr & HDR_SRC), "VIA_OWNER without a source"
         src = None
@@ -242,12 +275,12 @@ def decode_rows(hexrows: str) -> tuple[dict[int, list[tuple[int, int, int]]], di
             q = int.from_bytes(b[off + W:off + W + 2], "big", signed=True)
             fi = int.from_bytes(b[off + W + 2:off + W + 6], "big")
             edges.append((dst, q, fi)); off += W + 6
-        leaves.append(keccak(b[start:off]))
+        slices.append(b[start:off])
         rows[u] = edges
         splus[u] = sp if sp is not None else sum(q for _, q, _ in edges if q > 0)
         meta[u] = (src, via_owner, None)
     assert off == len(b)
-    return rows, splus, meta, leaves
+    return rows, splus, meta, slices
 
 
 def check_file(path: Path) -> None:
@@ -262,9 +295,9 @@ def check_file_obj(obj: dict, path=None) -> None:
     assert [str(x) for x in d] == obj["expected"]["d"], path
     assert [str(x) for x in e] == obj["expected"]["e"], path
     assert str(sum(ceil_div(l * ex, WAD) for l, ex in zip(cert.lambdas, e))) == obj["expected"]["eEff"], path
-    rows, splus, meta, leaves = decode_rows(obj["calldata"]["rows"])
+    rows, splus, meta, slices = decode_rows(obj["calldata"]["rows"])
     assert rows == cert.rows and splus == cert.splus, path
-    assert "0x" + merkle_root(leaves).hex() == obj["expected"]["graphRoot"], path
+    assert "0x" + merkle_root([keccak(x) for x in slices]).hex() == obj["expected"]["graphRoot"], path
     for r in obj["rows"]:                                # decoded header meta == published JSON meta
         src, via_owner, ref = meta[r["u"]]
         assert (src, via_owner, ref) == (r["source"], r["via"] == "owner", r["aliasOf"]), (path, r["u"])

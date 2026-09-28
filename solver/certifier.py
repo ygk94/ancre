@@ -35,7 +35,7 @@ from dataclasses import dataclass, field
 from fractions import Fraction
 from pathlib import Path
 
-from export import NotEncodable, encode, keccak, node_entry  # noqa: F401  (NotEncodable re-exported)
+from export import encode, keccak, node_entry, node_key, sorted_tags
 from graph import ADDR, AGENT, ANCHOR, Graph, Identity, build_graph, load_schema
 from ppr import Certificate, certify, e_eff, verify
 
@@ -45,6 +45,7 @@ ADD_NODES_SIG = "addNodes(bytes32,bytes)"
 RESERVE_SIG = "reserveCapacity(bytes32,uint32)"
 CERT_VIEW = "certificate(bytes32)(uint64,uint256,bytes32,bytes32,bytes32,uint32,uint32,bool)"
 NODES_ADDED = "NodesAdded(bytes32 indexed,uint256,uint256)"
+CERT_SUBMITTED = "CertificateSubmitted(bytes32 indexed,uint64 indexed,uint256,bytes32,bytes32,bytes32,uint32,uint32)"
 SET_PARAMS_SIG = ("(address[],uint64[],uint32,uint32,bytes32,(string,int128,int128,int128,uint8)[],"
                   "(uint8,uint64,uint64,uint64))")
 
@@ -101,7 +102,7 @@ class SetConfig:
     def set_params_tuple(self) -> str:
         """SetParams of the v0 contract as a cast tuple literal."""
         sch = self.schema()
-        tags = sorted(self.filter_tags, key=lambda t: keccak(t.encode()))
+        tags = sorted_tags(self.filter_tags)
         ts = ",".join(f"({t},{sch[t].min_wad},{sch[t].neutral_wad},{sch[t].max_wad},"
                       f"{0 if sch[t].kind == 'endorsement' else 1})" for t in tags)
         anchors = sorted(a.lower() for a in self.anchors)
@@ -119,11 +120,18 @@ class ChainError(Exception):
         return revert_reason(str(self))
 
 
-# custom errors of AnchoredReputation (R5), selector -> name (cast sig)
-ERRORS = {"0xf0064498": "ResidualTooLarge", "0xee3f07f1": "NotBetter", "0xcc34a05a": "BadParams",
-          "0x9f1b671d": "BadRows", "0xa6a549a4": "BadEdge", "0x1078df5d": "BadVectors", "0x62687f6f": "BadNCert",
-          "0x2b3ddb29": "UnknownSet", "0x3a81d6fc": "AlreadyRegistered", "0x2ad907fb": "ValueTooLarge",
-          "0xd7e4e29d": "RegistryUnreadable", "0x44a37e44": "NoCert", "0x7ae39e67": "BadNodes"}
+# custom errors of AnchoredReputation (R5): selectors derived from the declarations, never copied by hand
+ERROR_SIGS = ["BadParams(uint256)", "AlreadyRegistered()", "UnknownSet()", "NodeExists(bytes32)", "BadNodes()",
+              "BadNCert()", "BadVectors()", "BadRows(uint256)", "BadEdge(uint256)", "ValueTooLarge()",
+              "RegistryUnreadable()", "ResidualTooLarge(uint256,uint256)", "NotBetter(uint256,uint256)", "NoCert()",
+              "BadProof(uint256)"]
+
+
+def _selector(sig: str) -> str:
+    return "0x" + keccak(sig.encode()).hex()[:8]
+
+
+ERRORS = {_selector(sig): sig.split("(")[0] for sig in ERROR_SIGS}
 
 
 def revert_reason(err: str) -> str:
@@ -132,9 +140,6 @@ def revert_reason(err: str) -> str:
         return err[:160]
     args = [int(m.group(2)[i:i + 64], 16) for i in range(0, len(m.group(2)), 64)]
     return f"{ERRORS.get(m.group(1), m.group(1))}({', '.join(map(str, args))})"
-
-
-VALUE_FLAGS = {"--gas-limit", "--from", "--address", "--from-block", "--to-block", "--keystore"}
 
 
 @dataclass
@@ -166,27 +171,16 @@ class Chain:
         self.rpc, self.signer = rpc, signer
         self.cast = cast or os.path.expanduser("~/.foundry/bin/cast")
 
-    def _run(self, *args: str, sign: bool = False) -> str:
-        """`cast <sub> [options] [positionals]`: options (and the value after a VALUE_FLAG) are moved in front,
-        split by POSITION (never by value), because `cast send --create CODE` takes everything after CODE."""
-        sub, *rest = args
-        flags, pos, i = [], [], 0
-        while i < len(rest):
-            if rest[i].startswith("--"):
-                flags.append(rest[i])
-                if rest[i] in VALUE_FLAGS and i + 1 < len(rest):
-                    flags.append(rest[i + 1])
-                    i += 1
-            else:
-                pos.append(rest[i])
-            i += 1
-        env = dict(os.environ)
+    def _run(self, sub: str, *args: str, sign: bool = False) -> str:
+        """`cast <sub> --rpc-url RPC [signer options] <args>`. Callers pass their options before the positionals
+        (cast stops parsing options after `--create CODE`)."""
+        env, sig = dict(os.environ), []
         if sign:
             if self.signer is None:
                 raise RuntimeError("no signer configured")
-            flags = self.signer.args() + flags          # before any `--create`, which must come last
+            sig = self.signer.args()
             env.update(self.signer.env())
-        p = subprocess.run([self.cast, sub, "--rpc-url", self.rpc, *flags, *pos], capture_output=True, text=True,
+        p = subprocess.run([self.cast, sub, "--rpc-url", self.rpc, *sig, *args], capture_output=True, text=True,
                            env=env)
         if p.returncode != 0:
             raise ChainError(p.stderr.strip()[-2000:])
@@ -205,12 +199,22 @@ class Chain:
         return self._run("call", to, sig, *args)
 
     def estimate(self, to: str, sig: str, *args: str) -> int:
-        return int(self._run("estimate", to, sig, *args, "--from", self.sender))
+        return int(self._run("estimate", "--from", self.sender, to, sig, *args))
+
+    @staticmethod
+    def _receipt(out: str) -> dict:
+        rc = json.loads(out)
+        rc["ok"] = rc.get("status") in ("0x1", 1, "1")
+        return rc
 
     def send(self, to: str, sig: str, *args: str, gas_limit: int) -> dict:
-        return json.loads(self._run("send", to, sig, *args, "--gas-limit", str(gas_limit), "--json", sign=True))
+        return self._receipt(self._run("send", "--gas-limit", str(gas_limit), "--json", to, sig, *args, sign=True))
 
-    def logs(self, address: str, event_sig: str, from_block: int, *topics: str, to_block: int | str = "latest") -> list[dict]:
+    def deploy(self, code: str, gas_limit: int) -> dict:
+        return self._receipt(self._run("send", "--gas-limit", str(gas_limit), "--json", "--create", code, sign=True))
+
+    def logs(self, address: str, event_sig: str, from_block: int, *topics: str,
+             to_block: int | str = "latest") -> list[dict]:
         out = self._run("logs", "--address", address, "--from-block", str(from_block), "--to-block", str(to_block),
                         "--json", event_sig, *topics)
         return json.loads(out) if out else []
@@ -242,16 +246,20 @@ def parse_entries(b: bytes) -> list[NodeKey]:
     return out
 
 
-def _selector(sig: str) -> str:
-    return "0x" + keccak(sig.encode()).hex()[:8]
+def anchor_table(anchors: list[str]) -> list[NodeKey]:
+    """Nodes 0..k-1 of a set: its anchors, addresses strictly increasing (registerAnchorSet)."""
+    return [(ANCHOR, a) for a in sorted(x.lower() for x in anchors)]
 
 
-def chain_table(chain: Chain, contract: str, set_id: str, anchors: list[str], from_block: int = 0) -> list[NodeKey]:
+def chain_table(chain: Chain, contract: str, set_id: str, anchors: list[str], from_block: int = 0,
+                to_block: int | str = "latest", table: list[NodeKey] | None = None) -> list[NodeKey]:
     """The on-chain node table, rebuilt from NodesAdded logs and the calldata of their transactions (addNodes or
-    submitCertificate newNodes), checked for continuity. A transaction that is not a direct call to the contract
-    (multisig, router) cannot be decoded and raises."""
-    table: list[NodeKey] = [(ANCHOR, a) for a in sorted(x.lower() for x in anchors)]
-    logs = chain.logs(contract, NODES_ADDED, from_block, set_id)
+    submitCertificate newNodes), checked for continuity. Incremental: pass the table known up to from_block − 1.
+    A transaction that is not a direct call to the contract (multisig, router) cannot be decoded and raises."""
+    table = list(table) if table is not None else anchor_table(anchors)
+    if isinstance(to_block, int) and from_block > to_block:     # nothing new since the last sync
+        return table
+    logs = chain.logs(contract, NODES_ADDED, from_block, set_id, to_block=to_block)
     for lg in sorted(logs, key=lambda l: (int(l["blockNumber"], 16), int(l["logIndex"], 16))):
         data = bytes.fromhex(lg["data"][2:])
         start, count = int.from_bytes(data[:32], "big"), int.from_bytes(data[32:64], "big")
@@ -313,10 +321,6 @@ def align(g: Graph, cert: Certificate, table: list[NodeKey], prev_ncert: int) ->
     return Aligned(out, nodes, appended)
 
 
-def encode_v0(cert: Certificate, nodes: list[NodeKey], identity: Identity | None) -> dict:
-    return encode(cert, nodes, identity, version="v0")
-
-
 # ----------------------------------------------------------------------------- triggers
 
 
@@ -331,12 +335,12 @@ class Support:
         clients = set()
         for ci in cert.rows:
             gi = cert.node_map[ci]
-            src = g.row_src.get(gi, (None, ""))[0]
-            clients.add(src if src else str(g.nodes[gi][1]))
+            src = g.row_src[gi][0] if gi in g.row_src else str(g.nodes[gi][1])      # address nodes carry themselves
+            if src is not None:
+                clients.add(src)
         agents = {int(v) for kind, v in g.nodes if kind == AGENT}
         # a pair rejected by R6 (client controls the target) comes back if the target changes hands
-        agents |= {int(r["agent"]) for r in g.rejected
-                   if r["raison"].startswith("controleur") and r["client"] in clients}
+        agents |= {a for c, a in g.r6_pairs if c in clients}
         return cls(clients=clients, agents=agents)
 
 
@@ -365,14 +369,14 @@ class Tx:
     note: str = ""
 
 
-def plan(cfg: SetConfig, set_id: str, al: Aligned, enc: dict, reserved_nodes: int, e_max: int, k: int) -> list[Tx]:
+def plan(cfg: SetConfig, set_id: str, al: Aligned, enc: dict, reserved_nodes: int, e_max: int) -> list[Tx]:
     """Transactions for one certificate.
     Small case: newNodes inline in submitCertificate. Large case (more than inline_nodes_max new nodes, or more
     unreserved vector slots than one reserve chunk): addNodes chunks, then reserveCapacity chunks up to nCert
     (the certificate then pays x→y, 100 gas/slot, instead of 0→x), then submitCertificate. Chunks follow the slot
     count ⌈n/4⌉·(k+2) of the contract's vector layout (ENCODING.md §5), so k is taken into account."""
     n = al.cert.n
-    stride = k + 2
+    stride = al.cert.k + 2
     unreserved_slots = max(0, (n + 3) // 4 - (reserved_nodes + 3) // 4) * stride
     large = len(al.appended) > cfg.gas.inline_nodes_max or unreserved_slots > cfg.gas.reserve_slots_per_tx
     txs: list[Tx] = []
@@ -380,9 +384,9 @@ def plan(cfg: SetConfig, set_id: str, al: Aligned, enc: dict, reserved_nodes: in
     if large:
         per = cfg.gas.add_nodes_per_tx
         for i in range(0, len(al.appended), per):
-            chunk = b"".join(node_entry(x) for x in al.appended[i:i + per])
-            txs.append(Tx("addNodes", ADD_NODES_SIG, [set_id, "0x" + chunk.hex()],
-                          f"nodes {i}..{i + len(al.appended[i:i + per]) - 1}"))
+            chunk = al.appended[i:i + per]
+            txs.append(Tx("addNodes", ADD_NODES_SIG, [set_id, "0x" + b"".join(map(node_entry, chunk)).hex()],
+                          f"nodes {i}..{i + len(chunk) - 1}"))
         inline = b""
         nodes_per_reserve = max(4, (cfg.gas.reserve_slots_per_tx // stride) * 4)
         upto = reserved_nodes
@@ -467,6 +471,15 @@ class Certifier:
         self.state_path, self.journal = state_path, journal
         self.state = State.load(state_path, set_id, contract)
         self.support: Support | None = None
+        self._table: list[NodeKey] | None = None        # node table known up to self._table_block (append-only)
+        self._table_block = -1
+
+    def table(self, head: int) -> list[NodeKey]:
+        """Incremental sync of the append-only node table: only the NodesAdded logs after the last sync."""
+        self._table = chain_table(self.chain, self.contract, self.set_id, self.cfg.anchors,
+                                  self._table_block + 1, head, self._table)
+        self._table_block = head
+        return self._table
 
     def compute(self, fbs, idn: Identity, table: list[NodeKey], prev_ncert: int):
         g = build_graph(fbs, idn, self.cfg.schema(), self.cfg.filter_tags, self.cfg.anchors,
@@ -488,19 +501,19 @@ class Certifier:
     def run_once(self, fbs, idn: Identity, *, reason: str, block: int | None = None, dry: bool = False) -> dict:
         t0 = time.perf_counter()
         if self.chain is None or dry:
-            table, oc, head = [(ANCHOR, a) for a in sorted(x.lower() for x in self.cfg.anchors)], None, None
+            table, oc, head = anchor_table(self.cfg.anchors), None, None
         else:
             head = self.chain.block_number()
-            table = chain_table(self.chain, self.contract, self.set_id, self.cfg.anchors)
+            table = self.table(head)
             oc = OnChain.read(self.chain, self.contract, self.set_id)
         g, al, enc = self.compute(fbs, idn, table, oc.n_cert if oc else 0)
         gr, vr = "0x" + enc["graphRoot"].hex(), "0x" + enc["vectorRoot"].hex()
-        base = dict(set=self.cfg.name, reason=reason, block=block, nCert=al.cert.n, rows=len(al.cert.rows),
-                    newNodes=len(al.appended), eEff=e_eff(al.cert), iterations=al.cert.iterations, graphRoot=gr,
-                    computeMs=round((time.perf_counter() - t0) * 1000, 1))
         e_max = e_eff(al.cert)
+        base = dict(set=self.cfg.name, reason=reason, block=block, nCert=al.cert.n, rows=len(al.cert.rows),
+                    newNodes=len(al.appended), eEff=e_max, iterations=al.cert.iterations, graphRoot=gr,
+                    computeMs=round((time.perf_counter() - t0) * 1000, 1))
         reserved = max(self.state.reserved, oc.n_cert if oc else 0)
-        txs = plan(self.cfg, self.set_id, al, enc, reserved, e_max, al.cert.k)
+        txs = plan(self.cfg, self.set_id, al, enc, reserved, e_max)
         if oc is None:
             return self.journal.log(action="planned", txs=[t.fn for t in txs], **base)
         refresh = self.due_refresh(oc, head)
@@ -519,7 +532,7 @@ class Certifier:
                 raise RuntimeError(f"{tx.fn}: gas limit {lim} > cap {self.cfg.gas.tx_cap} (GAS.md: an update breaks "
                                    "around 12 k edges at k = 3; beyond, the verification must be split)")
             rc = self.chain.send(self.contract, tx.sig, *tx.args, gas_limit=lim)
-            ok = rc.get("status") in ("0x1", 1, "1")
+            ok = rc["ok"]
             last = self.journal.log(action=tx.fn, note=tx.note, estimate=est, gasLimit=lim,
                                     gasUsed=int(rc["gasUsed"], 16), tx=rc.get("transactionHash"), status=ok,
                                     txBlock=int(rc["blockNumber"], 16), **base)

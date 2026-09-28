@@ -26,8 +26,8 @@ from pathlib import Path
 
 import certifier as C
 import run_mainnet as R
-from export import encode, load_certificate, node_entry
-from graph import AGENT, ANCHOR, ZERO, Feedback, Identity
+from export import NotEncodable, encode, load_certificate, node_entry
+from graph import ADDR, AGENT, ANCHOR, ZERO, Feedback, Identity
 
 HERE = Path(__file__).parent
 ROOT = HERE.parent
@@ -74,9 +74,8 @@ def build_contract() -> str:
 def deploy(chain: C.Chain, bytecode: str) -> str:
     args = subprocess.run([str(FOUNDRY / "cast"), "abi-encode", "c(address,address)", IDENTITY, REPUTATION],
                           check=True, capture_output=True, text=True).stdout.strip()
-    rc = json.loads(chain._run("send", "--gas-limit", "12000000", "--json", "--create", bytecode + args[2:],
-                               sign=True))
-    assert rc["status"] in ("0x1", 1), rc
+    rc = chain.deploy(bytecode + args[2:], gas_limit=12_000_000)
+    assert rc["ok"], rc
     return rc["contractAddress"]
 
 
@@ -112,15 +111,13 @@ def vector_calldata(obj: dict) -> tuple[C.Certificate, list, dict]:
     nodes = []
     for nd in obj["nodes"]:
         nodes.append((ANCHOR, nd["address"]) if nd["kind"] == "anchor" else
-                     (AGENT, nd["agentId"]) if nd["kind"] == "agent" else ("addr", nd["address"]))
+                     (AGENT, nd["agentId"]) if nd["kind"] == "agent" else (ADDR, nd["address"]))
     idn = Identity(block=0, owner={nd["agentId"]: nd.get("owner") or ZERO for nd in obj["nodes"] if nd["kind"] == "agent"},
                    wallet={})
     enc = encode(cert, nodes, idn if obj["identityBlock"] is not None else None, version="v0")
-    new_nodes = b"".join(node_entry(x) for x in nodes[cert.k:])
-    return cert, nodes, {**enc, "newNodes": new_nodes}
+    return cert, nodes, enc
 
 
-SUBMIT = C.SUBMIT_SIG
 
 
 def scenario_vectors(chain: C.Chain, contract: str) -> list[dict]:
@@ -130,14 +127,14 @@ def scenario_vectors(chain: C.Chain, contract: str) -> list[dict]:
         name = p.stem
         try:
             cert, nodes, enc = vector_calldata(obj)
-        except C.NotEncodable as e:
+        except NotEncodable as e:
             res.append({"vector": name, "result": f"not v0-encodable ({e})"})
             continue
         cfg = cfg_from_vector(obj, name)
         try:
             set_id, reg = register(chain, contract, cfg)
         except C.ChainError as e:
-            res.append({"vector": name, "result": "set NOT registrable on v0: " + _reason(str(e)),
+            res.append({"vector": name, "result": "set NOT registrable on v0: " + C.revert_reason(str(e)),
                         "tagsOver32Bytes": [t for t in cfg.filter_tags if len(t.encode()) > 32]})
             continue
         e_max = int(obj["expected"]["eEff"])
@@ -148,14 +145,14 @@ def scenario_vectors(chain: C.Chain, contract: str) -> list[dict]:
         bad[v * rec:v * rec + 8] = (cert.t[0][v] + 10**6).to_bytes(8, "big")
         args = [set_id, str(cert.n), str(e_max), "0x" + enc["newNodes"].hex()]
         try:
-            chain.estimate(contract, SUBMIT, *args, "0x" + bytes(bad).hex(), "0x" + enc["rows"].hex())
+            chain.estimate(contract, C.SUBMIT_SIG, *args, "0x" + bytes(bad).hex(), "0x" + enc["rows"].hex())
             mutated = "ACCEPTED (bug)"
         except C.ChainError as e:
-            mutated = "rejected: " + _reason(str(e))
-        est = chain.estimate(contract, SUBMIT, *args, "0x" + enc["vectors"].hex(), "0x" + enc["rows"].hex())
-        rc = chain.send(contract, SUBMIT, *args, "0x" + enc["vectors"].hex(), "0x" + enc["rows"].hex(),
+            mutated = "rejected: " + C.revert_reason(str(e))
+        est = chain.estimate(contract, C.SUBMIT_SIG, *args, "0x" + enc["vectors"].hex(), "0x" + enc["rows"].hex())
+        rc = chain.send(contract, C.SUBMIT_SIG, *args, "0x" + enc["vectors"].hex(), "0x" + enc["rows"].hex(),
                         gas_limit=cfg.gas.limit(est))
-        ok = rc["status"] in ("0x1", 1)
+        ok = rc["ok"]
         root = chain.call(contract, "dryRun(bytes32,uint32,bytes,bytes)(uint256[],uint256,bytes32)", set_id,
                           str(cert.n), "0x" + enc["vectors"].hex(), "0x" + enc["rows"].hex()).split("\n")
         res.append({"vector": name, "result": "ACCEPTED" if ok else "REVERTED", "mutated": mutated,
@@ -163,10 +160,6 @@ def scenario_vectors(chain: C.Chain, contract: str) -> list[dict]:
                     "eEffOnChain": int(root[1].split()[0]), "eEffExpected": e_max,
                     "graphRootMatch": root[2].strip() == "0x" + enc["graphRoot"].hex()})
     return res
-
-
-def _reason(err: str) -> str:
-    return C.revert_reason(err)
 
 
 def scenario_service(chain: C.Chain, contract: str) -> list[dict]:
@@ -203,7 +196,7 @@ def scenario_service(chain: C.Chain, contract: str) -> list[dict]:
     other = C.Chain(chain.rpc, C.Signer(OTHER_ADDR))
     junk = node_entry((AGENT, 999_999)) + node_entry((AGENT, 23))         # junk, then a node we will need
     rc = other.send(contract, C.ADD_NODES_SIG, set_id, "0x" + junk.hex(), gas_limit=500_000)
-    assert rc["status"] in ("0x1", 1), "the third-party addNodes must succeed for the scenario to mean anything"
+    assert rc["ok"], "the third-party addNodes must succeed for the scenario to mean anything"
     out.append({"frontRun": "third party addNodes(#999999, #23)", "tx": rc["transactionHash"]})
     ev2 = Feedback(agent_id=23, client=h2, index=1, value=100, decimals=0, tag1="vouch", tag2="", revoked=False)
     chain._run("rpc", "anvil_mine", hex(cfg.min_refresh + 1))
@@ -298,14 +291,14 @@ def scenario_watch(chain: C.Chain, contract: str) -> list[dict]:
         start = chain.block_number()
         args = [set_id, str(cert.n), obj["expected"]["eEff"], "0x" + enc["newNodes"].hex(),
                 "0x" + enc["vectors"].hex(), "0x" + enc["rows"].hex()]
-        chain.send(contract, SUBMIT, *args, gas_limit=cfg.gas.limit(chain.estimate(contract, SUBMIT, *args)))
-        before = chain.call(contract, "certificate(bytes32)(uint64,uint256,bytes32,bytes32,bytes32,uint32,uint32,bool)", set_id).split("\n")[1]
+        chain.send(contract, C.SUBMIT_SIG, *args, gas_limit=cfg.gas.limit(chain.estimate(contract, C.SUBMIT_SIG, *args)))
+        before = str(C.OnChain.read(chain, contract, set_id).e_eff)
         ev = Wt.watch_once(chain, contract, cfg, set_id, nodes, fbs, idn, C.Journal(SCR / "journal_watch.jsonl"),
                            start, send=True)
-        after = chain.call(contract, "certificate(bytes32)(uint64,uint256,bytes32,bytes32,bytes32,uint32,uint32,bool)", set_id).split("\n")[1]
+        after = str(C.OnChain.read(chain, contract, set_id).e_eff)
         out.append({"vector": name, "detected": [d["kind"] for e in ev for d in e["discrepancies"]],
                     "proofs": [p for e in ev for p in e.get("proofs", [])],
-                    "eEffBefore": before.split()[0], "eEffAfter": after.split()[0]})
+                    "eEffBefore": before, "eEffAfter": after})
     return out
 
 

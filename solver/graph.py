@@ -123,6 +123,34 @@ class Identity:
             self._w2a = {k: sorted(v) for k, v in m.items()}
         return self._w2a
 
+    # --- state transitions (R6/R7 inputs), shared by every replayer (snapshot, indexer export) ---------------
+    def apply_transfer(self, agent_id: int, frm: str, to: str) -> None:
+        frm, to = frm.lower(), to.lower()
+        if frm != ZERO:
+            self.past_owners.setdefault(agent_id, set()).add(frm)
+        self.owner[agent_id] = to
+        self.approved.pop(agent_id, None)               # ERC-721: a transfer clears getApproved
+        self._w2a = None
+
+    def apply_wallet(self, agent_id: int, wallet: str | None) -> None:
+        w = (wallet or ZERO).lower()
+        w = w if len(w) == 42 else ZERO                 # empty metadata value = cleared
+        self.wallet[agent_id] = w
+        if w != ZERO:
+            self.past_wallets.setdefault(agent_id, set()).add(w)
+        self._w2a = None
+
+    def apply_approval(self, agent_id: int, approved: str | None) -> None:
+        ap = (approved or ZERO).lower()
+        if ap == ZERO:
+            self.approved.pop(agent_id, None)
+        else:
+            self.approved[agent_id] = ap
+
+    def apply_operator(self, owner: str, operator: str, on: bool) -> None:
+        ops = self.operators.setdefault(owner.lower(), set())
+        (ops.add if on else ops.discard)(operator.lower())
+
     def source_of(self, agent_id: int, owner_fallback: bool = False) -> tuple[str | None, str]:
         """R7: (src(j), "wallet" | "owner" | ""). The wallet always wins over the owner (D44)."""
         w = self.wallet.get(agent_id, ZERO) or ZERO
@@ -216,32 +244,19 @@ def replay_identity_events(idn: Identity, events: list[dict], after_block: int, 
             continue
         a = e.get("agent")
         if e["ev"] == "Transfer":
-            frm, to = e["frm"].lower(), e["to"].lower()
-            if frm != ZERO:
-                idn.past_owners.setdefault(a, set()).add(frm)
-            idn.owner[a] = to
-            idn.approved.pop(a, None)                       # ERC-721: a transfer clears getApproved
+            idn.apply_transfer(a, e["frm"], e["to"])
         elif e["ev"] == "MetadataSet" and e.get("key") == "agentWallet":
-            v = e["val"].lower()
-            idn.wallet[a] = ("0x" + v[2:]) if len(v) == 42 else ZERO
-            if len(v) == 42:
-                idn.past_wallets.setdefault(a, set()).add(idn.wallet[a])
+            idn.apply_wallet(a, e["val"])
         elif e["ev"] == "Approval":                       # approve(approved, tokenId)
-            ap = e["approved"].lower()
-            if ap == ZERO:
-                idn.approved.pop(a, None)
-            else:
-                idn.approved[a] = ap
+            idn.apply_approval(a, e["approved"])
         elif e["ev"] == "ApprovalForAll":
-            ops = idn.operators.setdefault(e["owner"].lower(), set())
-            (ops.add if e["approved_all"] else ops.discard)(e["operator"].lower())
+            idn.apply_operator(e["owner"], e["operator"], e["approved_all"])
         elif e["ev"] in (TOPIC_APPROVAL, TOPIC_APPROVAL_FOR_ALL):
             raise ValueError(f"undecoded approval event at block {e['block']}: decode it before replaying (R6 input)")
         elif e["ev"] == "Registered":
             idn.owner.setdefault(a, e["owner"].lower())
             idn.wallet.setdefault(a, ZERO)
     idn.block = to_block
-    idn._w2a = None
     return idn
 
 
@@ -366,8 +381,9 @@ class Graph:
     anchors: list[int]                              # anchor node indices (one column each)
     log: dict[str, int]                             # filtering counters
     rejected: list[dict]                            # rejected feedback/pairs (reports)
-    row_src: dict[int, tuple[str, str]] = field(default_factory=dict)  # u -> (client, "anchor"|"address"|"wallet"|"owner")
+    row_src: dict[int, tuple[str | None, str]] = field(default_factory=dict)  # u -> (client, anchor|address|wallet|owner|none)
     pairs: dict[tuple[str, int], PairEdge] = field(default_factory=dict)
+    r6_pairs: set[tuple[str, int]] = field(default_factory=set)   # (client, agent) rejected by R6 (controllers)
 
     @property
     def n(self) -> int:
@@ -398,7 +414,8 @@ class Graph:
 def combine_pairs(feedbacks: list[Feedback], identity: Identity, schema: dict[str, TagSpec],
                   filter_tags: list[str] | None, *, selection: str = "latest_then_reject",
                   combine: str = "neg_dominance", reject_controllers: bool = True,
-                  log: dict | None = None, rejected: list | None = None) -> dict[tuple[str, int], PairEdge]:
+                  log: dict | None = None, rejected: list | None = None,
+                  r6: set | None = None) -> dict[tuple[str, int], PairEdge]:
     """R1-R6: one combined edge per (client, agent). Normative defaults; the options exist only to measure
     the rules that were replaced (tour 2 `latest_pair`, `latest_valid` reading of proof (ii))."""
     if filter_tags is None:
@@ -443,9 +460,8 @@ def combine_pairs(feedbacks: list[Feedback], identity: Identity, schema: dict[st
         q = quantize(f.value, f.decimals, schema[t])                        # R4
         if q is None:
             log["rejet_hors_bornes"] += 1
-            if rejected is not None:
-                rejected.append({"raison": "hors_bornes", "client": c, "agent": a, "tag1": t,
-                                 "index": f.index, "value": str(f.value)})
+            rejected.append({"raison": "hors_bornes", "client": c, "agent": a, "tag1": t,
+                             "index": f.index, "value": str(f.value)})
             continue
         by_pair[(c, a)].append((q, f))
     out: dict[tuple[str, int], PairEdge] = {}
@@ -455,6 +471,8 @@ def combine_pairs(feedbacks: list[Feedback], identity: Identity, schema: dict[st
             if c in ctl:
                 log[f"rejet_controleur_{ctl[c]}"] += 1
                 rejected.append({"raison": "controleur_" + ctl[c], "client": c, "agent": a, "avis": len(lst)})
+                if r6 is not None:
+                    r6.add((c, a))
                 continue
         neg = [x for x in lst if x[0] < 0]                                  # R5
         q, f = min(neg, key=lambda x: (x[0], x[1].tag1)) if neg else max(lst, key=lambda x: (x[0], x[1].tag1))
@@ -481,8 +499,9 @@ def build_graph(feedbacks: list[Feedback], identity: Identity, schema: dict[str,
     log: dict[str, int] = defaultdict(int)
     rejected: list[dict] = []
     anchors = sorted({a.lower() for a in anchors})     # contract: anchor addresses strictly increasing
+    r6: set[tuple[str, int]] = set()
     pairs = combine_pairs(feedbacks, identity, schema, filter_tags, selection=selection, combine=combine,
-                          reject_controllers=reject_controllers, log=log, rejected=rejected)
+                          reject_controllers=reject_controllers, log=log, rejected=rejected, r6=r6)
 
     out_rows: dict[str, list[PairEdge]] = defaultdict(list)                # client -> combined edges
     for (c, _), pe in pairs.items():
@@ -490,8 +509,8 @@ def build_graph(feedbacks: list[Feedback], identity: Identity, schema: dict[str,
     rated = sorted({a for (_, a) in pairs})
     # R7: A(c) restricted to graph nodes (rated agents)
     carriers: dict[str, list[tuple[int, str]]] = defaultdict(list)
-    for j in rated:
-        s, via = identity.source_of(j, owner_fallback)
+    sources = {j: identity.source_of(j, owner_fallback) for j in rated}
+    for j, (s, via) in sources.items():
         if s is not None and s in out_rows:
             carriers[s].append((j, via))
     # a client is an address node iff A(c) is empty over ALL agents (not only rated ones)
@@ -519,13 +538,13 @@ def build_graph(feedbacks: list[Feedback], identity: Identity, schema: dict[str,
 
     rows: dict[int, list[Edge]] = {}
     row_src: dict[int, tuple[str, str]] = {}
-    for j in rated:                                     # every agent node records src(j), even with an empty row:
-        s_, via_ = identity.source_of(j, owner_fallback)  # its (possibly empty) row stays challengeable (SRC)
-        row_src[index[(AGENT, j)]] = (s_, via_) if s_ is not None else (None, "none")
-    for a in anchors:                                   # R8
+    for j, (s, via) in sources.items():                 # every agent node records src(j), even with an empty row:
+        row_src[index[(AGENT, j)]] = (s, via) if s is not None else (None, "none")   # it stays challengeable (SRC)
+    for a in anchors:                                   # R8; every anchor has a row_src, even with an empty row
+        u = index[(ANCHOR, a)]
+        row_src[u] = (a, "anchor")
         if a in out_rows:
-            u = index[(ANCHOR, a)]
-            rows[u], row_src[u] = row_of(a, u), (a, "anchor")
+            rows[u] = row_of(a, u)
     for c, lst in carriers.items():                     # R7 row copy
         for j, via in lst:
             u = index[(AGENT, j)]
@@ -541,4 +560,5 @@ def build_graph(feedbacks: list[Feedback], identity: Identity, schema: dict[str,
         if len(row) > ROW_MAX:
             log["lignes_sup_ROW_MAX"] += 1
     return Graph(nodes=nodes, index=index, rows=rows, anchors=[index[(ANCHOR, a)] for a in anchors],
-                 log=dict(log), rejected=rejected if keep_detail else [], row_src=row_src, pairs=pairs)
+                 log=dict(log), rejected=rejected if keep_detail else [], row_src=row_src, pairs=pairs,
+                 r6_pairs=r6)

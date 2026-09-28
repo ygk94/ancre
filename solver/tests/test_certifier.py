@@ -8,6 +8,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import certifier as C
+import export as X
 import run_mainnet as R
 from graph import AGENT, ANCHOR, Feedback, build_graph
 from ppr import certify, e_eff, verify
@@ -31,7 +32,7 @@ def test_align_on_existing_table_keeps_indices_and_values(mainnet):
     cfg = honest_cfg(fbs)
     g = build_graph(fbs, idn, cfg.schema(), cfg.filter_tags, cfg.anchors)
     cert = certify(g, cfg.alpha)
-    anchors = [(ANCHOR, a) for a in sorted(cfg.anchors)]
+    anchors = C.anchor_table(cfg.anchors)
     table = anchors + [(AGENT, 999_999), (AGENT, 4), (AGENT, 12_345)]     # older nodes, some unrelated
     al = C.align(g, cert, table, prev_ncert=len(table))
     assert al.nodes[:len(table)] == table and al.cert.n == len(al.nodes)
@@ -45,19 +46,18 @@ def test_align_on_existing_table_keeps_indices_and_values(mainnet):
 
 
 def test_encode_v0_expands_alias_and_refuses_splus():
-    import export as X
     fbs, idn, anc = X.toy_identity_graph()
     sch = {k: v for k, v in C.SetConfig(name="x", anchors=[], lambdas=[], alphaN=1, alphaD=3,
                                          filter_tags=[]).schema().items() if k in ("vouch", "review", "slash")}
     g = build_graph(fbs, idn, sch, list(sch), anc, owner_fallback=True)
     cert = certify(g, Fraction(1, 3))
     nodes = [g.nodes[i] for i in cert.node_map]
-    with pytest.raises(C.NotEncodable):
-        C.encode_v0(cert, nodes, idn)
+    with pytest.raises(X.NotEncodable):
+        X.encode(cert, nodes, idn, version="v0")
     fbs2 = [f for f in fbs if f.client != "0x" + "f" * 40]                   # drop the ROW_MAX row
     g2 = build_graph(fbs2, idn, sch, list(sch), anc, owner_fallback=True)
     c2 = certify(g2, Fraction(1, 3))
-    enc = C.encode_v0(c2, [g2.nodes[i] for i in c2.node_map], idn)
+    enc = X.encode(c2, [g2.nodes[i] for i in c2.node_map], idn, version="v0")
     rows, splus, meta, _ = X.decode_rows("0x" + enc["rows"].hex())
     assert rows == c2.rows and all(m[2] is None for m in meta.values())    # no alias in v0
 
@@ -66,15 +66,15 @@ def test_plan_splits_large_first_certificate(mainnet):
     fbs, idn = mainnet
     cfg = honest_cfg(fbs, gas=C.GasPolicy(add_nodes_per_tx=2))
     g = build_graph(fbs, idn, cfg.schema(), cfg.filter_tags, cfg.anchors)
-    al = C.align(g, certify(g, cfg.alpha), [(ANCHOR, a) for a in sorted(cfg.anchors)], 0)
+    al = C.align(g, certify(g, cfg.alpha), C.anchor_table(cfg.anchors), 0)
     cfg.gas.inline_nodes_max = 1
     cfg.gas.reserve_slots_per_tx = 4                                        # k = 2: 1 chunk of 4 nodes per tx
-    txs = C.plan(cfg, "0x" + "00" * 32, al, C.encode_v0(al.cert, al.nodes, idn), 0, 16, al.cert.k)
+    txs = C.plan(cfg, "0x" + "00" * 32, al, X.encode(al.cert, al.nodes, idn, version="v0"), 0, 16)
     assert [t.fn for t in txs] == ["addNodes", "addNodes", "reserveCapacity", "reserveCapacity",
                                    "submitCertificate"]
     assert [t.args[1] for t in txs if t.fn == "reserveCapacity"] == ["4", "6"]
     assert txs[-1].args[3] == "0x"                                          # nodes already added
-    small = C.plan(honest_cfg(fbs), "0x" + "00" * 32, al, C.encode_v0(al.cert, al.nodes, idn), 0, 16, al.cert.k)
+    small = C.plan(honest_cfg(fbs), "0x" + "00" * 32, al, X.encode(al.cert, al.nodes, idn, version="v0"), 0, 16)
     assert [t.fn for t in small] == ["submitCertificate"] and small[0].args[3] == "0x" + al.new_nodes.hex()
 
 
@@ -110,11 +110,12 @@ def test_replacement_wait_and_gas_limit(tmp_path):
         C.State.load(tmp_path / "s.json", "0xcc", "0xbb")
 
 
-def test_cast_argument_split_is_positional():
+def test_cast_argv_order_and_error_selectors():
     ch = C.Chain("http://x", C.Signer("0x" + "1" * 40), cast="/bin/echo")
-    out = ch._run("send", "0xto", "f(uint256)", "500000", "--gas-limit", "500000", "--json", sign=True)
+    out = ch._run("send", "--gas-limit", "500000", "--json", "0xto", "f(uint256)", "500000", sign=True)
     assert out.split() == ["send", "--rpc-url", "http://x", "--unlocked", "--from", "0x" + "1" * 40, "--gas-limit",
                            "500000", "--json", "0xto", "f(uint256)", "500000"]
+    assert C.ERRORS["0x0cb49808"] == "BadProof" and C.ERRORS["0xee3f07f1"] == "NotBetter"
 
 
 def test_trigger_on_transfer_of_a_controller_rejected_target():

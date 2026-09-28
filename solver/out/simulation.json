@@ -102,9 +102,9 @@
    "gasUsed": 394812
   },
   {
-   "ts": 1790626916.411,
+   "ts": 1790627373.32,
    "action": "certified",
-   "latencyMs": 1513.1,
+   "latencyMs": 236.0,
    "txs": 1,
    "refresh": false,
    "lastTx": "0x4935be4adc7baff8f24be6b8d7d86e2a07c48e66a4f931ab1ebd3359b8cfe5a8",
@@ -118,10 +118,10 @@
    "eEff": 16,
    "iterations": 4,
    "graphRoot": "0x202e848c99665e17fb9a3d736394b98b794356f8ed7edca925639d24a6db69cd",
-   "computeMs": 1439.8
+   "computeMs": 173.5
   },
   {
-   "ts": 1790626916.462,
+   "ts": 1790627373.368,
    "action": "skip_identical",
    "set": "mainnet-honest",
    "reason": "recompute, nothing changed",
@@ -132,14 +132,14 @@
    "eEff": 16,
    "iterations": 4,
    "graphRoot": "0x202e848c99665e17fb9a3d736394b98b794356f8ed7edca925639d24a6db69cd",
-   "computeMs": 50.8
+   "computeMs": 48.3
   },
   {
    "trigger": "NewFeedback 0x0730 -> #22",
    "relevant": true
   },
   {
-   "ts": 1790626916.509,
+   "ts": 1790627373.388,
    "action": "deferred_replacement_rule",
    "waitBlocks": 601,
    "eCur": 16,
@@ -153,12 +153,12 @@
    "eEff": 24,
    "iterations": 4,
    "graphRoot": "0xd38e9a1fb352aeff20d24a390b498c6c91bdeb4dec597b292885067b3aaede8d",
-   "computeMs": 46.3
+   "computeMs": 20.2
   },
   {
-   "ts": 1790626916.854,
+   "ts": 1790627374.576,
    "action": "certified",
-   "latencyMs": 271.2,
+   "latencyMs": 1109.1,
    "txs": 1,
    "refresh": false,
    "lastTx": "0x4663bda754dcc104ea126d09c59b9c438759378aaf8f134e8041ef0eae496e28",
@@ -172,7 +172,7 @@
    "eEff": 24,
    "iterations": 4,
    "graphRoot": "0xd38e9a1fb352aeff20d24a390b498c6c91bdeb4dec597b292885067b3aaede8d",
-   "computeMs": 46.9
+   "computeMs": 30.0
   },
   {
    "trigger": "NewFeedback scanner -> #2",
@@ -183,9 +183,9 @@
    "tx": "0xe6ed60d3cf83c66348c81e361ce1b82f43962948d30728f6071af1c38ab5589d"
   },
   {
-   "ts": 1790626917.379,
+   "ts": 1790627375.085,
    "action": "certified",
-   "latencyMs": 180.8,
+   "latencyMs": 152.8,
    "txs": 1,
    "refresh": false,
    "lastTx": "0xc31947eb36c73d2316c8df3a09838b97c7f0e3c240b7680c4a17f4dd6ce146fe",
@@ -199,12 +199,12 @@
    "eEff": 34,
    "iterations": 4,
    "graphRoot": "0x51687d9f2ddbda3c030fcbcfa0ae846d7a82ef0d6b84443ac7101c7353264809",
-   "computeMs": 81.5
+   "computeMs": 65.8
   },
   {
-   "ts": 1790626924.908,
+   "ts": 1790627382.561,
    "action": "certified",
-   "latencyMs": 159.6,
+   "latencyMs": 98.3,
    "txs": 1,
    "refresh": true,
    "lastTx": "0x760ae920b4ec2da9c81af9996cdc36dbe90a8e7af57527eb4e0abe226565e0fa",
@@ -218,12 +218,12 @@
    "eEff": 34,
    "iterations": 4,
    "graphRoot": "0x51687d9f2ddbda3c030fcbcfa0ae846d7a82ef0d6b84443ac7101c7353264809",
-   "computeMs": 91.2
+   "computeMs": 40.0
   },
   {
    "journal": [
     {
-     "ts": 1790626916.41,
+     "ts": 1790627373.319,
      "action": "submitCertificate",
      "note": "nCert 6, rows 5",
      "estimate": 503480,
@@ -241,12 +241,12 @@
      "eEff": 16,
      "iterations": 4,
      "graphRoot": "0x202e848c99665e17fb9a3d736394b98b794356f8ed7edca925639d24a6db69cd",
-     "computeMs": 1439.8
+     "computeMs": 173.5
     },
     {
-     "ts": 1790626916.411,
+     "ts": 1790627373.32,
      "action": "certified",
-     "latencyMs": 1513.1,
+     "latencyMs": 236.0,
      "txs": 1,
      "refresh": false,
      "lastTx": "0x4935be4adc7baff8f24be6b8d7d86e2a07c48e66a4f931ab1ebd3359b8cfe5a8",
@@ -260,10 +260,10 @@
      "eEff": 16,
      "iterations": 4,
      "graphRoot": "0x202e848c99665e17fb9a3d736394b98b794356f8ed7edca925639d24a6db69cd",
-     "computeMs": 1439.8
+     "computeMs": 173.5
     },
     {
-     "ts": 1790626916.462,
+     "ts": 1790627373.368,
      "action": "skip_identical",
      "set": "mainnet-honest",
      "reason": "recompute, nothing changed",
@@ -274,10 +274,10 @@
      "eEff": 16,
      "iterations": 4,
      "graphRoot": "0x202e848c99665e17fb9a3d736394b98b794356f8ed7edca925639d24a6db69cd",
-     "computeMs": 50.8
+     "computeMs": 48.3
     },
     {
-     "ts": 1790626916.509,
+     "ts": 1790627373.388,
      "action": "deferred_replacement_rule",
      "waitBlocks": 601,
      "eCur": 16,
@@ -291,10 +291,10 @@
      "eEff": 24,
      "iterations": 4,
      "graphRoot": "0xd38e9a1fb352aeff20d24a390b498c6c91bdeb4dec597b292885067b3aaede8d",
-     "computeMs": 46.3
+     "computeMs": 20.2
     },
     {
-     "ts": 1790626916.853,
+     "ts": 1790627374.574,
      "action": "submitCertificate",
      "note": "nCert 7, rows 6",
      "estimate": 187129,
@@ -312,12 +312,12 @@
      "eEff": 24,
      "iterations": 4,
      "graphRoot": "0xd38e9a1fb352aeff20d24a390b498c6c91bdeb4dec597b292885067b3aaede8d",
-     "computeMs": 46.9
+     "computeMs": 30.0
     },
     {
-     "ts": 1790626916.854,
+     "ts": 1790627374.576,
      "action": "certified",
-     "latencyMs": 271.2,
+     "latencyMs": 1109.1,
      "txs": 1,
      "refresh": false,
      "lastTx": "0x4663bda754dcc104ea126d09c59b9c438759378aaf8f134e8041ef0eae496e28",
@@ -331,10 +331,10 @@
      "eEff": 24,
      "iterations": 4,
      "graphRoot": "0xd38e9a1fb352aeff20d24a390b498c6c91bdeb4dec597b292885067b3aaede8d",
-     "computeMs": 46.9
+     "computeMs": 30.0
     },
     {
-     "ts": 1790626917.379,
+     "ts": 1790627375.085,
      "action": "submitCertificate",
      "note": "nCert 9, rows 7",
      "estimate": 231725,
@@ -352,12 +352,12 @@
      "eEff": 34,
      "iterations": 4,
      "graphRoot": "0x51687d9f2ddbda3c030fcbcfa0ae846d7a82ef0d6b84443ac7101c7353264809",
-     "computeMs": 81.5
+     "computeMs": 65.8
     },
     {
-     "ts": 1790626917.379,
+     "ts": 1790627375.085,
      "action": "certified",
-     "latencyMs": 180.8,
+     "latencyMs": 152.8,
      "txs": 1,
      "refresh": false,
      "lastTx": "0xc31947eb36c73d2316c8df3a09838b97c7f0e3c240b7680c4a17f4dd6ce146fe",
@@ -371,10 +371,10 @@
      "eEff": 34,
      "iterations": 4,
      "graphRoot": "0x51687d9f2ddbda3c030fcbcfa0ae846d7a82ef0d6b84443ac7101c7353264809",
-     "computeMs": 81.5
+     "computeMs": 65.8
     },
     {
-     "ts": 1790626924.907,
+     "ts": 1790627382.561,
      "action": "submitCertificate",
      "note": "nCert 9, rows 7",
      "estimate": 160366,
@@ -392,12 +392,12 @@
      "eEff": 34,
      "iterations": 4,
      "graphRoot": "0x51687d9f2ddbda3c030fcbcfa0ae846d7a82ef0d6b84443ac7101c7353264809",
-     "computeMs": 91.2
+     "computeMs": 40.0
     },
     {
-     "ts": 1790626924.908,
+     "ts": 1790627382.561,
      "action": "certified",
-     "latencyMs": 159.6,
+     "latencyMs": 98.3,
      "txs": 1,
      "refresh": true,
      "lastTx": "0x760ae920b4ec2da9c81af9996cdc36dbe90a8e7af57527eb4e0abe226565e0fa",
@@ -411,7 +411,7 @@
      "eEff": 34,
      "iterations": 4,
      "graphRoot": "0x51687d9f2ddbda3c030fcbcfa0ae846d7a82ef0d6b84443ac7101c7353264809",
-     "computeMs": 91.2
+     "computeMs": 40.0
     }
    ]
   }
@@ -425,7 +425,7 @@
   {
    "journal": [
     {
-     "ts": 1790626925.769,
+     "ts": 1790627382.956,
      "action": "addNodes",
      "note": "nodes 0..499",
      "estimate": 14390760,
@@ -443,10 +443,10 @@
      "eEff": 11226,
      "iterations": 98,
      "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 606.2
+     "computeMs": 256.3
     },
     {
-     "ts": 1790626926.292,
+     "ts": 1790627383.184,
      "action": "addNodes",
      "note": "nodes 0..499",
      "estimate": 14393736,
@@ -464,10 +464,10 @@
      "eEff": 11226,
      "iterations": 98,
      "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 249.1
+     "computeMs": 128.8
     },
     {
-     "ts": 1790626926.388,
+     "ts": 1790627383.449,
      "action": "addNodes",
      "note": "nodes 500..734",
      "estimate": 6783932,
@@ -485,10 +485,10 @@
      "eEff": 11226,
      "iterations": 98,
      "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 249.1
+     "computeMs": 128.8
     },
     {
-     "ts": 1790626926.459,
+     "ts": 1790627383.535,
      "action": "reserveCapacity",
      "note": "upto 600",
      "estimate": 10396784,
@@ -506,10 +506,10 @@
      "eEff": 11226,
      "iterations": 98,
      "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 249.1
+     "computeMs": 128.8
     },
     {
-     "ts": 1790626926.53,
+     "ts": 1790627383.604,
      "action": "reserveCapacity",
      "note": "upto 1200",
      "estimate": 10390584,
@@ -527,10 +527,10 @@
      "eEff": 11226,
      "iterations": 98,
      "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 249.1
+     "computeMs": 128.8
     },
     {
-     "ts": 1790626926.591,
+     "ts": 1790627383.661,
      "action": "reserveCapacity",
      "note": "upto 1237",
      "estimate": 730904,
@@ -548,10 +548,10 @@
      "eEff": 11226,
      "iterations": 98,
      "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 249.1
+     "computeMs": 128.8
     },
     {
-     "ts": 1790626926.812,
+     "ts": 1790627383.966,
      "action": "submitCertificate",
      "note": "nCert 1237, rows 1237",
      "estimate": 7940345,
@@ -569,12 +569,12 @@
      "eEff": 11226,
      "iterations": 98,
      "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 249.1
+     "computeMs": 128.8
     },
     {
-     "ts": 1790626926.813,
+     "ts": 1790627383.967,
      "action": "certified",
-     "latencyMs": 1003.2,
+     "latencyMs": 985.9,
      "txs": 6,
      "refresh": false,
      "lastTx": "0x91261f6113fd863917143d7efdc73b3196ca69e954e9744d67613533cef8100b",
@@ -588,14 +588,14 @@
      "eEff": 11226,
      "iterations": 98,
      "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 249.1
+     "computeMs": 128.8
     }
    ]
   },
   {
-   "ts": 1790626926.813,
+   "ts": 1790627383.967,
    "action": "certified",
-   "latencyMs": 1003.2,
+   "latencyMs": 985.9,
    "txs": 6,
    "refresh": false,
    "lastTx": "0x91261f6113fd863917143d7efdc73b3196ca69e954e9744d67613533cef8100b",
@@ -609,7 +609,7 @@
    "eEff": 11226,
    "iterations": 98,
    "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-   "computeMs": 249.1
+   "computeMs": 128.8
   }
  ],
  "watch": [
