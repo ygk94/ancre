@@ -546,3 +546,92 @@ class Certifier:
         self.state.save(self.state_path)
         return self.journal.log(action="certified", latencyMs=round((time.perf_counter() - t0) * 1000, 1),
                                 txs=len(txs), refresh=refresh, lastTx=last["tx"], txBlock=last["txBlock"], **base)
+
+
+# ----------------------------------------------------------------------------- service loop
+
+REGISTRY_EVENTS = {   # event -> (signature for cast logs, kind for `relevant`)
+    "NewFeedback": "NewFeedback(uint256 indexed,address indexed,uint64,int128,uint8,string,string,string,string,string,bytes32)",
+    "FeedbackRevoked": "FeedbackRevoked(uint256 indexed,address indexed,uint64 indexed)",
+    "Transfer": "Transfer(address indexed,address indexed,uint256 indexed)",
+    "MetadataSet": "MetadataSet(uint256 indexed,string indexed,string,bytes)",
+    "Approval": "Approval(address indexed,address indexed,uint256 indexed)",
+    "ApprovalForAll": "ApprovalForAll(address indexed,address indexed,bool)",
+    "Upgraded": "Upgraded(address indexed)",
+}
+
+
+def registry_events(chain: Chain, identity: str, reputation: str, frm: int, to: int) -> list[dict]:
+    """Registry events of (frm, to] as `relevant` inputs, from indexed topics only (no ABI decoding needed).
+    Needs an RPC that accepts the range (rpc1.monad.xyz: full history; rpc.monad.xyz: 100 blocks per call)."""
+    out = []
+    for kind, sig in REGISTRY_EVENTS.items():
+        for addr in ((reputation,) if kind in ("NewFeedback", "FeedbackRevoked") else
+                     (identity, reputation) if kind == "Upgraded" else (identity,)):
+            for lg in chain.logs(addr, sig, frm, to_block=to):
+                tp = lg["topics"]
+                ev = {"kind": kind, "block": int(lg["blockNumber"], 16)}
+                if kind in ("NewFeedback", "FeedbackRevoked"):
+                    ev.update(agentId=int(tp[1], 16), client="0x" + tp[2][-40:])
+                elif kind in ("Transfer", "Approval"):
+                    ev["agentId"] = int(tp[3], 16)
+                elif kind == "MetadataSet":
+                    ev["agentId"] = int(tp[1], 16)
+                out.append(ev)
+    return out
+
+
+def main(argv=None):
+    """Certifier loop: poll the registries, recompute only on a relevant event or a due refresh. Registry data:
+    a from_indexer.py export directory (re-read when something is relevant). A real transaction needs --send
+    and a keystore (Hugo's agreement on testnet/mainnet); without --send every round is a dry plan."""
+    import argparse
+    from graph import load_feedbacks_onchain, load_identity_json
+    ap = argparse.ArgumentParser(description="ANCRE certifier service")
+    ap.add_argument("--rpc", required=True)
+    ap.add_argument("--contract", required=True)
+    ap.add_argument("--set-config", required=True)
+    ap.add_argument("--set-id", required=True)
+    ap.add_argument("--identity", required=True, help="IdentityRegistry address of the chain")
+    ap.add_argument("--reputation", required=True, help="ReputationRegistry address of the chain")
+    ap.add_argument("--data", required=True, help="from_indexer.py output directory")
+    ap.add_argument("--from-block", type=int, required=True)
+    ap.add_argument("--state", default="certifier_state.json")
+    ap.add_argument("--journal", default="certifier.jsonl")
+    ap.add_argument("--from", dest="sender")
+    ap.add_argument("--keystore")
+    ap.add_argument("--password-env")
+    ap.add_argument("--send", action="store_true")
+    ap.add_argument("--interval", type=float, default=5.0)
+    ap.add_argument("--once", action="store_true")
+    a = ap.parse_args(argv)
+    cfg = SetConfig.load(a.set_config)
+    signer = Signer(a.sender, "keystore", a.keystore, a.password_env) if a.send else (
+        Signer(a.sender) if a.sender else None)
+    chain = Chain(a.rpc, signer)
+    jr = Journal(Path(a.journal))
+    svc = Certifier(cfg, chain, a.contract, a.set_id, Path(a.state), jr)
+    load = lambda: (load_feedbacks_onchain(Path(a.data) / "onchain_feedbacks.json"),
+                    load_identity_json(Path(a.data) / "identity.json"))
+    frm, first = a.from_block, True
+    while True:
+        head = chain.block_number()
+        try:
+            evs = [] if first else [e for e in registry_events(chain, a.identity, a.reputation, frm, head)
+                                    if svc.support is None or relevant(e, svc.support)]
+            due = svc.due_refresh(OnChain.read(chain, a.contract, a.set_id), head)
+            if first or evs or due:
+                fbs, idn = load()
+                svc.run_once(fbs, idn, reason="start" if first else ("refresh" if due and not evs else
+                             f"{len(evs)} relevant event(s)"), block=head, dry=not a.send)
+            frm, first = head + 1, False
+        except Exception as e:                          # journal, keep the window, retry next round
+            jr.log(action="error", set=cfg.name, error=str(e)[:500], fromBlock=frm, head=head)
+        if a.once:
+            return 0
+        time.sleep(a.interval)
+
+
+if __name__ == "__main__":
+    import sys
+    sys.exit(main())
