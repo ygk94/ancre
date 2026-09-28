@@ -1,16 +1,38 @@
 # yaml-language-server: $schema=./node_modules/envio/evm.schema.json
-# P2 spike (chantier 03, E1a): can a handler read the transaction calldata?
 name: ancre-indexer
-disable_default_cross_chain: true
-address_format: lowercase
+description: ERC-8004 trust-graph compiler and ANCRE certificate auditor (multichain)
+disable_default_cross_chain: true   # rows keyed by (id, chainId); a reorg only rolls back its own chain
+address_format: lowercase           # direct joins with the solver (lowercase addresses)
 contracts:
+  - name: IdentityRegistry
+    abi_file_path: abis/IdentityRegistry.json
+    events:
+      - event: "Registered(uint256 indexed agentId, string agentURI, address indexed owner)"
+      - event: "Transfer(address indexed from, address indexed to, uint256 indexed tokenId)"
+      - event: "MetadataSet(uint256 indexed agentId, string indexed indexedMetadataKey, string metadataKey, bytes metadataValue)"
+      - event: "Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)"
+      - event: "ApprovalForAll(address indexed owner, address indexed operator, bool approved)"
+      - event: "Upgraded(address indexed implementation)"
+      - event: "OwnershipTransferred(address indexed previousOwner, address indexed newOwner)"
   - name: ReputationRegistry
     abi_file_path: abis/ReputationRegistry.json
     events:
       - event: "NewFeedback(uint256 indexed agentId, address indexed clientAddress, uint64 feedbackIndex, int128 value, uint8 valueDecimals, string indexed indexedTag1, string tag1, string tag2, string endpoint, string feedbackURI, bytes32 feedbackHash)"
+      - event: "FeedbackRevoked(uint256 indexed agentId, address indexed clientAddress, uint64 indexed feedbackIndex)"
+      - event: "Upgraded(address indexed implementation)"
+      - event: "OwnershipTransferred(address indexed previousOwner, address indexed newOwner)"
 chains:
-  - id: 143
-    start_block: 52952794
+  - id: 143                         # Monad mainnet
+    start_block: 52952790           # Identity proxy deployment (Reputation: 52952794), MESURÉ 27/09
     contracts:
+      - name: IdentityRegistry
+        address: "0x8004a169fb4a3325136eb29fa0ceb6d2e539a432"
       - name: ReputationRegistry
         address: "0x8004baa17c55a88189ae136b182e5fda19de9b63"
+  - id: 10143                       # Monad testnet: ERC-8004 v2.0.0 at the "testnet" addresses
+    start_block: 0
+    contracts:
+      - name: IdentityRegistry
+        address: "0x8004a818bfb912233c491871b3d84c89a494bd9e"
+      - name: ReputationRegistry
+        address: "0x8004b663056a597dffe9eccc1965a193b7388713"

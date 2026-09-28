@@ -1,13 +1,156 @@
-# P2 spike: one row per NewFeedback, with what the handler could read from the transaction.
-type CalldataProbe {
+# ANCRE indexer — ERC-8004 trust-graph compiler (chantier 03, E2).
+# Per-chain mode (disable_default_cross_chain): every row is keyed by (id, chainId).
+# Addresses are lowercase. Composite ids use "-".
+#
+# Layer 1  append-only history, dated by (block, logIndex): replays the registry state at any block.
+# Layer 2  current state, rebuilt from events only (Monad serves no historical state beyond ~40k blocks).
+# Layer 3  normative edges of the reference set: D14 (latest non-revoked per (client, agent, tag1),
+#          negative dominance across tags), D15 (endorsement tags only), out-of-bounds rejected
+#          (never capped), D16/D20 rejection of the target's CURRENT controllers.
+#          Port of solver/graph.py (the reference); parity is tested in test/parity.test.ts.
+#          The emitter node (D20 row copy, D44 owner fallback) is not frozen here: it is resolved
+#          at export / audit time from Agent + WalletAgents.
+
+############ Layer 1 — history
+
+type Feedback {                      # id = agentId-client-feedbackIndex
   id: ID!
+  agent: Agent!
+  client: String! @index
+  feedbackIndex: BigInt!             # 1-based, per (client, agent), all tags
+  value: BigInt!                     # exact int128 from the event
+  valueDecimals: Int!
+  tag1: String!
+  tag2: String!
+  endpoint: String!
+  feedbackURI: String!
+  feedbackHash: String!
+  triple: String! @index             # client-agentId-tag1 (D14 unit)
+  blockNumber: BigInt! @index
+  logIndex: Int!
+  txHash: String!
+  txFrom: String!                    # signer; != client when the call is relayed (e.g. EIP-7702 relayers)
+  revokedAtBlock: BigInt             # null = active
+  clientWasController: String        # owner | operator | agentWallet | approved, evaluated at the feedback's block
+}
+
+type WalletChange {                  # MetadataSet(agentWallet); id = block-logIndex
+  id: ID!
+  agent: Agent!
+  wallet: String!                    # 0x0 when cleared (emitted on every transfer)
+  blockNumber: BigInt! @index
+  logIndex: Int!
+}
+
+type OwnerChange {                   # ERC-721 Transfer; id = block-logIndex
+  id: ID!
+  agent: Agent!
+  from: String!
+  to: String!
+  isMint: Boolean!
+  blockNumber: BigInt! @index
+  logIndex: Int!
+}
+
+type ApprovalChange {                # ERC-721 Approval; id = block-logIndex
+  id: ID!
+  agent: Agent!
+  approved: String!
+  blockNumber: BigInt! @index
+  logIndex: Int!
+}
+
+type OperatorChange {                # ApprovalForAll; id = block-logIndex
+  id: ID!
+  owner: String! @index
+  operator: String!
+  approved: Boolean!
+  blockNumber: BigInt! @index
+  logIndex: Int!
+}
+
+type RegistryEvent {                 # Upgraded / OwnershipTransferred on both proxies (D17 watch)
+  id: ID!                            # block-logIndex
+  registry: String!                  # identity | reputation
+  kind: String!                      # Upgraded | OwnershipTransferred
+  implementation: String
+  newOwner: String
   blockNumber: BigInt!
   txHash: String!
-  txFrom: String!
-  txTo: String!
-  inputBytes: Int!
-  selector: String!
-  directCall: Boolean!
-  decoded: Boolean!
-  matchesEvent: Boolean!
+}
+
+############ Layer 2 — current state
+
+type Agent {                         # id = agentId (decimal)
+  id: ID!
+  owner: String! @index
+  wallet: String! @index             # 0x0 when cleared
+  approved: String!                  # 0x0 when none; reset by Transfer (ERC-721)
+  uri: String!
+  registeredBlock: BigInt
+  registeredTxFrom: String           # deployer EOA (registration bursts)
+  transferCount: Int!
+  lastTransferBlock: BigInt          # D10 / D35 (TRANSFERRED)
+  feedbacks: [Feedback!]! @derivedFrom(field: "agent")
+  edgesIn: [RefEdge!]! @derivedFrom(field: "agent")
+}
+
+type WalletAgents {                  # reverse index wallet -> agents (absent on-chain; D16/D20/D44)
+  id: ID!                            # wallet
+  agentIds: [String!]!
+  count: Int! @index
+}
+
+type Operator {                      # id = owner-operator
+  id: ID!
+  owner: String! @index
+  operator: String!
+  active: Boolean!
+}
+
+############ Layer 3 — normative edges (reference set)
+
+type TripleLatest {                  # D14: latest non-revoked feedback per (client, agent, tag1)
+  id: ID!                            # client-agentId-tag1
+  client: String!
+  agent: Agent!
+  tag1: String!
+  feedback: Feedback                 # null when every feedback of the triple is revoked
+}
+
+enum EdgeReject {
+  NONE
+  OUT_OF_BOUNDS_ONLY                 # every filter tag's latest feedback is out of bounds
+  ZERO_WEIGHT
+  CONTROLLER_OWNER
+  CONTROLLER_OPERATOR
+  CONTROLLER_WALLET
+  CONTROLLER_APPROVED
+}
+
+type RefEdge {                       # combined edge per (client, agent) under the reference schema + filter
+  id: ID!                            # client-agentId
+  client: String! @index
+  agent: Agent!
+  w: Int!                            # int16 on the 1e-4 grid (graph.quantize); 0 when rejected
+  decidingTag: String
+  feedbackIndex: BigInt
+  rejected: EdgeReject!
+  updatedAtBlock: BigInt! @index
+}
+
+############ Stats (one row per chain, id = "stats")
+
+type ChainStats {
+  id: ID!
+  agents: Int!
+  transfers: Int!
+  feedbacks: Int!
+  revoked: Int!
+  selfRatings: Int!                  # feedbacks given while the client controlled the target
+  outOfRange: Int!                   # |value| >= 1e38
+  refEdges: Int!                     # RefEdge rows with w != 0
+  sharedWallets: Int!
+  agentsOnSharedWallets: Int!
+  lastBlock: BigInt!
 }
