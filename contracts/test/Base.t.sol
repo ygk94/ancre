@@ -40,7 +40,7 @@ abstract contract AncreBase is Test {
 
     function _params(address[] memory anchors, uint8 minAnchors)
         internal
-        pure
+        view
         returns (AnchoredReputation.SetParams memory p)
     {
         uint256 k = anchors.length;
@@ -56,7 +56,29 @@ abstract contract AncreBase is Test {
         p.alphaD = AD;
         p.tagSchemaHash = keccak256("ANCRE reference schema v0 (test)");
         p.tags = _tags();
-        p.policy = AnchoredReputation.Policy({minAnchors: minAnchors, maxAge: 1000, minRefresh: 50, slackRefresh: 0});
+        p.policy = _policy(minAnchors);
+    }
+
+    /// test policy (D39): theta = 0.1, rho = 1/2, q = 1, any negative anchor feedback vetoes, strict transfer,
+    /// Submitter-attested by this test contract
+    function _policy(uint8 minAnchors) internal view returns (AnchoredReputation.Policy memory q) {
+        address[] memory subs = new address[](1);
+        subs[0] = address(this);
+        q = AnchoredReputation.Policy({
+            theta: 1e17,
+            rhoN: 1,
+            rhoD: 2,
+            minAnchors: minAnchors,
+            vetoQuorum: 1,
+            vetoMax: -1,
+            maxAge: 1000,
+            minRefresh: 50,
+            slackRefresh: 0,
+            eLowMax: 1e16,
+            strictTransfer: true,
+            registryVerified: false,
+            submitters: subs
+        });
     }
 
     function _anchors(uint256 k) internal pure returns (address[] memory a) {

@@ -1,10 +1,12 @@
 # ENCODING — contrat d'interface entre le solveur (R4) et `AnchoredReputation.sol` (R5)
 
-> Version `ancre-cert-v0`, 2026-09-27. Source de vérité : `src/AnchoredReputation.sol`. Implémentation de référence côté test : `test/utils/CertLib.sol` (même arithmétique, octet pour octet).
+> Version `ancre-cert-v0` (lignes et vecteurs) + `setId` v1 (28/09, §1). Rédigé le 2026-09-27, tenu par le chantier 02. Source de vérité : `src/AnchoredReputation.sol`. Implémentation de référence côté test : `test/utils/CertLib.sol` (même arithmétique, octet pour octet).
 > Alignement vérifié avec `solver/FORMAT.md` (R4, lu le 27/09 vers 13:30) : **aucune divergence d'encodage ni d'arithmétique**. Les divergences de sémantique registre (F2, F3, F4) sont tranchées ou ouvertes au §7.
 > Big-endian partout. `WAD = 1e18`. `GRID = 10 000` (grille de poids de 1e-4).
 
 ## 1. Ensemble d'ancres (`registerAnchorSet`, une fois, immuable)
+
+> **v1, 2026-09-28 (D39, D24, D32)** : la politique complète est engagée dans le `setId`. Tout vecteur ou payeur qui calcule un `setId` doit utiliser ce format.
 
 ```
 setId = keccak256(abi.encode(anchors, lambdas, alphaN, alphaD, tagSchemaHash, tags, policy))
@@ -12,12 +14,27 @@ setId = keccak256(abi.encode(anchors, lambdas, alphaN, alphaD, tagSchemaHash, ta
   lambdas  uint64[]   WAD, aucun nul, somme = 1e18 exactement
   alphaN/alphaD uint32  0 < alphaN < alphaD (défaut D2 : 1/3)
   tagSchemaHash bytes32  hash du schéma complet hors chaîne (D12)
-  tags     TagSpec[]  ≤ TAGS_MAX = 8, triés par keccak256(tag) strictement croissant
+  tags     TagSpec[]  1..TAGS_MAX = 16 (D24), triés par keccak256(tag) strictement croissant
            TagSpec = (string tag ≤ 32 octets, int128 min, int128 neutral, int128 max, uint8 kind)
            bornes en WAD ; min ≤ neutral ≤ max, min < max ; kind 0 = endorsement, 1 = measurement
-  policy   (uint8 minAnchors ≥ 1, uint64 maxAge > 0, uint64 minRefresh, uint64 slackRefresh WAD)
+  policy   Policy (tuple, dans cet ordre) :
+           uint64  theta            WAD, > 0            trustLow ≥ theta
+           uint32  rhoN, uint32 rhoD  rhoD > 0          rhoD·distrustUp ≤ rhoN·trustLow
+           uint8   minAnchors       m, 1 ≤ m ≤ k        leave-one-out (D8)
+           uint8   vetoQuorum       q, 1 ≤ q ≤ k        VETOED ssi ≥ q ancres opposent un veto
+           int16   vetoMax          [−10 000, −1]       poids de grille ≤ vetoMax ⇒ veto (D21/D33)
+           uint64  maxAge           blocs, > 0
+           uint64  minRefresh       blocs               règle de remplacement
+           uint64  slackRefresh     WAD                 règle de remplacement
+           uint64  eLowMax          WAD                 budget d'élargissement de la borne basse (D36)
+           bool    strictTransfer   D35 : ownerOf en direct dans assess (true recommandé)
+           bool    registryVerified D32 : chaque arête relue dans le registre à la soumission
+           address[] submitters     D32 : ≤ 8, strictement croissantes, non nulles ;
+                                    vide = soumission ouverte, exige registryVerified
 ```
-Démo : les ancres sont des adresses (pas de pré-rotation D9, TODO).
+Encodage : `abi.encode` standard de Solidity (la struct `Policy` est un tuple dynamique à cause de `submitters`). En Python : `eth_abi.encode(["address[]","uint64[]","uint32","uint32","bytes32","(string,int128,int128,int128,uint8)[]","(uint64,uint32,uint32,uint8,uint8,int16,uint64,uint64,uint64,uint64,bool,bool,address[])"], [...])`.
+Lecture : `policyOf(setId)` renvoie la politique engagée.
+Démo : les ancres sont des adresses (pas de pré-rotation D9/D43, E8).
 
 ## 2. Table de nœuds (append-only)
 

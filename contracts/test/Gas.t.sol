@@ -109,7 +109,7 @@ contract GasTest is AncreBase {
     uint256 nonce;
 
     function _setAndNodes(uint256 n, uint256 k, bool addNow) internal returns (bytes32 sid, bytes memory entries) {
-        AnchoredReputation.SetParams memory p = _params(_anchors(k), 2);
+        AnchoredReputation.SetParams memory p = _params(_anchors(k), k > 1 ? 2 : 1);
         p.tagSchemaHash = keccak256(abi.encode("gas", nonce++)); // distinct setId per measurement
         sid = ar.registerAnchorSet(p);
         entries = _agentEntries(1, n - k);

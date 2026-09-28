@@ -36,7 +36,7 @@ contract ProfileTest is AncreBase {
         uint256[3] memory ks = [uint256(1), 3, 8];
         for (uint256 q; q < 3; ++q) {
             uint256 k = ks[q];
-            bytes32 sid = ar.registerAnchorSet(_params(_anchors(k), 2));
+            bytes32 sid = ar.registerAnchorSet(_params(_anchors(k), k > 1 ? 2 : 1));
             ar.addNodes(sid, _agentEntries(1, 334 - k));
             CertLib.Graph memory g = CertLib.newGraph(334, k, AN, AD, 334, 1002);
             for (uint256 u; u < 334; ++u) {

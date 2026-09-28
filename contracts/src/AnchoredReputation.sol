@@ -22,7 +22,8 @@ import {IIdentityRegistry8004, IReputationRegistry8004} from "./interfaces/IERC8
 contract AnchoredReputation {
     // ------------------------------------------------------------------ constants
     uint256 public constant K_MAX = 16;
-    uint256 public constant TAGS_MAX = 8;
+    uint256 public constant TAGS_MAX = 16; // D24
+    uint256 public constant SUBMITTERS_MAX = 8; // D32, Submitter-attested level
     uint256 public constant ROW_MAX = 256;
     uint256 public constant WAD = 1e18;
     /// weight grid: w in [-GRID, GRID] \ {0} represents w / GRID in [-1, 1] (1e-4 steps)
@@ -62,11 +63,22 @@ contract AnchoredReputation {
         uint8 kind; // 0 = endorsement (creates edges), 1 = measurement (never creates edges, D15)
     }
 
+    /// Everything a payer needs to decide is committed here, hence in the setId (D1, D39): a status OK
+    /// only says the certificate is usable, `isTrusted` says whether the agent may be paid.
     struct Policy {
-        uint8 minAnchors; // leave-one-out m (D8), recommended 2
-        uint64 maxAge; // blocks
-        uint64 minRefresh; // blocks
+        uint64 theta; // WAD, > 0: trustLow >= theta (an unknown agent has trust 0)
+        uint32 rhoN; // distrust ratio: rhoD * distrustUp <= rhoN * trustLow
+        uint32 rhoD; // > 0
+        uint8 minAnchors; // leave-one-out m (D8), 1 <= m <= k, recommended 2
+        uint8 vetoQuorum; // q (D8): VETOED iff at least q anchors veto, 1 <= q <= k, recommended 1
+        int16 vetoMax; // an anchor feedback of grid weight <= vetoMax is a veto, in [-GRID, -1] (D21, D33)
+        uint64 maxAge; // blocks > 0
+        uint64 minRefresh; // blocks, see replacement rule
         uint64 slackRefresh; // WAD, see replacement rule
+        uint64 eLowMax; // WAD: widening budget of the lower bound, beyond it the set is STALE (D36)
+        bool strictTransfer; // D35: live ownerOf in assess (default true) instead of a proof-set flag
+        bool registryVerified; // D32: every committed edge is re-read in the registry at submission
+        address[] submitters; // D32: strictly increasing, <= SUBMITTERS_MAX; empty = open (requires registryVerified)
     }
 
     struct SetParams {
@@ -89,7 +101,7 @@ contract AnchoredReputation {
     }
 
     /// Per-set state, placed at a page-aligned storage base so that every field lives in ONE
-    /// MIP-8 page (8 100 gas cold for the whole struct instead of one page per field).
+    /// MIP-8 page (8 100 gas cold for the whole struct instead of one page per field): 113 slots.
     struct SetState {
         // slot 0
         bool registered;
@@ -103,6 +115,9 @@ contract AnchoredReputation {
         uint32 nodeCount;
         uint32 nCert;
         uint32 numRows;
+        uint8 vetoQuorum;
+        bool strictTransfer;
+        bool registryVerified;
         // slot 1
         uint64 certBlock;
         uint64 maxAge;
@@ -111,7 +126,14 @@ contract AnchoredReputation {
         // slot 2
         uint64 slackRefresh;
         uint32 reservedChunks; // vector chunks known to be non-zero (written or reserved)
-        // slots 3..
+        uint64 theta;
+        uint32 rhoN;
+        uint32 rhoD;
+        int16 vetoMax;
+        // slot 3
+        uint64 eLowMax;
+        uint8 numSubmitters;
+        // slots 4..
         uint256 eEff; // sum_a ceil(lambda_a * e[a] / WAD)
         bytes32 graphRoot;
         bytes32 vectorRoot;
@@ -119,7 +141,8 @@ contract AnchoredReputation {
         bytes32 versionHash; // keccak(identity, keccak(getVersion()), reputation, keccak(getVersion()))
         uint256[16] anchors; // address | lambda << 160
         uint256[16] r; // residual per column, WAD
-        TagStored[8] tags;
+        TagStored[16] tags;
+        address[8] submitters; // D32 (inline: same page as the rest, no extra cold page at submission)
     }
 
     struct Assessment {
@@ -130,7 +153,12 @@ contract AnchoredReputation {
         uint256 e; // eEff, L1 error bound                 (WAD, rounded up)
         uint64 certBlock;
         uint8 vetoCount;
-        bytes32 triggerTag; // tag of the most negative anchor feedback (VETOED) — E's request, tour 3
+        bytes32 triggerTag; // tag of the most negative vetoing anchor feedback — E's request, tour 3
+        // vetoCount counts anchors whose feedback is a veto; the status is VETOED iff vetoCount >= q
+        uint256 trustLow; // lower bound used by the policy: trustRobust minus the widening eLow (WAD)
+        uint256 distrustUp; // upper bound used by the policy: distrust + e (WAD)
+        uint256 eLow; // widening of the lower bound by discrepancy proofs (WAD, D22/D36)
+        bool trusted; // D39: status OK, veto checked, and the committed policy (theta, rho) holds
     }
 
     // ------------------------------------------------------------------ storage
@@ -173,6 +201,7 @@ contract AnchoredReputation {
     error NotBetter(uint256 eNew, uint256 eCur);
     error NoCert();
     error BadProof(uint256 code);
+    error NotSubmitter();
 
     constructor(IIdentityRegistry8004 identity_, IReputationRegistry8004 reputation_) {
         identity = identity_;
@@ -190,7 +219,7 @@ contract AnchoredReputation {
         if (k == 0 || k > K_MAX || p.lambdas.length != k) revert BadParams(1);
         if (p.alphaN == 0 || p.alphaN >= p.alphaD) revert BadParams(2);
         if (p.tags.length == 0 || p.tags.length > TAGS_MAX) revert BadParams(3);
-        if (p.policy.minAnchors == 0 || p.policy.maxAge == 0) revert BadParams(4);
+        _checkPolicy(p.policy, k);
         setId = computeSetId(p);
         SetState storage s = _set(setId);
         if (s.registered) revert AlreadyRegistered();
@@ -231,16 +260,68 @@ contract AnchoredReputation {
 
         s.registered = true;
         s.k = uint8(k);
-        s.minAnchors = p.policy.minAnchors;
+        _storePolicy(s, p.policy);
         s.numTags = uint8(p.tags.length);
         s.alphaN = p.alphaN;
         s.alphaD = p.alphaD;
         s.nodeCount = uint32(k);
-        s.maxAge = p.policy.maxAge;
-        s.minRefresh = p.policy.minRefresh;
-        s.slackRefresh = p.policy.slackRefresh;
         s.tagSchemaHash = p.tagSchemaHash;
         emit AnchorSetRegistered(setId, p.anchors, p.lambdas, p.alphaN, p.alphaD);
+    }
+
+    function _checkPolicy(Policy calldata q, uint256 k) internal pure {
+        // theta = 0 would trust unknown agents (D39); rhoN = 0 would trust nobody
+        if (q.theta == 0 || q.rhoN == 0 || q.rhoD == 0) revert BadParams(4);
+        if (q.minAnchors == 0 || q.minAnchors > k || q.vetoQuorum == 0 || q.vetoQuorum > k) revert BadParams(12);
+        if (q.vetoMax > -1 || q.vetoMax < -GRID) revert BadParams(13);
+        if (q.maxAge == 0) revert BadParams(14);
+        uint256 ns = q.submitters.length;
+        if (ns > SUBMITTERS_MAX || (ns == 0 && !q.registryVerified)) revert BadParams(15); // open => verified (D32)
+        if (q.registryVerified) revert BadParams(17); // TODO(E2): registry verification not implemented yet
+        for (uint256 i = 1; i < ns; ++i) {
+            if (q.submitters[i] <= q.submitters[i - 1]) revert BadParams(16);
+        }
+        if (ns != 0 && q.submitters[0] == address(0)) revert BadParams(16);
+    }
+
+    function _storePolicy(SetState storage s, Policy calldata q) internal {
+        s.minAnchors = q.minAnchors;
+        s.vetoQuorum = q.vetoQuorum;
+        s.strictTransfer = q.strictTransfer;
+        s.registryVerified = q.registryVerified;
+        s.maxAge = q.maxAge;
+        s.minRefresh = q.minRefresh;
+        s.slackRefresh = q.slackRefresh;
+        s.theta = q.theta;
+        s.rhoN = q.rhoN;
+        s.rhoD = q.rhoD;
+        s.vetoMax = q.vetoMax;
+        s.eLowMax = q.eLowMax;
+        s.numSubmitters = uint8(q.submitters.length);
+        for (uint256 i; i < q.submitters.length; ++i) {
+            s.submitters[i] = q.submitters[i];
+        }
+    }
+
+    /// Committed policy of a set (D39), for payers and screens.
+    function policyOf(bytes32 setId) external view returns (Policy memory q) {
+        SetState storage s = _set(setId);
+        q.theta = s.theta;
+        q.rhoN = s.rhoN;
+        q.rhoD = s.rhoD;
+        q.minAnchors = s.minAnchors;
+        q.vetoQuorum = s.vetoQuorum;
+        q.vetoMax = s.vetoMax;
+        q.maxAge = s.maxAge;
+        q.minRefresh = s.minRefresh;
+        q.slackRefresh = s.slackRefresh;
+        q.eLowMax = s.eLowMax;
+        q.strictTransfer = s.strictTransfer;
+        q.registryVerified = s.registryVerified;
+        q.submitters = new address[](s.numSubmitters);
+        for (uint256 i; i < q.submitters.length; ++i) {
+            q.submitters[i] = s.submitters[i];
+        }
     }
 
     // ================================================================== node table
@@ -330,6 +411,7 @@ contract AnchoredReputation {
     ) external {
         SetState storage s = _set(setId);
         if (!s.registered) revert UnknownSet();
+        if (s.numSubmitters != 0 && !_isSubmitter(s, msg.sender)) revert NotSubmitter();
         if (newNodes.length != 0) _appendNodes(s, setId, newNodes);
         uint256 k = s.k;
         uint256 n = nCert;
@@ -370,6 +452,14 @@ contract AnchoredReputation {
         s.idxWidth = uint8(W);
         s.registryChanged = false;
         emit CertificateSubmitted(setId, uint64(block.number), eNew, root, s.vectorRoot, vh, uint32(n), uint32(numRows));
+    }
+
+    function _isSubmitter(SetState storage s, address who) internal view returns (bool) {
+        uint256 ns = s.numSubmitters;
+        for (uint256 i; i < ns; ++i) {
+            if (s.submitters[i] == who) return true;
+        }
+        return false;
     }
 
     /// Dry run for certifiers (no state change): the residuals, eEff and graphRoot a submission would
@@ -861,16 +951,11 @@ contract AnchoredReputation {
         return (x.status, x.trustRobust, x.distrust, x.e, x.certBlock);
     }
 
-    /// isTrusted <=> OK and trustRobust >= theta + e and rhoD (distrust + e) <= rhoN (trustRobust - e)
-    function isTrusted(uint256 agentId, bytes32 setId, uint256 theta, uint256 rhoN, uint256 rhoD)
-        external
-        view
-        returns (bool)
-    {
-        Assessment memory x = assess(agentId, setId, true);
-        if (x.status != Status.OK) return false;
-        if (x.trustRobust < theta + x.e) return false;
-        return rhoD * (x.distrust + x.e) <= rhoN * (x.trustRobust - x.e);
+    /// D39: the only answer a payer may act on. Applies the policy committed in the setId
+    /// (theta, rho, m, q, maxAge, eLowMax, veto); status OK alone is not enough (an unknown agent is OK
+    /// with trust 0).
+    function isTrusted(uint256 agentId, bytes32 setId) external view returns (bool) {
+        return assess(agentId, setId, true).trusted;
     }
 
     function assess(uint256 agentId, bytes32 setId, bool withVeto) public view returns (Assessment memory x) {
@@ -916,18 +1001,22 @@ contract AnchoredReputation {
             return x;
         }
         if (withVeto) {
+            int256 worst;
             for (uint256 a; a < k; ++a) {
                 (bool ok, int256 w, bytes32 tag) = _registryEdge(s, address(uint160(s.anchors[a])), agentId);
                 if (!ok) {
                     x.status = Status.REGISTRY_CHANGED; // unreadable registry: fail closed, never revert
                     return x;
                 }
-                if (w < 0) {
-                    if (x.vetoCount == 0) x.triggerTag = tag;
+                if (w <= s.vetoMax) {
+                    if (w < worst) {
+                        worst = w;
+                        x.triggerTag = tag;
+                    }
                     x.vetoCount += 1;
                 }
             }
-            if (x.vetoCount > 0) {
+            if (x.vetoCount >= s.vetoQuorum) {
                 x.status = Status.VETOED;
                 return x;
             }
@@ -940,6 +1029,10 @@ contract AnchoredReputation {
             }
         }
         x.status = Status.OK;
+        x.trustLow = x.trustRobust > x.e ? x.trustRobust - x.e : 0;
+        x.distrustUp = x.distrust + x.e;
+        x.trusted = withVeto && x.trustLow >= s.theta
+            && uint256(s.rhoD) * x.distrustUp <= uint256(s.rhoN) * x.trustLow;
     }
 
     /// trust minus the (m - 1) largest contributions; k <= 16 so a selection loop is fine.

@@ -239,7 +239,7 @@ contract AnchoredReputationTest is AncreBase {
         // transfer (D10)
         idr.transfer(102, address(0xDEAD));
         assertEq(uint8(ar.assess(102, setId, true).status), uint8(AnchoredReputation.Status.TRANSFERRED));
-        assertFalse(ar.isTrusted(102, setId, 0, 1, 2));
+        assertFalse(ar.isTrusted(102, setId));
 
         // stale
         vm.roll(block.number + 1001);
@@ -263,8 +263,128 @@ contract AnchoredReputationTest is AncreBase {
 
     function test_isTrusted() public {
         bytes32 setId = _certifiedX(1);
-        assertTrue(ar.isTrusted(101, setId, 1e17, 1, 2));
-        assertFalse(ar.isTrusted(101, setId, 3e17, 1, 2));
+        assertTrue(ar.isTrusted(101, setId), "trust(X) = 0.222 >= theta 0.1");
+        assertFalse(ar.isTrusted(999, setId), "unknown agent: status OK but trust 0 (AM-6.1)");
+        assertEq(uint8(ar.assess(999, setId, true).status), uint8(AnchoredReputation.Status.OK));
+        assertFalse(ar.assess(101, setId, false).trusted, "never trusted without the veto check");
+
+        // a stricter policy is another set (D39: thresholds are committed in the setId)
+        AnchoredReputation.SetParams memory p = _params(_anchors(1), 1);
+        p.policy.theta = 3e17;
+        bytes32 strict = ar.registerAnchorSet(p);
+        assertTrue(strict != setId);
+        ar.addNodes(strict, _agentEntries(101, 2));
+        _submit(strict, _chainGraph(true), _handT(), 100);
+        assertFalse(ar.isTrusted(101, strict), "0.222 < theta 0.3");
+        AnchoredReputation.Policy memory q = ar.policyOf(strict);
+        assertEq(q.theta, 3e17);
+        assertEq(q.submitters.length, 1);
+    }
+
+    function test_vetoQuorum() public {
+        address[] memory anc = _anchors(2);
+        AnchoredReputation.SetParams memory p = _params(anc, 1);
+        p.policy.vetoQuorum = 2;
+        bytes32 setId = ar.registerAnchorSet(p);
+        ar.addNodes(setId, _agentEntries(101, 1));
+        CertLib.Graph memory g = CertLib.newGraph(3, 2, AN, AD, 3, 4);
+        g.addRow(0, address(0), _one(2), _oneW(10_000));
+        g.addRow(1, address(0), _one(2), _oneW(10_000));
+        g.addRow(2, OX, new uint256[](0), new int256[](0));
+        g.ownerFp[2] = uint64(uint160(OX));
+        _submit(setId, g, g.fixedPoint(40), type(uint256).max);
+        assertTrue(ar.isTrusted(101, setId));
+        vm.prank(anc[0]);
+        rep.giveFeedback(101, -100, 0, "slash", "");
+        AnchoredReputation.Assessment memory x = ar.assess(101, setId, true);
+        assertEq(x.vetoCount, 1);
+        assertEq(uint8(x.status), uint8(AnchoredReputation.Status.OK), "one veto < q = 2");
+        vm.prank(anc[1]);
+        rep.giveFeedback(101, -1, 0, "review", "");
+        x = ar.assess(101, setId, true);
+        assertEq(uint8(x.status), uint8(AnchoredReputation.Status.VETOED));
+        assertEq(x.triggerTag, bytes32("slash"), "most negative veto names the reason");
+        assertFalse(ar.isTrusted(101, setId));
+    }
+
+    function test_vetoMax() public {
+        AnchoredReputation.SetParams memory p = _params(_anchors(1), 1);
+        p.policy.vetoMax = -5000; // only feedbacks at or below -0.5 veto
+        bytes32 setId = ar.registerAnchorSet(p);
+        ar.addNodes(setId, _agentEntries(101, 2));
+        _submit(setId, _chainGraph(true), _handT(), 100);
+        vm.startPrank(_anchors(1)[0]);
+        rep.giveFeedback(101, -4, 1, "review", ""); // -0.4
+        assertEq(uint8(ar.assess(101, setId, true).status), uint8(AnchoredReputation.Status.OK));
+        rep.giveFeedback(101, -5, 1, "review", ""); // -0.5
+        vm.stopPrank();
+        assertEq(uint8(ar.assess(101, setId, true).status), uint8(AnchoredReputation.Status.VETOED));
+    }
+
+    function test_policyValidation() public {
+        AnchoredReputation.SetParams memory p = _params(_anchors(2), 1);
+        p.policy.theta = 0;
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 4));
+        ar.registerAnchorSet(p);
+        p = _params(_anchors(2), 1);
+        p.policy.minAnchors = 3; // m > k
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 12));
+        ar.registerAnchorSet(p);
+        p = _params(_anchors(2), 1);
+        p.policy.vetoMax = 0;
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 13));
+        ar.registerAnchorSet(p);
+        p = _params(_anchors(2), 1);
+        p.policy.submitters = new address[](0); // open submission requires Registry-verified (D32)
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 15));
+        ar.registerAnchorSet(p);
+        p = _params(_anchors(2), 1);
+        p.policy.rhoN = 0;
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 4));
+        ar.registerAnchorSet(p);
+        p = _params(_anchors(2), 1);
+        p.policy.rhoD = 0;
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 4));
+        ar.registerAnchorSet(p);
+        p = _params(_anchors(2), 1);
+        p.policy.vetoQuorum = 0;
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 12));
+        ar.registerAnchorSet(p);
+        p.policy.vetoQuorum = 3;
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 12));
+        ar.registerAnchorSet(p);
+        p = _params(_anchors(2), 1);
+        p.policy.vetoMax = -10_001;
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 13));
+        ar.registerAnchorSet(p);
+        p = _params(_anchors(2), 1);
+        p.policy.maxAge = 0;
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 14));
+        ar.registerAnchorSet(p);
+        p = _params(_anchors(2), 1);
+        p.policy.submitters = new address[](9);
+        for (uint256 i; i < 9; ++i) {
+            p.policy.submitters[i] = address(uint160(i + 1));
+        }
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 15));
+        ar.registerAnchorSet(p);
+        p.policy.submitters = new address[](2);
+        (p.policy.submitters[0], p.policy.submitters[1]) = (address(2), address(2)); // duplicate
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 16));
+        ar.registerAnchorSet(p);
+        (p.policy.submitters[0], p.policy.submitters[1]) = (address(0), address(2)); // zero address
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 16));
+        ar.registerAnchorSet(p);
+    }
+
+    function test_onlySubmitters() public {
+        bytes32 setId = _chainSet(1);
+        CertLib.Graph memory g = _chainGraph(true);
+        bytes memory v = CertLib.encodeVectors(g, _handT());
+        bytes memory rows = CertLib.encodeRows(g, 2);
+        vm.prank(address(0xBAD));
+        vm.expectRevert(AnchoredReputation.NotSubmitter.selector);
+        ar.submitCertificate(setId, 3, type(uint256).max, "", v, rows);
     }
 
     // ------------------------------------------------------------------ replacement rule (AM-2.3)
