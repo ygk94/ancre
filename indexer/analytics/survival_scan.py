@@ -67,6 +67,9 @@ def token() -> str:
     return t
 
 
+PAUSE = 0.0  # seconds between pages (--pause), to stay under the free token's per-60 s budget
+
+
 def stream_logs(url: str, selections: list[dict], from_block: int, to_block: int | None, tok: str):
     """Yield raw HyperSync logs (all pages) for the given log selections."""
     fb = from_block
@@ -97,6 +100,8 @@ def stream_logs(url: str, selections: list[dict], from_block: int, to_block: int
         if nb >= end:
             return
         fb = nb
+        if PAUSE:
+            time.sleep(PAUSE)
 
 
 def word(data: bytes, i: int) -> int:
@@ -229,7 +234,10 @@ def main():
     ap.add_argument("--chains", default="143,42161,10")
     ap.add_argument("--to-block", action="append", default=[], help="chain:block (exclusive), e.g. 143:108434519")
     ap.add_argument("--out", default=str(HERE / "out"))
+    ap.add_argument("--pause", type=float, default=0.0, help="seconds between HyperSync pages (rate limit)")
     a = ap.parse_args()
+    global PAUSE
+    PAUSE = a.pause
     stops = {int(c): int(b) for c, b in (x.split(":") for x in a.to_block)}
     tok = token()
     out = Path(a.out)
