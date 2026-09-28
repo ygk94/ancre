@@ -1,0 +1,13 @@
+# P2 spike: one row per NewFeedback, with what the handler could read from the transaction.
+type CalldataProbe {
+  id: ID!
+  blockNumber: BigInt!
+  txHash: String!
+  txFrom: String!
+  txTo: String!
+  inputBytes: Int!
+  selector: String!
+  directCall: Boolean!
+  decoded: Boolean!
+  matchesEvent: Boolean!
+}

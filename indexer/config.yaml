@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=./node_modules/envio/evm.schema.json
+# P2 spike (chantier 03, E1a): can a handler read the transaction calldata?
+name: ancre-indexer
+disable_default_cross_chain: true
+address_format: lowercase
+contracts:
+  - name: ReputationRegistry
+    abi_file_path: abis/ReputationRegistry.json
+    events:
+      - event: "NewFeedback(uint256 indexed agentId, address indexed clientAddress, uint64 feedbackIndex, int128 value, uint8 valueDecimals, string indexed indexedTag1, string tag1, string tag2, string endpoint, string feedbackURI, bytes32 feedbackHash)"
+chains:
+  - id: 143
+    start_block: 52952794
+    contracts:
+      - name: ReputationRegistry
+        address: "0x8004baa17c55a88189ae136b182e5fda19de9b63"
