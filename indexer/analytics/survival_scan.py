@@ -14,6 +14,7 @@ Needs ENVIO_API_TOKEN (read from indexer/.env if not in the environment).
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import os
 import sys
@@ -89,7 +90,7 @@ def stream_logs(url: str, selections: list[dict], from_block: int, to_block: int
                 if (e.code != 429 and e.code < 500) or attempt == 5:
                     raise
                 time.sleep(10 * (attempt + 1))
-            except (urllib.error.URLError, TimeoutError):
+            except (urllib.error.URLError, TimeoutError, ConnectionError, http.client.HTTPException):
                 if attempt == 5:
                     raise
                 time.sleep(10 * (attempt + 1))
