@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ANCRE — guide de reprise en main</title>
+<style>
+:root{
+  --bg:#f7f6f2; --panel:#ffffff; --ink:#1d1c1a; --muted:#6b675f; --line:#e3e0d8;
+  --accent:#1f5f8b; --accent-soft:#e6f0f7; --ok:#2e7d4f; --ok-soft:#e5f3ea;
+  --warn:#9a5b00; --warn-soft:#fbf0dc; --bad:#a3342f; --bad-soft:#f8e6e4; --code:#f0eee8;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15161a; --panel:#1d1f24; --ink:#e9e7e2; --muted:#a19d95; --line:#2e3138;
+    --accent:#7db6de; --accent-soft:#1e2b36; --ok:#79c796; --ok-soft:#1d2c23;
+    --warn:#e3b262; --warn-soft:#322817; --bad:#ec8b84; --bad-soft:#3a2120; --code:#262930;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15161a; --panel:#1d1f24; --ink:#e9e7e2; --muted:#a19d95; --line:#2e3138;
+  --accent:#7db6de; --accent-soft:#1e2b36; --ok:#79c796; --ok-soft:#1d2c23;
+  --warn:#e3b262; --warn-soft:#322817; --bad:#ec8b84; --bad-soft:#3a2120; --code:#262930;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+.wrap{max-width:960px;margin:0 auto;padding:32px 16px 80px}
+header h1{font-size:2rem;margin:0 0 4px;letter-spacing:-.02em}
+header p{margin:0;color:var(--muted)}
+nav.toc{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 0;margin:20px 0 8px;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.9rem}
+nav.toc a{color:var(--accent);text-decoration:none}
+h2{font-size:1.35rem;margin:44px 0 12px;padding-top:8px;border-top:1px solid var(--line)}
+h3{font-size:1.05rem;margin:20px 0 8px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:12px 0}
+.hero{font-size:1.15rem;background:var(--accent-soft);border-color:transparent}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.pill{display:inline-block;font-size:.75rem;padding:1px 8px;border-radius:999px;margin-right:6px;vertical-align:1px}
+.p-ok{background:var(--ok-soft);color:var(--ok)} .p-warn{background:var(--warn-soft);color:var(--warn)} .p-bad{background:var(--bad-soft);color:var(--bad)} .p-acc{background:var(--accent-soft);color:var(--accent)}
+code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:.88em}
+a{color:var(--accent)}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600}
+.tablewrap{overflow-x:auto}
+ol.path{counter-reset:s;list-style:none;padding:0;margin:0}
+ol.path>li{counter-increment:s;position:relative;padding:14px 16px 14px 58px;background:var(--panel);border:1px solid var(--line);border-radius:10px;margin:10px 0}
+ol.path>li::before{content:counter(s);position:absolute;left:16px;top:14px;width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--panel);display:grid;place-items:center;font-weight:700}
+.meta{color:var(--muted);font-size:.88rem}
+.tl{border-left:2px solid var(--line);margin-left:6px;padding-left:18px}
+.tl div{position:relative;margin:0 0 14px}
+.tl div::before{content:"";position:absolute;left:-24px;top:8px;width:10px;height:10px;border-radius:50%;background:var(--accent)}
+.tl b{display:inline-block;min-width:64px}
+.arch{font:13px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre;overflow-x:auto;background:var(--code);padding:14px;border-radius:8px}
+dl{margin:0} dt{font-weight:600;margin-top:10px} dd{margin:2px 0 0 0;color:var(--ink)}
+.small{font-size:.88rem;color:var(--muted)}
+.themebtn{float:right;background:none;border:1px solid var(--line);color:var(--muted);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.85rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <button class="themebtn" id="tbtn" type="button">thème</button>
+  <h1>ANCRE — guide de reprise en main</h1>
+  <p>Ce qu'il faut lire, dans quel ordre, et ce qu'il faut en retenir. État au 29/09/2026. Soumission visée le <b>12/10</b> (clôture le 14/10 à 05:59, heure de Paris).</p>
+</header>
+
+<nav class="toc">
+  <a href="#resume">En 2 minutes</a><a href="#parcours">Parcours de lecture</a><a href="#essentiel">Les 12 choses à savoir</a>
+  <a href="#histoire">Comment on en est arrivé là</a><a href="#archi">Architecture</a><a href="#etat">Décidé / ouvert / à toi</a>
+  <a href="#carte">Où sont les choses</a><a href="#glossaire">Glossaire</a>
+</nav>
+
+<h2 id="resume">En 2 minutes</h2>
+<div class="card hero">
+  <b>ANCRE</b> est la couche que la norme ERC-8004 délègue au lecteur sans lui donner d'outil. C'est une réputation d'agents IA qui <b>résiste aux Sybil</b>, <b>relative aux ancres que le lecteur choisit</b>, <b>certifiée on-chain</b>, et <b>lisible par un contrat avant qu'il paie</b>.<br>
+  Le message de la démo : <i>sur le mainnet, la moyenne ment ; ANCRE refuse de payer au bloc suivant.</i>
+</div>
+<div class="grid">
+  <div class="card"><h3>Le problème</h3>
+    <ul>
+      <li>ERC-8004 stocke des avis, mais n'importe qui note gratuitement.</li>
+      <li>Sur le mainnet Monad, <b>83 % des avis viennent d'une ferme</b> : 7 665 agents « Spawn » qui notent tous « Eve-8004 ».</li>
+      <li>La moyenne naïve d'Eve vaut <b>1,53 × 10³⁶</b>.</li>
+      <li>La norme dit elle-même : « Sybil attacks are possible ».</li>
+    </ul>
+  </div>
+  <div class="card"><h3>La solution</h3>
+    <ul>
+      <li>Un PageRank personnalisé, ancré sur <i>tes</i> ancres, calculé hors chaîne.</li>
+      <li>Un contrat le <b>vérifie en une passe</b> (certificat par sous-solution).</li>
+      <li>Un contrat payeur appelle <code>isTrusted</code> avant de régler un paiement x402. <b>La ferme reçoit une masse de 0.</b></li>
+    </ul>
+  </div>
+  <div class="card"><h3>Où on en est</h3>
+    <ul>
+      <li><span class="pill p-ok">fait</span>La spec est tranchée : 46 décisions.</li>
+      <li><span class="pill p-ok">fait</span>Un prototype existe : solveur (95 tests) et contrat (49 tests).</li>
+      <li><span class="pill p-ok">fait</span>La doc des sponsors a été vérifiée.</li>
+      <li><span class="pill p-warn">en cours</span>Les chantiers 02, 03 et 04 sont lancés.</li>
+      <li><span class="pill p-bad">bloquant</span>Tes actions du jour 0, dans MUSTDO.</li>
+    </ul>
+  </div>
+</div>
+
+<h2 id="parcours">Parcours de lecture (≈ 2 h pour tout, ≈ 45 min pour l'essentiel)</h2>
+<p class="small">Les liens ouvrent les fichiers du dépôt. Un Markdown s'affiche en texte brut dans le navigateur ; pour une lecture confortable, ouvre-le dans ton éditeur.</p>
+<ol class="path">
+  <li><b><a href="../ANCRE.md">ANCRE.md</a></b> <span class="pill p-bad">indispensable</span> <span class="meta">≈ 30 min</span><br>
+    Le projet entier en un document : but, cadre du hackathon, problème chiffré, solution complète (graphe, maths, certificat, lecture, architecture, x402, MetaMask, Mera, Envio), mesures, norme, démo, concurrence, planning, liens.<br>
+    <span class="meta">À retenir : les sections 4.1 à 4.5 (la solution) et la section 7 (la démo).</span></li>
+  <li><b><a href="MUSTDO.md">mustdo/MUSTDO.md</a></b> <span class="pill p-bad">indispensable</span> <span class="meta">≈ 10 min</span><br>
+    Tout ce que toi seul peux faire. <b>Le point 0 (s'inscrire avant le 06/10)</b> et les points 1 à 6 bloquent les chantiers.</li>
+  <li><b><a href="../docs/chantiers/ROADMAP.md">docs/chantiers/ROADMAP.md</a></b> <span class="pill p-bad">indispensable</span> <span class="meta">≈ 15 min</span><br>
+    Les étapes de chaque chantier (agents, skills), les dépendances et les <b>4 portes de faisabilité</b> P1 à P4, qui peuvent encore changer l'architecture.</li>
+  <li><b><a href="../docs/conseil/CR-conseil.md">docs/conseil/CR-conseil.md</a> : seulement le « Journal des décisions » en tête</b> <span class="pill p-acc">important</span> <span class="meta">≈ 20 min</span><br>
+    D1 à D46, une ligne chacune. Le reste du fichier est l'historique des délibérations (tours 1 à 6) : à consulter quand tu veux savoir <i>pourquoi</i>.<br>
+    <span class="meta">À lire en priorité dans la suite du fichier : la section Tour 5 (la faille de fabrication, D32) et la section Tour 6 (le positionnement, D45).</span></li>
+  <li><b><a href="../docs/conseil/bounties-sponsors.md">docs/conseil/bounties-sponsors.md</a></b> <span class="pill p-acc">important</span> <span class="meta">≈ 10 min</span><br>
+    L'inventaire officiel des bounties et les 3 fiches visées (Envio, Mera, MetaMask) avec leurs critères de jugement.</li>
+  <li><b><a href="../docs/chantiers/README.md">docs/chantiers/README.md</a></b> <span class="pill p-acc">important</span> <span class="meta">≈ 10 min</span><br>
+    Comment une session de chantier travaille : les règles communes, les formats d'échange et <b>les skills à utiliser, et quand</b>.</li>
+  <li><b><a href="../CLAUDE.md">CLAUDE.md</a></b> <span class="pill p-acc">utile</span> <span class="meta">≈ 10 min</span><br>
+    La fiche de passation que lit chaque session : faits vérifiés, pièges Monad, environnement. Utile pour savoir ce que « savent » les agents.</li>
+  <li><b>Approfondissements, selon ton rôle</b> <span class="pill p-ok">optionnel</span><br>
+    <ul>
+      <li>La norme : <a href="../docs/erc/anchored-reputation.md">docs/erc/anchored-reputation.md</a> et <a href="../docs/erc/CHANGES.md">CHANGES.md</a></li>
+      <li>Les résultats du solveur : <a href="../solver/RESULTS.md">solver/RESULTS.md</a> et <a href="../solver/out/mainnet.md">solver/out/mainnet.md</a> (acte 1)</li>
+      <li>Le gas mesuré : <a href="../contracts/GAS.md">contracts/GAS.md</a></li>
+      <li>La contre-expertise qui a trouvé la faille : <a href="../docs/conseil/tour5B-revue-tour4.md">tour5B-revue-tour4.md</a></li>
+      <li>La doc vérifiée, par sujet : <a href="../docs/ressources/">docs/ressources/</a> (envio, mera, metamask-agent-wallet, x402, monad-dev-et-soumission, et les design-*.md)</li>
+      <li>Le storyboard de la vidéo et la checklist de soumission : <a href="../docs/ressources/design-demo-et-soumission.md">design-demo-et-soumission.md</a></li>
+      <li>Les briefs de chantier : <a href="../docs/chantiers/">docs/chantiers/</a> (01 à 09)</li>
+    </ul></li>
+</ol>
+
+<h2 id="essentiel">Les 12 choses à savoir absolument</h2>
+<div class="grid">
+  <div class="card"><h3>1. Pas de score global</h3>La réputation est <b>relative aux ancres que le lecteur choisit</b> (D1, D2). Un contrat engage son ensemble d'ancres et sa politique dans un <code>setId</code> immuable.</div>
+  <div class="card"><h3>2. PageRank personnalisé</h3>t = (1−α)·Cᵀt + α·p, avec α = 1/3 recommandé. La convention est absorbante, pour garder la linéarité. La méfiance ne se propage que d'un saut. Leave-one-out avec m = 2 : <b>une ancre seule ne peut pas faire payer</b>.</div>
+  <div class="card"><h3>3. Règles du graphe</h3>
+    <ul>
+      <li>On garde le dernier avis par (client, agent, tag), et <b>le négatif domine</b> (D14).</li>
+      <li><b>Seuls les tags « endorsement » créent des arêtes</b> (D15). Sans cette règle, un scanner fait fuir 34,6 % de la masse vers la ferme.</li>
+    </ul></div>
+  <div class="card"><h3>4. Le certificat</h3>Si t ≤ F(t) composante par composante, alors t ≤ t* : c'est une <b>borne inférieure exacte</b> pour chaque agent (D26). Elle ne vaut que si le graphe soumis n'en rajoute pas (D32).</div>
+  <div class="card"><h3>5. La faille trouvée au tour 5</h3>Le prototype ne relisait <b>aucune arête</b> dans le registre : un certificat fabriqué remplaçait l'honnête. D'où deux niveaux, <b>Registry-verified</b> (chaque arête relue, ~13,6 M gas estimés) ou <b>Submitter-attested</b> (avec une preuve de fabrication). <b>La mesure P1 tranche.</b></div>
+  <div class="card"><h3>6. Statut ≠ confiance</h3><code>assess</code> renvoie OK même pour un agent inconnu. <b>Il faut toujours <code>isTrusted</code></b>, qui applique les seuils engagés dans le <code>setId</code> (D39).</div>
+  <div class="card"><h3>7. La double garde de paiement</h3>Le contrat payeur ERC-1271 détient les USDC et appelle <code>isTrusted</code> au moment du règlement x402. Le plugin MetaMask vérifie avant de signer (D41). <b>Le test T1 sur le testnet (P3)</b> doit confirmer que le facilitator l'accepte.</div>
+  <div class="card"><h3>8. Le veto</h3>C'est le dernier avis négatif d'une ancre, lu dans le registre : il agit <b>au bloc suivant</b>, sans recertification (D33). C'est le disjoncteur de la démo.</div>
+  <div class="card"><h3>9. Les chiffres du mainnet</h3>
+    <ul>
+      <li>9 283 avis, dont 82,6 % viennent de la ferme.</li>
+      <li>Il ne reste que <b>3 arêtes utiles</b>, et une seule chaîne honnête.</li>
+      <li>78 auto-notations.</li>
+      <li>Une seule EOA peut upgrader les deux registres.</li>
+      <li>Les registres existent <b>aussi sur le testnet</b>, à d'autres adresses.</li>
+    </ul></div>
+  <div class="card"><h3>10. Les 3 bounties</h3>
+    <ul>
+      <li><b>Envio</b> : l'indexeur qui audite les certificats, sur plusieurs chaînes.</li>
+      <li><b>Mera</b> : un passkey, deux sels. Des clés d'ancre pré-rotées récupérables, et un dossier de veto chiffré.</li>
+      <li><b>MetaMask</b> : un plugin <code>mm ancre</code>. Son éligibilité depuis la track 04 est à confirmer.</li>
+    </ul></div>
+  <div class="card"><h3>11. Le positionnement</h3><i>« A receipt can be true and still come from a farm. »</i> Face à Kanmani et Sentinel, qui font de la confiance par le prix, ANCRE apporte des garants choisis par le lecteur et une lecture par le contrat (D45). À ne pas prétendre : que les autres paieraient notre ferme.</div>
+  <div class="card"><h3>12. Ce qu'on ne dit jamais</h3>
+    <ul>
+      <li>« premier à vérifier un point fixe on-chain » (OpenRank le faisait) ;</li>
+      <li>« le paiement prouve l'honnêteté » ;</li>
+      <li>« recalcul à chaque bloc » ;</li>
+      <li>une garantie présentée sans son niveau.</li>
+    </ul>
+    Et on ne présente jamais le scanner comme un attaquant.</div>
+</div>
+
+<h2 id="histoire">Comment on en est arrivé là</h2>
+<div class="tl">
+  <div><b>21/09</b> Premier snapshot du mainnet Monad et premier draft de l'ERC (dans le vault).</div>
+  <div><b>23/09</b> CLAUDE.md, la fiche de passation. Zéro ligne de code.</div>
+  <div><b>27/09</b> <b>Tours 1 à 3 du conseil.</b> Score en part de masse, convention absorbante, méfiance à un saut, veto direct, certificat à borne croissante.<br>
+  <b>4 agents vérifient les faits on-chain.</b> Ils trouvent plusieurs choses : les registres sont upgradables par une seule EOA, les wallets sont partagés, 78 agents s'auto-notent, un plancher calldata s'applique, et MIP-8 aussi.</div>
+  <div><b>27/09</b> <b>Chantiers R4, R5, R6.</b> Le solveur, le contrat (le gas réel vaut 5 à 13 fois l'estimation) et le draft d'ERC réécrit. <b>Tour 4</b> : la sous-solution (D26).<br>
+  <b>Tour 5</b>, en deux conseils parallèles : le modèle économique, et une contre-expertise qui <b>trouve la faille de fabrication</b> (D32).</div>
+  <div><b>27/09</b> Les bounties sponsors sont inventoriés et 3 sont choisis (D38). <b>Vague 1</b> : doc Envio, Mera, MetaMask, x402 et Monad. On découvre que <b>les registres existent sur le testnet</b>, que le dépôt public est probablement obligatoire et que les inscriptions fermeraient le 06/10.<br>
+  <b>Vague 2</b> : les designs des 5 grandes parties, puis <b>vague 3</b> : cross-idea sur Mera et Envio, D39 à D43, et les briefs complétés.</div>
+  <div><b>28/09</b> <b>Tour 6</b> : le repli owner, et le positionnement face à Sentinel (D44 à D46). La feuille de route par chantier, les portes P1 à P4, les prompts de session, et le push de <code>feat/conseil-solveur-contrat</code> sur GitHub.</div>
+  <div><b>29/09</b> Les chantiers <b>02</b> (contrat) et <b>04</b> (solveur) tournent sur cette machine, et le <b>03</b> (indexeur) sur l'autre. Cette conversation reste le pilote.</div>
+</div>
+
+<h2 id="archi">Architecture</h2>
+<div class="arch">Registres ERC-8004 (Monad 143 · testnet 10143 · ~20 chaînes)
+        │  events : NewFeedback, FeedbackRevoked, Registered, Transfer, MetadataSet, Upgraded
+        ▼
+[03] Indexeur Envio ── arêtes selon la norme + audit de chaque certificat (Discrepancy)
+        ▼
+[04] Solveur + certificateur (Python) ── itération depuis 0, une colonne par ancre
+        ▼  certificat (solver/FORMAT.md ⇄ contracts/ENCODING.md)
+[02] AnchoredReputation.sol ── vérifie en une passe · assess / isTrusted · preuves d'écart
+        ├──▶ [05] Payeur ERC-1271 ── règlement x402 en USDC, refusé si isTrusted = non
+        ├──▶ [05] Plugin MetaMask « mm ancre »
+        └──▶ [07] Écran de démo (monadLogs, naïf contre ANCRE)
+Ancres : clés « demo » · Mera (passkey PRF) pour la rotation de clé et le dossier de veto</div>
+
+<h2 id="etat">Ce qui est décidé, ce qui est ouvert, ce qui t'attend</h2>
+<div class="grid">
+  <div class="card"><h3><span class="pill p-ok">décidé</span>À ne pas rouvrir sans preuve</h3>D1 à D46 dans le journal du CR. Parmi elles : PPR ancré, pas de paiement dans les poids, sous-solution, double garde, veto au dernier avis, les 3 bounties, le positionnement.</div>
+  <div class="card"><h3><span class="pill p-warn">ouvert</span>Tranché par les mesures</h3>
+    <ul>
+      <li><b>P1</b> : Registry-verified ou Submitter-attested.</li>
+      <li><b>P2</b> : l'indexeur voit-il le calldata ?</li>
+      <li><b>P3</b> : le facilitator accepte-t-il le payeur ?</li>
+      <li><b>P4</b> : Mera passe-t-il sur deux appareils ?</li>
+    </ul>
+    Les désaccords non résolus sont listés à la fin de chaque tour du CR.</div>
+  <div class="card"><h3><span class="pill p-bad">à toi</span>Tes décisions</h3>
+    <ul>
+      <li>L'inscription avant le 06/10, les règles, le projet et les bounties sur la plateforme.</li>
+      <li>Le token Envio, le domaine HTTPS pour Mera, le test T1.</li>
+      <li>Le dépôt public et la licence, la divulgation, le budget MON, le nom.</li>
+    </ul>
+    <a href="MUSTDO.md">Voir MUSTDO</a>.</div>
+</div>
+
+<h2 id="carte">Où sont les choses</h2>
+<div class="tablewrap"><table>
+<tr><th>Chemin</th><th>Contenu</th></tr>
+<tr><td><code>ANCRE.md</code></td><td>Le projet en un document</td></tr>
+<tr><td><code>mustdo/</code></td><td>Tes actions (MUSTDO.md), ce guide, les prompts des sessions de chantier</td></tr>
+<tr><td><code>docs/conseil/</code></td><td>Le CR cumulatif (décisions, angles morts, tours), les annexes des tours 5 et 6, les bounties</td></tr>
+<tr><td><code>docs/chantiers/</code></td><td>Les briefs 01 à 09, la ROADMAP, le README (règles et skills), les journaux et rapports des sessions</td></tr>
+<tr><td><code>docs/ressources/</code></td><td>La doc technique vérifiée et les designs</td></tr>
+<tr><td><code>docs/erc/</code></td><td>Le draft d'ERC et la table des changements</td></tr>
+<tr><td><code>solver/</code>, <code>contracts/</code></td><td>Le prototype : solveur PPR et contrat vérificateur</td></tr>
+<tr><td><code>../ancre-02</code>, <code>../ancre-04</code></td><td>Les worktrees des sessions de chantier 02 et 04</td></tr>
+<tr><td>Vault</td><td><code>/Users/hugo/Projet/dataBlockchain</code> (veille, snapshot du 21/09)</td></tr>
+</table></div>
+
+<h2 id="glossaire">Glossaire</h2>
+<div class="card"><dl>
+<dt>Ancre</dt><dd>Une adresse ou une identité à laquelle le lecteur fait confiance a priori. La masse de confiance part des ancres.</dd>
+<dt><code>setId</code></dt><dd>Un engagement immuable : ancres, poids, α, schéma de tags, filtre, et politique (θ, ρ, m, q, maxAge, eLow_max).</dd>
+<dt>PPR</dt><dd>PageRank personnalisé. Une marche aléatoire qui revient aux ancres avec la probabilité α.</dd>
+<dt>Masse t</dt><dd>La part de la confiance des ancres qui arrive sur un agent, en WAD (1e18 = 100 %).</dd>
+<dt>Sous-solution</dt><dd>Un vecteur t tel que t ≤ F(t). Il est garanti inférieur au vrai point fixe, sans marge d'erreur.</dd>
+<dt>Registry-verified / Submitter-attested</dt><dd>Les deux niveaux de certificat. Dans le premier, le contrat relit chaque arête dans le registre. Dans le second, un soumetteur listé atteste, et une preuve de fabrication reste possible.</dd>
+<dt>Preuves d'écart (i) à (v)</dt><dd>Chacune montre un désaccord entre le certificat et le registre : omission, avis périmé, avis révoqué, wallet ou contrôleur changé, fabrication.</dd>
+<dt>Leave-one-out (m = 2)</dt><dd>On retire la plus grosse contribution d'une ancre avant de comparer au seuil : il faut au moins deux ancres pour faire payer.</dd>
+<dt>Veto</dt><dd>Un avis négatif d'une ancre, lu en direct : il bloque le paiement au bloc suivant.</dd>
+<dt>x402</dt><dd>Un protocole de paiement HTTP 402. Un facilitator règle en USDC. Les schémas « exact » (EIP-3009) et « upto » (Permit2) existent.</dd>
+<dt>ERC-1271</dt><dd>Une signature validée par un contrat. C'est ce qui permet à notre payeur de refuser au moment du règlement.</dd>
+<dt>Portes P1 à P4</dt><dd>Les 4 tests de faisabilité qui peuvent encore changer l'architecture (voir la ROADMAP).</dd>
+</dl></div>
+
+<p class="small" style="margin-top:40px">Généré le 29/09/2026 à partir de l'état du dépôt (branche <code>feat/conseil-solveur-contrat</code>). Si un chiffre diffère d'ici à ANCRE.md ou au CR, ce sont eux qui font foi.</p>
+</div>
+<script>
+(function(){
+  var root=document.documentElement, b=document.getElementById('tbtn');
+  try{var t=localStorage.getItem('ancre-theme'); if(t) root.setAttribute('data-theme',t);}catch(e){}
+  b.addEventListener('click',function(){
+    var cur=root.getAttribute('data-theme');
+    var dark=cur? cur==='dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    var nxt=dark?'light':'dark'; root.setAttribute('data-theme',nxt);
+    try{localStorage.setItem('ancre-theme',nxt);}catch(e){}
+  });
+})();
+</script>
+</body>
+</html>
