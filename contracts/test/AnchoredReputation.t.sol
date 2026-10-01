@@ -48,11 +48,15 @@ contract AnchoredReputationTest is AncreBase {
         CertLib.Graph memory g = _chainGraph(true);
         uint256[][] memory t = _handT();
         // the hand vector is an exact fixed point of the floor map: r = 0 + E+ (2) + 1
+        assertTrue(CertLib.isSubSolution(g, t));
         assertEq(CertLib.residual(g, t)[0], 3, "reference residual");
         _submit(setId, g, t, 100);
-        assertEq(ar.residual(setId, 0), 3, "contract residual");
-        (, uint256 eEff,,,,,,) = ar.certificate(setId);
-        assertEq(eEff, 9, "e = ceil(r / alpha) = 9 wei");
+        (uint256 eUp0, uint256 eLow0) = ar.columnBounds(setId, 0);
+        assertEq(eUp0, 9, "eUp = ceil(r / alpha) = 9 wei");
+        assertEq(eLow0, 0);
+        (, uint256 eEff, uint256 eLowEff,,,,,,) = ar.certificate(setId);
+        assertEq(eEff, 9);
+        assertEq(eLowEff, 0);
         assertEq(ar.vectorAt(setId, 1, 0), t[0][1]);
         assertEq(ar.vectorAt(setId, 2, 0), t[0][2]);
         assertEq(ar.vectorAt(setId, 2, 2), uint64(uint160(OY)), "owner fingerprint lane");
@@ -61,15 +65,20 @@ contract AnchoredReputationTest is AncreBase {
         assertEq(x.trust, t[0][1]);
         assertEq(x.trustRobust, t[0][1], "m = 1: nothing removed");
         assertEq(x.e, 9);
+        assertEq(x.trustLow, t[0][1], "D26: t is the lower bound itself, eLow = 0");
+        assertEq(x.distrustUp, 9);
+        assertTrue(x.trusted);
     }
 
     function test_solverMatchesContract() public {
         bytes32 setId = _chainSet(1);
         CertLib.Graph memory g = _chainGraph(true);
         uint256[][] memory t = g.fixedPoint(80);
-        uint256[] memory r = CertLib.residual(g, t);
+        assertTrue(CertLib.isSubSolution(g, t), "iteration from 0 gives a sub-solution (L3)");
+        uint256[] memory e = CertLib.eUp(g, t);
         _submit(setId, g, t, type(uint256).max);
-        assertEq(ar.residual(setId, 0), r[0]);
+        (uint256 eUp0,) = ar.columnBounds(setId, 0);
+        assertEq(eUp0, e[0]);
     }
 
     function test_truncationMargin() public {
@@ -77,21 +86,44 @@ contract AnchoredReputationTest is AncreBase {
         CertLib.Graph memory g = _chainGraph(false); // Y's row omitted -> truncated
         uint256[][] memory t = _handT();
         _submit(setId, g, t, type(uint256).max);
-        // + ceil((1 - alpha) t_Y) = ceil(148148148148148148 * 2 / 3) = 98765432098765432
-        assertEq(ar.residual(setId, 0), 3 + 98_765_432_098_765_432);
+        // r = 3 + ceil((1 - alpha) t_Y) = 3 + ceil(148148148148148148 * 2 / 3) = 3 + 98765432098765432
+        (uint256 eUp0,) = ar.columnBounds(setId, 0);
+        assertEq(eUp0, (3 + 98_765_432_098_765_432) * 3);
+        // a truncated row lowers y only: the lower bound still holds, X stays trusted (D26)
+        assertEq(ar.assess(101, setId, true).trustLow, t[0][1]);
     }
 
-    function test_wrongResidualRejected() public {
+    function test_notSubSolutionRejected() public {
         bytes32 setId = _chainSet(1);
         CertLib.Graph memory g = _chainGraph(true);
         uint256[][] memory t = _handT();
-        t[0][1] += 1e15; // wrong vector
-        uint256 eBad = CertLib.eEff(g, CertLib.residual(g, t));
+        t[0][1] += 1; // one wei above y: not a lower bound any more
+        bytes memory v = CertLib.encodeVectors(g, t);
+        bytes memory rows = CertLib.encodeRows(g, 2);
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.NotSubSolution.selector, 0, 1));
+        ar.submitCertificate(setId, 3, type(uint256).max, "", v, rows);
+    }
+
+    function test_deflatedVectorAcceptedButImprecise() public {
+        bytes32 setId = _chainSet(1);
+        CertLib.Graph memory g = _chainGraph(true);
+        uint256[][] memory t = _handT();
+        t[0][2] -= 1e15; // Y (a leaf) below y: still a sub-solution (AM-5.16), but eUp grows
+        assertTrue(CertLib.isSubSolution(g, t));
+        uint256 eBad = CertLib.eEff(g, t);
         assertGt(eBad, 1e15);
         bytes memory v = CertLib.encodeVectors(g, t);
         bytes memory rows = CertLib.encodeRows(g, 2);
         vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.ResidualTooLarge.selector, eBad, 100));
         ar.submitCertificate(setId, 3, 100, "", v, rows);
+        ar.submitCertificate(setId, 3, eBad, "", v, rows);
+        // the zero vector is a sub-solution too: trusted by nobody, eUp ~ 1 WAD
+        uint256[][] memory z = new uint256[][](1);
+        z[0] = new uint256[](3);
+        _submit(setId, g, z, type(uint256).max);
+        (, uint256 eZ,,,,,,,) = ar.certificate(setId);
+        assertGt(eZ, 9e17);
+        assertFalse(ar.isTrusted(101, setId));
     }
 
     function test_weightOffGridRejected() public {
@@ -167,7 +199,7 @@ contract AnchoredReputationTest is AncreBase {
         _submit(setId, _chainGraph(true), _handT(), 100);
     }
 
-    function test_vetoNegativeDominance() public {
+    function test_vetoIsLastAnchorFeedback() public {
         bytes32 setId = _certifiedX(1);
         address a = _anchors(1)[0];
         vm.prank(a);
@@ -176,20 +208,43 @@ contract AnchoredReputationTest is AncreBase {
         assertEq(uint8(x.status), uint8(AnchoredReputation.Status.VETOED));
         assertEq(x.triggerTag, bytes32("slash"));
         assertEq(x.vetoCount, 1);
+        assertFalse(ar.isTrusted(101, setId));
 
-        // AM-3.1: a later +1 under another tag must NOT erase the slash
+        // D33: the live veto is the anchor's LAST feedback. A later +1 of the same anchor under another tag
+        // lifts the live veto (normative rule: an anchor that posts something else must re-post its veto);
+        // the certificate's D14 dominance keeps the slash as distrust / certified bit after recertification.
         vm.prank(a);
         rep.giveFeedback(101, 1, 0, "review", "");
-        x = ar.assess(101, setId, true);
-        assertEq(uint8(x.status), uint8(AnchoredReputation.Status.VETOED), "negative dominance");
+        assertEq(uint8(ar.assess(101, setId, true).status), uint8(AnchoredReputation.Status.OK));
 
-        // only revocation by the author lifts it
+        // re-posting the veto restores it; revocation of the last veto lifts it
         vm.prank(a);
-        rep.revokeFeedback(101, slashIdx);
-        x = ar.assess(101, setId, true);
-        assertEq(uint8(x.status), uint8(AnchoredReputation.Status.OK));
+        uint64 again = rep.giveFeedback(101, -100, 0, "slash", "");
+        assertEq(uint8(ar.assess(101, setId, true).status), uint8(AnchoredReputation.Status.VETOED));
+        vm.prank(a);
+        rep.revokeFeedback(101, again);
+        assertEq(uint8(ar.assess(101, setId, true).status), uint8(AnchoredReputation.Status.OK));
+        slashIdx;
         (AnchoredReputation.Status st,,,,) = ar.trustOf(101, setId);
         assertEq(uint8(st), uint8(AnchoredReputation.Status.OK));
+    }
+
+    function test_certifiedVetoBit() public {
+        // the anchor's row carries a negative edge to X: certified bit, even if the anchor's last feedback
+        // is positive (complement, D33); here Y is endorsed and X is slashed in the certificate
+        bytes32 setId = _chainSet(1);
+        CertLib.Graph memory g = CertLib.newGraph(3, 1, AN, AD, 3, 4);
+        g.addRow(0, address(0), _two(1, 2), _twoW(-10_000, 10_000));
+        g.addRow(2, OY, new uint256[](0), new int256[](0));
+        g.ownerFp[1] = uint64(uint160(OX));
+        g.ownerFp[2] = uint64(uint160(OY));
+        _submit(setId, g, g.fixedPoint(40), type(uint256).max);
+        assertEq(ar.vectorAt(setId, 1, 3), 1, "flags lane: bit of anchor 0");
+        AnchoredReputation.Assessment memory x = ar.assess(101, setId, true);
+        assertEq(uint8(x.status), uint8(AnchoredReputation.Status.VETOED));
+        assertEq(x.triggerTag, bytes32(0));
+        assertEq(uint8(ar.assess(102, setId, true).status), uint8(AnchoredReputation.Status.OK));
+        assertTrue(ar.isTrusted(102, setId));
     }
 
     function test_vetoLastPerTag() public {
@@ -239,7 +294,7 @@ contract AnchoredReputationTest is AncreBase {
         // transfer (D10)
         idr.transfer(102, address(0xDEAD));
         assertEq(uint8(ar.assess(102, setId, true).status), uint8(AnchoredReputation.Status.TRANSFERRED));
-        assertFalse(ar.isTrusted(102, setId, 0, 1, 2));
+        assertFalse(ar.isTrusted(102, setId));
 
         // stale
         vm.roll(block.number + 1001);
@@ -263,24 +318,139 @@ contract AnchoredReputationTest is AncreBase {
 
     function test_isTrusted() public {
         bytes32 setId = _certifiedX(1);
-        assertTrue(ar.isTrusted(101, setId, 1e17, 1, 2));
-        assertFalse(ar.isTrusted(101, setId, 3e17, 1, 2));
+        assertTrue(ar.isTrusted(101, setId), "trust(X) = 0.222 >= theta 0.1");
+        assertFalse(ar.isTrusted(999, setId), "unknown agent: status OK but trust 0 (AM-6.1)");
+        assertEq(uint8(ar.assess(999, setId, true).status), uint8(AnchoredReputation.Status.OK));
+        assertFalse(ar.assess(101, setId, false).trusted, "never trusted without the veto check");
+
+        // a stricter policy is another set (D39: thresholds are committed in the setId)
+        AnchoredReputation.SetParams memory p = _params(_anchors(1), 1);
+        p.policy.theta = 3e17;
+        bytes32 strict = ar.registerAnchorSet(p);
+        assertTrue(strict != setId);
+        ar.addNodes(strict, _agentEntries(101, 2));
+        _submit(strict, _chainGraph(true), _handT(), 100);
+        assertFalse(ar.isTrusted(101, strict), "0.222 < theta 0.3");
+        AnchoredReputation.Policy memory q = ar.policyOf(strict);
+        assertEq(q.theta, 3e17);
+        assertEq(q.submitters.length, 1);
+    }
+
+    function test_vetoQuorum() public {
+        address[] memory anc = _anchors(2);
+        AnchoredReputation.SetParams memory p = _params(anc, 1);
+        p.policy.vetoQuorum = 2;
+        bytes32 setId = ar.registerAnchorSet(p);
+        ar.addNodes(setId, _agentEntries(101, 1));
+        CertLib.Graph memory g = CertLib.newGraph(3, 2, AN, AD, 3, 4);
+        g.addRow(0, address(0), _one(2), _oneW(10_000));
+        g.addRow(1, address(0), _one(2), _oneW(10_000));
+        g.addRow(2, OX, new uint256[](0), new int256[](0));
+        g.ownerFp[2] = uint64(uint160(OX));
+        _submit(setId, g, g.fixedPoint(40), type(uint256).max);
+        assertTrue(ar.isTrusted(101, setId));
+        vm.prank(anc[0]);
+        rep.giveFeedback(101, -100, 0, "slash", "");
+        AnchoredReputation.Assessment memory x = ar.assess(101, setId, true);
+        assertEq(x.vetoCount, 1);
+        assertEq(uint8(x.status), uint8(AnchoredReputation.Status.OK), "one veto < q = 2");
+        vm.prank(anc[1]);
+        rep.giveFeedback(101, -1, 0, "review", "");
+        x = ar.assess(101, setId, true);
+        assertEq(uint8(x.status), uint8(AnchoredReputation.Status.VETOED));
+        assertEq(x.triggerTag, bytes32("slash"), "most negative veto names the reason");
+        assertFalse(ar.isTrusted(101, setId));
+    }
+
+    function test_vetoMax() public {
+        AnchoredReputation.SetParams memory p = _params(_anchors(1), 1);
+        p.policy.vetoMax = -5000; // only feedbacks at or below -0.5 veto
+        bytes32 setId = ar.registerAnchorSet(p);
+        ar.addNodes(setId, _agentEntries(101, 2));
+        _submit(setId, _chainGraph(true), _handT(), 100);
+        vm.startPrank(_anchors(1)[0]);
+        rep.giveFeedback(101, -4, 1, "review", ""); // -0.4
+        assertEq(uint8(ar.assess(101, setId, true).status), uint8(AnchoredReputation.Status.OK));
+        rep.giveFeedback(101, -5, 1, "review", ""); // -0.5
+        vm.stopPrank();
+        assertEq(uint8(ar.assess(101, setId, true).status), uint8(AnchoredReputation.Status.VETOED));
+    }
+
+    function test_policyValidation() public {
+        AnchoredReputation.SetParams memory p = _params(_anchors(2), 1);
+        p.policy.theta = 0;
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 4));
+        ar.registerAnchorSet(p);
+        p = _params(_anchors(2), 1);
+        p.policy.minAnchors = 3; // m > k
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 12));
+        ar.registerAnchorSet(p);
+        p = _params(_anchors(2), 1);
+        p.policy.vetoMax = 0;
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 13));
+        ar.registerAnchorSet(p);
+        p = _params(_anchors(2), 1);
+        p.policy.submitters = new address[](0); // open submission requires Registry-verified (D32)
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 15));
+        ar.registerAnchorSet(p);
+        p = _params(_anchors(2), 1);
+        p.policy.rhoN = 0;
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 4));
+        ar.registerAnchorSet(p);
+        p = _params(_anchors(2), 1);
+        p.policy.rhoD = 0;
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 4));
+        ar.registerAnchorSet(p);
+        p = _params(_anchors(2), 1);
+        p.policy.vetoQuorum = 0;
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 12));
+        ar.registerAnchorSet(p);
+        p.policy.vetoQuorum = 3;
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 12));
+        ar.registerAnchorSet(p);
+        p = _params(_anchors(2), 1);
+        p.policy.vetoMax = -10_001;
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 13));
+        ar.registerAnchorSet(p);
+        p = _params(_anchors(2), 1);
+        p.policy.maxAge = 0;
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 14));
+        ar.registerAnchorSet(p);
+        p = _params(_anchors(2), 1);
+        p.policy.submitters = new address[](9);
+        for (uint256 i; i < 9; ++i) {
+            p.policy.submitters[i] = address(uint160(i + 1));
+        }
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 15));
+        ar.registerAnchorSet(p);
+        p.policy.submitters = new address[](2);
+        (p.policy.submitters[0], p.policy.submitters[1]) = (address(2), address(2)); // duplicate
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 16));
+        ar.registerAnchorSet(p);
+        (p.policy.submitters[0], p.policy.submitters[1]) = (address(0), address(2)); // zero address
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadParams.selector, 16));
+        ar.registerAnchorSet(p);
+    }
+
+    function test_onlySubmitters() public {
+        bytes32 setId = _chainSet(1);
+        CertLib.Graph memory g = _chainGraph(true);
+        bytes memory v = CertLib.encodeVectors(g, _handT());
+        bytes memory rows = CertLib.encodeRows(g, 2);
+        vm.prank(address(0xBAD));
+        vm.expectRevert(AnchoredReputation.NotSubmitter.selector);
+        ar.submitCertificate(setId, 3, type(uint256).max, "", v, rows);
     }
 
     // ------------------------------------------------------------------ replacement rule (AM-2.3)
-    function test_replacementRule() public {
+    function test_replacementAttested() public {
+        // Submitter-attested: a listed submitter always replaces (D27), even with a worse bound
         bytes32 setId = _certifiedX(1);
-        CertLib.Graph memory g = _chainGraph(false); // truncated -> much larger e
-        uint256[][] memory t = _handT();
-        bytes memory v = CertLib.encodeVectors(g, t);
-        bytes memory rows = CertLib.encodeRows(g, 2);
-        vm.expectRevert();
-        ar.submitCertificate(setId, 3, type(uint256).max, "", v, rows);
-        vm.roll(block.number + 1001); // stale -> any valid certificate replaces
-        ar.submitCertificate(setId, 3, type(uint256).max, "", v, rows);
-        // an equally precise one is always accepted
+        _submit(setId, _chainGraph(false), _handT(), type(uint256).max); // truncated -> much larger e
+        (, uint256 eEff,,,,,,,) = ar.certificate(setId);
+        assertGt(eEff, 1e17);
         _submit(setId, _chainGraph(true), _handT(), 100);
-        (, uint256 eEff,,,,,,) = ar.certificate(setId);
+        (, eEff,,,,,,,) = ar.certificate(setId);
         assertEq(eEff, 9);
     }
 
@@ -294,64 +464,6 @@ contract AnchoredReputationTest is AncreBase {
         bytes memory rows = CertLib.encodeRows(g, 2);
         vm.expectRevert(AnchoredReputation.BadNCert.selector);
         ar.submitCertificate(setId, 2, type(uint256).max, "", v, rows);
-    }
-
-    // ------------------------------------------------------------------ omission proof (D6, type i)
-    function test_omissionProof() public {
-        // X's wallet rated Z (vouch 80) in the registry, the certificate's row of X omits it
-        vm.prank(OX);
-        rep.giveFeedback(103, 80, 0, "vouch", "");
-        bytes32 setId = _chainSet(1);
-        ar.addNodes(setId, _agentEntries(103, 1)); // Z = node 3
-        CertLib.Graph memory g = CertLib.newGraph(4, 1, AN, AD, 3, 4);
-        g.addRow(0, address(0), _one(1), _oneW(10_000));
-        g.addRow(1, OX, _one(2), _oneW(10_000)); // omits X -> Z
-        g.addRow(2, OY, new uint256[](0), new int256[](0));
-        g.ownerFp[1] = uint64(uint160(OX));
-        uint256[][] memory t = g.fixedPoint(60);
-        _submit(setId, g, t, type(uint256).max);
-        uint256 r0 = ar.residual(setId, 0);
-
-        bytes32[] memory lv = CertLib.leaves(g, 2);
-        bytes memory row1 = CertLib.rowBytes(g, 1, 2);
-        bytes32 keyX = ar.agentKey(101);
-        ar.proveOmission(setId, 1, row1, CertLib.merkleProof(lv, 1), "", keyX, 103);
-
-        // Delta = |w|/B' + S (B'-B)/(B B') with S = B = 1, w = 0.8, B' = 1.8
-        uint256 dNum = 8000 * 10_000 + 10_000 * 8000;
-        uint256 den = 3 * 10_000 * 18_000;
-        uint256 inc = (t[0][1] * 2 * dNum + den - 1) / den;
-        assertEq(ar.residual(setId, 0), r0 + inc, "r widened by (1-a) t_X Delta");
-
-        // the same fact is billed once per row state
-        bytes memory added = abi.encodePacked(uint32(103), int16(8000));
-        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadProof.selector, 9));
-        ar.proveOmission(setId, 1, row1, new bytes32[](0), added, keyX, 103);
-        // a stale view of the row (without the amendment) is refused
-        bytes32[] memory pf = CertLib.merkleProof(lv, 1);
-        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadProof.selector, 5));
-        ar.proveOmission(setId, 1, row1, pf, "", keyX, 103);
-    }
-
-    function test_omissionRejectsPresentEdgeAndSelf() public {
-        vm.prank(OX);
-        rep.giveFeedback(102, 1, 0, "review", "");
-        bytes32 setId = _chainSet(1);
-        CertLib.Graph memory g = _chainGraph(true);
-        _submit(setId, g, _handT(), 100);
-        bytes32[] memory lv = CertLib.leaves(g, 2);
-        bytes memory row1 = CertLib.rowBytes(g, 1, 2);
-        bytes32[] memory pf = CertLib.merkleProof(lv, 1);
-        bytes32 keyX = ar.agentKey(101);
-        // X -> Y is present in the row
-        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadProof.selector, 8));
-        ar.proveOmission(setId, 1, row1, pf, "", keyX, 102);
-        // X's wallet is X's own owner: self edge rejected (D16)
-        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadProof.selector, 10));
-        ar.proveOmission(setId, 1, row1, pf, "", keyX, 101);
-        // wrong Merkle position
-        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadProof.selector, 4));
-        ar.proveOmission(setId, 0, row1, pf, "", keyX, 103);
     }
 
     function test_neverRevertsOnBrokenRegistry() public {

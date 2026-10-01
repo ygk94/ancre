@@ -1,7 +1,55 @@
-# GAS — mesures réelles d'`AnchoredReputation.sol` (chantier R5, 2026-09-27)
+# GAS — mesures réelles d'`AnchoredReputation.sol`
 
-Légende : **MESURÉ** = sorti de `forge test` (commande donnée) · **CALCULÉ** = formule appliquée aux mesures · **ESTIMÉ (CR)** = chiffre du CR du conseil, pour comparaison.
-Environnement : Foundry 1.8.3, solc 0.8.28 via-IR, optimizer 200, `network = "monad"`. Fork mainnet 143 au bloc 108 445 171 pour les lectures. Contrat déployé : **21 815 octets** (sous 24 Ko, donc portable sur Ethereum).
+Légende : **MESURÉ** = sorti de `forge test` (commande donnée) · **CALCULÉ** = formule appliquée aux mesures · **DOC** = documentation Monad · **ESTIMÉ (CR)** = chiffre du CR du conseil, pour comparaison.
+Environnement : Foundry 1.8.3, solc 0.8.28 via-IR, optimizer 200, `network = "monad"`. Limite par transaction : **30 M gas** (DOC, `developer-essentials`, tableau « Transaction gas limit ») ; prix du gas **102 gwei** (MESURÉ, `cast gas-price --rpc-url https://rpc.monad.xyz`, 28/09 ; base fee 100 gwei).
+
+## Porte P1 (chantier 02, 2026-09-28) : coût du niveau Registry-verified — contrat v1
+
+Banc : `test/RegistryBench.t.sol`, **fork du testnet 10143 au bloc 66 494 673, vrais registres ERC-8004 v2.0.0** (même bytecode que le mainnet). Les agents (`register`) et les avis (`giveFeedback`) du graphe sont écrits dans le fork ; le même certificat est soumis à trois ensembles. Chaque soumission est une transaction isolée (21 000 + calldata + plancher EIP-7623 compris, pages MIP-8 froides à chaque transaction).
+Commande : `forge test --match-contract RegistryBenchTest -vv | grep 'P1|'` (≈ 100 s, RPC du testnet).
+
+| Cas (k = 3) | Submitter-attested | Registry-verified | Surcoût | Par arête |
+|---|---|---|---|---|
+| **Démo acte 2 : 300 arêtes, 100 nœuds, 1 avis par couple** — mise à jour | 1 321 852 | **14 970 695** | 13,65 M | **45,5 k** |
+| idem, premier certificat (après `addNodes` + `reserveCapacity`) | 1 449 082 | 15 097 925 | 13,65 M | 45,5 k |
+| 30 arêtes, 10 nœuds, 1 avis par couple — mise à jour | 266 928 | 1 561 536 | 1,29 M | 43,2 k |
+| 30 arêtes, 10 nœuds, **5 avis par couple** (même tag) — mise à jour | 266 693 | 3 131 181 | 2,86 M | 95,5 k |
+| Mainnet réel (fork 108 445 171) : 3 arêtes de 0xea0b… sur #2/#3/#4, premier certificat | — | 645 080 | — | — |
+| Recertification après l'upgrade vers la PR #80 (D28), même graphe | — | 367 312 | — | — |
+
+(MESURÉ, `forge test --match-contract "RegistryBenchTest|UpgradeTest" -vv | grep 'P1\|D28'`, 28/09. « verified-open » coûte la même chose à 500 gas près.)
+Submitter-attested coûte maintenant 1,32 M au lieu de 0,87 M (v0) : **les contrôles de forme** (cible = agent, wallet sur les lignes d'agents), exigés aux deux niveaux pour que toute arête reste contestable, coûtent ≈ 1,5 k par arête (boucle Solidity sur le calldata, à passer en Yul si besoin).
+
+**Décomposition CALCULÉE du coût par arête** (≈ 45 k, avis unique) : `getLastIndex` à travers le proxy (page du couple, froide) + un `readFeedback` (page de l'avis) + `isAuthorizedOrOwner(client, j)` (pages owner, opérateurs, approbation) + `getAgentWallet(j)` ; plus, par ligne d'agent, `getAgentWallet(u)`, et par agent de masse, `ownerOf`. **Chaque avis supplémentaire du couple à relire coûte ≈ 13 k** (CALCULÉ : (95,5 − 43,2) / 4). La relecture « dernier index du tag » n'est donc pas bornée : un couple à 100 avis sous un seul tag coûte ≈ 1,3 M à relire (CALCULÉ).
+
+**Taille maximale en une transaction** (CALCULÉ, pente mesurée, avis unique) : (30 M − 1,3 M) / 45,5 k ≈ **630 arêtes à k = 3**. En MON au prix mesuré : certificat de la démo ≈ 15,0 M × 102 gwei ≈ **1,53 MON**, 1,64 MON avec 7,5 % de marge de gas limit (sur Monad on paie la limite). Submitter-attested : 0,13 MON.
+
+### Verdict P1
+
+**Registry-verified passe pour la démo, et c'est le niveau que je recommande pour la démo** :
+- le certificat de l'acte 2 tient dans une transaction avec une marge de ×2 (15,0 M sur 30 M) ;
+- sur le testnet (D40 : ferme et répétitions), le coût est nul en vrai MON ;
+- sur le mainnet, les graphes réels sont minuscules (3 arêtes utiles de 0xea0b… : 0,65 M MESURÉ, ≈ 0,07 MON).
+
+**Limites franches** :
+1. ×11 par rapport à Submitter-attested sur le graphe de la démo ; au-delà d'environ 630 arêtes (k = 3), un seul certificat ne passe plus en une transaction, et la vérification répartie n'est pas implémentée.
+2. Un couple avec beaucoup d'avis coûte ≈ 13 k par avis relu : le certificateur doit **omettre** ces arêtes et déclarer B⁺ (sûr pour la borne basse, D32), ou passer au niveau Submitter-attested.
+3. **Registry-verified ne ferme pas la dilution** (B⁺ sous-déclaré) : c'est invérifiable faute d'index par client, et seul `proveEdge` la corrige. Voir `PROOFS.md`, « Garanties ».
+
+### Lectures (même banc, vrais registres, via `Consumer`, AM-R5.1)
+
+| Lecture (k = 3, mode strict) | Gas marginal |
+|---|---|
+| `assess` avec veto, agent de masse, ancres avec avis sur lui | 139 055 à 165 888 |
+| `assess` sans veto, strict (`ownerOf` en direct) | 80 609 |
+| `isTrusted`, **refus bon marché** (bornes déjà fausses : aucune lecture du registre) | **41 904** |
+| `isTrusted`, agent inconnu | **29 211** |
+
+(MESURÉ, `forge test --match-contract RegistryBenchTest -vv`.) Le refus d'un inconnu (une ferme) ne coûte plus que 29 k au payeur, au lieu de 115 à 190 k en R5. Un agent qui passe les bornes paie le chemin complet (≈ `assess` avec veto).
+
+---
+
+## Historique R5 (contrat v0, 27/09) — conservé pour comparaison
 
 ## Verdict
 
