@@ -100,3 +100,11 @@ export async function warp(pub, seconds) {
   await pub.request({ method: "evm_increaseTime", params: [toHex(seconds)] });
   await pub.request({ method: "evm_mine", params: [] });
 }
+
+/** Rehearsal only: what the human's MetaMask extension does on the signing page (eth_signTypedData_v4). */
+export async function signAsExtension(account, req) {
+  const td = req.prepare();
+  const { EIP712Domain, ...types } = td.types;
+  const message = { ...td.message, from: account.address };
+  return { address: account.address, signature: await account.signTypedData({ ...td, types, message }), template: td };
+}

@@ -75,3 +75,17 @@ export function toCommandError(e: unknown): never {
   if (e instanceof FlowError || e instanceof X402Error || e instanceof ConfigError) throw new CommandError(e.code, e.message, e.hint);
   throw e;
 }
+
+/** Every address the host wallet manages (selected or not): none of them may sign a human override. */
+export function allWalletAddresses(snapshot: unknown): Address[] {
+  const rec = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
+  if (!rec(snapshot)) return [];
+  const out = new Set<Address>();
+  const sel = selectedAddress(snapshot);
+  if (sel) out.add(sel);
+  for (const l of [snapshot.byokWallets, snapshot.remoteWallets]) {
+    if (!Array.isArray(l)) continue;
+    for (const w of l) if (rec(w) && typeof w.address === "string" && isAddress(w.address)) out.add(getAddress(w.address));
+  }
+  return [...out];
+}

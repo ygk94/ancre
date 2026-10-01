@@ -75,14 +75,17 @@ reason, trigger tag) and notes that **a human** may override:
 mm ancre override http://provider.example/quote     # run by the human, in their own terminal
 ```
 
-- The override **pays from the human's personal wallet**: the plugin prepares an ordinary EIP-3009 payment
-  and opens a one-time page on `127.0.0.1`; the human signs it in **their MetaMask browser extension**. It never
-  uses the Agent Wallet and never touches the payer contract's funds. There is no switching between the two
-  wallets: a signature from the Agent Wallet or from any operator of the payer is refused.
-- **An agent cannot run it.** The command declares no `wallet-submit` capability (the host refuses it the wallet
-  executor), refuses to run without an interactive terminal or with `--json`, asks for a typed confirmation,
-  and needs a signature that only the human's extension can produce. `test/override.test.mjs` checks each of
-  these paths, plus that no file other than `lib/host.ts` reaches the executor.
+- The override **pays from the human's personal wallet**, that is, **the payer's owner or treasury** (addresses the
+  human set on-chain, which the agent can neither change nor sign for). The plugin prepares an ordinary EIP-3009
+  payment and opens a one-time page on `127.0.0.1`; the human signs it in **their MetaMask browser extension**. It
+  never uses the Agent Wallet and never touches the payer contract's funds.
+- **What makes it human-only** is that signature: any other key is refused, including every address of the Agent
+  Wallet, every operator of the payer, and any freshly funded key. The command also declares no `wallet-submit`
+  capability (the host refuses it the wallet executor), and refuses to run without an interactive terminal or with
+  `--json` (defence in depth: a program can fake a terminal, it cannot fake the owner's signature).
+  `test/override.test.mjs` checks each path, plus that no file other than `lib/host.ts` reaches the executor.
+- There is no switching between the two wallets: if the owner or treasury is itself an Agent Wallet address,
+  the override is refused as misconfigured.
 - An override is not a precedent: the next payment to that provider goes through ANCRE again.
 
 ## Journal
@@ -90,7 +93,8 @@ mm ancre override http://provider.example/quote     # run by the human, in their
 Every refusal, payment, settlement refusal and override is appended to `~/.ancre/journal.jsonl` (or
 `ANCRE_JOURNAL`), one JSON object per line: kind, URL, agent id, payee, amount, ANCRE verdict, reason, status,
 trigger tag, who paid, transaction. `mm ancre journal --json` prints the latest entries; the demo screen
-(chantier 07) can tail the file directly.
+(chantier 07) can tail the file directly. It is a local convenience, not a tamper-proof audit trail: the
+on-chain trace of a refusal is the payer's `reportRefusal`.
 
 ## How a payment works
 
@@ -110,7 +114,7 @@ trigger tag, who paid, transaction. `mm ancre journal --json` prints the latest 
 ## Tests
 
 ```bash
-npm test                       # 40 tests on stubs: manifest (official schema), x402, blobs, verdicts, flows with a spy executor, client guard, human override
+npm test                       # 48 tests on stubs: manifest (official schema), x402, blobs, verdicts, flows with a spy executor, client guard, human override
 node scripts/demo-local.mjs    # rehearsal of the demo on an anvil --network monad fork (no real transaction)
 node scripts/t1.mjs --local    # test T1 dry run: the facilitator emulated as x402-rs does it
 node scripts/setup-fork.mjs    # demo setup on a fork: register, setAgentWallet, payer (operator = Agent Wallet), funding

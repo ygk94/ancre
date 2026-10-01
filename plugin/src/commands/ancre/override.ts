@@ -1,7 +1,8 @@
 import { type CommandIO, InputFieldType, type InputSchema, PluginCommand, schemaToArgs, schemaToFlags } from "@metamask/agent-wallet/plugin";
 import { createInterface } from "node:readline/promises";
 import { parseUsdc, resolveConfig } from "../../lib/config.js";
-import { hostDeps, selectedAddress, toCommandError } from "../../lib/host.js";
+import { allWalletAddresses, hostDeps, toCommandError } from "../../lib/host.js";
+import { isInteractive } from "../../lib/interactive.js";
 import { humanSign } from "../../lib/human.js";
 import { fileJournal } from "../../lib/journal.js";
 import { type OverrideResult, overrideFlow } from "../../lib/override.js";
@@ -15,13 +16,11 @@ const inputs = {
   rpcUrl: { type: InputFieldType.Text, flag: "rpc-url", message: "Read through this RPC (or ANCRE_RPC_URL)", required: false, prompt: false },
 } satisfies InputSchema;
 
-const MACHINE_OUTPUT = /^--(json|toon|format)(=|$)/;
-
 /**
- * HUMAN ONLY (D47). Pays a provider ANCRE refused, from the human's OWN wallet, signed in their MetaMask
- * extension through a local page. This command holds no wallet-submit capability: it cannot reach the Agent
- * Wallet executor, and it never touches the payer contract's funds. It refuses to run without an interactive
- * terminal or with machine output.
+ * HUMAN ONLY (D47). Pays a provider ANCRE refused, from the human's OWN wallet (the payer's owner or treasury),
+ * signed in their MetaMask extension through a local page. This command holds no wallet-submit capability: it
+ * cannot reach the Agent Wallet executor, and it never touches the payer contract's funds. It also refuses to run
+ * without an interactive terminal or with machine output (defence in depth).
  */
 export default class AncreOverride extends PluginCommand<OverrideResult> {
   static override description =
@@ -38,13 +37,13 @@ export default class AncreOverride extends PluginCommand<OverrideResult> {
       const inp = await io.resolveInputs(inputs);
       const cfg = resolveConfig({ chainId: inp.chainId, payer: inp.payer });
       const argv = [...process.argv, ...(this.ctx.argv ?? [])];
-      const interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY) && !argv.some((a) => MACHINE_OUTPUT.test(a));
+      const interactive = isInteractive(process.stdin.isTTY, process.stdout.isTTY, argv);
       const base = await hostDeps(this.ctx, io, cfg, null, inp.rpcUrl ?? process.env.ANCRE_RPC_URL); // null: no wallet executor
-      let agentWallet;
+      let agentWallets: ReturnType<typeof allWalletAddresses> = [];
       try {
-        agentWallet = selectedAddress(await this.ctx.walletStateManager.read());
+        agentWallets = allWalletAddresses(await this.ctx.walletStateManager.read());
       } catch {
-        agentWallet = undefined;
+        agentWallets = []; // not initialized: the owner/treasury rule still binds
       }
       const print = (s: string) => process.stderr.write(s + "\n");
       return await overrideFlow(
@@ -55,7 +54,7 @@ export default class AncreOverride extends PluginCommand<OverrideResult> {
           random32: base.random32,
           signal: base.signal,
           interactive,
-          agentWallet,
+          agentWallets,
           journal: fileJournal(),
           print,
           confirm: async (prompt, expected) => {
@@ -80,6 +79,7 @@ export default class AncreOverride extends PluginCommand<OverrideResult> {
   override successHint(r: OverrideResult): string {
     if (r.outcome === "OVERRIDE_PAID") return `Human override: ${r.human} paid ${r.offer.amountUsdc} USDC to agent #${r.agentId} (tx ${r.transaction})`;
     if (r.outcome === "OVERRIDE_DECLINED") return "Override declined: nothing was signed or paid";
-    return `Override failed (HTTP ${r.settlementError?.httpStatus}): nothing paid by the payer`;
+    if (r.outcome === "OVERRIDE_UNKNOWN") return `Override outcome UNKNOWN: your authorisation stays valid until ${r.liveAuthorization?.validBefore}; do not sign again before`;
+    return `Override refused by the server or facilitator (HTTP ${r.settlementError?.httpStatus}); the payer contract was not used`;
   }
 }

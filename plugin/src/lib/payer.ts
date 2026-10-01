@@ -63,23 +63,39 @@ export function ancrePaymentTypedData(chainId: number, auth: Authorization, agen
   } as const;
 }
 
-/** The EIP-3009 digest the USDC presents to isValidSignature (domain "USDC" / "2", MESURÉ 27/09). */
-export function usdcAuthorizationDigest(chainId: number, usdc: Address, auth: Authorization): Hex {
-  return hashTypedData({
+const TWA_FIELDS = [
+  { name: "from", type: "address" },
+  { name: "to", type: "address" },
+  { name: "value", type: "uint256" },
+  { name: "validAfter", type: "uint256" },
+  { name: "validBefore", type: "uint256" },
+  { name: "nonce", type: "bytes32" },
+] as const;
+
+/** EIP-3009 TransferWithAuthorization in the USDC domain ("USDC" / "2", MESURÉ 27/09), for viem. */
+export function usdcAuthorizationTypedData(chainId: number, usdc: Address, auth: Authorization) {
+  return {
     domain: { name: "USDC", version: "2", chainId, verifyingContract: usdc },
-    types: {
-      TransferWithAuthorization: [
-        { name: "from", type: "address" },
-        { name: "to", type: "address" },
-        { name: "value", type: "uint256" },
-        { name: "validAfter", type: "uint256" },
-        { name: "validBefore", type: "uint256" },
-        { name: "nonce", type: "bytes32" },
-      ],
-    },
+    types: { TransferWithAuthorization: TWA_FIELDS },
     primaryType: "TransferWithAuthorization",
     message: auth,
-  });
+  } as const;
+}
+
+/** The same, as JSON for a wallet's eth_signTypedData_v4 (EIP712Domain listed, integers as strings). */
+export function usdcAuthorizationTypedDataJson(chainId: number, usdc: Address, auth: Authorization) {
+  return {
+    domain: { name: "USDC", version: "2", chainId, verifyingContract: usdc },
+    types: { EIP712Domain: EIP712_DOMAIN, TransferWithAuthorization: TWA_FIELDS },
+    primaryType: "TransferWithAuthorization",
+    message: { from: auth.from, to: auth.to, value: auth.value.toString(), validAfter: auth.validAfter.toString(),
+      validBefore: auth.validBefore.toString(), nonce: auth.nonce },
+  };
+}
+
+/** The EIP-3009 digest the USDC presents to isValidSignature. */
+export function usdcAuthorizationDigest(chainId: number, usdc: Address, auth: Authorization): Hex {
+  return hashTypedData(usdcAuthorizationTypedData(chainId, usdc, auth));
 }
 
 /** 65-byte r|s|v with v in {27, 28}: the only form the payer accepts. Accepts v in {0, 1} and EIP-2098 compact. */

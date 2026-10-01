@@ -16,11 +16,17 @@ const PAYER = getAddress("0x00000000000000000000000000000000000000aa");
 const USDC = getAddress("0x754704Bc059F8C67012fEd69BC8A327a5aafb603");
 const PAYTO = getAddress("0x00000000000000000000000000000000000000b0");
 const cfg = { chainId: 143, network: "eip155:143", usdc: USDC, payer: PAYER };
-const human = privateKeyToAccount("0x" + "42".repeat(32));
+const human = privateKeyToAccount("0x" + "42".repeat(32)); // the payer's owner (and treasury): the human
 const agent = privateKeyToAccount("0x" + "11".repeat(32)); // the Agent Wallet = an operator of the payer
+const stranger = privateKeyToAccount("0x" + "77".repeat(32)); // a funded key the agent could create: neither operator nor owner
+const sign = async (acct, req) => {
+  const td = req.prepare();
+  const { EIP712Domain, ...types } = td.types;
+  return { address: acct.address, signature: await acct.signTypedData({ ...td, types, message: { ...td.message, from: acct.address } }), template: td };
+};
 const A = (o = {}) => ({ status: 4, trust: 0n, trustRobust: 0n, distrust: 0n, e: 0n, certBlock: 5n, vetoCount: 1, triggerTag: keccak256(toHex("veto")), trustLow: 0n, distrustUp: 0n, eLow: 0n, trusted: false, ...o });
 
-function world({ decide = [9, A()], humanBalance = 10n ** 6n } = {}) {
+function world({ decide = [9, A()], humanBalance = 10n ** 6n, owner = human.address, treasury = human.address } = {}) {
   const fetches = [];
   const leaked = { sign: 0, send: 0 };
   const offer = { scheme: "exact", network: "eip155:143", amount: "10000", asset: USDC, payTo: PAYTO, maxTimeoutSeconds: 60, extra: { name: "USDC", version: "2", erc8004AgentId: "12" } };
@@ -31,6 +37,9 @@ function world({ decide = [9, A()], humanBalance = 10n ** 6n } = {}) {
         case "maxPerPayment": return 1_000_000n;
         case "balanceOf": return args[0] === PAYER ? 10n ** 6n : humanBalance;
         case "isOperator": return getAddress(args[0]) === agent.address;
+        case "owner": return owner;
+        case "treasury": return treasury;
+        case "operators": return [agent.address, "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"];
         default: throw new Error("unexpected " + functionName);
       }
     },
@@ -42,13 +51,9 @@ function world({ decide = [9, A()], humanBalance = 10n ** 6n } = {}) {
     nowSec: () => 1_900_000_000,
     random32: () => keccak256(toHex("n")),
     interactive: true,
-    agentWallet: agent.address,
+    agentWallets: [agent.address],
     confirm: async (_p, expected) => expected === "override 12",
-    humanSign: async (req) => {
-      const message = { ...req.typedData.message, from: human.address };
-      const { EIP712Domain, ...types } = req.typedData.types;
-      return { address: human.address, message, signature: await human.signTypedData({ ...req.typedData, types, message }) };
-    },
+    humanSign: (req) => sign(human, req),
     // what an agent would love to use: the Agent Wallet's own signer, injected on purpose. It must never be called.
     signTypedData: async () => { leaked.sign++; return "0x"; },
     sendTransaction: async () => { leaked.send++; return { status: "CONFIRMED" }; },
@@ -110,30 +115,102 @@ test("override without the human's typed confirmation: declined, nothing signed"
   assert.equal(w.fetches.length, 1);
 });
 
-test("a signature by the Agent Wallet / an operator is refused (no switch between the two wallets)", async () => {
-  for (const variant of ["agentWallet", "operatorOnly"]) {
+const journaled = (w) => {
+  const path = join(mkdtempSync(join(tmpdir(), "ancre-j-")), "journal.jsonl");
+  w.deps.journal = fileJournal(path);
+  return () => readJournal(path).map((e) => e.kind);
+};
+
+test("a signature by the Agent Wallet / an operator is refused (no switch between the two wallets), and journaled", async () => {
+  for (const variant of ["agentWallets", "operatorOnly"]) {
     const w = world();
-    if (variant === "operatorOnly") w.deps.agentWallet = undefined; // unknown locally: the payer's operator list still catches it
-    w.deps.humanSign = async (req) => {
-      const message = { ...req.typedData.message, from: agent.address };
-      const { EIP712Domain, ...types } = req.typedData.types;
-      return { address: agent.address, message, signature: await agent.signTypedData({ ...req.typedData, types, message }) };
-    };
+    if (variant === "operatorOnly") w.deps.agentWallets = undefined; // host state unknown: the payer's operator list still catches it
+    const kinds = journaled(w);
+    w.deps.humanSign = (req) => sign(agent, req);
     await assert.rejects(overrideFlow(w.deps, cfg, "https://p/x", {}), (e) => e.code === "ANCRE_OVERRIDE_NOT_HUMAN", variant);
     assert.equal(w.fetches.length, 1, "no paid request");
+    assert.deepEqual(kinds(), ["override_requested", "override_refused"]);
   }
 });
 
-test("a forged or altered human signature is refused", async () => {
+test("a funded third-party key (not an operator, not in the host wallet) is refused: only the owner or treasury may sign", async () => {
+  const w = world();
+  const kinds = journaled(w);
+  w.deps.humanSign = (req) => sign(stranger, req);
+  await assert.rejects(overrideFlow(w.deps, cfg, "https://p/x", {}), (e) => e.code === "ANCRE_OVERRIDE_NOT_HUMAN" && /neither the payer's owner nor its treasury/.test(e.message));
+  assert.equal(w.fetches.length, 1);
+  assert.deepEqual(kinds(), ["override_requested", "override_refused"]);
+});
+
+test("any address of the host wallet is refused even if it were the owner", async () => {
+  const w = world({ owner: human.address, treasury: human.address });
+  w.deps.agentWallets = [agent.address, human.address]; // the human's key imported into the Agent Wallet: not a human anymore
+  await assert.rejects(overrideFlow(w.deps, cfg, "https://p/x", {}), (e) => e.code === "ANCRE_OVERRIDE_MISCONFIGURED");
+});
+
+test("a payer whose owner and treasury are the agent's has no human: override refused", async () => {
+  const w = world({ owner: agent.address, treasury: agent.address });
+  await assert.rejects(overrideFlow(w.deps, cfg, "https://p/x", {}), (e) => e.code === "ANCRE_OVERRIDE_MISCONFIGURED");
+});
+
+test("a forged signature or an unfunded human wallet is refused, and journaled", async () => {
   const w1 = world();
-  w1.deps.humanSign = async (req) => ({ address: human.address, message: { ...req.typedData.message, from: human.address }, signature: "0x" + "12".repeat(65) });
+  const k1 = journaled(w1);
+  w1.deps.humanSign = async (req) => ({ address: human.address, signature: "0x" + "12".repeat(65), template: req.prepare() });
   await assert.rejects(overrideFlow(w1.deps, cfg, "https://p/x", {}), (e) => e.code === "ANCRE_OVERRIDE_BAD_SIGNATURE");
+  assert.deepEqual(k1(), ["override_requested", "override_refused"]);
   const w2 = world();
-  const orig = w2.deps.humanSign;
-  w2.deps.humanSign = async (req) => ({ ...(await orig(req)), message: { ...req.typedData.message, from: human.address, to: agent.address } });
+  w2.deps.humanSign = async () => ({ address: human.address, signature: "0x12" }); // page never asked for a template
   await assert.rejects(overrideFlow(w2.deps, cfg, "https://p/x", {}), (e) => e.code === "ANCRE_OVERRIDE_BAD_SIGNATURE");
   const w3 = world({ humanBalance: 1n });
   await assert.rejects(overrideFlow(w3.deps, cfg, "https://p/x", {}), (e) => e.code === "ANCRE_OVERRIDE_UNFUNDED");
+});
+
+test("the non-interactive refusal is journaled too (an agent trying is what the screen must show)", async () => {
+  const w = world();
+  const kinds = journaled(w);
+  w.deps.interactive = false;
+  await assert.rejects(overrideFlow(w.deps, cfg, "https://p/x", {}), (e) => e.code === "ANCRE_OVERRIDE_HUMAN_ONLY");
+  assert.deepEqual(kinds(), ["override_refused"]);
+});
+
+test("isInteractive: TTY on both ends and no machine output", async () => {
+  const { isInteractive } = await import("../dist/lib/interactive.js");
+  assert.equal(isInteractive(true, true, ["ancre", "override", "u"]), true);
+  assert.equal(isInteractive(undefined, true, []), false, "stdin piped (an agent's shell)");
+  assert.equal(isInteractive(true, false, []), false, "stdout piped");
+  for (const f of ["--json", "--toon", "--format=json", "--format"]) assert.equal(isInteractive(true, true, ["x", f]), false, f);
+  const cmd = readFileSync(new URL("../dist/commands/ancre/override.js", import.meta.url), "utf8");
+  assert.match(cmd, /isInteractive\(process\.stdin\.isTTY, process\.stdout\.isTTY, argv\)/, "the command uses it");
+});
+
+test("2xx without settlement proof after a human signature is UNKNOWN, with the live authorisation", async () => {
+  const w = world();
+  const kinds = journaled(w);
+  const orig = w.deps.fetch;
+  w.deps.fetch = async (url, init = {}) => (init.headers ? new Response("{}", { status: 200 }) : orig(url, init));
+  const r = await overrideFlow(w.deps, cfg, "https://p/x", {});
+  assert.equal(r.outcome, "OVERRIDE_UNKNOWN");
+  assert.ok(r.liveAuthorization.validBefore);
+  assert.deepEqual(kinds(), ["override_requested", "override_signed", "override_unknown"]);
+});
+
+test("the validity window starts when the human clicks, not when the page opens", async () => {
+  const w = world();
+  let clock = 1_900_000_000;
+  w.deps.nowSec = () => clock;
+  w.deps.humanSign = async (req) => { clock += 240; return sign(human, req); }; // 4 minutes to open, unlock, sign
+  const r = await overrideFlow(w.deps, cfg, "https://p/x", {});
+  const a = decodeB64Json(w.fetches[1].headers["payment-signature"]).payload.authorization;
+  assert.equal(BigInt(a.validBefore), BigInt(1_900_000_000 + 240 + 60));
+  assert.equal(r.outcome, "OVERRIDE_PAID");
+});
+
+test("the payer's maxPerPayment does not bind the human's own wallet", async () => {
+  const w = world({ decide: [5, A({ status: 0, trusted: true, vetoCount: 0 })] }); // OVER_LIMIT for the payer
+  const r = await overrideFlow(w.deps, cfg, "https://p/x", { maxAmount: 10n ** 6n });
+  assert.equal(r.verdict, "OVER_LIMIT");
+  assert.equal(r.outcome, "OVERRIDE_PAID");
 });
 
 test("human override pays from the human's wallet, never touches the agent's signer, and is journaled", async () => {
@@ -169,7 +246,7 @@ test("pay journals a refusal and points to the human-only override", async () =>
 test("human signing page: one-time token, 127.0.0.1 only, resolves on the posted signature", async () => {
   const { humanSign } = await import("../dist/lib/human.js");
   let url;
-  const p = humanSign({ chainId: 143, summary: "<b>x</b>", typedData: { domain: {}, types: {}, primaryType: "X", message: {} }, onUrl: (u) => (url = u), timeoutMs: 5000 });
+  const p = humanSign({ chainId: 143, summary: "<b>x</b>", prepare: () => ({ issued: 1 }), onUrl: (u) => (url = u), timeoutMs: 5000 });
   while (!url) await new Promise((r) => setTimeout(r, 10));
   assert.match(url, /^http:\/\/127\.0\.0\.1:\d+\/\?t=[0-9a-f]{32}$/);
   const bare = url.split("?")[0];
@@ -178,7 +255,9 @@ test("human signing page: one-time token, 127.0.0.1 only, resolves on the posted
   assert.match(html, /eth_signTypedData_v4/);
   assert.match(html, /&#60;b&#62;x&#60;\/b&#62;/, "the summary is escaped");
   const t = new URL(url).searchParams.get("t");
-  const posted = { address: human.address, message: {}, signature: "0x12" };
+  const tpl = await (await fetch(`${bare}template?t=${t}`)).json();
+  assert.deepEqual(tpl, { issued: 1 });
+  const posted = { address: human.address, signature: "0x12" };
   assert.equal((await fetch(`${bare}done?t=${t}`, { method: "POST", body: JSON.stringify(posted) })).status, 200);
-  assert.deepEqual(await p, posted);
+  assert.deepEqual(await p, { ...posted, template: { issued: 1 } }, "the template comes from the plugin, not from the page");
 });

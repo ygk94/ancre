@@ -110,8 +110,9 @@ async function main() {
 
     // the conditions of the guarantee, through the plugin's own status flow
     const cfg = { chainId: CHAIN_ID, network: NETWORK, usdc: USDC, payer };
-    const s = await statusFlow({ readContract: (a) => pub.readContract(a) }, cfg, agentWallet.address, "server");
-    step("check: mm ancre payer status (as the Agent Wallet, server mode)", { balanceUsdc: s.balanceUsdc, operators: s.operators, owner: s.owner, treasury: s.treasury, guarantee: s.guarantee });
+    // the wallet mode is unknown on a fork (it is read from the real mm wallet state): reported as "unchecked"
+    const s = await statusFlow({ readContract: (a) => pub.readContract(a) }, cfg, agentWallet.address, undefined);
+    step("check: mm ancre payer status (as the Agent Wallet; server-wallet mode unchecked on a fork)", { balanceUsdc: s.balanceUsdc, operators: s.operators, owner: s.owner, treasury: s.treasury, guarantee: s.guarantee });
     const ok = s.guarantee.filter((g) => g.ok !== null).every((g) => g.ok) && s.balanceUsdc === fmtUsdc(fund);
     console.log(`\nSETUP ${ok ? "PASS" : "FAIL"}  (human ${human.address}, Agent Wallet ${agentWallet.address}, agent #${agentId}, payer ${payer})`);
     if (!ok) process.exitCode = 1;

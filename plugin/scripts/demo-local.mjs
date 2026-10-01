@@ -18,6 +18,8 @@ import { CHAIN_ID, DEV_D, DEV_F, DEV_P, NETWORK, USDC, dealUsdc, emulatedFacilit
 import { startX402Server } from "./x402-server.mjs";
 import { ancreGuard } from "../dist/lib/x402-guard.js";
 import { overrideFlow } from "../dist/lib/override.js";
+import { payerAbi } from "../dist/lib/payerAbi.js";
+import { signAsExtension } from "./local.mjs";
 import { fileJournal, readJournal } from "../dist/lib/journal.js";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -155,18 +157,17 @@ async function main() {
     // the human's MetaMask extension; in the real command the human signs on a local page in the browser)
     const humanKey = privateKeyToAccount(bytesToHex(randomBytes(32)));
     await dealUsdc(pub, humanKey.address, 50_000n);
+    // the override signer must be the payer's owner or treasury: hand the ownership to the human (D47 setup)
+    const th = await admin.writeContract({ address: payer, abi: payerAbi, functionName: "transferOwnership", args: [humanKey.address], gas: 80_000n, chain: null });
+    await pub.waitForTransactionReceipt({ hash: th });
     const jpath = join(mkdtempSync(join(tmpdir(), "ancre-demo-")), "journal.jsonl");
     const payerBefore = await bal(payer);
     const farmBefore = await bal(DEV_F);
     const ov = await overrideFlow({
       readContract: (a) => pub.readContract(a), fetch: globalThis.fetch.bind(globalThis), nowSec: () => Math.floor(Date.now() / 1000),
-      random32: () => bytesToHex(randomBytes(32)), interactive: true, agentWallet: dev.address, journal: fileJournal(jpath),
+      random32: () => bytesToHex(randomBytes(32)), interactive: true, agentWallets: [dev.address], journal: fileJournal(jpath),
       confirm: async () => true,
-      humanSign: async (req) => {
-        const message = { ...req.typedData.message, from: humanKey.address };
-        const { EIP712Domain, ...types } = req.typedData.types;
-        return { address: humanKey.address, message, signature: await humanKey.signTypedData({ ...req.typedData, types, message }) };
-      },
+      humanSign: async (req) => signAsExtension(humanKey, req),
     }, cfg, `${server.url}/farm`, {});
     scene("8. human override of the farm refusal (D47)", {
       verdictOverridden: ov.verdict, outcome: ov.outcome, paidBy: ov.human, transaction: ov.transaction,

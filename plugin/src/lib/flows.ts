@@ -122,7 +122,10 @@ export type InspectResult = {
   wouldSign: { primaryType: "AncrePayment"; domain: string; to: string; value: string; agentId: string };
 } & Verdict;
 
-export async function challenge(d: Pick<Deps, "readContract" | "fetch" | "signal">, cfg: Config, url: string, agentIdFlag: string | undefined, maxAmount: bigint | undefined): Promise<Challenge> {
+export async function challenge(
+  d: Pick<Deps, "readContract" | "fetch" | "signal">, cfg: Config, url: string, agentIdFlag: string | undefined, maxAmount: bigint | undefined,
+  payerCap = true, // false for the human override: the payer's maxPerPayment does not bind the human's own wallet
+): Promise<Challenge> {
   let res: Response;
   try {
     res = await d.fetch(url, { method: "GET", signal: d.signal });
@@ -130,7 +133,7 @@ export async function challenge(d: Pick<Deps, "readContract" | "fetch" | "signal
     throw new FlowError("ANCRE_HTTP_ERROR", `GET ${url} failed: ${(e as Error).message}`, "Check the URL");
   }
   const pr = parsePaymentRequired(res.status, res.headers, await res.text());
-  const maxPerPayment = await read<bigint>(d, cfg.payer, payerAbi, "maxPerPayment");
+  const maxPerPayment = payerCap ? await read<bigint>(d, cfg.payer, payerAbi, "maxPerPayment") : undefined;
   const offer = selectOffer(pr, { network: cfg.network, usdc: cfg.usdc, maxAmount, maxPerPayment });
   return { url, pr, offer, agentId: resolveAgentId(agentIdFlag, offer) };
 }
@@ -202,6 +205,7 @@ export async function payFlow(
     return { ...ins, outcome: "NOT_SIGNED", paid: false, signed: false, humanOverride: HUMAN_OVERRIDE_NOTE };
   }
   if (!ins.balanceOk) {
+    j("refusal", { detail: "payer unfunded" });
     throw new FlowError("ANCRE_PAYER_UNFUNDED", `Payer balance ${ins.payerBalanceUsdc} USDC < ${ins.offer.amountUsdc}`, "Ask the human to run `mm ancre payer fund <amount> --confirm`");
   }
 

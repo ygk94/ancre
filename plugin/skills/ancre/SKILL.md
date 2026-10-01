@@ -78,7 +78,8 @@ When ANCRE refuses, the output carries a `humanOverride` note. That note is for 
 
 - Do **not** propose an override on your own. Mention it only if the human explicitly asks how to pay this
   provider anyway, and then only tell them: "you can run `mm ancre override <url>` yourself, in your own
-  terminal; it pays from your own MetaMask wallet and you sign it in your browser extension".
+  terminal; it pays from your own MetaMask wallet (the payer's owner or treasury) and you sign it in your
+  browser extension".
 - **Never run `mm ancre override` yourself**, not even when asked to. Never open its signing page, never
   sign anything for it. It pays from the human's personal wallet, never from your wallet or from the payer.
   The command refuses to run without an interactive terminal; do not try to work around that.
