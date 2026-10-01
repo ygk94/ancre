@@ -1,774 +1,662 @@
 ---
 eip: TBD
 title: Anchored Reputation for Trustless Agents
-description: Reader-anchored, certified, Sybil-bounded aggregation of ERC-8004 feedback that contracts can read before they pay
+description: Reader-anchored, Sybil-bounded aggregation of ERC-8004 feedback, certified on-chain and readable by a contract before it pays
 author: TBD
-discussions-to: https://ethereum-magicians.org/t/erc-8004-trustless-agents/25098
+discussions-to: TBD
 status: Draft
 type: Standards Track
 category: ERC
-created: 2026-09-27
-requires: 165, 721, 8004
+created: 2026-10-01
+requires: 721, 8004
 ---
 
-⟦Texte R6 du 2026-09-27, réécrit à partir du draft du 2026-09-21 selon le CR du conseil (tours 1 à 3, décisions D1 à D19). Les notes en français entre ⟦ ⟧ sont internes et DOIVENT être retirées avant soumission. ⟦OPEN⟧ marque un désaccord non résolu du CR : le texte donne la position retenue par la synthèse du conseil, sans trancher le désaccord. Avant soumission : remplir `author` (au moins un auteur avec pseudo GitHub), ouvrir un fil dédié sur ethereum-magicians et y pointer `discussions-to` (le fil #25098 est celui d'ERC-8004), retirer les liens externes non autorisés par EIP-1, vérifier que `description` fait ≤ 140 caractères (actuellement 114).⟧
+⟦Texte du chantier 08, 2026-10-01, réécrit à partir du draft R6 (27/09) pour l'aligner sur les décisions D20 à D46 du CR et sur l'implémentation v1 (`contracts/ENCODING.md` unifié du 01/10, `solver/FORMAT.md`, `contracts/PROOFS.md`). Les notes en français entre ⟦ ⟧ sont internes et DOIVENT être retirées avant soumission. ⟦OPEN⟧ marque un point que le CR n'a pas tranché. La correspondance ancien texte → nouveau texte est dans `docs/erc/CHANGES.md` (section 08). Avant soumission : `author` (🧑 Hugo), `discussions-to` (fil dédié à ouvrir, voir `drafts/`), numéro attribué par les éditeurs.⟧
 
 ## Abstract
 
-[ERC-8004](./eip-8004.md) records feedback about agents but leaves aggregation and Sybil filtering to readers: `getSummary` requires a caller-supplied list of clients, and its Security Considerations state that Sybil attacks are possible. This ERC standardizes that missing layer.
+[ERC-8004](./eip-8004.md) records feedback about agents but leaves aggregation and Sybil filtering to readers: `getSummary` requires a caller-supplied list of clients, and the ERC states that Sybil attacks are possible. This ERC standardizes that missing layer.
 
-An **anchor set** is an immutable, content-addressed description of *whom the reader trusts to start with* (anchors and their weights), *how feedback is read* (a tag schema with declared scales and kinds), and *how results are used* (a policy). For each anchor set, a **certificate** publishes, per anchor, a personalized-PageRank trust vector over the ERC-8004 feedback graph, expressed as a share of a unit mass, together with a one-hop distrust vector and a global error bound. The error bound is verified on-chain in a single pass over the committed graph. It can only **grow** when anyone proves a discrepancy between the committed graph and the registry; there is no bond and no slashing.
+An **anchor set** is an immutable, content-addressed description of *whom the reader trusts to start with* (anchors and their weights), *how feedback becomes edges* (a tag schema with declared scales and kinds), and *when an agent may be paid* (a policy). For each anchor set, a **certificate** publishes, per anchor, a personalized-PageRank trust column over the ERC-8004 feedback graph and a one-hop distrust vector. The aggregator contract accepts a certificate only if every submitted trust value is a **sub-solution** of the committed graph (`t ≤ F(t)` coordinate by coordinate), which makes it an exact per-agent **lower bound** of the true trust as long as the committed graph is dominated by the registry. At the `RegistryVerified` level, the contract re-reads every committed edge in the registry at submission, so fabricated or inflated edges are refused. Edges that are omitted, diluted or changed after submission can be proven by anyone. A proof only widens the certificate's bounds. It never moves funds.
 
-Contracts read the result synchronously through `trustOf` and `assess`. These functions never revert: they return a status (`OK`, `STALE`, `TRANSFERRED`, `VETOED`, `REGISTRY_CHANGED`, …), a leave-one-anchor-out robust trust value, the distrust value, the error bound and the certificate block. Anchors can veto an agent directly, with immediate effect, by posting negative feedback in the registry.
+Contracts read the result synchronously. `isTrusted(agentId, setId)` applies the policy committed in the set: leave-one-anchor-out trust, distrust ratio, live anchor veto, freshness and transfer. It never reverts. Anchors veto an agent with immediate effect by posting negative feedback in the registry.
 
 ## Motivation
 
-- **Aggregation is required by ERC-8004 but unspecified.** ERC-8004 states that "more complex reputation aggregation will happen off-chain" and that "we expect many players to build reputation systems". At least eight independent aggregators existed as of 2026-09-21, each with its own interface. No contract can consume reputation without trusting one vendor's API.
+- **Aggregation is required by ERC-8004 but unspecified.** ERC-8004 expects "many players to build reputation systems" and leaves Sybil filtering to the reader, but defines no interface for the result. As of 2026-09-21, at least eight independent aggregators existed, each with its own API. A contract cannot consume reputation without trusting one vendor's off-chain service.
 
-- **Raw feedback is not comparable.** On one production deployment of ERC-8004 v2.0.0 (EIP-155 chain ID 143), a single registry mixed 0–100 ratings, Elo ratings around 1,600, ±1 votes, and 117 values of `1e38`. The naive mean for the most-rated agent was about 1.5 × 10³⁶. *(Measured 2026-09-21; re-measured identical on 2026-09-27.)* Without a declared scale per tag, every average is meaningless.
+- **Raw feedback is not comparable.** On Monad mainnet (chain ID 143), which runs ERC-8004 v2.0.0, one registry mixed 0–100 ratings, Elo ratings around 1,600, ±1 votes and 117 values of `1e38`. The naive mean of the most-rated agent was about 1.5 × 10³⁶ *(measured 2026-09-21, unchanged on 2026-09-27)*. Without a declared scale per tag, every average is meaningless.
 
-- **Sybil farms dominate unfiltered data.** On the same deployment, 7,665 of 9,188 feedback entries (83 %) came from agents registered within about 48 hours, all rating one agent at the maximum. *(Measured 2026-09-21.)* An external study reports coordinated Sybil behaviour among 59–91 % of raters on three other chains. *(Reported by the study, not re-verified by the authors of this ERC.)*
+- **Sybil farms dominate unfiltered data.** On the same deployment, 7,665 of 9,188 feedback entries (83 %) came from agents registered within about 48 hours, all rating one agent at the maximum *(measured 2026-09-21; 82.6 % of 9,283 on 2026-09-27, after 95 entries posted by one automated relayer)*.
 
-- **Payment is not a defence.** The farm above paid for its interactions, and the raters were funded by the rated agent's owner. An independent analysis of the same data found 16 feedback entries out of 9,188 with clean payment provenance. *(Reported 2026-09-21 by a third-party project, not re-verified.)*
+- **Payment is not a defence.** The farm above paid for its interactions, and the raters were funded by the rated agent's owner. A third-party analysis of the same data found 16 entries out of 9,188 with clean payment provenance *(reported 2026-09-21, not re-verified)*. Another third-party service reports that 73 of 85 payment claims in ERC-8004 evidence documents on that chain cite a transaction absent from the chain they name *(self-reported, read 2026-09-28)*. A receipt, true or false, says nothing about whether the payer is independent of the payee.
 
-- **The registry's own guard is bypassed in practice.** `giveFeedback` rejects the owner and operators of an agent, but not its `agentWallet`. On the same deployment, one agent received 78 feedback entries from its own `agentWallet`; `agentWallet` is not unique (178 wallets are shared by 1,773 agents, up to 762 agents per wallet); and after each of the 72 historical transfers, the wallet was cleared while the former owner regained the right to rate the agent. *(Measured and verified against the deployed source on 2026-09-27.)*
+- **The registry's own guard is bypassed in practice.** `giveFeedback` rejects the owner and operators of an agent, but not its `agentWallet`. On the same deployment, one agent received 78 entries from its own `agentWallet`, 178 wallets are each the `agentWallet` of several agents (1,773 agents in total, up to 762 per wallet), and the wallet was cleared at each of the 72 historical transfers *(measured and checked against the deployed source, 2026-09-27)*.
 
-- **Measurement tags create attack edges.** A monitoring service that pings every endpoint and posts "liveness" or "trust" feedback effectively endorses whatever it pings. On the same deployment, such a scanner rated farm agents, which in turn rated the farm's target. Taking that scanner as a trusted source leaks trust into the farm. *(Measured 2026-09-27.)*
+- **Measurement tags create attack edges.** A monitoring service that pings endpoints and posts `liveness` or `trust` feedback endorses whatever it pings. On the same deployment, such a scanner rated farm agents, which rated the farm's target. With the scanner as the only trusted source, 34.6 % of its trust mass reached the farm *(measured 2026-09-27, reference solver)*.
 
-- **A single global score is undesirable.** Contributors to the ERC-8004 discussion called a single aggregated score dangerous, and one post in that thread asked for reputation *relative to reader-chosen anchors* (personalized PageRank / EigenTrust pre-trusted peers). No specification provides it.
+- **A single global score is undesirable.** Contributors to the ERC-8004 discussion called a single aggregated score dangerous, and one post in that thread asked for reputation *relative to reader-chosen anchors* (personalized PageRank, EigenTrust pre-trusted peers). No specification provides it.
 
-- **Contracts need to act on trust, not just display it.** Payment routers, escrow and access control need a synchronous answer with a bounded error, a freshness indicator, and a fail-closed behaviour.
+- **Contracts need to act on trust, not just display it.** Payment routers, escrow and access control need a synchronous answer, a freshness indicator, and fail-closed behaviour, computed on-chain and not served by an API.
 
-- **The real graph is thin, and that is the point.** On the deployment above, 84 agents had received feedback (10 of them absent from the most-used public indexer), no feedback had been posted since 2026-09-10, and only 3 edges survived a minimal endorsement schema. *(Measured 2026-09-27.)* An aggregator conforming to this ERC reports the farm's target at zero trust and almost every other agent as unknown. That is the correct answer, and a reader-anchored aggregator is the tool that lets it be stated verifiably.
+- **The real graph is thin, and that is the point.** On the deployment above, 84 agents had received feedback *(snapshot of 2026-09-21)*. Under the edge rules of this ERC and a minimal endorsement schema, a single honest endorsement chain remains: one client endorses three agents through the wallet it shares with them. An aggregator conforming to this ERC gives the farm's target zero trust, and almost every other agent is unknown *(measured 2026-10-01, reference implementation)*. That is the correct answer, and a reader-anchored certificate states it verifiably.
 
-⟦Toutes ces mesures concernent Monad mainnet (143), registres `0x8004A169…a432` / `0x8004BAa1…9b63`. Le nom de la chaîne reste hors du texte (norme chain-agnostique, décision CLAUDE.md §5). Sources : snapshot 8004scan du 21/09 + relecture on-chain du 27/09 au bloc ≈ 108,43 M (CR tour 3, « Faits vérifiés »). L'étude externe est arXiv 2606.26028 (73,5 % / 59,2 % / 90,6 %) : EIP-1 interdit le lien arXiv, citer par DOI si elle en a un. L'analyse de provenance est celle de ColinkaMir/monad-agent-trust. Le post est le #309 du fil #25098 (2026-07-23). Vérifier avant publication qui détient le scanner `0xa06f907f` (question 1 du tour 3) et trancher la divulgation responsable pour #8317 (question 5 du tour 3) : le texte public ne nomme ni l'un ni l'autre.⟧
+⟦Sources : CR tour 3 « Faits vérifiés » (bloc ≈ 108,43 M), AM-6.11 (9 283 avis, relayer `0x10304054`), R4 (34,6 %), résultats du chantier 04 (chaîne honnête rétablie par D20, Eve à 0), tour 6 (Kanmani, auto-déclaré, 28/09). « Huit agrégateurs » : fiche projet du vault, 21/09, NON REVÉRIFIÉ depuis. Les tiers (ColinkaMir, Kanmani) ne sont pas nommés dans le texte, conformément à D29 (« ne jamais présenter un tiers comme attaquant ») et à la consigne de C au tour 6 (« jamais de positionnement contre un concurrent dans l'ERC ») : ils sont nommés en Rationale, comme exemples d'`edgeFilterId` (D46). L'étude arXiv « 59-91 % » du draft R6 est retirée : EIP-1 n'autorise pas ce lien et le chiffre n'était pas revérifié. Le scanner n'est pas nommé (AM-5.2 : service automatique, pas complice).⟧
 
 ## Specification
 
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in RFC 2119 and RFC 8174.
 
-### 1. Conventions and definitions
+### 1. Conventions
 
-- `WAD = 10**18`. All trust, distrust, residual and error values are unsigned integers in WAD. Division is integer division; the rounding direction is stated at every step.
-- `GRID = 10**4`. Edge weights are quantized on a grid of `1/GRID` (§3.4).
-- **Registries**: an ERC-8004 Identity Registry and the Reputation Registry bound to it, on the chain where the aggregator is deployed. An aggregator conforming to this ERC MUST be deployed on the same chain as the registries it reads.
-- **Feedback**: a tuple `(agentId, client, feedbackIndex, value, valueDecimals, tag1, tag2, isRevoked)` as returned by `readFeedback`. `feedbackIndex` starts at 1 and is ordered per `(agentId, client)` pair across all tags. `tag2` is ignored by this ERC.
-- **Certificate block** (`certBlock`): the block number at which a certificate was accepted on-chain. All ages and delays in this ERC are counted in blocks, never in seconds.
-- **Controllers of an agent `j`**: `ownerOf(j)`, `getAgentWallet(j)`, `getApproved(j)`, and every address `o` with `isApprovedForAll(ownerOf(j), o)`.
-- **Former owners of `j`**: every address that has been `ownerOf(j)` before the current owner, as recorded by ERC-721 `Transfer` events.
+- `WAD = 10**18`. Trust, distrust, mass and bound values are unsigned integers in WAD. All divisions are integer divisions, and the rounding direction is stated at each step: ⌊x⌋ rounds down, ⌈x⌉ rounds up.
+- `GRID = 10_000`. Edge weights are integers in `[−GRID, GRID]` (a grid of 10⁻⁴).
+- All byte strings are big-endian.
+- **Registries.** An aggregator is bound, for its whole life, to one ERC-8004 Identity Registry and the Reputation Registry linked to it, on the chain where the aggregator is deployed. It MUST NOT read registries on another chain.
+- **Feedback.** A tuple `(agentId, client, feedbackIndex, value, valueDecimals, tag1, tag2, isRevoked)` as returned by `readFeedback(agentId, client, feedbackIndex)`. `feedbackIndex` starts at 1 and is ordered per `(agentId, client)` pair, across all tags. `getLastIndex(agentId, client)` returns the highest index. `tag2` is ignored by this ERC.
+- **Controllers of an agent `j`.** `ownerOf(j)`, `getAgentWallet(j)`, `getApproved(j)`, and every address `o` with `isApprovedForAll(ownerOf(j), o)`, all read at the time of the check. Former owners are not controllers.
+- **Blocks.** All ages and delays are counted in blocks (`block.number`), never in seconds.
 
-#### 1.1 Nodes
+### 2. Anchor sets
 
-The graph has three kinds of nodes. Each has a 32-byte `nodeKey`:
-
-| Kind | Identifier | `nodeKey` |
-|---|---|---|
-| `AGENT` (1) | `agentId` | `keccak256(abi.encode(uint8(1), agentId))` |
-| `ADDRESS` (2) | `address` | `keccak256(abi.encode(uint8(2), addr))` |
-| `ANCHOR` (3) | `anchorId` (§2) | `keccak256(abi.encode(uint8(3), anchorId))` |
-
-Only `AGENT` nodes receive edges. `ADDRESS` nodes never receive edges or anchor mass, so their trust is identically zero; they exist so that ambiguous senders are never merged into an agent (§3.2). Implementations MAY omit `ADDRESS` nodes from certificates. An `ANCHOR` node is always distinct from every `AGENT` node, even when the anchor's key is also an agent's wallet.
-
-### 2. Anchors
-
-An anchor is identified by a self-certifying `anchorId` with key pre-rotation, so that an anchor set can stay immutable while the anchor rotates its signing key.
-
-- **Inception.** The anchor's first key `key0` chooses a secret `salt1` and a next key `key1`, and publishes `nextKeyDigest1 = keccak256(abi.encode(key1, salt1))`. Then `anchorId = keccak256(abi.encode(key0, nextKeyDigest1))`.
-- **Rotation.** To rotate from key `n` to key `n+1`, key `n+1` itself calls `rotate`, revealing `salt(n+1)` and committing `nextKeyDigest(n+2)`. The call MUST succeed only if `keccak256(abi.encode(msg.sender, salt)) == nextKeyDigest(n+1)`. A stolen current key therefore cannot rotate the anchor. A `nextKeyDigest` of zero makes the current key final.
-- **Current key.** Only feedback posted by the anchor's **current key** counts, both in the graph and in vetoes. After a rotation, the anchor re-posts whatever feedback it wants to keep. Feedback posted by a former key MUST be ignored.
+#### 2.1 Parameters and identifier
 
 ```solidity
-interface IAnchorKeyRegistry {
-    event AnchorIncepted(bytes32 indexed anchorId, address indexed key, bytes32 nextKeyDigest);
-    event AnchorKeyRotated(bytes32 indexed anchorId, address indexed newKey, uint64 sequence, bytes32 nextKeyDigest);
-
-    /// key0 = msg.sender; anchorId = keccak256(abi.encode(msg.sender, nextKeyDigest)).
-    /// MUST revert if anchorId already exists.
-    function incept(bytes32 nextKeyDigest) external returns (bytes32 anchorId);
-
-    /// msg.sender is the new key. MUST revert unless
-    /// keccak256(abi.encode(msg.sender, salt)) == the committed nextKeyDigest (which MUST be non-zero).
-    function rotate(bytes32 anchorId, bytes32 salt, bytes32 newNextKeyDigest) external;
-
-    /// MUST NOT revert; returns (address(0), 0) for an unknown anchorId.
-    function currentKey(bytes32 anchorId) external view returns (address key, uint64 sequence);
+struct TagSpec {
+    string tag;     // ERC-8004 tag1, any non-empty length
+    int128 min;     // bounds in WAD: a value v with d decimals is compared as v · 10^(18 − d)
+    int128 neutral;
+    int128 max;
+    uint8  kind;    // 0 = endorsement, 1 = measurement
 }
-```
-
-The anchor key registry is identified by its address inside each anchor set (§5). The key is an address because ERC-8004 feedback is attributed to `msg.sender`.
-
-⟦D9, tour 2 Q2. Motif KERI. La démo du 13/10 n'implémente pas la pré-rotation (adresses fixes étiquetées « demo », découpage AM-2.13) : l'implémentation de référence ne sera pas conforme sur ce point à la soumission.⟧
-
-### 3. Graph construction
-
-For an anchor set `S` (§5) with schema `schema(S)`, the trust graph is built from the registries' state as follows. Certifiers compute it off-chain from registry events. The rules are normative, because two conforming certifiers MUST produce the same graph from the same state.
-
-#### 3.1 Tag schema
-
-```solidity
-enum TagKind { Endorsement, Measurement }
-
-struct TagSchema {
-    string  tag;      // exact ERC-8004 tag1 (MAY be the empty string)
-    TagKind kind;
-    int256  min;      // lowest valid value, scaled to WAD (18 decimals)
-    int256  neutral;  // value that carries no opinion, scaled to WAD
-    int256  max;      // highest valid value, scaled to WAD
-}
-```
-
-- A schema is an array of `TagSchema` sorted by `keccak256(bytes(tag))` in strictly ascending order. `schemaHash = keccak256(abi.encode(schema))`.
-- Each entry MUST satisfy `min ≤ neutral ≤ max` and `min < max`.
-- The schema MUST contain at most `TAGS_MAX = 8` entries of kind `Endorsement`.
-- **Only `Endorsement` tags create edges.** Feedback with a `Measurement` tag MUST NOT create edges and MUST NOT propagate trust or distrust. A consumer MAY use measurement feedback in its own policy (for example, to refuse an agent whose reported uptime is below a threshold), outside the quantities defined by this ERC.
-- Feedback whose `tag1` is not in the schema MUST be ignored.
-- There is no global schema registry. The schema is committed per anchor set, and anyone MAY publish a reference schema for others to adopt.
-
-⟦D12, D15. `higherIsBetter` du draft du 21/09 est supprimé : le couple min/neutral/max le remplace (un tag où « plus bas est mieux » se déclare avec neutral = max). Le `ITagSchemaRegistry` global est supprimé (D12 : pas d'autorité).⟧
-
-#### 3.2 Sender resolution
-
-For an anchor set `S`, the sender node of a feedback posted by address `c` is:
-
-1. the `ANCHOR` node of `a`, if `c` is the current key (§2) of an anchor `a` of `S`; otherwise
-2. the `AGENT` node `i`, if `i` is the **unique** agent with `getAgentWallet(i) == c`; otherwise
-3. the `ADDRESS` node of `c`, when no agent or several agents have `agentWallet == c`.
-
-Rule 1 takes precedence: feedback from an anchor's current key is attributed to the anchor node only, never also to an agent node. The ERC-721 owner of an agent is not a sender for that agent unless it is also its `agentWallet`. This follows ERC-8004's recommendation that agents acting as clients use their `agentWallet`. Senders MUST NOT be merged across agents.
-
-⟦D16, D9, relecture D→A du tour 3 (« à écrire explicitement »). La précédence exclusive de la règle 1 est un choix R6 : le CR dit « nœud-ancre distinct » sans dire si l'avis est aussi attribué à l'agent. Le solveur R4 (solver/graph.py) l'attribue AUX DEUX nœuds : voir AM-R6.14. Pas d'index inverse wallet → agent on-chain (AM-3.4) : l'unicité est établie hors chaîne par l'indexeur à partir de `MetadataSet(agentWallet)`, `Transfer` et `Registered`.⟧
-
-#### 3.3 Edge rejection
-
-A feedback from `c` about agent `j` MUST be discarded if any of these holds:
-
-- `c` is a controller of `j` (§1);
-- `c` is a former owner of `j`;
-- the sender node of `c` is the `AGENT` node of `j` (self-edge).
-
-#### 3.4 Normalization and quantization
-
-Let a feedback have `value` (int128) and `valueDecimals` `d` (0 ≤ `d` ≤ 18), and let `s` be the schema entry for its `tag1`.
-
-1. `V = value · 10^(18 − d)`. This conversion is exact.
-2. If `V < s.min` or `V > s.max`, the feedback is **invalid** and MUST be discarded. Aggregators MUST NOT clamp out-of-range values.
-3. The quantized weight `q ∈ [−GRID, GRID]` is computed with truncation toward zero:
-   - if `V ≥ s.neutral`: `q = (s.max == s.neutral) ? 0 : ((V − s.neutral) · GRID) / (s.max − s.neutral)`;
-   - otherwise: `q = −(((s.neutral − V) · GRID) / (s.neutral − s.min))`.
-
-The quantized weight is normative. It defines the graph and is not an approximation covered by the error bound. The weight in WAD is `q · 10^14`.
-
-⟦D18 + tour 2 Q5. La règle du tour 2 « troncature vers zéro de value/10^dec → WAD » n'a plus d'objet : d ≤ 18 (VÉRIFIÉ) rend la conversion exacte ; la seule troncature est celle de q (AM-R6.6). |V| ≤ 1e56 et |V − neutral|·GRID ≤ ~2e60 tiennent dans un int256.⟧
-
-#### 3.5 Edge unit and combination
-
-For each triple `(c, j, τ)`, with `c` a client, `j` an agent and `τ` an `Endorsement` tag of the schema, the **current feedback** is the one with the highest `feedbackIndex` among the feedback from `c` about `j` with `tag1 == τ` that is **not revoked and valid** (§3.4). If there is none, the triple contributes nothing. An invalid or revoked feedback never supersedes an earlier valid one. Revoking the latest feedback therefore restores the previous valid one.
-
-The pair `(c, j)` then receives one combined weight, from the current feedback of each tag (**negative dominance**):
-
-- if at least one per-tag `q` is negative, `w(c, j)` is the most negative `q`;
-- otherwise, `w(c, j)` is the largest `q`.
-
-Ties are broken by the smallest `tag1` in byte order. The tie-break selects which feedback is recorded (§6.1); the weight is the same either way. A combined weight of zero creates no edge.
-
-The edge `u → j` then has weight `w(c, j)`, where `u` is the sender node of `c` (§3.2) and the feedback passed §3.3. Since each node has exactly one sender address, each pair `(u, j)` has at most one edge.
-
-⟦D14. « Dernier avis non révoqué » lu littéralement : le dernier parmi les non révoqués ET valides. C'est aussi le mode par défaut du solveur (`selection="latest_valid"`). L'autre lecture possible (« le dernier avis, s'il n'est pas révoqué ») est notée AM-R6.21. Le tie-break est un choix R6 ; le solveur départage par `max((q, tag1))` côté positif, donc par le plus grand tag (AM-R6.24).⟧
-
-#### 3.6 Weight matrices (separate budgets)
-
-For each node `u` with out-edges:
-
-```
-S⁺_u = Σ_j max(w_uj, 0)        B⁺_u = max(GRID, S⁺_u)        C_uj = max(w_uj, 0) / B⁺_u
-S⁻_u = Σ_j max(−w_uj, 0)       B⁻_u = max(GRID, S⁻_u)        D_uj = max(−w_uj, 0) / B⁻_u
-```
-
-Every row of `C` and every row of `D` sums to at most 1. Endorsement and distrust use **separate budgets**: criticizing an agent costs a node none of its endorsement capacity.
-
-#### 3.7 Edge filters (extension point)
-
-An anchor set MAY commit a non-zero `edgeFilterId`. Its semantics are defined by a separate specification. An edge filter MUST only remove edges; it MUST NOT add edges or increase weights. Payment provenance MUST NOT be a weight or a condition in the core algorithm; it MAY be an edge filter. When `edgeFilterId ≠ 0` and the filter has no on-chain predicate, disputes of kind `OMISSION` (§7) cannot be checked, and the set MUST NOT be certified at level `RegistryContested`.
-
-⟦D3. Le signal de provenance de paiement (ColinkaMir) est le premier filtre d'extension envisagé.⟧
-
-### 4. Algorithm `PPR-v1`
-
-Let `α = alphaNum / alphaDen` with `0 < alphaNum < alphaDen`, committed in the anchor set. For each anchor `a` of the set (a *column*), let `p^(a)` be the unit vector on the `ANCHOR` node of `a`. The trust column `t^(a)` is the unique fixed point of
-
-```
-F^(a)(t) = (1 − α) · Cᵀ t + α · p^(a)
-```
-
-**Absorbing convention.** Mass that a node does not pass on (a row of `C` summing to less than 1, or no out-edge) is lost. It is **not** redistributed to `p`. Hence `Σ_i t^(a)_i ≤ 1` (in WAD, `≤ WAD`), each entry fits in 64 bits, and the map `p ↦ t` is exactly linear.
-
-**Trust as a share of mass.** `t^(a)_i` is the share of anchor `a`'s unit mass that reaches node `i`. It is exposed as is, in WAD. It is not multiplied by the number of nodes or by any other quantity chosen by the certifier.
-
-**Distrust (one hop).** `d^(a)_j = (1 − α) · Σ_u t^(a)_u · D_uj`. Distrust does not propagate further, and it does not feed back into trust.
-
-**Anchor-set values.** With anchor weights `λ_a` (in WAD, summing to `WAD`):
-
-```
-contribution_a(i) = λ_a · t^(a)_i / WAD
-trust(i)          = Σ_a contribution_a(i)
-trustRobust(i)    = trust(i) − (sum of the (m − 1) largest contribution_a(i))     // m = minAnchors; 0 if k < m
-distrust(i)       = Σ_a λ_a · d^(a)_i / WAD
-```
-
-`trustRobust` is the trust that no set of `m − 1` anchors can produce alone. Distrust is **not** leave-one-out, because it only ever pushes toward refusal.
-
-**Error bound.** `F^(a)` is a contraction of factor `(1 − α)` in L1. For any submitted column `t`, if `r_a ≥ ‖t − F^(a)(t)‖₁`, then `‖t − t*^(a)‖₁ ≤ r_a / α`. The per-column bound is `e_a = ⌈r_a · alphaDen / alphaNum⌉`, and the set-level bound is
-
-```
-eEff = Σ_a ⌈λ_a · e_a / WAD⌉
-```
-
-`eEff` bounds the error of `trust`, `trustRobust` and `distrust` for every agent simultaneously (§ Rationale). It is a single global bound: widening it affects every agent of the set by the same amount.
-
-⟦OPEN — désaccord 5 du tour 2 (borne globale) : A et E constatent qu'un élargissement touche tout le monde ; une borne par coordonnée n'a pas été trouvée en une passe. Le texte garde la borne globale.⟧
-
-⟦D1 (part de masse WAD, plus de `score = t·N` ni de `errorBound = (r/α)·N`, AM-1.1), D5 (convention absorbante : le draft du 21/09 renvoyait la masse sans issue vers p, AM-1.2), D4 (méfiance à un saut ; la formule d = (1−α)Dᵀt est implicite dans l'analyse de A au tour 2 et explicite dans solver/ppr.py), D7, D8.⟧
-
-### 5. Anchor sets
-
-```solidity
-enum Level { None, Optimistic, ResidualVerified, RegistryContested }
 
 struct Policy {
-    uint8   minAnchors;          // m ≥ 1; RECOMMENDED default 2 (see Security Considerations)
-    uint8   vetoQuorum;          // q ≥ 1; RECOMMENDED default 1
-    uint64  threshold;           // θ, WAD
-    uint64  rhoNum;              // distrust ratio ρ = rhoNum / rhoDen; RECOMMENDED 1/2
-    uint64  rhoDen;
-    uint64  maxAge;              // blocks after which a certificate is STALE
-    uint64  minRefresh;          // blocks, see §6.3
-    uint64  slackRefresh;        // WAD, see §6.3
-    uint16  rowMax;              // maximum out-edges per committed row; RECOMMENDED 256
-    Level   minLevel;            // lowest certificate level accepted for this set
-    address optimisticCertifier; // sole certifier allowed at level Optimistic; address(0) disables Optimistic
+    uint64    theta;            // WAD, > 0
+    uint32    rhoN;             // distrust ratio ρ = rhoN / rhoD, both > 0
+    uint32    rhoD;
+    uint8     minAnchors;       // m, 1 ≤ m ≤ k
+    uint8     vetoQuorum;       // q, 1 ≤ q ≤ k
+    int16     vetoMax;          // in [−GRID, −1]
+    uint64    maxAge;           // blocks, > 0
+    uint64    minRefresh;       // blocks
+    uint64    slackRefresh;     // WAD
+    uint64    eLowMax;          // WAD
+    bool      strictTransfer;
+    bool      registryVerified;
+    bool      ownerFallback;
+    address[] submitters;       // ≤ SUBMITTERS_MAX = 8, strictly increasing, non-zero
 }
 
-struct AnchorSet {
-    address   identityRegistry;
-    address   reputationRegistry;
-    address   anchorKeyRegistry;
-    bytes32[] anchorIds;         // strictly ascending, 1 ≤ k ≤ K_MAX = 16
-    uint64[]  weights;           // λ_a in WAD, each > 0, Σ = WAD
-    uint64    alphaNum;          // α = alphaNum / alphaDen, 0 < alphaNum < alphaDen
-    uint64    alphaDen;
-    bytes32   schemaHash;        // §3.1
-    bytes32   edgeFilterId;      // §3.7; bytes32(0) = none
+struct SetParams {
+    address[] anchors;          // 1 ≤ k ≤ K_MAX = 16, strictly increasing, non-zero
+    uint64[]  lambdas;          // λ_a in WAD, each > 0, Σ λ_a = WAD exactly
+    uint32    alphaN;           // α = alphaN / alphaD, 0 < alphaN < alphaD
+    uint32    alphaD;
+    bytes32   tagSchemaHash;    // keccak256 of the schema document (§2.4)
+    TagSpec[] tags;             // 1 ≤ length ≤ TAGS_MAX = 16, strictly increasing by keccak256(bytes(tag))
     Policy    policy;
-    string    metadataURI;       // human-readable name, author, rationale for the anchors
 }
 ```
 
-- `setId = keccak256(abi.encode(block.chainid, set))`. An anchor set is **immutable**. Changing any field (an anchor, a weight, `α`, the schema, the filter, the policy, the registries, the metadata) yields a new `setId`.
-- Registration is permissionless. The full schema MUST be supplied at registration, and its hash MUST equal `schemaHash`.
-- The anchors are named by `anchorId`, not by address, so keys can rotate without a new set.
-- This ERC defines **no default anchor set**. Sets published for demonstration SHOULD say so in `metadataURI`.
-- An implementation MAY restrict the values of `α` it accepts. A set whose `α` is not accepted MUST be rejected at registration.
-
-⟦D1 (politique engagée dans le setId), D2 (α = 1/3 pour ANCRE), D12, D13. Le CR se contredit sur α (« unique par déploiement » en D2, « la norme autorise α par certificat » au tour 2 Q4, « engagé dans le setId » dans la consigne R6) : le texte l'engage dans le setId et laisse un déploiement le restreindre (AM-R6.7).⟧
-
-⟦OPEN — désaccord 6 du tour 2 (α) : aucune donnée ; R4 le mesure sur des graphes synthétiques à vérité connue (D19). α n'est pas fixé par la norme.⟧
-
-### 6. Certificates
-
-#### 6.1 Commitments
-
-```solidity
-struct Certificate {
-    bytes32   setId;
-    Level     level;
-    address   certifier;
-    uint64    certBlock;              // block.number at acceptance
-    uint64    snapshotBlock;          // block at which the certifier read the registries (informative, ≤ certBlock)
-    bytes32   identityVersionHash;    // §8
-    bytes32   reputationVersionHash;  // §8
-    bytes32   graphRoot;              // Merkle root of row leaves
-    bytes32   vectorRoot;             // Merkle root of vector leaves
-    uint256[] residual;               // r_a per column, WAD, including rounding, truncation and widening
-    uint256   errorBound;             // eEff, WAD
-}
+```
+setId = keccak256(abi.encode(anchors, lambdas, alphaN, alphaD, tagSchemaHash, tags, policy))
 ```
 
-**Row leaf.** For every node `u` whose trust is non-zero in at least one column:
+- An anchor set is **immutable**. Changing any parameter (an anchor, a weight, `α`, a tag bound, the policy, the schema document) yields a new `setId`.
+- Registration is permissionless. The aggregator MUST revert registration if any constraint stated in the comments above, in §2.2 or in §3.1 is violated, or if the `setId` is already registered.
+- `α` is a parameter of the set. The RECOMMENDED value is `1/3`.
+- A set is identified globally by `(chainId, aggregator address, setId)`. The aggregator address binds the registries (§1). The `setId` alone does not.
+- This ERC defines **no default anchor set**.
 
-```solidity
-struct RowEntry {
-    bytes32 dst;            // nodeKey of the destination AGENT node
-    bytes32 tagHash;        // keccak256(bytes(tag1)) of the feedback selected by §3.5
-    uint64  feedbackIndex;  // index of that feedback
-    uint64  lastIndex;      // getLastIndex(agentId(dst), sender) at snapshotBlock
-    int16   q;              // combined weight w(sender, dst), non-zero
-}
-// entries strictly ascending by dst; at most policy.rowMax entries
-rowLeaf = keccak256(abi.encode(nodeKey, truncated, sender, bPlus, bMinus, entries));
-```
+⟦D1, D24, D39. Le préimage est celui de l'implémentation v1 (`computeSetId`, ENCODING §1), pas celui du draft R6 (`chainId`, registres, `metadataURI`, `edgeFilterId`, `anchorKeyRegistry`) : AM-08.1. α par ensemble : D24, ce qui ferme le désaccord 6 du tour 2 (⟦OPEN⟧ retiré). TAGS_MAX = 16 : D24. `K_MAX = 16`, `SUBMITTERS_MAX = 8` : constantes v1.⟧
 
-- `sender` is the address resolved in §3.2: the anchor's current key, the agent's `agentWallet`, or `address(0)` when the agent has no sender (wallet unset or ambiguous).
-- `bPlus` and `bMinus` are `B⁺_u` and `B⁻_u` in grid units (`uint32`).
-- `truncated` is `true` for a node in the truncation set `T` (§6.2). A truncated row has no entries.
-- A node whose row would exceed `policy.rowMax` entries MUST be truncated.
+#### 2.2 Policy
 
-**Vector leaf.** For every node with non-zero trust in at least one column:
+Everything a payer needs in order to decide is committed in the `setId`. The status returned by the reading functions describes the certificate, not the agent; `isTrusted` applies the policy (§8).
 
-```solidity
-vectorLeaf = keccak256(abi.encode(nodeKey, owner, uint64[] t, uint64[] d));
-// owner = ownerOf(agentId) at certBlock for AGENT nodes, address(0) otherwise
-```
-
-**Trees.** Leaves are sorted by `nodeKey`, in ascending order. A parent is `keccak256(abi.encodePacked(left, right))`. An odd last node is promoted unchanged. The root of an empty set is `bytes32(0)`. Leaves are never 64 bytes long, so a leaf cannot be confused with an inner node.
-
-The calldata encoding of a submission is implementation-defined. Only the leaves and roots above are normative.
-
-⟦D18, tour 3 Q2 C (« l'encodage des feuilles de graphRoot doit être normé ; celui du calldata est un détail d'implémentation »). Le draft du 21/09 avait un `lastIndexRoot` séparé, que le tour 3 demande de conserver. Il est replié ici dans chaque `RowEntry.lastIndex` : sous D6, il ne sert plus à la solidité de la borne, seulement à classer une preuve d'écart comme antérieure ou postérieure au snapshot (AM-R6.9). `nodeCount` est supprimé (tour 3). Les feuilles utilisent des `nodeKey` et non les indices stables de la table du contrat : c'est portable d'un déploiement à l'autre, mais plus coûteux en hachage. À aligner avec contracts/ENCODING.md quand il existera (AM-R6.12).⟧
-
-#### 6.2 Residual verification (normative pseudo-code)
-
-A certificate at level `ResidualVerified` or `RegistryContested` MUST be accepted only if the following verification succeeds in the transaction that submits it. `k` is the number of anchors, `αN/αD = alphaNum/alphaDen`, and `ΔA = αD − αN`.
-
-```
-CERTIFY(setId, submission):
-  S ← anchorSet(setId)                                   // revert if unknown
-  require submission.level ≥ S.policy.minLevel
-  vI, vR ← versionHash(S.identityRegistry), versionHash(S.reputationRegistry)   // §8
-  observe(vI, vR)                                        // updates observed hashes, may emit RegistryChanged
-
-  // --- submission content (logical) ---
-  // N : nodes (nodeKey, kind, id), strictly ascending by nodeKey; MUST contain every anchor node
-  //     of S and every dst of every row
-  // t[a][n] : uint64, 0 ≤ t ≤ WAD, for a ∈ 1..k, n ∈ N
-  // row[n] : for every n with max_a t[a][n] > 0, either TRUNCATED or (sender, entries)
-  // T : the set of truncated nodes
-
-  for a in 1..k:  lo[a][·] ← 0; cnt[a][·] ← 0; dist[a][·] ← 0; marg[a] ← 0
-  for a in 1..k:  lo[a][anchorNode(a)] += ⌊αN · WAD / αD⌋;  cnt[a][anchorNode(a)] += 1
-
-  for n in N with row[n] not TRUNCATED:
-     E ← row[n].entries
-     require |E| ≤ S.policy.rowMax
-     require E strictly ascending by dst; every dst ∈ N, kind(dst) = AGENT, dst ≠ n
-     require every e.q ∈ [−GRID, GRID] \ {0}
-     require every e.tagHash names an Endorsement tag of the schema
-     B⁺ ← max(GRID, Σ_{e.q>0} e.q);  B⁻ ← max(GRID, Σ_{e.q<0} −e.q)
-     require B⁺ == row[n].bPlus ∧ B⁻ == row[n].bMinus
-     for a in 1..k with t[a][n] > 0, for e in E:
-        if e.q > 0:  lo[a][e.dst]   += ⌊t[a][n] · e.q · ΔA / (B⁺ · αD)⌋;  cnt[a][e.dst] += 1
-        else:        dist[a][e.dst] += ⌈t[a][n] · (−e.q) · ΔA / (B⁻ · αD)⌉
-
-  for n in T, a in 1..k:  marg[a] += ⌈t[a][n] · ΔA / αD⌉            // truncation margin (1 − α)·t_n
-
-  for a in 1..k:
-     r[a] ← Σ_{n∈N} max(lo[a][n] + cnt[a][n] − t[a][n],  t[a][n] − lo[a][n])  +  marg[a]
-     e[a] ← ⌈r[a] · αD / αN⌉
-  eEff ← Σ_a ⌈λ_a · e[a] / WAD⌉
-
-  require REPLACEMENT_ALLOWED(S, current(setId), eEff)              // §6.3
-  for every AGENT node n with max_a t[a][n] > 0:  owner[n] ← ownerOf(agentId(n))   // read, not submitted
-  store t, dist as d, owner; graphRoot, vectorRoot computed from the leaves (§6.1)
-  store Certificate{…, certBlock = block.number, residual = r, errorBound = eEff}
-  emit CertificatePublished
-```
-
-Notes:
-
-- For every node `n`, `F(t)_n ∈ [lo_n, lo_n + cnt_n]` in exact arithmetic, because each floored term loses less than one unit. So `r[a]` is an upper bound on `‖t − F(t)‖₁`.
-- The truncation margin `(1 − α)·t_n` covers both the endorsement row and the distrust row of a truncated node (see Rationale, *One error bound for trust and distrust*).
-- Nodes outside `N` have trust zero in every column. Every node of `N` with non-zero trust MUST have either a row, possibly with no entries, or be in `T`.
-- The certifier does not submit `d`. The contract computes it, rounding up.
-
-⟦Pseudo-code aligné sur l'en-tête de solver/ppr.py (arrondi majoré `max(hi − t, t − lo)`, marge `⌈t_u·(αD−αN)/αD⌉`). Deux écarts assumés, à signaler au chantier R4 : (1) le solveur arrondit `d` à l'entier inférieur, le texte à l'entier supérieur (échec fermé) : AM-R6.13 ; (2) le solveur porte les lignes par indice de nœud et non par `nodeKey`.⟧
-
-**Level `Optimistic`.** The contract does not verify the residual. The certificate MUST be submitted by `S.policy.optimisticCertifier`. Consumers relying on it trust that certifier.
-
-⟦Conséquence de D6 (pas de caution, pas de slashing) et du niveau « Optimistic : rien n'est vérifié » (C, tour 2) : sans restriction, n'importe qui publierait t = 1 pour ses Sybil. La restriction à un certificateur engagé dans la politique est un ajout R6, pas une décision du CR (AM-R6.17).⟧
-
-#### 6.3 Replacement
-
-Certification is permissionless, except at level `Optimistic`. A new certificate replaces the current one if and only if one of these holds:
-
-```
-REPLACEMENT_ALLOWED(S, cur, eEffNew) ⇔
-     cur is absent
-  ∨  block.number − cur.certBlock > S.policy.maxAge
-  ∨  status(cur) = REGISTRY_CHANGED
-  ∨  eEffNew ≤ cur.errorBound                                   // errorBound includes every widening so far
-  ∨  (block.number − cur.certBlock > S.policy.minRefresh ∧ eEffNew ≤ cur.errorBound + S.policy.slackRefresh)
-```
-
-The last clause lets an honest certifier refresh a graph that has legitimately become denser (and so has a larger bound). The rule stops a sloppy certificate (for example, one that truncates everything) from replacing a precise one.
-
-⟦Tour 2 Q1 et spec Q1 (relecture A→D). La clause REGISTRY_CHANGED est un ajout R6 : sans elle, un certificat rendu faux par une upgrade bloquerait son remplacement jusqu'à maxAge.⟧
-
-### 7. Discrepancy proofs (level `RegistryContested`)
-
-A discrepancy proof shows that a committed row differs from the registry. It never invalidates the certificate and never moves funds: it only **widens** the residual. It is permissionless.
-
-A row has a **state**. Its initial state is the committed row, proven against `graphRoot`. After a proof, its state is `rowState[u] = rowLeaf(L′_u)`. Each proof starts from the row's current state.
-
-| Kind | Fact read from the registries | New row `L′` |
+| Field | Meaning | Constraint |
 |---|---|---|
-| (i) `OMISSION` | Feedback `(c = L.sender, j, idx)` that is not revoked, valid, has an `Endorsement` tag, and passes §3.3 as far as checkable on-chain. `L` has no entry for `j`, **or** `L`'s entry for `j` has a different `tagHash` and the new `q` dominates it under §3.5 | the entry for `j` becomes `(j, tag, idx, q)`, combined with the existing weight by §3.5 |
-| (ii) `STALE` | `L` has entry `(j, τ, idx, ·)`; feedback `(L.sender, j, idx2)` with `idx2 > idx`, `tag1` hashing to `τ`, valid and not revoked | the entry takes `idx2` and its `q`; if the new `q` is 0, the entry is removed |
-| (iii) `REVOKED` | `L` has entry `(j, τ, idx, ·)` and `readFeedback(j, L.sender, idx).isRevoked` | the entry is removed |
-| (iv-a) `SENDER` | For an `AGENT` row: `getAgentWallet(agentId(u)) ≠ L.sender`. For an `ANCHOR` row: `currentKey(anchorId(u)) ≠ L.sender` | empty row, `sender` = the current value |
-| (iv-b) `CONTROLLER` | `L` has an entry for `j`, and `L.sender` is currently a controller of `j` | the entry for `j` is removed |
+| `theta` | minimum lower-bound trust `trustLow` for an agent to be trusted | `> 0`, so an unknown agent is never trusted |
+| `rhoN/rhoD` | an agent is refused if `rhoD · distrustUp > rhoN · trustLow` | both `> 0`; RECOMMENDED `1/2` |
+| `minAnchors` | `m`: trust that `m − 1` anchors cannot produce alone (§4.4) | `1 ≤ m ≤ k`; see Security Considerations |
+| `vetoQuorum` | `q`: number of vetoing anchors that make an agent `VETOED` | `1 ≤ q ≤ k`; RECOMMENDED `1` |
+| `vetoMax` | an anchor edge or feedback of grid weight `≤ vetoMax` is a veto | `[−GRID, −1]` |
+| `maxAge` | a certificate older than `maxAge` blocks is `STALE` | `> 0` |
+| `minRefresh`, `slackRefresh` | refresh window of the replacement rule (§5.9) | — |
+| `eLowMax` | widening budget of the lower bound: beyond it the certificate is `STALE` | — |
+| `strictTransfer` | if `true`, reads compare `ownerOf` live with the committed owner | RECOMMENDED `true` |
+| `registryVerified` | certification level (§2.3) | — |
+| `ownerFallback` | emitter resolution through the owner when `agentWallet` is zero (§3.5) | — |
+| `submitters` | certifiers allowed to submit; empty means open | empty requires `registryVerified` |
+
+⟦D35 (mode strict par défaut, RECOMMENDED), D36 (eLowMax), D39 (statut ≠ confiance), D33 (vetoMax), D44 (ownerFallback, défaut false = décision de Hugo en attente, AM-INT.8).⟧
+
+#### 2.3 Certification levels
+
+- **`RegistryVerified`** (`registryVerified = true`). At submission, the aggregator re-reads every committed edge, every row source and every committed owner in the registries (§5.7), and refuses the certificate on any mismatch. Submission MAY be open to anyone (`submitters` empty) or restricted to the listed submitters.
+- **`SubmitterAttested`** (`registryVerified = false`, `submitters` non-empty). Only listed submitters may submit or append nodes. The aggregator checks the arithmetic and the shape of the submission, but not its content against the registry.
+
+At both levels, discrepancy proofs (§6) are permissionless and remain available for the life of the certificate. A set MUST NOT be open unless it is `RegistryVerified`.
+
+⟦D32 remplace les trois niveaux R6 (ResidualVerified / RegistryContested / Optimistic). Le niveau Optimistic et son `optimisticCertifier` (AM-R6.17) disparaissent : Submitter-attested est leur version saine (preuves actives, preuve (v)). D27 : le propriétaire de l'ensemble est le soumetteur attesté par défaut.⟧
+
+#### 2.4 Schema document
+
+`tagSchemaHash` is the keccak256 of a UTF-8 JSON document that the set's author publishes off-chain. The document MUST contain:
+
+- `tags`: the full tag list, identical to `SetParams.tags`, with each tag in clear text;
+- `name`, `author` and `rationale`: who the anchors are, who chose them and why;
+- `edgeFilterId`: the 32-byte identifier of the edge filter (§3.8), or the zero value.
+
+The document SHOULD state whether the set is for demonstration. Consumers SHOULD read the schema document before relying on a set. The aggregator does not read it.
+
+⟦Le `metadataURI` du draft R6 et l'`edgeFilterId` n'existent pas dans le `SetParams` v1. Ils sont rattachés au document engagé par `tagSchemaHash`, ce qui les met dans le `setId` sans changer le contrat (AM-08.1, AM-08.2). Le format exact du document (clés JSON, canonicalisation avant hachage) n'est pas fixé par le CR : je propose un JSON canonique (RFC 8785) dans E2, à valider.⟧
+
+### 3. Graph
+
+For an anchor set and a registry state, the **graph** is a set of weighted, directed edges between nodes. The rules in this section are normative. Two conforming implementations MUST derive the same edges, with the same weights, from the same registry state and the same set.
+
+#### 3.1 Tags and kinds
+
+- Each `TagSpec` MUST satisfy `min ≤ neutral ≤ max` and `min < max`, and `kind ∈ {0, 1}`.
+- **Only `endorsement` tags create edges.** Feedback whose `tag1` is a `measurement` tag MUST NOT create an edge and MUST NOT propagate trust or distrust. A consumer MAY use measurement feedback in its own policy, outside the quantities defined by this ERC.
+- Feedback whose `tag1` is not in `tags` MUST be ignored. Tags are matched by `keccak256(bytes(tag1))`.
+
+#### 3.2 Normalization
+
+Let a feedback have `value` (int128) and `valueDecimals` `d`, and let `s` be the `TagSpec` of its `tag1`.
+
+1. If `d > 18`, the feedback is invalid. Otherwise `x = value · 10^(18 − d)`, computed exactly in `int256`.
+2. If `x < s.min` or `x > s.max`, the feedback is **invalid**. Implementations MUST NOT clamp out-of-range values.
+3. The weight `w ∈ [−GRID, GRID]` is truncated toward zero:
+   - if `x > s.neutral`: `w = ⌊(x − s.neutral) · GRID / (s.max − s.neutral)⌋`;
+   - if `x < s.neutral`: `w = −⌊(s.neutral − x) · GRID / (s.neutral − s.min)⌋`;
+   - if `x = s.neutral`: `w = 0`.
+
+The quantized weight is normative: it defines the graph and is not an approximation covered by any bound.
+
+#### 3.3 Pair edge
+
+For a client address `c` and an agent `j`, the **pair weight** `w(c, j)` is computed over the whole history of the pair:
+
+1. For each endorsement tag `τ` of the set, take the feedback from `c` about `j` with `tag1 = τ` that has the **highest `feedbackIndex` among the non-revoked ones**. If that feedback is invalid (§3.2), the tag yields nothing. An older feedback of the same tag is **not** used instead.
+2. **Negative dominance.** If at least one tag yields a negative weight, `w(c, j)` is the most negative one; otherwise it is the largest one. If no tag yields a non-zero weight, there is no edge.
+3. **Deciding feedback.** The `feedbackIndex` of the pair edge is the index of the feedback that gives `w(c, j)`. Between tags of equal weight, the feedback with the **highest** `feedbackIndex` decides.
+4. **Rejection.** There is no edge if `c` is a controller of `j` (§1), read at the time the edge is evaluated.
+
+⟦D14, R3, R5, R6 de FORMAT.md. Deux changements par rapport au draft R6 : (a) un avis hors bornes ne laisse plus passer l'avis précédent du même tag (R3 « latest then reject », choisi par le 04 et le contrat ; R6 avait pris « latest valid », AM-R6.21) ; (b) l'égalité entre tags se départage par l'index le plus grand (F-6 de l'intégration : le contrat ne stocke que des hashes de tags) et non par le plus petit tag (AM-R6.24 fermé). La règle « ancien owner » de D16 est retirée par D20 (AM-R6.4 fermé).⟧
+
+#### 3.4 Nodes
+
+There are three kinds of nodes:
+
+- **Anchor nodes**: one per anchor address of the set.
+- **Agent nodes**: ERC-8004 agents.
+- **Address nodes**: client addresses that resolve to no agent (§3.5).
+
+Only agent nodes receive edges. An anchor node is distinct from every agent node, even when the anchor address is also the source of an agent.
+
+#### 3.5 Emitter resolution and row copy
+
+The **source** of an agent `j` is:
+
+- `getAgentWallet(j)`, if it is non-zero;
+- otherwise `ownerOf(j)`, if the set's `ownerFallback` is `true`;
+- otherwise none.
+
+The wallet always takes precedence: an agent whose `agentWallet` is non-zero never emits its owner's row.
+
+For a client address `c`, let `A(c)` be the set of agents whose source is `c`. The **row of `c`** is the list of pair edges `c → j` (§3.3) over all agents `j`. Then:
+
+- every agent of `A(c)` emits the row of `c` with its **own** trust mass (**row copy**);
+- if `c` is an anchor address, the anchor node also emits the row of `c`, in addition to any agent copy;
+- if `A(c)` is empty and `c` is not an anchor, the row of `c` belongs to the address node of `c`. That node receives no edge and no anchor mass, so its trust is zero and its row propagates nothing.
+
+An edge `u → j` whose destination `j` is the emitting agent `u` itself is never committed (§5.4).
+
+⟦D20 (copie de ligne, confirmée par D34 : masse Sybil identique pour M = 1 ou 100), D44 (repli owner, ordre de priorité), R7 et R8 de FORMAT.md. R8 (ligne d'ancre portée par le nœud-ancre EN PLUS de la copie d'agent) tranche AM-R6.14 dans le sens du solveur, contre le choix exclusif de R6.⟧
+
+#### 3.6 Budgets
+
+For a node `u` emitting edges with weights `w_uj`:
 
 ```
-DISPUTE(setId, kind, evidence):
-  cur ← current(setId); S ← anchorSet(setId)
-  require cur.level = RegistryContested ∧ status(cur) ∉ {STALE, REGISTRY_CHANGED}
-  (u, L, proof) ← evidence
-  require (rowState[u] = 0 ∧ proof shows rowLeaf(L) ∈ graphRoot) ∨ rowLeaf(L) = rowState[u]
-  require ¬L.truncated ∧ ¬capped[u]
-  L′ ← APPLY(kind, L, fact)                      // table above; revert if the fact does not hold
-  if |L′.entries| > S.policy.rowMax:  L′ ← TRUNCATED
-  require rowLeaf(L′) ∉ seen[u]                  // each row state is charged at most once
-  Δ ← ⌈‖C(L) − C(L′)‖₁⌉ + ⌈‖D(L) − D(L′)‖₁⌉      // WAD, B⁺ and B⁻ recomputed on L and L′
-  if first proof on u:  cap[u] ← ⌈‖C(L⁰)‖₁⌉ + ⌈‖D(L⁰)‖₁⌉ + 2·WAD     // L⁰ = committed row
-  if spent[u] + Δ ≥ cap[u]:  Δ ← cap[u] − spent[u];  capped[u] ← true
-  spent[u] += Δ
-  for a in 1..k:  r[a] += ⌈t[a][u] · ΔA · Δ / (αD · WAD)⌉
-  recompute e[a] and eEff; cur.residual ← r; cur.errorBound ← eEff
-  seen[u] ∪= {rowLeaf(L′)};  rowState[u] ← rowLeaf(L′)
-  emit BoundWidened(setId, nodeKeyOf(u), kind, rowState[u], eEff, fact.index > entry.lastIndex)
+S⁺_u = Σ_j max(w_uj, 0)            B⁺_u = max(GRID, sPlus_u)        C_uj = max(w_uj, 0) / B⁺_u
+S⁻_u = Σ_j max(−w_uj, 0)           B⁻_u = max(GRID, S⁻_u)           D_uj = max(−w_uj, 0) / B⁻_u
 ```
 
-- **Soundness.** Replacing row `u` by `L′` changes `F^(a)(t)` by at most `(1 − α)·t_u·‖C(L) − C(L′)‖₁` in L1, and `d^(a)` by at most `(1 − α)·t_u·‖D(L) − D(L′)‖₁`. By the triangle inequality, successive states add up. After any sequence of proofs, `t` remains within the widened bound of the fixed point of the graph whose rows are the current row states.
-- **Cap.** Two rows `L⁰` and `X` satisfy `‖C(L⁰) − C(X)‖₁ + ‖D(L⁰) − D(X)‖₁ ≤ ‖C(L⁰)‖₁ + ‖D(L⁰)‖₁ + 2`. Once a row has been charged `cap[u]`, it is covered whatever its content, and further proofs on it MUST be rejected. This bounds the widening that any party, including the node's own controller posting new feedback after certification, can inflict on one row.
-- **Timing.** Proofs are accepted whether the fact predates the snapshot or not: ERC-8004 does not record when feedback was given. `BoundWidened` reports whether `idx > lastIndex`, so that observers can tell certifier omissions from post-snapshot activity. This has no effect on the bound.
-- **Truncated rows.** A proof on a row of `T` MUST be rejected: the truncation margin already covers it.
-- **Former owners.** Past ownership cannot be established on-chain. A proof of kind (i) cannot check the "former owner" rule of §3.3, so an edge a certifier correctly rejected under that rule can be re-added by a proof. The only effect is a wider bound, since a proof never raises trust.
-- **Ambiguous senders.** Whether a wallet is unique cannot be established on-chain. A row with `sender = address(0)` cannot receive proofs of kind (i), (ii) or (iii).
+`sPlus_u` is the true positive sum of the row (§5.4). When the full row is committed, `sPlus_u = S⁺_u`. Every row of `C` and of `D` sums to at most 1. Endorsement and distrust have **separate budgets**: criticizing an agent costs a node none of its endorsement capacity.
 
-⟦D6, spec Q1 du tour 2, adaptée à D14 et D16. Écarts avec le CR (voir CHANGES.md) : (ii) exige le MÊME tag, et non « tag1 ∈ filtre » (AM-R6.3) ; (iv) est scindé en (iv-a) émetteur, qui couvre aussi la rotation d'une ancre (AM-R6.22), et (iv-b) contrôleur ; la règle « ancien owner », annoncée comme « contestable par (iv) » en D16, n'est pas prouvable on-chain (AM-R6.4) ; `seen[u]` implémente « une fois par état » ; le plafond `cap[u]` est un ajout R6 contre l'élargissement sans fin (AM-R6.2). Les lignes ne portent que l'avis dominant par destination, comme le solveur. Une représentation par (destination, tag) serait plus précise pour (ii) et (iii), au prix de calldata (AM-R6.11). La démo du 13/10 n'implémente que (i) (découpage AM-2.13).⟧
+#### 3.7 Measurement tags in the policy
 
-### 8. Registry versions
+This ERC does not define any use of measurement tags. A consumer that refuses an agent on a measurement (for example, an uptime threshold) does so outside `isTrusted`.
+
+#### 3.8 Edge filters (reserved)
+
+An edge filter removes edges from the graph according to a property of the feedback or of its client (for example, payment provenance or payment-claim verification). This version defines **no** edge filter: the schema document's `edgeFilterId` MUST be zero, and conforming aggregators compute every quantity on the unfiltered graph. A future version that defines a filter MUST also define its on-chain predicate, because discrepancy proofs (§6) would otherwise widen honest certificates for every edge that the filter legitimately removed. A filter MUST only remove edges. It MUST NOT add edges or increase weights. Payment MUST NOT be an edge weight or a pass condition of the core algorithm.
+
+⟦D3, D46. Pas de filtre « reçu vrai » par défaut (D46, AM-7.5). Le draft R6 autorisait un `edgeFilterId` non nul hors du niveau contesté ; c'est intenable en v1, où les preuves sont actives à tous les niveaux (AM-08.2).⟧
+
+### 4. Trust, distrust and bounds
+
+#### 4.1 Columns
+
+Let `α = alphaN / alphaD` and `om = alphaD − alphaN`. For each anchor `a` (a **column**), with `p^(a)` the unit vector on the anchor node of `a`, the trust column `t*^(a)` is the unique fixed point of
+
+```
+F^(a)(t)_v = α · [v = a] · WAD + (1 − α) · Σ_u t_u · C_uv
+```
+
+**Absorbing convention.** Mass that a node does not pass on (a row of `C` summing to less than 1, or no row) is lost, not returned to `p`. Hence `Σ_v t*^(a)_v ≤ WAD`, and the map `p ↦ t*` is exactly linear: the trust of a weighted anchor set is the weighted sum of its columns.
+
+`t*^(a)_v` is the share of anchor `a`'s unit mass that reaches node `v`, in WAD. It is not multiplied by a node count or by any other quantity chosen by the certifier.
+
+#### 4.2 Certified columns are sub-solutions
+
+The aggregator computes, with every term rounded down,
+
+```
+y_v^(a) = [v = a] · ⌊alphaN · WAD / alphaD⌋ + Σ_{rows u, w_uv > 0} ⌊ t_u^(a) · om · w_uv / (alphaD · B⁺_u) ⌋
+```
+
+and accepts submitted columns `t^(a)` only if `t_v^(a) ≤ y_v^(a)` for every node `v` and every column `a`. Because `F` is monotone, such a `t` satisfies `t ≤ t*` coordinate by coordinate for the committed graph. It is also a lower bound for the registry's graph whenever the committed graph is **dominated** by it, that is, when every committed `C_uv` is at most the true one (Rationale).
+
+A certifier MUST compute `t` by iterating `t⁰ = 0`, `t^{n+1} = F_bas(t^n)` with exactly the arithmetic above. Every iterate is a sub-solution, and the certifier MAY stop at any iterate. A floating-point fixed point rounded to integers is not guaranteed to be a sub-solution.
+
+#### 4.3 Distrust
+
+Distrust propagates one hop and does not feed back into trust. With `T_u = ⌈Σ_a λ_a · t_u^(a) / WAD⌉`, the aggregator computes
+
+```
+d_v = Σ_{rows u, w_uv < 0} ⌈ T_u · om · |w_uv| / (alphaD · B⁻_u) ⌉
+```
+
+The submitter does not supply `d`.
+
+#### 4.4 Values of an agent for a set
+
+```
+c_a(i)      = ⌊λ_a · t_i^(a) / WAD⌋
+trust(i)    = Σ_a c_a(i)
+trustRobust(i) = trust(i) − (sum of the m − 1 largest c_a(i))         // 0 if m − 1 ≥ k
+trustLow(i)    = max(trustRobust(i) − eLowEff, 0)
+distrust(i)    = d_i
+distrustUp(i)  = d_i + eEff
+```
+
+`trustRobust` is the trust that no `m − 1` anchors can produce alone. It remains a lower bound because removing the largest contributions is non-decreasing in each contribution. Distrust is not leave-one-out, because it only pushes toward refusal.
+
+An agent outside the certificate has zero trust and zero distrust: *unknown* is expressed as zero trust, not as an error.
+
+#### 4.5 Bounds
+
+Each certificate carries two bounds per column, in WAD and in `t`-space:
+
+- **`eUp_a`**, an upper bound on `‖t*^(a) − t^(a)‖₁`. It bounds the error of distrust (§5.6). Proofs that show an omitted or increased edge widen it (§6).
+- **`eLow_a`**, an upper bound on `‖(t^(a) − t*^(a))⁺‖₁`. It is `0` at submission and is widened by proofs that show a decrease (revocation, lower weight, dilution, source change).
+
+```
+eEff    = Σ_a ⌈λ_a · eUp_a / WAD⌉
+eLowEff = Σ_a ⌈λ_a · eLow_a / WAD⌉
+```
+
+Both are global over the set: a widening on one row lowers `trustLow`, or raises `distrustUp`, for every agent of the set.
+
+⟦D26 (sous-solution), D32 (domination), D37 (lemmes L1-L5 de PROOFS.md, L6-L7 ajoutés par 02 et l'intégration). Le désaccord 5 du tour 2 (borne globale) est en partie tranché par D26 : la borne inférieure de confiance est exacte par agent à la soumission. Il reste global après une preuve (eLow, AM-02.4) : écrit en Security, ⟦OPEN⟧ retiré. La méfiance est calculée sur T combiné (ENCODING §4), pas colonne par colonne comme dans R6 : d n'a plus de colonnes.⟧
+
+### 5. Certificates
+
+#### 5.1 Node table
+
+For each set, the aggregator keeps an **append-only node table**. Node `i` has a 32-byte key `kind << 248 | value`: kind `1` agent (`agentId`), `2` address, `3` anchor (address). Anchors are nodes `0 … k−1`, in the order of `SetParams.anchors`, and are inserted at registration. Indices are stable: a node keeps its index for the life of the set.
+
+Nodes are appended as entries `0x01 ‖ agentId:u32` or `0x02 ‖ address:20`, either through `submitCertificate(…, newNodes, …)` or beforehand through `addNodes`. An entry whose key already exists MUST be refused. At the `SubmitterAttested` level, only listed submitters may append. Certifiers SHOULD order the nodes of a first certificate as anchors, then agents by increasing `agentId`, then addresses by increasing value.
+
+A certificate covers the nodes `[0, nCert)`. `nCert` MUST satisfy `k ≤ nCert ≤ nodeCount` and MUST NOT decrease from one certificate to the next.
+
+⟦Choix de rédaction : l'encodage binaire `ancre-cert-v1` devient NORMATIF (§5.3-§5.5), alors que R6 le laissait à l'implémentation. Raison : `graphRoot` et `vectorRoot` sont des hachages de ces octets, les preuves d'écart les rouvrent, et les vecteurs de test les fixent. AM-R6.12 (feuilles en `nodeKey` contre indices) est tranché en faveur des indices : un certificat n'a de sens que pour un agrégateur donné (§2.1), la portabilité des feuilles n'achetait rien.⟧
+
+#### 5.2 Submission
+
+```
+submitCertificate(setId, nCert:u32, eMax:u256, newNodes, vectors, rows)
+```
+
+The aggregator appends `newNodes`, verifies the submission (§5.6, §5.7), computes `eEff`, reverts if `eEff > eMax`, applies the replacement rule (§5.9), and stores the vectors, `d`, the certified veto bits, the bounds, `graphRoot`, `vectorRoot`, the registry version hash (§7) and `certBlock = block.number`. It then emits `CertificateSubmitted`.
+
+#### 5.3 Vectors
+
+```
+vectors = for i in [0, nCert): t_i^(0):u64 ‖ … ‖ t_i^(k−1):u64 ‖ ownerFp_i:u64        (nCert · (k+1) · 8 bytes)
+vectorRoot = keccak256(vectors)
+```
+
+- Each `t_i^(a)` is in WAD and MUST be `< 2^63`.
+- `ownerFp_i = uint160(ownerOf(agentId)) & (2^63 − 1)` for an agent node, and `0` for any other node. It records the owner at certification for the transfer check (§8.3).
+
+#### 5.4 Rows
+
+```
+rows  = W:u8 ‖ numRows:u32 ‖ row*                          W ∈ {2, 4}; W = 2 only if nCert ≤ 65 535
+row   = u:W ‖ hdr:u16 ‖ [src:20] ‖ [sPlus:u32] ‖ [ref:W] ‖ edge*nE
+hdr   = nE (bits 0..11, nE ≤ ROW_MAX = 256)
+      | 0x8000 SRC        the row's client address follows (agent rows only)
+      | 0x4000 SPLUS      the declared true positive sum follows (non-zero)
+      | 0x2000 ALIAS      copy of the earlier row `ref`: nE = 0, no SPLUS, SRC required
+      | 0x1000 VIA_OWNER  the client is ownerOf(u) and getAgentWallet(u) = 0 (sets with ownerFallback only)
+edge  = dst:W ‖ w:int16 ‖ feedbackIndex:u32
+```
+
+**Client of a row.** For an anchor row (`u < k`), the anchor address. For an address row, the node's address. For an agent row, `src`: the agent's `agentWallet` (VIA_OWNER clear) or, with VIA_OWNER, its owner. An agent row without SRC has no client: it MUST be empty, and it is allowed only on a set without `ownerFallback` when the agent's `agentWallet` is zero.
+
+**Edges.** Each edge is the pair edge (§3.3) of the row's client on the agent `dst`, with its combined weight `w` and the `feedbackIndex` of the deciding feedback.
+
+**Alias rows.** An alias row `u` (`u ≥ k`) repeats the client `src` of the earlier, non-alias row `ref < u`, and inherits its edges and its `sPlus`. It spreads them with its **own** mass `t_u`. This is how row copy (§3.5) is encoded without duplicating calldata. Each copy counts its positive edges in `E⁺` (§5.6).
+
+**sPlus.** The true positive sum of the client's full row, over all its pair edges. A certifier MAY omit **positive** edges of a row, for example to stay within `ROW_MAX` or to skip pairs that are expensive to re-read, provided it declares `sPlus`. The remaining edges then keep their true normalized weight (`B⁺ = max(GRID, sPlus)`), and the omitted mass enters the margin of `eUp` (§5.6). Without SPLUS, `sPlus = S⁺` of the committed edges.
+
+**Certifier obligations.**
+- Negative edges MUST NOT be omitted. Nothing declares the negative sum, so an omitted negative edge makes `distrustUp` unsound. It is a provable fault (§6), not an option.
+- Anchor rows MUST NOT be truncated or have edges omitted. The certified veto bit depends on them.
+- Every agent node with non-zero trust that has a source MUST carry its row, even when it is empty. Otherwise the node is **truncated**: it pays the truncation margin, and its edges cannot be challenged.
+- A row of a zero-trust node SHOULD NOT be provided. It adds nothing to `y` and adds its positive edges to `E⁺`.
+
+⟦D20, D32 (sPlus déclaré, preuve (v)), D21/D33 (lignes d'ancres jamais tronquées), D44 (VIA_OWNER). Le ROW_ALIAS_MAX = 64 de D44 est une canonicalisation du solveur, que le contrat ne vérifie pas et qui ne borne rien on-chain (AM-INT.7) : il n'est pas repris comme règle normative, il est cité en Rationale. Écart avec D44 noté AM-08.3.⟧
+
+#### 5.5 Graph root
+
+Leaf `ℓ` = `keccak256` of the row's bytes, from `u` to its last byte, optional fields included. Leaves are in row order. A parent is `keccak256(left ‖ right)`. An odd last element moves up unchanged. The root of zero rows is `bytes32(0)`.
+
+`graphRoot` and `vectorRoot` commit one submission. Two certifiers that use the same node table, the same rows and the same vectors obtain the same roots. A certifier MAY submit any sub-solution: the vectors, and therefore the roots, are not a canonical function of the registry state.
+
+#### 5.6 Arithmetic verification
+
+The aggregator MUST revert unless all of the following hold, and computes the bounds as shown.
+
+```
+for every row: rows strictly increasing by u, u < nCert, numRows ≤ nCert, exact end of buffer;
+               dst < nCert, dst ≠ u, dst strictly increasing within the row;
+               w ≠ 0, |w| ≤ GRID; nE ≤ ROW_MAX;
+               SPLUS ⇒ sPlus ≥ max(1, Σ committed w⁺)
+for every v < nCert, every column a:    t_v^(a) ≤ y_v^(a)                 // §4.2
+
+r_a   = Σ_v (y_v^(a) − t_v^(a))  +  E⁺ + 1
+        + Σ_{v < nCert without row, t_v^(a) ≠ 0}  ⌈ t_v^(a) · om / alphaD ⌉                         // truncation
+        + Σ_{rows u with sPlus_u > S⁺_u, t_u^(a) ≠ 0}  ⌈ t_u^(a) · om · (sPlus_u − S⁺_u) / (alphaD · B⁺_u) ⌉   // declared omission
+eUp_a = ⌈ r_a · alphaD / alphaN ⌉
+q_a   = ⌈ (r_a − E⁺ − 1) · alphaD / alphaN ⌉
+mass  = Σ_a ⌊ λ_a · Σ_v t_v^(a) / WAD ⌋
+D     = Σ_v d_v
+eEff = Σ_a ⌈λ_a · eUp_a / WAD⌉        qEff = Σ_a ⌈λ_a · q_a / WAD⌉        eLow_a = 0
+```
+
+`E⁺` is the number of positive edges of all provided rows, alias rows counted with their inherited edges. `E⁺ + 1` covers the floor of each positive term of `y` and of the `α` term. `q` is `eUp` without that rounding floor. It is used only by the replacement rule.
+
+**Certified veto bits.** Every edge of an anchor row `a` whose weight is `≤ vetoMax` sets bit `a` of the destination's certified veto mask.
+
+#### 5.7 Shape and registry checks
+
+**Shape, at both levels.** Every edge targets an agent node. An anchor or address row carries neither SRC nor VIA_OWNER. An agent row is either (a) SRC without VIA_OWNER, (b) SRC with VIA_OWNER on a set with `ownerFallback`, or (c) without SRC: empty, not an alias, without SPLUS, on a set without `ownerFallback`. An alias row satisfies §5.4. (In strict mode, an agent of non-zero trust whose `ownerFp` is zero or wrong reads as `TRANSFERRED`, §8.1.)
+
+**`RegistryVerified` only.** In the submitting transaction, the aggregator MUST check:
+
+| Object | Check |
+|---|---|
+| agent row, SRC without VIA_OWNER (aliases included) | `getAgentWallet(u) == src` |
+| agent row with VIA_OWNER | `getAgentWallet(u) == 0` and `ownerOf(u) == src` |
+| agent row without SRC | `getAgentWallet(u) == 0` |
+| each edge of a non-alias row | the client is not a controller of `dst`, and `(w, feedbackIndex)` equals the pair edge (§3.3) re-read in the Reputation Registry |
+| each agent node of non-zero trust | `ownerFp == uint160(ownerOf(agentId)) & (2^63 − 1)` |
+| each other node | `ownerFp == 0` |
+
+Re-reading a pair edge requires `getLastIndex`, then `readFeedback` from the highest index downward until every endorsement tag of the set has been seen or index 1 is reached. The cost is proportional to the history of the pair and is borne by the submitter.
+
+What cannot be checked at submission, at any level, because ERC-8004 has no per-client index: that a row is complete, and that a declared `sPlus` is the true sum.
+
+⟦ENCODING §3.2 et §3.4. La relecture coûte ≈ 45,5 k gas par arête à avis unique et ≈ 13 k par avis supplémentaire du couple (MESURÉ 28/09, GAS.md) : chiffres déplacés en Reference Implementation, hors texte normatif.⟧
+
+#### 5.8 Certifier procedure (informative)
+
+A certifier reads the registries at a recent block, derives the edges (§3), resolves emitters (§3.5), selects the support (nodes reachable from the anchors), iterates from zero (§4.2), encodes, and checks the result with `dryRun` or an `eth_call` of `submitCertificate` before sending it.
+
+#### 5.9 Replacement
+
+At the `SubmitterAttested` level, and on any set with a non-empty `submitters` list, a listed submitter always replaces the current certificate.
+
+On an open set, the aggregator MUST refuse a new certificate whose `vectorRoot` and `graphRoot` both equal those of a current certificate that has been widened by a proof. Otherwise it MUST accept the new certificate if and only if one of these holds:
+
+```
+no current certificate
+∨ the current certificate is REGISTRY_CHANGED (§7)
+∨ block.number − certBlock > maxAge
+∨ eLowEff_cur > eLowMax
+∨ ( mass_new + eLowEff_cur ≥ mass_cur  ∧  qEff_new ≤ q_cur  ∧  D_new ≥ D_cur )
+∨ ( block.number − certBlock > minRefresh  ∧  qEff_new ≤ q_cur + slackRefresh )
+
+with  q_cur = eEff_cur − eFloor_cur + eLowEff_cur,  eFloor = eEff − qEff at submission
+```
+
+The fourth clause accepts a certificate that is at least as good on every side. More mass is more precision on the trust side: two sub-solutions of the same graph satisfy `‖t* − t‖₁ = ‖t*‖₁ − ‖t‖₁`. A smaller `q` is more precision on the distrust side. And a larger distrust mass `D` keeps negative edges and certified vetoes from being dropped. The refresh window lets an unproven decrease (for example, a revocation) through after `minRefresh` blocks. Setting `minRefresh = maxAge` disables it.
+
+⟦AM-04.1, AM-5.16, AM-02.2, lemme L7 (intégration du 01/10). Remplace la règle R6 par `eEff` (eNew ≤ eCur), qui bloquait la croissance honnête et récompensait la censure. La clause REGISTRY_CHANGED du draft R6 est conservée (elle est dans le code).⟧
+
+### 6. Discrepancy proofs
+
+A discrepancy proof shows that a committed row differs from the registry **now**. It never invalidates a certificate and never moves funds: it widens `eLow` and/or `eUp`. Proofs are permissionless, apply to the current certificate, and are paid by the prover. Each fact is billed once: a row carries its **amendments** (`(agentId:u32 ‖ wCommitted:int16 ‖ wNow:int16)*`) and each proof starts from the amended state, `keccak256(leaf ‖ amends)`.
+
+#### 6.1 `proveEdge`
+
+`proveEdge(setId, row, src, amends, agentJ)` opens the committed row of `u` (with its Merkle path, or the stored amended state), and for an alias row its committed source row. It re-reads **now** the pair weight `wNew` of the row's client on `agentJ` (§3.3; `0` if the client is a controller of `agentJ`, or if the Identity Registry reverts for `agentJ`; the proof reverts if the Reputation Registry cannot be read). It reverts if `wNew` equals the current weight `wOld` (amended, else committed, else 0), or if the row's source no longer holds (§5.7 reads; use `proveWallet`). This one proof covers:
+
+- (i) **omission** of an edge, with or without dilution of the others;
+- (ii) a **stale** edge (a later feedback changed the weight);
+- (iii) a **revoked** deciding feedback;
+- a new **controller** relation;
+- (v) **fabrication** or **inflation** of a committed edge (needed at the `SubmitterAttested` level).
+
+**Amount.** Per side of the normalized row (positive side with `G = max(GRID, sPlus)`, negative side with `G = GRID`), with sum `S → S' = S − wo + wn`, `B = max(G, S)`, `B' = max(G, S')`, `rest = S − wo`:
+
+```
+dec = ⌈ WAD · [ rest · (B' − B)⁺ + (wo · B' − wn · B)⁺ ] / (B · B') ⌉
+inc = ⌈ WAD · [ rest · (B − B')⁺ + (wn · B − wo · B')⁺ ] / (B · B') ⌉
+caps per row:  Σ dec⁺ ≤ ⌈WAD · S⁰ / B⁰⌉,  Σ inc⁺ ≤ WAD,  Σ inc⁻ ≤ WAD           (B⁰ = max(GRID, sPlus or S⁰))
+prepaid⁺ = ⌊WAD · (sPlus − S⁰) / B⁰⌋ if sPlus was declared: only inc⁺ beyond it is billed
+eLow_a += ⌈ t_u^(a) · om · dec⁺ / (alphaN · WAD) ⌉
+eUp_a  += ⌈ t_u^(a) · om · (billed inc⁺ + inc⁻) / (alphaN · WAD) ⌉
+```
+
+`eLowEff` and `eEff` are then recomputed. If the proven edge belongs to an anchor row, now has a weight `≤ vetoMax`, and its destination is a certified node, the destination's certified veto bit is set.
+
+#### 6.2 `proveWallet`
+
+`proveWallet(setId, row, src, amends)` proves (iv): the committed source of an agent row no longer holds. The `agentWallet` changed (ERC-8004 clears it at every transfer), the owner of a VIA_OWNER row changed, the agent obtained a wallet, or the agent of a source-less row obtained a wallet. The aggregator bills to `eLow` the not-yet-billed part of the committed positive mass `⌈WAD · S⁰ / B⁰⌉`, and to `eUp` the not-yet-billed rest of `1 − prepaid⁺` on the positive side and of `1` on the negative side. The row is then void: no further proof applies to it.
+
+This is how the **outgoing** edges of a transferred agent are frozen until the next certificate.
+
+#### 6.3 `proveTransfer`
+
+`proveTransfer(setId, agentId)` sets the transfer flag of a certified agent whose current owner no longer matches `ownerFp`, or whose `ownerOf` reverts. Reads then return `TRANSFERRED` for that agent in both transfer modes.
+
+#### 6.4 Exhausted budget
+
+If `eLowEff > eLowMax`, the certificate is `STALE` (§8), and the replacement rule accepts any new certificate (§5.9).
+
+⟦D22 (plafonds par ligne), D32 (preuve (v)), D36 (eLowMax), D44 (gel des arêtes sortantes par (iv-a)), lemme L6. Le `dispute(kind, evidence)` R6 à cinq types devient trois fonctions ; (i), (ii), (iii), contrôleur et (v) sont fusionnés dans `proveEdge`, qui compare un poids relu avec le poids courant. La règle R6 « une preuve n'est acceptée que sur le niveau RegistryContested » disparaît : les preuves sont actives à tous les niveaux (D32). Écart avec D44 : le gel des arêtes sortantes n'est pas automatique en mode strict, il faut un `proveWallet` (AM-08.4).⟧
+
+### 7. Registry versions
 
 The registries are typically upgradeable proxies, and a contract cannot read another contract's implementation slot.
 
-- `versionHash(r) = keccak256(bytes(r.getVersion()))` if the static call succeeds and returns a string, and `bytes32(0)` otherwise.
-- Every certificate MUST commit the version hashes of both registries, read in the certifying transaction.
-- The contract keeps the last observed pair. `checkRegistry()` is callable by anyone. It reads both hashes, updates the observed pair, and emits `RegistryChanged` for each registry whose hash changed. Every `CERTIFY` performs the same observation.
-- A certificate whose committed hashes differ from the observed pair has status `REGISTRY_CHANGED`.
-- Certifiers MUST check the registry versions before each certification. Operators SHOULD monitor the registries' ERC-1967 `Upgraded` events off-chain and call `checkRegistry()` when one is emitted.
+- `versionHash = keccak256(abi.encode(identityRegistry, keccak256(bytes(identity.getVersion())), reputationRegistry, keccak256(bytes(reputation.getVersion()))))`. If either `getVersion()` call fails or returns malformed data, the registry is unreadable: submission MUST revert.
+- Every certificate stores the `versionHash` read in its submitting transaction.
+- `checkRegistry(setId)` is callable by anyone. It recomputes the hash and, if it differs from the certificate's hash or cannot be read, marks the set's certificate `REGISTRY_CHANGED` and emits `RegistryChanged`. A new certificate clears the mark.
+- Certifiers MUST check the registry versions before each certification. Operators SHOULD monitor the registries' ERC-1967 `Upgraded` events off-chain and call `checkRegistry` for every set they rely on when one is emitted.
 
-An upgrade that keeps the same version string is invisible on-chain. See Security Considerations.
+An upgrade that keeps the same version string is invisible on-chain (Security Considerations).
 
-⟦D17. `getVersion()` ne fait PAS partie de l'interface ERC-8004 : il existe dans l'implémentation de référence déployée (« 2.0.0 », VÉRIFIÉ 27/09). Une norme chain-agnostique ne peut donc pas l'exiger, d'où le repli `bytes32(0)` et la demande ajoutée à la section Backwards Compatibility (AM-R6.10).⟧
+⟦D17. `checkRegistry` est par ensemble dans la v1 (R6 : global) : une upgrade doit être signalée ensemble par ensemble (AM-08.5). `getVersion()` ne fait pas partie de l'interface ERC-8004 (AM-R6.10) : demande 5 en Backwards Compatibility. Le désaccord 2 du tour 3 (suffisance de la vérification de version) est maintenu en Security comme limite, sans marqueur ⟦OPEN⟧ : le texte ne prend aucune position qu'un tour ultérieur pourrait renverser.⟧
 
-⟦OPEN — désaccord 2 du tour 3 (coût et suffisance de la vérification de version) : B veut vérifier à la certification plus `checkRegistry()`, C juge que c'est de la vivacité par bonne volonté, E veut un event. La synthèse retient les trois, sans protection contre une upgrade qui garde la même version.⟧
+### 8. Reading
 
-### 9. Reading interface
+#### 8.1 Statuses
 
 ```solidity
-enum Status {
-    OK,                // certificate current and applicable
-    UNKNOWN_SET,       // setId not registered
-    NO_CERT,           // no certificate for this set
-    STALE,             // block.number − certBlock > policy.maxAge
-    REGISTRY_CHANGED,  // committed registry versions differ from the observed ones
-    TRANSFERRED,       // ownerOf(agentId) differs from the owner committed for this agent, or reverts
-    VETOED,            // at least vetoQuorum anchors currently hold negative feedback on the agent (assess only)
-    REGISTRY_ERROR     // a registry call needed for the answer failed (fail closed)
-}
+enum Status { OK, NO_CERT, STALE, TRANSFERRED, VETOED, REGISTRY_CHANGED }
+```
 
-enum Reason { NONE, STATUS, VETO, BELOW_THRESHOLD, DISTRUST }
+`assess(agentId, setId, withVeto)` MUST evaluate, in this order, and stop at the first that applies:
 
-struct TrustView {
-    Status  status;
-    Level   level;
-    uint64  certBlock;
-    uint256 trust;         // Σ_a contribution_a, WAD
-    uint256 trustRobust;   // leave-(m−1)-anchors-out, WAD
-    uint256 distrust;      // WAD
-    uint256 errorBound;    // eEff, WAD
-}
+1. `NO_CERT`: the set is unknown or has no certificate. All values are zero.
+2. `REGISTRY_CHANGED`: the certificate is marked by `checkRegistry` (§7).
+3. `STALE`: `block.number − certBlock > maxAge`, or `eLowEff > eLowMax`.
+4. `VETOED` (only if `withVeto`): at least `vetoQuorum` anchors veto the agent (§8.2). If a registry read needed for the veto fails, the status is `REGISTRY_CHANGED` instead.
+5. `TRANSFERRED`: the agent is certified, and either its transfer flag is set (§6.3), or `strictTransfer` is on, the agent has non-zero trust, and `ownerOf(agentId)` reverts or no longer matches `ownerFp`.
+6. `OK`.
 
-struct Assessment {
-    TrustView view_;
-    bool      trusted;
-    Reason    reason;
-    uint8     vetoCount;
-    bytes32   triggerTag;  // keccak256(tag1) of the feedback behind a veto; bytes32(0) otherwise
-}
+Under every status except `NO_CERT`, the value fields (`trust`, `trustRobust`, `distrust`, `e`, `eLow`, `trustLow`, `distrustUp`, `certBlock`) MUST be filled as in §4.4.
 
-interface IAnchoredReputation /* is IERC165 */ {
-    event AnchorSetRegistered(bytes32 indexed setId, address indexed registrant, AnchorSet set, TagSchema[] schema);
-    event CertificatePublished(bytes32 indexed setId, uint64 indexed certBlock, Level level,
-                               bytes32 graphRoot, bytes32 vectorRoot, uint256 errorBound, address certifier);
-    event BoundWidened(bytes32 indexed setId, bytes32 indexed nodeKey, uint8 kind,
-                       bytes32 rowState, uint256 errorBound, bool postdatesSnapshot);
-    event RegistryChanged(address indexed registry, bytes32 oldVersionHash, bytes32 newVersionHash);
+#### 8.2 Veto
 
-    function registerAnchorSet(AnchorSet calldata set, TagSchema[] calldata schema) external returns (bytes32 setId);
-    function anchorSet(bytes32 setId) external view returns (AnchorSet memory set, TagSchema[] memory schema);
+An anchor `a` vetoes agent `j` if **either**:
 
-    /// Reverts if verification (§6.2) or replacement (§6.3) fails. Encoding of `payload` is implementation-defined.
-    function certify(bytes32 setId, Level level, bytes calldata payload) external;
-    /// Reverts if the proof is invalid (§7). kind: 1 OMISSION, 2 STALE, 3 REVOKED, 4 SENDER, 5 CONTROLLER.
-    function dispute(bytes32 setId, uint8 kind, bytes calldata evidence) external returns (uint256 errorBound);
-    function checkRegistry() external returns (bool changed);
+- **live**: the feedback of index `getLastIndex(j, anchor_a)` is not revoked, has an endorsement tag of the set, is valid (§3.2), and has weight `≤ vetoMax`; **or**
+- **certified**: bit `a` of `j`'s certified veto mask is set (§5.6, §6.1).
 
-    function certificate(bytes32 setId) external view returns (Certificate memory);
+`vetoCount` is the number of anchors that veto. The live check reads one feedback per anchor, so a veto takes effect in the block after the anchor posts it, without recertification. `triggerTag` is the `keccak256(tag1)` of the most negative live veto, or zero if only certified bits apply.
 
-    /// MUST NOT revert. Certified values only; performs no veto read.
-    function trustOf(uint256 agentId, bytes32 setId) external view returns (TrustView memory);
-    /// MUST NOT revert. trustOf + live anchor veto + the set's policy.
-    function assess(uint256 agentId, bytes32 setId) external view returns (Assessment memory);
-    /// MUST NOT revert. Per-column certified values, for export and audit; empty arrays if unknown.
-    function columns(uint256 agentId, bytes32 setId) external view returns (uint256[] memory t, uint256[] memory d);
+#### 8.3 Trust decision
+
+```
+trusted ⇔ withVeto ∧ status = OK ∧ trustLow ≥ theta ∧ rhoD · distrustUp ≤ rhoN · trustLow
+```
+
+`isTrusted(agentId, setId)` returns `trusted` with `withVeto = true`. It MAY skip the registry reads, and return `false`, as soon as the bounds already fail.
+
+**A payer MUST decide with `isTrusted`, or with `assess(…, true)` and its `trusted` field.** `status = OK` alone does not mean the agent may be paid: an unknown agent has status `OK` and trust zero.
+
+#### 8.4 Robustness of reads
+
+`trustOf`, `assess` and `isTrusted` MUST NOT revert, whatever the registries return. Every external call they make MUST be gas-capped, and a failed call MUST resolve toward refusal (`REGISTRY_CHANGED`, `TRANSFERRED`, or `trusted = false`). `trustOf(agentId, setId)` returns `(status, trustRobust, distrust, e, certBlock)` from `assess(agentId, setId, true)`.
+
+⟦D21 et D33 (veto au dernier avis + bit certifié), D35, D39. Écarts avec R6 : plus de `UNKNOWN_SET` (fusionné dans `NO_CERT`), plus de `REGISTRY_ERROR` (un registre illisible donne `REGISTRY_CHANGED` au veto et `TRANSFERRED` sur `ownerOf`, AM-08.6) ; l'ordre veto avant transfert suit le code. Désaccord 2 du tour 5 (deux règles pour un même avis d'ancre : le veto en direct lit le dernier avis, D14 lit la dominance par tag) : ⟦OPEN⟧ ci-dessous.⟧
+
+⟦OPEN — tour 5, désaccord 2 : pour une même ancre, le veto en direct ne lit que le DERNIER avis (tous tags confondus), tandis que le graphe et le bit certifié appliquent la dominance du négatif par tag (D14). Un avis ultérieur de l'ancre, même de mesure, lève le veto en direct (AM-02.6) ; seul le bit certifié le maintient jusqu'au certificat suivant. Le texte suit D33 (le dernier avis fait foi en direct) et compense par la règle normative du §9. Non tranché par le conseil.⟧
+
+### 9. Obligations of anchors
+
+The live veto reads only an anchor's **last** feedback on an agent. Therefore:
+
+- An anchor that wants a veto to hold MUST NOT post any later feedback on the same agent, under any tag, until it intends to lift the veto.
+- An anchor SHOULD post vetoes under a dedicated endorsement tag named `veto`. The RECOMMENDED schema entry is `veto` with `kind = 0`, `min = −1·WAD`, `neutral = 0`, `max = 0`, so that a feedback of value `−1` has weight `−GRID`. An anchor SHOULD NOT post measurement feedback on agents it may veto.
+- To lift a veto, an anchor revokes it. The certified bit stays set until the next certificate.
+
+⟦D33 : « règle normative pour les ancres (republier le veto) ; tag `veto` RECOMMENDED ». AM-02.6. L'ancre qui doit poster autre chose sur l'agent DOIT reposter son veto en dernier ; formulé ici comme interdiction de poster après le veto, plus simple à suivre.⟧
+
+### 10. Interface
+
+```solidity
+interface IAnchoredReputation {
+    event AnchorSetRegistered(bytes32 indexed setId, address[] anchors, uint64[] lambdas, uint32 alphaN, uint32 alphaD);
+    event NodesAdded(bytes32 indexed setId, uint256 fromIndex, uint256 count);
+    event CertificateSubmitted(bytes32 indexed setId, uint64 indexed certBlock, uint256 eEff, bytes32 graphRoot,
+        bytes32 vectorRoot, bytes32 versionHash, uint32 nCert, uint32 numRows, bool registryVerified);
+    event EdgeProven(bytes32 indexed setId, uint256 indexed node, uint256 indexed agentId, int256 wOld, int256 wNew,
+        uint256 eLowEff, uint256 eEff);
+    event RowVoided(bytes32 indexed setId, uint256 indexed node, uint256 eLowEff, uint256 eEff);
+    event TransferFlagged(bytes32 indexed setId, uint256 indexed agentId);
+    event RegistryChanged(bytes32 indexed setId, bytes32 certifiedVersionHash, bytes32 currentVersionHash);
+
+    struct Assessment {
+        Status  status;
+        uint256 trust;
+        uint256 trustRobust;
+        uint256 distrust;
+        uint256 e;          // eEff
+        uint64  certBlock;
+        uint8   vetoCount;
+        bytes32 triggerTag; // keccak256(tag1) of the most negative live veto, or 0
+        uint256 trustLow;
+        uint256 distrustUp;
+        uint256 eLow;       // eLowEff
+        bool    trusted;
+    }
+
+    struct RowRef {
+        uint256   pos;      // rank of the row in the certificate (Merkle leaf index)
+        bytes     row;      // committed row bytes
+        bytes32[] path;     // Merkle siblings to graphRoot (may be empty once the row is amended)
+    }
+
+    // anchor sets
+    function computeSetId(SetParams calldata p) external pure returns (bytes32);
+    function registerAnchorSet(SetParams calldata p) external returns (bytes32 setId);
+    function policyOf(bytes32 setId) external view returns (Policy memory);
+
+    // node table and certificates
+    function addNodes(bytes32 setId, bytes calldata entries) external;
+    function submitCertificate(bytes32 setId, uint32 nCert, uint256 eMax, bytes calldata newNodes,
+        bytes calldata vectors, bytes calldata rows) external;
+    function certificate(bytes32 setId) external view returns (uint64 certBlock, uint256 eEff, uint256 eLowEff,
+        bytes32 graphRoot, bytes32 vectorRoot, bytes32 versionHash, uint32 nCert, uint32 numRows, bool registryChanged);
+    function quality(bytes32 setId) external view returns (uint256 mass, uint256 qCur, uint256 distrustMass, bool proven);
+
+    // discrepancy proofs
+    function proveEdge(bytes32 setId, RowRef calldata r, RowRef calldata src, bytes calldata amends, uint256 agentJ) external;
+    function proveWallet(bytes32 setId, RowRef calldata r, RowRef calldata src, bytes calldata amends) external;
+    function proveTransfer(bytes32 setId, uint256 agentId) external;
+    function checkRegistry(bytes32 setId) external returns (bool changed);
+
+    // reading: MUST NOT revert
+    function isTrusted(uint256 agentId, bytes32 setId) external view returns (bool);
+    function assess(uint256 agentId, bytes32 setId, bool withVeto) external view returns (Assessment memory);
+    function trustOf(uint256 agentId, bytes32 setId) external view
+        returns (Status status, uint256 trustRobust, uint256 distrust, uint256 e, uint64 certBlock);
 }
 ```
 
-**`trustOf`** MUST return, in this order of precedence: `UNKNOWN_SET`, `NO_CERT`, `REGISTRY_CHANGED`, `STALE`, then, for an agent with a committed owner, `TRANSFERRED` if `ownerOf(agentId)` differs or reverts, and `OK` otherwise. An agent outside the certificate's support has `trust = trustRobust = distrust = 0` and status `OK`: *unknown* is expressed as zero trust, not as an error. Every value field MUST be filled even when the status is not `OK`, except under `UNKNOWN_SET` and `NO_CERT`, where they are zero.
+Implementations MAY add functions (for example a dry run, capacity reservation, or raw storage views). They MAY implement [ERC-165](./eip-165.md).
 
-**`assess`** MUST compute:
+⟦Signatures recopiées de `AnchoredReputation.sol` v1 (intégration du 01/10). Les types `Status`, `SetParams`, `Policy` sont ceux du §2 et du §8. `dryRun`, `reserveCapacity`, `columnBounds`, `rowStateOf`, `vectorAt`, `nodeCount`, `nodeKeyAt` restent hors interface normative (optimisations propres à l'implémentation, `reserveCapacity` sert le stockage de MIP-8). ERC-165 passe de MUST à MAY : le contrat v1 ne l'implémente pas (AM-08.7) ; `requires: 165` retiré du préambule.⟧
 
-```
-ASSESS(agentId, setId):
-  v ← trustOf(agentId, setId);  P ← policy(setId)
-  if v.status ≠ OK:                         return (v, false, STATUS, 0, 0)
-  // live veto: read now, not certified
-  vetoes ← 0; trigger ← 0; worst ← 0
-  for each anchor a of the set:
-     key ← currentKey(anchorId_a)                        // REGISTRY_ERROR if the call fails
-     w_a ← combined weight (§3.5) of key's current feedback on agentId, over the Endorsement tags
-     if w_a < 0: vetoes += 1; if w_a < worst: worst ← w_a; trigger ← tagHash of that feedback
-  if vetoes ≥ P.vetoQuorum:                 v.status ← VETOED; return (v, false, VETO, vetoes, trigger)
-  if v.trustRobust < P.threshold + v.errorBound:                        return (v, false, BELOW_THRESHOLD, vetoes, 0)
-  if P.rhoDen·(v.distrust + v.errorBound) > P.rhoNum·(v.trustRobust − v.errorBound):
-                                                                        return (v, false, DISTRUST, vetoes, 0)
-  return (v, true, NONE, vetoes, 0)
-```
+### 11. Extensions outside this version
 
-- A registry or key-registry call that reverts or returns malformed data MUST yield `REGISTRY_ERROR` and `trusted = false`. Neither function may revert.
-- A veto takes effect in the block after the anchor's feedback, without recertification. It uses the anchor's current key only.
-- Consumers MUST treat any status other than `OK` as untrusted. They MAY apply a stricter threshold or a lower `maxAge` than the set's policy by computing from `TrustView`.
-- The storage layout is implementation-defined. `trustOf` MUST be answerable from contract state, without a proof supplied by the caller.
+**Rotating anchors.** This version names anchors by address. An anchor that loses its key must be replaced in a new set. A future version MAY name anchors by a self-certifying identifier with key pre-rotation: `anchorId = keccak256(abi.encode(key0, nextKeyDigest1))`, where each rotation reveals the committed next key and commits the following one. Only feedback from the anchor's current key would count, and the veto would read the current key. Such a version changes the `setId` preimage and the anchor-row client.
 
-⟦D11 renversée au tour 3 : vecteurs stockés, lecture sans preuve. Le statut `BAD_PROOF` et la lecture à preuve portée du tour 2 disparaissent. `REGISTRY_ERROR` et `Reason` sont des ajouts R6 pour tenir « ne revert jamais » face à un `ownerOf` qui revert (jeton brûlé) ou à un registre indisponible (AM-R6.16). Le veto relit le registre à chaque appel : son coût est proportionnel au nombre d'avis de l'ancre sur l'agent, borné par k ≤ 16 et TAGS_MAX = 8 (estimation de B au tour 3, non mesurée).⟧
+**Edge filters.** See §3.8.
 
-⟦OPEN — désaccord 4 du tour 3 (oracle de refus) : `triggerTag` aide l'attaquant selon D, il est indispensable à l'exploitation selon E. La synthèse le retient parce que l'état est public.⟧
-
-⟦OPEN — désaccord 4 du tour 2 (une lecture ou deux) : C voulait un cache lisible sans preuve, B craignait qu'il devienne l'implémentation copiée. Depuis D11 renversée, la lecture stockée EST la lecture normative et le cache disparaît. Le désaccord semble caduc, mais le CR ne le clôt pas : à confirmer au prochain tour (AM-R6.8).⟧
-
-### 10. ERC-165
-
-A conforming aggregator MUST implement [ERC-165](./eip-165.md) and return `true` for the interface ID of `IAnchoredReputation`. An anchor key registry MUST return `true` for the interface ID of `IAnchorKeyRegistry`.
-
-⟦Les identifiants d'interface seront calculés sur l'implémentation de référence une fois les signatures figées.⟧
+⟦OPEN — D9 (identité d'ancre à pré-rotation, confiance 0,6) et D43 (concept Mera : clés d'époque pré-rotées, `rotateBySig`) sont décidées mais pas implémentées : la v1 nomme les ancres par adresse, et le `setId` n'a pas de champ pour un registre de clés. Réintroduire `IAnchorKeyRegistry` dans le texte normatif contredirait le code ; le retirer contredirait D9. Je le mets en extension future, avec la forme décidée, en attendant 02-E8 (`AnchorRegistry`, conditionné par la porte P4 Mera). AM-08.8. À trancher par le pilote ou le conseil : (a) attendre 02-E8 et réintégrer, (b) publier la v1 avec ancres par adresse.⟧
 
 ## Rationale
 
-**Anchors instead of a global score.** Only asymmetric, seed-anchored reputation functions can resist Sybil attacks (Cheng and Friedman, *Sybilproof reputation mechanisms*, 2005). With an absorbing walk restarted at the anchors, the mass that reaches a Sybil region `X` containing no anchor is bounded by the mass crossing its attack edges: `π(X) ≤ ((1 − α)/α) · Σ_{u∉X, v∈X} π(u)·C_uv`. A farm of any size that no anchor-reachable node endorses receives exactly zero. Letting the reader choose the anchors also answers the objection to a single score.
-
-**Personalized PageRank.** Among the classical schemes (EigenTrust 2003, Advogato, SybilGuard/SybilLimit, SybilRank), PPR is the only one with both a formal Sybil bound and a **one-pass certificate**. Advogato's max-flow certificate is binary, and SybilRank relies on early-stopped iterations.
-
-**Share of mass, not a rescaled score.** An earlier draft exposed `t_i · N`, with `N` the number of nodes. `N` is chosen by the certifier and can be inflated for free by registering agents. A share of a unit mass has no free parameter. Every column entry is at most `WAD`, so it fits in 64 bits.
-
-**Absorbing convention.** Sending lost mass back to `p` makes `t` depend non-linearly on `p`. Absorbing it keeps `t = Σ_a λ_a t^(a)` exact. A certificate therefore carries one column per anchor, any weighting is a linear combination, and leave-one-out is computable.
-
-**Separate budgets.** The distrust a region `X` can emit is `(1 − α)·Σ_{u∈X} t_u·Σ_j D_uj ≤ (1 − α)·π(X)`, as long as the rows of `D` sum to at most 1, whether or not `D` shares a budget with `C`. A shared budget would only buy a factor of at most 2, and it would make honest criticism cost endorsement capacity.
-
-**One-hop distrust, anchor veto, leave-one-out.** Distrust that propagates would let a Sybil region smear honest agents through chains of negative feedback. One hop keeps it bounded by the emitter's own trust. A stolen anchor key is used for **approving** Sybils (theft), not for vetoes (denial of service). `trustRobust` with `minAnchors = m` removes the `m − 1` largest per-anchor contributions, so no `m − 1` anchors can make an agent pass alone. Vetoes and distrust fail closed, so they need no such protection.
-
-**One error bound for trust and distrust.** Let `e_t = r/α`. Distrust computed from `t` differs from distrust computed from `t*` by at most `(1 − α)·e_t`. The distrust rows of truncated nodes add at most `Σ_T (1 − α)·t_u ≤ r`, and `r ≤ α·e_t`. So the total distrust error is at most `(1 − α)·e_t + α·e_t = e_t`. This is why the truncation margin is `(1 − α)·t_u`, even though a truncated row hides both an endorsement row and a distrust row. Discrepancy proofs add the change in both rows, which is conservative.
-
-**Growing bound instead of slashing.** ERC-8004 does not record when feedback was given. A proof that "this feedback existed before the certificate" is therefore impossible. With slashing, an attacker could post feedback right after an honest certificate, "prove" an omission and collect the bond. Widening the bound needs no dating, no bond and no challenge window. It remains true for the registry as far as anyone has proven. The permissionless replacement rule stops a sloppy certificate from displacing a precise one.
-
-**Stored vectors, proof-free reads.** A read that requires the payee to supply a Merkle proof would change payment protocols on the provider side and would add a proof service to operate. This ERC fixes the behaviour (`trustOf` answerable without a proof) and leaves the storage layout to implementations. `vectorRoot` is kept for export and audit.
-
-**Normative quantization.** Quantization changes `C`, and therefore the fixed point. If it were left to implementations, two honest certifiers would certify different vectors for the same set. A grid of `10^-4` fits an `int16` and keeps calldata small.
-
-**Tag kinds.** A liveness ping delegates no trust. If measurement feedback propagated, anyone running an automated scanner would manufacture attack edges, and the Sybil bound would be worthless. The kind is part of the committed schema, so no implementation can make it propagate by accident.
-
-**Per-tag edge unit and negative dominance.** Taking "the latest feedback of the pair" lets any later positive feedback under another tag erase a negative one. On the deployment studied, this erased the only useful negative edge (a `−100` under one tag followed by `+1` under another). Keeping the latest feedback per tag, then the worst across tags, is the only combination that is monotone toward refusal.
-
-**Sender resolution.** Merging every agent that shares a wallet would pool the mass of up to hundreds of agents behind one address. Treating an ambiguous sender as an address node, which has no mass, costs nothing to honest agents with a unique wallet.
-
-**Pre-rotated anchor identifiers.** Naming anchors by address makes key rotation require a new set, and therefore a migration by every consumer. Naming them by ERC-8004 `agentId` puts anchors up for sale with the NFT. Pre-rotation, as in the KERI key event model, reconciles immutable sets with rotating keys.
-
-**Three levels.** The same text applies to every chain. Only the level that is economical to maintain differs. `ResidualVerified` proves the fixed point of the committed graph. `RegistryContested` also lets anyone widen the bound against the registry. `Optimistic` proves nothing and names its certifier.
-
-**Prior art.** On-chain verification of an EigenTrust iteration with Merkle challenges appears in the OpenRank proof of concept (Karma3 Labs). A seeded PageRank proven in zero knowledge over EAS attestations appears in the trustgraphs project. This ERC contributes the ERC-8004 graph construction (tag schemas and kinds, per-tag edge unit, sender resolution, controller rejection), reader-chosen anchors with pre-rotation, the growing-bound certificate, and a contract-facing, non-reverting interface.
-
-⟦Références à convertir au format EIP-1 (DOI + métadonnées CSL-JSON, sinon texte sans lien) : Cheng & Friedman 2005 (P2PECON), Kamvar et al. 2003 (EigenTrust), KERI (Smith). Ne PAS présenter la vérification on-chain du point fixe comme nouvelle (CLAUDE.md §6).⟧
+⟦E3 : section à réécrire (lemmes L1-L7, D30, antériorités). Contenu R6 retiré parce qu'il décrivait la borne L1 globale comme garantie de confiance.⟧
 
 ## Backwards Compatibility
 
-This ERC requires no change to ERC-8004. Aggregators only read the registries, through `ownerOf`, `getApproved`, `isApprovedForAll`, `getAgentWallet`, `readFeedback`, `readAllFeedback` and `getLastIndex`, plus `getVersion` when it is available. Certifiers additionally read the events `NewFeedback`, `FeedbackRevoked`, `MetadataSet`, `Registered` and `Transfer`.
+This ERC requires no change to ERC-8004. Aggregators only read the registries: `ownerOf`, `getApproved`, `isApprovedForAll`, `getAgentWallet`, `getLastIndex`, `readFeedback` and `getVersion`. Certifiers also read the events `NewFeedback`, `FeedbackRevoked`, `MetadataSet`, `Registered` and `Transfer`.
 
 **Requested for a future ERC-8004 revision.** Each request removes a limitation stated in Security Considerations:
 
-1. **Record `block.number` with each feedback.** This would make omissions, key rotations and transfers datable, allow discrepancy proofs to be restricted to facts that predate the snapshot, and allow reputation received before a transfer to be separated from reputation received after it.
+1. **Record `block.number` with each feedback.** Omissions, transfers and anchor key rotations would become datable. Discrepancy proofs could then be limited to facts that predate a certificate, and reputation received before a transfer could be separated from reputation received after it.
 2. **Extend the `giveFeedback` guard to `agentWallet`.** The current guard rejects the owner and approved operators, but not the agent's own wallet.
-3. **Make `agentWallet` unique and add a reverse lookup.** This would make sender resolution verifiable on-chain. ⟦Une v2.1.0 en ce sens existe en amont, branche `feat/unique-reverse-lookup`, non déployée au 27/09 (VÉRIFIÉ source).⟧
+3. **Make `agentWallet` unique and add a reverse lookup.** Emitter resolution and row completeness would become verifiable on-chain.
 4. **Timelock registry upgrades.** Upgrades should be announced on-chain, with a delay, before they take effect.
-5. ⟦Proposition R6, hors CR :⟧ **Standardize `getVersion()`** in the ERC-8004 interfaces, so that aggregators can commit to a registry version without relying on an implementation detail.
+5. **Standardize `getVersion()`** in the ERC-8004 interfaces, so that aggregators can commit to a registry version without relying on an implementation detail.
 
-If the registries change the semantics of `agentWallet` or of `feedbackIndex`, existing certificates become `REGISTRY_CHANGED` (§8), and sets need recertification under an updated version of this ERC.
+If the registries change the semantics of `agentWallet`, of `feedbackIndex` or of the guard, existing certificates become `REGISTRY_CHANGED` (§7) once the version string changes, and sets need recertification.
 
-⟦D17, tour 3 Q3 C. Demande 1 déjà présente dans le draft du 21/09. Demandes 2 à 4 ajoutées par le tour 3. Aucune ne sera en place le 13/10 : le produit fonctionne sans elles (relecture E→C).⟧
+⟦D17, tour 3 Q3 C. Demande 1 déjà dans le draft du 21/09 ; 2 à 4 ajoutées au tour 3 ; 5 proposée par R6 (AM-R6.10). Une v2.1.0 (unicité du wallet, index inverse) existe en amont (PR #80, ouverte, non déployée au 27/09). `isAuthorizedOrOwner`, utilisé par l'implémentation, est une fonction de l'implémentation de référence d'ERC-8004 : la norme ne cite que les fonctions ERC-721.⟧
 
 ## Test Cases
 
-The test vectors are **normative**. Two conforming implementations MUST produce the same quantized weights, the same graph, and the same `graphRoot` for the same registry state and anchor set. For a given submitted `t`, they MUST produce the same `r`, `e`, `d`, statuses and assessments. The vectors are published as JSON in `../assets/erc-TBD/vectors/`. Each vector gives its inputs (registry state as a list of feedback and identity facts, anchor set, schema) and its expected outputs. Exact rational values are given below; WAD values are floors.
-
-⟦Les fichiers de vecteurs seront produits par le solveur R4 (solver/) et rejoués par les tests Foundry R5 (contracts/). À la date de ce texte, solver/FORMAT.md et contracts/ENCODING.md n'existent pas encore : le format JSON reste à aligner. Les valeurs ci-dessous ont été calculées en rationnels exacts le 27/09 (script jetable), pas encore rejouées par le solveur ni par le contrat.⟧
-
-### TC-1 Quantization (§3.4)
-
-Schema `starred`: min 0, neutral 50, max 100. `vouch`: min 0, neutral 0, max 1. `slash`: min −100, neutral 0, max 0. `review`: min −1, neutral 0, max 1. `third`: min 0, neutral 0, max 3. `minusthird`: min −3, neutral 0, max 0. All bounds are WAD-scaled.
-
-| tag | value | decimals | expected `q` |
-|---|---|---|---|
-| starred | 87 | 0 | 7400 |
-| starred | 33 | 0 | −3400 |
-| starred | 4999 | 2 | −2 |
-| starred | 5001 | 2 | 2 |
-| starred | 1e38 | 0 | invalid (discarded, not clamped) |
-| vouch | 1 | 0 | 10000 |
-| slash | −100 | 0 | −10000 |
-| review | 1 | 0 | 10000 |
-| third | 1 | 0 | 3333 (truncated toward zero) |
-| minusthird | −1 | 0 | −3333 (toward zero, not −3334) |
-
-### TC-2 Edge unit and dominance (§3.5)
-
-- Client `c` (unique wallet of agent 18) about agent 4: `slash −100` (index 1), then `review +1` (index 2). Expected: one edge of weight `−10000`, recorded feedback index 1. Under the superseded rule "latest feedback of the pair", the edge would be `+10000`. ⟦Cas réel mainnet (0xea0b… → #4), MESURÉ 27/09 : c'était la seule arête négative utile du registre.⟧
-- Same client: `vouch 1` (index 1), `vouch 0` (index 2). Expected: no edge (current `vouch` is neutral).
-- Same client: `vouch 1` (index 1), `vouch 1` revoked (index 2). Expected: weight `10000`, index 1 (a revoked feedback does not supersede).
-- Same client: `vouch 1` (index 1), `vouch 5` (index 2, out of range). Expected: weight `10000`, index 1 (an invalid feedback does not supersede).
-
-### TC-3 Tag kinds (§3.1)
-
-A scanner address that is the unique wallet of an agent posts `uptime` (kind `Measurement`) feedback on 10 agents. Expected: no edges from the scanner, and the scanner node has no row. ⟦Cas réel : scanner noté sur des agents de la ferme, MESURÉ 27/09. Le classement de `trust` / `oracle-screening` en `measurement` est un choix du schéma de référence ANCRE, pas un fait.⟧
-
-### TC-4 Sender resolution and rejection (§3.2, §3.3)
-
-- Wallet `w` is `agentWallet` of agents 7 and 8. Feedback from `w` on agent 9. Expected: edge from the `ADDRESS` node of `w`, which has zero trust. Agents 7 and 8 have no out-edge.
-- Agent 5's `agentWallet` posts `vouch 1` on agent 5. Expected: rejected (controller). ⟦Cas réel : 78 avis d'un agent par son propre agentWallet, MESURÉ 27/09.⟧
-- Agent 6 transferred from `o1` to `o2`; `o1` then posts `vouch 1` on agent 6. Expected: rejected (former owner).
-- Anchor `A` has current key `k`, and `k` is also the unique `agentWallet` of agent 11. Feedback from `k` on agent 12. Expected: the edge is on `A`'s row only; agent 11 has no out-edge from it. ⟦Choix R6, diverge du solveur actuel (AM-R6.14).⟧
-- Anchor `A` rotated from `k0` to `k1`. Earlier feedback from `k0` on agent 12. Expected: ignored.
-
-### TC-5 Reference graph: absorbing mass, separate budgets, linearity, leave-one-out (§3.6, §4)
-
-`α = 1/3`, anchors `A1`, `A2` with `λ = (1/2, 1/2)`, `minAnchors = 2`. Edges (quantized):
-`A1 → 1 : 10000`; `A2 → 1 : 10000`; `A2 → 2 : 10000`; `1 → 3 : 5000`; `2 → 3 : −10000`.
-
-Row budgets: `B⁺(A1) = 10000`, `B⁺(A2) = 20000`, `B⁺(1) = 10000` (so half of agent 1's mass is absorbed), `B⁻(2) = 10000`.
-
-| | `t^(A1)` | `t^(A2)` | `d^(A1)` | `d^(A2)` |
-|---|---|---|---|---|
-| A1 | 1/3 | 0 | 0 | 0 |
-| A2 | 0 | 1/3 | 0 | 0 |
-| agent 1 | 2/9 (222222222222222222) | 1/9 (111111111111111111) | 0 | 0 |
-| agent 2 | 0 | 1/9 | 0 | 0 |
-| agent 3 | 2/27 (74074074074074074) | 1/27 (37037037037037037) | 0 | 2/27 |
-
-Total mass of column `A1`: `17/27 < 1` (absorbing). Expected set values:
-
-| agent | trust | trustRobust (m = 2) | distrust |
-|---|---|---|---|
-| 1 | 1/6 (166666666666666666) | 1/18 (55555555555555555) | 0 |
-| 2 | 1/18 | 0: endorsed by one anchor only | 0 |
-| 3 | 1/18 | 1/54 (18518518518518518) | 1/27 (37037037037037037) |
-
-With `θ = 0.01 WAD`, `ρ = 1/2` and an exact submission (`eEff` = rounding only): agent 1 is `trusted`; agent 2 fails with `BELOW_THRESHOLD`; agent 3 fails with `DISTRUST`.
-
-Linearity check: the set `{A1}` alone (`λ = 1`, `minAnchors = 1`) MUST give `trust(1) = 2/9`, equal to column `A1` above.
-
-### TC-6 Residual and truncation (§6.2)
-
-- Submitting TC-5's floors MUST yield per-column residuals equal to the rounding terms only (at most `nnz + 1` per column plus the floor gaps). The expected integers are in the vector file.
-- Truncating agent 1 in TC-5 MUST contribute a margin term of `⌈t^(a)_1 · 2/3⌉` to `r_a` (so `4/27` to `r_A1` and `2/27` to `r_A2`). The residual also includes the mismatch on agent 3, whose `F` no longer receives agent 1's mass unless the certifier resubmits `t_3`.
-- A row with `rowMax + 1` entries MUST be rejected unless it is truncated.
-- A weight off the grid (`|q| > 10000`, or `q = 0` in a row entry) MUST be rejected.
-
-### TC-7 Discrepancy proof and widening (§7)
-
-On TC-5 certified at level `RegistryContested`, agent 1's wallet has also posted `vouch 1` on agent 2 (a valid feedback absent from row 1). Proof of kind `OMISSION`:
-- new row 1: `1 → 3 : 5000`, `1 → 2 : 10000`, `B⁺ = 15000`; `Δ = |1/2 − 1/3| + 2/3 = 5/6`;
-- `r_A1 += (2/3)·(2/9)·(5/6) = 10/81`; `r_A2 += (2/3)·(1/9)·(5/6) = 5/81`;
-- `eEff` grows by `(1/2)·(10/27) + (1/2)·(5/27) = 5/18` (277777777777777777 WAD).
-
-Resubmitting the same proof MUST revert (state already charged). Agent 1's `assess` becomes `BELOW_THRESHOLD`: one proven omission lowers everyone's verdict. This is the intended behaviour of a global bound (see ⟦OPEN⟧ §4).
-
-Cap: repeated proofs on row 1 MUST stop widening once the row has been charged `‖C(L⁰)‖₁ + ‖D(L⁰)‖₁ + 2 = 5/2` (in units of Δ).
-
-### TC-8 Statuses and veto (§9)
-
-- `UNKNOWN_SET`, `NO_CERT`: as named, with zeroed values and no revert.
-- `STALE`: at `certBlock + maxAge + 1`.
-- `TRANSFERRED`: after `transferFrom` of agent 1; `ownerOf` reverting (burned token) also yields `TRANSFERRED`.
-- `REGISTRY_CHANGED`: the registry version string changes and `checkRegistry()` is called; `RegistryChanged` is emitted.
-- `VETOED`: `A2`'s current key posts `slash −100` on agent 1. In the next block, `assess(1)` returns `VETOED`, `vetoCount = 1`, `triggerTag = keccak256("slash")`, with no recertification. Then `A2` posts `review +1` on agent 1: the result stays `VETOED` (negative dominance). After `A2` revokes the slash, it returns to `trusted`.
-- Leave-one-out: if `A1`'s key is compromised and endorses a fresh Sybil agent `X` (`A1 → X : 10000`), then after recertification `trustRobust(X) = 0` and `assess(X)` fails with `BELOW_THRESHOLD`.
-
-### TC-9 Mainnet replay (informative)
-
-Replay of the deployment studied in Motivation, at a fixed block, with the reference schema (`vouch`, `review`, `slash` endorsement) and any anchor set that does not endorse the farm. Expected: the farm's target has `trust = 0`, and at most 3 edges survive. ⟦MESURÉ 27/09 au bloc ≈ 108,43 M ; registre sans nouvel avis depuis le bloc 103 696 240 (2026-09-10). Informatif : dépend d'un état de chaîne, pas de la norme.⟧
+⟦E2 : à réécrire à partir de `solver/vectors/`, `solver/vectors/violations/` et `contracts/test/diff/`.⟧
 
 ## Reference Implementation
 
-⟦ANCRE, dépôt privé jusqu'à décision de Hugo :
-- `contracts/`: `AnchoredReputation.sol` au niveau ResidualVerified (k colonnes jointes, table de nœuds append-only, vecteurs tassés 4 × uint64 par slot, `vectorRoot`, `assess`), preuve (i) OMISSION seulement pour la démo. Chantier R5, en cours le 27/09.
-- `solver/`: solveur PPR hors chaîne en Python, arithmétique entière identique au contrat. Chantier R4, en cours le 27/09.
-- Indexeur (R7), `TrustGatedRouter` d'exemple (R8).
-Déploiement et coûts : AUCUN chiffre de gas dans ce texte avant `forge test --gas-report`. Cible ESTIMÉE au tour 3 : ≈ 320 gas par arête au plancher de calldata (≈ 8 octets par arête). L'estimation de 350-400 gas par arête du 21/09 était fausse d'un facteur 4 à 7 (AM-3.6).
-À remplacer, avant soumission, par un lien vers les fichiers dans `../assets/erc-TBD/`.⟧
+⟦E3.⟧
 
 ## Security Considerations
 
-**Anchor-set parameters.**
-- **`minAnchors` MUST be at least 2 for any set used to authorize a transfer of value**, and implementations MUST compute `trustRobust` and `assess` as specified. With `minAnchors = 1`, one stolen anchor key suffices to make a Sybil agent pass. With `minAnchors ≥ 2` and `vetoQuorum = 1`, a stolen key yields at most a denial of service (vetoes, distrust, loss of the endorsements it held), never a payment to a Sybil the other anchors do not endorse.
-- A stolen current key can veto, criticize and withdraw endorsements until the anchor rotates. Rotation requires the pre-committed next key, which anchors SHOULD keep offline and SHOULD NOT have used anywhere else.
-- Consumers SHOULD read a set's `metadataURI` and schema before relying on it. A set with a lax schema (for example, measurement tags declared as endorsements) is valid but leaks trust. There are no default sets.
-
-⟦OPEN — désaccord 3 du tour 2 (m = 2 contre goulot d'intégration) : E n'accepte m = 2 qu'avec le motif « consommateur-ancre » (le client note ceux qui ont livré) ; C objecte que le client devient la cible de corruption, et qu'un client plus une ancre complaisante suffisent. Le texte recommande m = 2 et mentionne le motif sans le trancher.⟧
-
-**Consumer-as-anchor.** A consumer MAY be one of the anchors of the sets it uses, and rate the providers that delivered. Combined with `minAnchors ≥ 2`, a consumer alone never suffices to make a provider pass.
-
-**Completeness and watchers.** ERC-8004 indexes feedback by `(agentId, client)`, not by client, and does not date it. The completeness of a committed row cannot be verified on-chain; it can only be contested. An omission nobody proves stays invisible. The party with an interest in proving it is the consumer about to pay, and a proof costs one transaction per row. There is no reward. A certifier can also front-run a precise certificate with one of equal `eEff` that omits a negative edge; only a discrepancy proof reveals it.
-
-**Global bound.** Widening is global. One proven discrepancy on a high-trust row can make every agent of the set fail its threshold until recertification. This is fail-closed by design and it is also a lever for denial of service. The per-row cap (§7) bounds it, and permissionless recertification ends it.
-
-**Liveness dependency.** Every consumer that fails closed depends on someone recertifying before `maxAge`. Certification is permissionless, so a consumer that runs the published indexer and solver can recertify itself.
-
-⟦OPEN — désaccord 1 du tour 2 (dépendance de vivacité, AM-2.12) : E exige un mode dégradé ; A et D refusent tout mode qui paie sans certificat frais. Le texte ne définit aucun mode dégradé.⟧
-
-**Agent transfers and reputation purchase.** ERC-8004 clears `agentWallet` on transfer, so a transferred agent loses its outgoing edges until the new owner re-verifies a wallet. Its incoming reputation is paused (`TRANSFERRED`) until recertification. The recertifier then decides what to reintegrate: since feedback is undated, reputation received before the transfer cannot be separated on-chain from reputation received after it. Buying a reputable agent therefore costs a pause, not a reset. Anchors can react with a veto.
-
-⟦OPEN — désaccord 2 du tour 2 (rachat de réputation) : D juge la pause inutile, car elle ne coûte qu'un délai ; B et C disent qu'on ne peut rien faire de mieux sans bloc dans le registre. La seule vraie solution est la demande 1 à ERC-8004.⟧
-
-**Registry governance.** The registries studied are upgradeable proxies controlled by a single externally owned account, with no timelock *(verified 2026-09-27 on the deployment of Motivation)*. Their owner can change any semantics this ERC relies on. The committed version hash detects a version change only if the version string changes, and only once someone calls `checkRegistry()` or certifies. An upgrade that keeps the version string is detectable only off-chain, through `Upgraded` events. Consumers of high-value flows SHOULD monitor those events.
-
-**Guard bypass and shared wallets.** The ERC-8004 guard does not cover `agentWallet` or former owners (78 self-ratings observed; former owners regain the right to rate after each transfer). §3.3 rejects both, but the former-owner rule is enforced off-chain only (§7). Wallet uniqueness is established off-chain. A certifier that wrongly declares a unique wallet ambiguous silences that agent's outgoing edges, and no on-chain proof can contest it.
-
-**Permanent negatives.** Negative feedback dominates until its author revokes it, and only its author can revoke it. If the author loses its key, the negative is permanent. The provider's recourse is out of protocol, through ERC-8004 `appendResponse`, and the consumer's choice of set.
-
-⟦OPEN — désaccord 1 du tour 3 (négatif permanent) : A et E veulent une échéance ou une levée ; D refuse toute échéance (l'attaquant attendrait l'expiration). Rien n'est tranché : la révocation par l'auteur reste le seul mécanisme.⟧
-
-**Refusal oracle.** `triggerTag` tells a caller which tag caused a veto. The state is public anyway.
-
-**Measurement leakage.** A set that declares an automated measurement tag as `Endorsement` recreates attack edges (see Motivation). Reference schemas SHOULD classify every tag posted by automated monitors as `Measurement`.
-
-**Payment is not honesty.** Payment-backed feedback raises cost but does not prevent self-funded rings, as observed on-chain. Payment MUST NOT be used as an edge weight or as a pass condition in the core algorithm. It MAY be an edge filter (§3.7).
-
-**Rounding.** All divisions are floored for trust (with the count of divisions added to the residual) and rounded up for distrust and error terms, so rounding never favours passing.
-
-**Gas and denial of service.**
-- `certify` is linear in the number of committed edges times the number of columns. Implementations MUST bound calldata per transaction.
-- Rows are bounded by `rowMax`. Larger rows are truncated at the cost of the margin `(1 − α)·t_u`. An anchor's own row with more than `rowMax` endorsements would be truncated at a margin of about `(1 − α)·α` per column, which saturates the bound. Anchors SHOULD keep their rows within `rowMax`.
-- `assess` makes external calls proportional to the number of anchors and to each anchor's feedback on the agent. Only the anchors control that count.
-- Consumers SHOULD call `assess` with an explicit gas limit, and treat an out-of-gas as untrusted.
-- An append-only node table grows only with support nodes, and entering the support requires trust mass.
-
-**Same chain.** All reads of registry state are same-chain. Cross-chain use of certificates (through `vectorRoot`) is out of scope, and would reintroduce trust in a bridge.
+⟦E3 : à réécrire.⟧
 
 ## Copyright
 
