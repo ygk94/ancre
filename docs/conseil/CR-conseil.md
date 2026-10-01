@@ -1350,3 +1350,37 @@ Rapport : `docs/chantiers/rapports/08.md`. Relecture adversariale : `docs/erc/re
 | **AM-08.C** | Le refus de resoumettre un certificat déjà prouvé faux **se contourne en changeant les octets**, par exemple avec une ligne vide | Moyenne | Identifier un certificat par son contenu, pas par ses octets, ou exiger une amélioration par rapport à l'état prouvé |
 
 **Décisions de Hugo** : MUSTDO, point 14g.
+
+---
+
+# Résultats du chantier 05 (payeur, plugin MetaMask) — 2026-10-01
+
+Rapport : `docs/chantiers/rapports/05.md`. Fusionné dans `feat/conseil-solveur-contrat`. **Tests revérifiés par le pilote : 147 tests Foundry, forks compris, et 48 tests du plugin, tous verts.**
+
+**Ce qui est livré**
+- **`TrustGatedPayer`**, le payeur ERC-1271 de D41 :
+  - `isTrusted` est appelé dans `isValidSignature` ;
+  - schémas `exact` (EIP-3009) et `upto` (Permit2) ;
+  - `explain` et `reportRefusal` ;
+  - `/code-review high`, plus une revue de sécurité faite à la main (la skill relisait encore le dépôt principal, AM-02.9) : aucune faille notée ≥ 8/10.
+- **Le plugin `mm ancre`** : `check`, `inspect`, `pay`, `payer status`, `payer fund`, `override`, et un journal ; `SKILL.md` et README.
+- **L'override humain (D47).**
+  - Il affiche le verdict, demande une confirmation tapée, puis ouvre une page locale à usage unique. **L'humain signe dans son extension**, depuis son propre wallet. Le payeur et l'Agent Wallet ne sont jamais débités.
+  - **Le signataire est identifié positivement** : seuls l'owner ou la trésorerie du payeur, fixés on-chain, sont acceptés. La revue de code avait montré qu'une clé tierce financée passait dans la première version ; c'est corrigé.
+  - La commande refuse de tourner sans terminal interactif, et n'a pas accès à l'exécuteur de l'Agent Wallet.
+  - **17 tests prouvent qu'aucun chemin ne permet à un agent d'exécuter un override.** Dans le vrai `mm` 7.0.0, la tentative est refusée et inscrite au journal.
+- **La mise en place sur fork** (`scripts/setup-fork.mjs`) enchaîne :
+  - `register` ;
+  - `AgentWalletSet` signé ;
+  - `setAgentWallet` ;
+  - le déploiement du payeur ;
+  - le dépôt d'USDC.
+
+  **`SETUP PASS` sur les vrais registres du fork.**
+
+**Angles morts à retenir**
+- **Le journal du plugin est une commodité pour l'écran, pas une trace infalsifiable** : l'agent tourne sous le même utilisateur. La trace on-chain, c'est `reportRefusal`.
+- **Guard Mode n'est pas lisible par le plugin.** Il faut le vérifier avec `mm wallet policy get`.
+- **Si l'owner est un compte délégué EIP-7702 sans `isValidSignature`**, il ne pourra pas signer l'override en EIP-3009. C'est à vérifier.
+
+**Ce qui attend Hugo** (MUSTDO, point 14h) : le test T1 réel, `mm login`, et l'adresse owner et trésorerie.

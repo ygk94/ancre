@@ -102,6 +102,14 @@
     - (c) **fixer `minRefresh = maxAge`**.
   - **Autoriser une session de correction du contrat** pour les trois défauts AM-08.A, B et C. Le texte de la norme n'est pas soumettable tant qu'ils ne sont pas corrigés ou explicitement assumés.
 
+- [ ] **14h. Chantier 05 : ce qui ne dépend que de toi (01/10)** :
+  - **Test T1 réel sur le testnet** (porte P3 : le facilitator accepte-t-il le payeur ?). Il faut ton accord, puis environ **0,40 MON et 0,1 USDC de testnet** (faucets : https://faucet.monad.xyz, https://faucet.circle.com). La procédure est dans `contracts/`, voir `docs/chantiers/rapports/05.md`.
+  - **`mm login`** : pour essayer en vrai le `pay` et l'`override` avec ton extension MetaMask. Choisis le mode **server-wallet**, pas BYOK (condition de D47).
+  - **L'adresse owner et trésorerie du payeur** : ce sera **le seul wallet qui pourra signer un override**.
+    - Ce doit être **un compte de ton extension MetaMask**, distinct du wallet serveur de `mm`.
+    - **À vérifier** : si ce compte est délégué en EIP-7702 sans `isValidSignature`, il ne pourra pas signer l'override en EIP-3009.
+  - **Vérifier Guard Mode** avec `mm wallet policy get` : il doit être limité au payeur et à l'USDC, puisque le plugin ne peut pas le lire.
+
 ## 🟡 Avant le 12/10
 
 - [ ] **15. Déclarer le niveau de certification de la démo** après la mesure du chantier 02 : Registry-verified, chaque arête relue (~13,6 M gas estimés), ou Submitter-attested (D32).
