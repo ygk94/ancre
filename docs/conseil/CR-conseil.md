@@ -1289,3 +1289,33 @@ Rapports complets : `docs/chantiers/rapports/02.md` et `04.md` (branches `chanti
 | AM-04.2 | **Noms de tags limités à 32 octets** : un vrai tag du registre en fait 33, et l'ensemble est refusé | en cours d'intégration |
 | AM-04.10, 04.12 | Parité avec l'indexeur : sémantique d'`OUT_OF_BOUNDS` (par tag ou par couple), ordre des tags (UTF-8 contre UTF-16 en JavaScript) | **à relayer au chantier 03** |
 | AM-PIL.1 | **Le repérage des sessions par `ListAgents` ne marche pas** (dossier non affiché). Les prompts doivent passer par un fichier de présence ou par le seul journal | prompts à corriger |
+
+---
+
+# Intégration 02 + 04 — 2026-10-01
+
+Rapport : `docs/chantiers/rapports/integration.md`. Fusionnée dans `feat/conseil-solveur-contrat` (commit `23d7f77`). **Tests revérifiés par le pilote : 91 verts pour le contrat (forks compris), 134 verts et 1 sauté pour le solveur.**
+
+- **Un seul format v1.** Le binaire, l'arithmétique, la règle de remplacement et les preuves sont dans `contracts/ENCODING.md`. Les règles d'arêtes R1 à R8 sont dans `solver/FORMAT.md`.
+  - On retient le **sPlus du 04** (la vraie somme positive), signalé par le bit d'en-tête du 02. Le B⁺ du 02 donnait une borne juste mais trop large.
+  - On retient la **disposition des lignes du 02**, plus **VIA_OWNER**, qui n'existe que si le `setId` l'engage (D44).
+- **Erreur corrigée** : départager deux tags à égalité par ordre alphabétique (règle du 04) n'est pas calculable on-chain. Ça changeait 7 arêtes réelles. On départage désormais par le feedbackIndex le plus grand.
+- **AM-04.1 fermé : nouvelle règle de remplacement.** Elle compare la masse, q (eUp sans le plancher d'arrondi) et la méfiance D. L'ancienne règle bloquait la croissance honnête du graphe **et** acceptait la censure (moins d'arêtes, donc un eUp plus petit). Sur le fork, un graphe qui grandit est certifié tout de suite, contre 601 blocs d'attente avant.
+- **AM-04.2 fermé** : les tags peuvent avoir n'importe quelle longueur, puisque seul leur hash est stocké. L'enregistrement d'un ensemble coûte 14 % de moins.
+- **Test différentiel réel**, mesuré deux fois (Foundry et `simulate.py` sur un fork du mainnet) : **9 vecteurs sur 9 acceptés**, avec setId, eEff, racines, masse, q et D identiques.
+- **Violations** :
+  - en Registry-verified, fabrication et gonflement sont refusés dès la soumission, tandis que la dilution et le négatif omis passent, puis sont prouvés ;
+  - en Submitter-attested, les quatre violations sont prouvées, preuve (v) comprise, pour 0,26 à 0,30 M gas par preuve.
+- **`/code-review high`** : 10 constats, 9 corrigés, 1 assumé (la fenêtre de rafraîchissement). **13 tests de refus du 02 étaient creux**, mais les refus eux-mêmes étaient bien réels. C'est corrigé.
+- **Gas** :
+  - la démo en Registry-verified ne bouge pas ;
+  - les mises à jour coûtent 0,1 à 3 % de plus ;
+  - le premier certificat coûte 40 à 400 k gas de plus ;
+  - le contrat passe à **33,5 Ko**, toujours au-dessus des 24 Ko d'Ethereum.
+
+| Id | Angle mort | Statut |
+|---|---|---|
+| AM-INT.1 | **Une dilution qui ne change ni la masse ni D passe encore la règle de remplacement.** Sur un ensemble ouvert, il faut un surveillant actif pendant le jugement, ou un soumetteur attesté (D27) | décision de Hugo |
+| AM-INT.2 | Des tests de refus creux (`expectRevert` suivi d'un appel bas niveau sans lire son résultat) ne testent rien | corrigé ; à rappeler dans les briefs (`/code-review`) |
+
+**Relais** : `docs/chantiers/relais/vers-03.md` pour l'indexeur (égalité entre tags, `OUT_OF_BOUNDS` par tag, `via = none`, tags en hash). Les chantiers **05** et **07** doivent savoir que `triggerTag` est maintenant un hash.
