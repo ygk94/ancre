@@ -534,6 +534,8 @@ trusted ⇔ withVeto ∧ status = OK ∧ trustLow ≥ theta ∧ rhoD · distrust
 
 **A payer MUST decide with `isTrusted`, or with `assess(…, true)` and its `trusted` field.** `status = OK` alone does not mean the agent may be paid: an unknown agent has status `OK` and trust zero.
 
+A payer MUST NOT authorize a transfer of value on a set whose `minAnchors` is below 2. A payer that caches a decision MUST bound the cache's lifetime in blocks and MUST NOT reuse a decision across certificates.
+
 #### 8.4 Robustness of reads
 
 `trustOf`, `assess` and `isTrusted` MUST NOT revert, whatever the registries return. Every external call they make MUST be gas-capped, and a failed call MUST resolve toward refusal (`REGISTRY_CHANGED`, `TRANSFERRED`, or `trusted = false`). `trustOf(agentId, setId)` returns `(status, trustRobust, distrust, e, certBlock)` from `assess(agentId, setId, true)`.
@@ -628,7 +630,135 @@ Implementations MAY add functions (for example a dry run, capacity reservation, 
 
 ## Rationale
 
-⟦E3 : section à réécrire (lemmes L1-L7, D30, antériorités). Contenu R6 retiré parce qu'il décrivait la borne L1 globale comme garantie de confiance.⟧
+**Anchors instead of a global score.** Only asymmetric, seed-anchored reputation functions can resist Sybil attacks[^1]. With a walk that restarts at the anchors and absorbs lost mass, the mass that reaches a region `X` containing no anchor is bounded by the mass that crosses its attack edges: `π(X) ≤ ((1 − α)/α) · Σ_{u∉X, v∈X} π(u) · C_uv`. A farm of any size that no anchor-reachable node endorses receives exactly zero. Letting the reader choose the anchors also answers the objection to a single score.
+
+**Personalized PageRank.** EigenTrust with pre-trusted peers[^2] is personalized PageRank under another name. Among the classical schemes (EigenTrust, Advogato, SybilGuard[^5], SybilRank), it is the only one that has both a formal Sybil bound and a certificate checkable in **one pass** over the graph. Advogato's certificate is a binary max-flow, and SybilRank depends on an early-stopped iteration.
+
+**A share of mass, not a rescaled score.** An earlier draft exposed `t_i · N`, with `N` the number of nodes. `N` is chosen by the certifier and can be inflated for free by registering agents. A share of a unit mass has no free parameter, and each entry fits in 64 bits.
+
+**Absorbing convention.** Sending lost mass back to `p` makes `t` depend non-linearly on `p`. Absorbing it keeps the trust of a weighted set exactly equal to the weighted sum of its columns. A certificate can therefore carry one column per anchor, and leave-one-anchor-out is computable.
+
+**Sub-solution certificates: a classical bound used on-chain.** The certificate relies on four elementary facts. None of them is new: they are the comparison principle for non-negative matrices of spectral radius below 1[^4], and the lower-bound property of approximate personalized PageRank vectors that local "push" algorithms use[^3]. What this ERC adds is their use as an on-chain acceptance test.
+- *L1, monotonicity.* `F` has non-negative coefficients (distrust does not enter trust), and flooring is non-decreasing, so `x ≤ x′` implies `F(x) ≤ F(x′)` and `F_bas(x) ≤ F_bas(x′)`.
+- *L2, a sub-solution is a lower bound.* If `C′ ≤ C` entrywise and `t ≤ F′_bas(t)`, then `t ≤ F(t) ≤ F²(t) ≤ … → t*`, so `t ≤ t*` coordinate by coordinate.
+- *L3, iteration from zero.* `t⁰ = 0`, `t^{n+1} = F_bas(tⁿ)` is non-decreasing, bounded and integer, hence stationary, and every iterate is a sub-solution. A floating-point fixed point rounded to integers can exceed `F_bas(t)` by one unit. This is why §4.2 requires iteration from zero.
+- *L4, leave-one-out.* `trust − (sum of the m − 1 largest contributions)` is non-decreasing in each contribution, so it remains a lower bound.
+
+The aggregator only checks `t_v ≤ y_v` once per node and column. The result is a per-agent lower bound with no error term, whatever rows the certifier truncated. An earlier draft certified an L1 norm of the residual instead. Its single global bound forced certifiers to submit almost the whole support so that the error stayed below the threshold.
+
+**Domination, and why two levels.** L2 only holds for the registry's graph if the committed graph is dominated by it (`C′ ≤ C`). A certificate that fabricates an edge, inflates a weight or shrinks a budget passes the arithmetic, and the test vectors include one of each. At the `RegistryVerified` level, fabrication and inflation become impossible: every committed edge, row source and owner is re-read in the submitting transaction. Two things stay impossible to check at submission, because ERC-8004 has no per-client index:
+- a row's **completeness**;
+- the truth of a declared `sPlus`.
+
+Dilution (an under-declared positive budget) and omitted negative edges therefore remain provable after the fact, not refusable at submission. `SubmitterAttested` trades the re-reads for a list of accountable submitters, with the same proofs. The re-read costs roughly ten times the attested submission on the measured deployment (Reference Implementation).
+
+**Declared `sPlus`.** Without it, omitting a positive edge would shrink `B⁺` and raise every other edge of the row: omission would become dilution. Declaring the true sum keeps the remaining edges at their true weight. The omitted mass becomes an explicit margin of `eUp` and costs nothing on the trust side. A certifier can then drop expensive or excess edges safely. Nothing declares the negative sum, so negative edges are never omissible.
+
+**Two bounds.** `eUp` (L5) bounds `‖t* − t‖₁`. It is what makes `distrustUp = d + eEff` an upper bound on the true distrust, since distrust is linear in trust with coefficients at most `1 − α`. `eLow` (L6) bounds `‖(t − t*)⁺‖₁` after proofs of decreases. Each proof bills the exact change of the normalized row, multiplied by `(1 − α)·t_u / α`. Per-row caps bound the total, and successive amendments add up by the triangle inequality.
+
+**Replacement by quality.** Two valid sub-solutions of the same graph satisfy `‖t* − t‖₁ = ‖t*‖₁ − ‖t‖₁` (L7). More mass is therefore more precision, and omitting endorsements (censorship) loses mass. An earlier rule compared error bounds. It blocked every honest update of a growing graph, since each new positive edge adds a rounding unit, and it rewarded censorship, since fewer edges give a smaller bound. `q`, the bound without its rounding floor, keeps truncation honest. The distrust mass `D` keeps negative edges. A zero vector has `q ≈ 1 WAD` and can never displace a live certificate.
+
+**Growing bounds instead of slashing.** ERC-8004 does not record when feedback was given, so "this feedback existed before the certificate" cannot be proven. With slashing, anyone could post feedback just after an honest certificate, "prove" an omission and collect a bond. Widening a bound needs no dates, no bond and no challenge window. It also doubles as the recertification signal.
+
+**Separate budgets, one-hop distrust, leave-one-out, veto.** The distrust a region `X` can emit is `(1 − α)·Σ_{u∈X} t_u·Σ_j D_uj ≤ (1 − α)·π(X)` whenever rows of `D` sum to at most 1, whether or not `D` shares a budget with `C`. A shared budget would only buy a factor of 2, and it would make honest criticism cost endorsement capacity. Distrust that propagated would let a Sybil region smear honest agents through chains of negative feedback. A stolen anchor key is used to **approve** Sybils (theft), not to veto (denial of service). With `minAnchors ≥ 2`, no single anchor can make an agent pass. The live veto reads one feedback per anchor, so a veto takes effect in the next block at a bounded cost. The certified bit keeps a veto that a later feedback of the same anchor would hide.
+
+**Tags and edges.** A liveness ping delegates no trust. If measurement feedback propagated, anyone running an automated scanner would manufacture attack edges, and the Sybil bound would be worthless. On the deployment of Motivation, this is how trust leaked into the farm. Keeping the latest feedback per tag, then the worst across tags, is monotone toward refusal: under "latest feedback of the pair", a `+1` under another tag erased the only useful negative edge of that registry. When the latest feedback of a tag is invalid, the tag yields nothing. That is the client's current statement. Falling back to an older one would let a stale opinion speak for the client, and would need an unbounded scan in the live veto. Ties are broken by feedback index because the aggregator stores only tag hashes.
+
+**Row copy and owner fallback.** Merging every agent that shares a wallet would pool hundreds of agents' mass behind one address. Treating such a wallet as a massless address node would silence honest agents that share a platform wallet. Copying the row into every agent that has the wallet as its source lets each agent speak with its own mass: agents without mass transmit nothing, and the measured Sybil mass is the same with one copy or a hundred. The owner fallback lets agents whose wallet was cleared by a transfer speak through their owner, who can set the wallet anyway. Because it changes the edges, it is committed in the `setId`. Certifiers can bound the copies of one row (the reference solver uses 64), but nothing on-chain depends on that bound.
+
+**Normative encoding.** The roots hash the submitted bytes, proofs reopen rows by those bytes, and the vectors fix them. Leaving the encoding to implementations would make two conforming certifiers produce incompatible commitments. Node indices are local to an aggregator. That is enough, because a certificate is meaningful only to the aggregator that verified it.
+
+**Proof-free reads.** A read that required the payee to supply a Merkle proof would change payment protocols on the provider side and add a proof service to operate. On storage priced per page, contiguous vectors rewritten in place are cheap, so `isTrusted` reads stored state.
+
+**Normative quantization.** Quantization changes `C`, and therefore the fixed point. A grid of 10⁻⁴ fits an `int16` and keeps rows small.
+
+**Edge filters.** Payment provenance and payment-claim verification are useful, orthogonal signals. One project scores the provenance of the funds behind a feedback (monad-agent-trust). Another checks whether the payment cited in an ERC-8004 evidence document happened (Kanmani). Either could become an `edgeFilterId` once its predicate can be evaluated on-chain. No filter "the receipt is true" is suggested as a default: a farm that pays itself has only true receipts.
+
+**Constants.**
+- `K_MAX = 16` anchors and `TAGS_MAX = 16` tags bound the per-set storage and the live veto.
+- `ROW_MAX = 256` bounds a row in calldata. Anchor rows cannot exceed it, because they cannot be truncated.
+- `α = 1/3` is the recommended value, not a fixed one: no value dominates. On synthetic graphs with known ground truth (degree 5, 100 attack edges), the honest coverage after leave-one-out at a threshold admitting 1 % of Sybils was 0.752 / 0.712 / 0.668 for `α` = 1/4 / 1/3 / 1/2. At a fixed threshold, the Sybils admitted were 0.7 % / 0.3 % / 0 %. These figures depend on the model.
+
+**Prior art.**
+- Verification of an EigenTrust computation with fraud proofs over Merkle commitments appears in the OpenRank proof of concept (Karma3 Labs), whose settlement layer is simulated off-chain.
+- A seeded PageRank proven in zero knowledge over EAS attestations appears in the trustgraphs project.
+- A payer that constrains itself with a policy before paying, without changing x402, is proposed in x402 issue 2641.
+
+This ERC does not claim the on-chain verification of a fixed point, nor policy-gated payment. It contributes their combination for ERC-8004: the graph construction (tag kinds, per-tag edge unit, emitter resolution, current-controller rejection), reader-chosen anchors with leave-one-out and a live veto, the sub-solution certificate with registry re-reads and growing bounds, and a non-reverting interface that a paying contract reads in the same transaction.
+
+⟦Sources : PROOFS.md L1-L7 (D37), présentés selon D30 comme usage on-chain d'une borne classique, pas comme résultat nouveau. Mesures α : R4 / tour 4 (synthétique, deg = 5, g = 100). D34 : masse Sybil 0,1481 pour M = 1 ou 100 copies. ROW_ALIAS_MAX = 64 (D44) : AM-08.3. Antériorités : OpenRank et trustgraphs (CLAUDE.md §6, D30), x402 #2641 (`docs/ressources/x402.md`, issue ouverte, maj 2026-09-11). D46 : Kanmani et ColinkaMir nommés comme exemples d'`edgeFilterId`, sans dépendance. EIP-1 interdit les liens GitHub : projets cités par leur nom seulement. DOI des notes 1 à 5 : vérification dans la note qui suit les références.⟧
+
+[^1]:
+    ```csl-json
+    {
+      "type": "paper-conference",
+      "id": 1,
+      "author": [{"family": "Cheng", "given": "Alice"}, {"family": "Friedman", "given": "Eric"}],
+      "DOI": "10.1145/1080192.1080202",
+      "title": "Sybilproof reputation mechanisms",
+      "container-title": "Proceedings of the 2005 ACM SIGCOMM Workshop on Economics of Peer-to-Peer Systems",
+      "original-date": {"date-parts": [[2005]]},
+      "URL": "https://doi.org/10.1145/1080192.1080202"
+    }
+    ```
+
+[^2]:
+    ```csl-json
+    {
+      "type": "paper-conference",
+      "id": 2,
+      "author": [{"family": "Kamvar", "given": "Sepandar D."}, {"family": "Schlosser", "given": "Mario T."}, {"family": "Garcia-Molina", "given": "Hector"}],
+      "DOI": "10.1145/775152.775242",
+      "title": "The EigenTrust algorithm for reputation management in P2P networks",
+      "container-title": "Proceedings of the 12th International Conference on World Wide Web",
+      "original-date": {"date-parts": [[2003]]},
+      "URL": "https://doi.org/10.1145/775152.775242"
+    }
+    ```
+
+[^3]:
+    ```csl-json
+    {
+      "type": "paper-conference",
+      "id": 3,
+      "author": [{"family": "Andersen", "given": "Reid"}, {"family": "Chung", "given": "Fan"}, {"family": "Lang", "given": "Kevin"}],
+      "DOI": "10.1109/FOCS.2006.44",
+      "title": "Local Graph Partitioning using PageRank Vectors",
+      "container-title": "47th Annual IEEE Symposium on Foundations of Computer Science (FOCS'06)",
+      "original-date": {"date-parts": [[2006]]},
+      "URL": "https://www.math.ucsd.edu/~fan/wp/localpartition.pdf"
+    }
+    ```
+
+[^4]:
+    ```csl-json
+    {
+      "type": "book",
+      "id": 4,
+      "author": [{"family": "Berman", "given": "Abraham"}, {"family": "Plemmons", "given": "Robert J."}],
+      "DOI": "10.1137/1.9781611971262",
+      "title": "Nonnegative Matrices in the Mathematical Sciences",
+      "publisher": "Society for Industrial and Applied Mathematics",
+      "original-date": {"date-parts": [[1994]]},
+      "URL": "https://doi.org/10.1137/1.9781611971262"
+    }
+    ```
+
+[^5]:
+    ```csl-json
+    {
+      "type": "paper-conference",
+      "id": 5,
+      "author": [{"family": "Yu", "given": "Haifeng"}, {"family": "Kaminsky", "given": "Michael"}, {"family": "Gibbons", "given": "Phillip B."}, {"family": "Flaxman", "given": "Abraham"}],
+      "DOI": "10.1145/1159913.1159945",
+      "title": "SybilGuard: Defending Against Sybil Attacks via Social Networks",
+      "container-title": "Proceedings of the 2006 Conference on Applications, Technologies, Architectures, and Protocols for Computer Communications",
+      "original-date": {"date-parts": [[2006]]},
+      "URL": "https://doi.org/10.1145/1159913.1159945"
+    }
+    ```
+
+⟦DOI vérifiés via Crossref le 01/10 (agent). EIP-1 demande un DOI et au moins une URL, de préférence vers une copie libre. Seule la note 3 a une copie libre vérifiée. Pour les autres, l'URL est celle du DOI : à confirmer au lint (eipw). SybilRank (NSDI 2012) n'a pas de DOI, donc il est cité sans note. OpenRank : le PoC (`openrankprotocol/openrank-poc`, Rust) simule la couche de règlement et ne déploie aucun contrat. L'affirmation « première vérification déployée sur un contrat EVM » n'est PAS faite dans le texte (non vérifiée au-delà de deux organisations GitHub).⟧
 
 ## Backwards Compatibility
 
@@ -731,7 +861,7 @@ Four certificates satisfy `t ≤ F_bas(t)` for their committed graph, but that g
 | dilution: `18 → 3` omitted, no `sPlus` | `t(2)`: 0.0926 → 0.1296 | accepted | row 18, agent 3, `wNew = 10000` | 111111111111111111 / 111111111111111127 |
 | slash omitted (anchor row and copy) | `d(4)`: 0.1852 → 0 | accepted | row `A2`, then row 18, agent 4, `wNew = −10000` | 0 / 555555555555555573 |
 
-After the proofs, `‖(t − t*)⁺‖₁ ≤ eLow` and `d* ≤ d + eEff` hold again for the true graph. Resubmitting a proven certificate unchanged MUST revert (§5.9).
+After the proofs, `‖(t − t*)⁺‖₁ ≤ eLow` and `d* ≤ d + eEff` hold again for the true graph. Resubmitting a proven certificate unchanged reverts (§5.9).
 
 ### TC-6 Behaviour (§5.9, §7, §8)
 
@@ -771,11 +901,96 @@ Ces cas ne sont pas dans `verify.py` : ils exigent un registre. Le chemin `asset
 
 ## Reference Implementation
 
-⟦E3.⟧
+The reference implementation has four parts:
+- an aggregator contract that implements §2 to §10;
+- an off-chain solver that applies the edge rules of §3 and iterates from zero;
+- a certifier service;
+- a watcher that audits each certificate against the registry and submits `proveEdge`, `proveWallet` or `proveTransfer`.
+
+It passes every vector of the Test Cases. On the deployment described in Motivation, measured on a fork of that chain on 2026-10-01:
+
+| operation | gas |
+|---|---|
+| certificate of 300 edges, 100 nodes, 3 anchors, `RegistryVerified` (update) | 14,974,802 |
+| same certificate, `SubmitterAttested` | 1,351,917 |
+| re-read of one edge in the registry (single feedback in the pair) | ≈ 45,500 |
+| each further feedback in the same pair | ≈ 13,000 |
+| `isTrusted` on an unknown agent | 29,231 |
+| `assess` without veto, strict transfer mode | 80,609 |
+| `assess` with veto | 139,055 – 165,888 |
+| one discrepancy proof | 258,685 – 304,293 |
+
+With a 30 M gas transaction limit, a `RegistryVerified` certificate holds about 630 single-feedback edges at `k = 3`. Splitting verification across transactions is not specified.
+
+The contract's runtime bytecode is 33,527 bytes. That is above the 24,576-byte limit of EIP-170, so it cannot be deployed unchanged on a chain that enforces that limit. A deployment on such a chain has to move the proof functions (`proveEdge`, `proveWallet`, `proveTransfer`) into a separate contract that shares the aggregator's storage, or move the verification pass into libraries. Either split leaves the interface of §10 unchanged.
+
+⟦Chiffres : `contracts/GAS.md` (MESURÉ, intégration 02 + 04, 01/10 ; 630 arêtes CALCULÉ). Le dépôt est privé (décision de Hugo) : avant la PR, il faut soit le rendre public et le citer (EIP-1 n'autorise pas le lien GitHub, mais l'implémentation peut être copiée dans `assets/`), soit copier `AnchoredReputation.sol` dans `assets/erc-0000/`. Taille : AM-INT.9 et AM-08.13 ; ma recommandation est de découper APRÈS la soumission du hackathon (hors chemin critique : Monad accepte 128 Ko), mais AVANT la PR d'ERC si Hugo veut une implémentation de référence déployable sur Ethereum.⟧
 
 ## Security Considerations
 
-⟦E3 : à réécrire.⟧
+**What a certificate guarantees.**
+- At submission, `t ≤ t*` holds for the committed graph.
+- For the registry's graph, it holds only if the committed graph is dominated by it (Rationale).
+- At the `RegistryVerified` level, fabricated and inflated edges are refused, but dilution (an under-declared `sPlus`) and omitted negative edges are not, because completeness cannot be checked without a per-client index. At the `SubmitterAttested` level, all four are possible for a listed submitter.
+
+In every case, the lower bound is guaranteed for the registry's graph only once every existing discrepancy has been proven. No level makes a certificate unforgeable. A consumer relying on a set should know who watches it.
+
+**Open sets need a watcher.** On a set without listed submitters, anyone can submit. A diluted certificate that does not lower the mass, `q` or `D` passes the replacement rule and can displace an honest one before `maxAge`. A proof corrects it, and the honest certificate then replaces it at once. A slightly different variant can be resubmitted, though, and has to be proven again: each round costs the submitter about a full certificate and the watcher one proof. Nothing on-chain bounds the number of rounds. A set that cannot guarantee an active watcher should list its submitters.
+
+**Bounds are global over a set.** `eLowEff` and `eEff` aggregate over all agents. One proof on a high-trust row lowers `trustLow`, or raises `distrustUp`, for every agent of the set until recertification.
+- On the deployment of Motivation, proving one omitted negative edge on an anchor row raised `eEff` from 18 wei to 0.556 WAD. With `ρ = 1/2`, no agent passed `isTrusted` until the next certificate.
+- Only the client of a committed row can create such facts, and the replacement rule lets recertification follow at once. This is fail-closed by design, and it is also a denial-of-service lever.
+- The owner of an endorsed agent can make its endorser an approved operator (`setApprovalForAll`), which turns the endorsement into a controller relation, and then prove the decrease.
+- `eLowMax` caps the widening of the lower bound: beyond it, the set is `STALE` and any certificate can replace the current one.
+
+**Cost asymmetries.** Re-reading a pair edge scans the pair's history from its latest index downward. The client of a row can stack feedback on a pair to make a `RegistryVerified` submission, or a proof, more expensive. On the deployment of Motivation, each stacked feedback costs its author about 20 times what it costs a reader to skip it. A certifier can also omit such a positive edge under a declared `sPlus`.
+
+**Anchors.**
+- With `minAnchors ≥ 2` and `vetoQuorum = 1`, a stolen anchor key yields at most a denial of service: vetoes, distrust, and the loss of the endorsements it held. It never yields a payment to an agent that the other anchors do not endorse. With `minAnchors = 1`, one stolen key suffices to make a Sybil agent pass.
+- This version names anchors by address. A compromised anchor cannot rotate its key: it has to be replaced in a new set, and consumers have to migrate.
+- The live veto reads only an anchor's last feedback on an agent. Any later feedback from the anchor, even a measurement, lifts the live veto. Only the certified bit keeps it until the next certificate. Anchors therefore have to follow §9.
+- A slash followed by a positive feedback from the same anchor, both posted between two certificates, is seen neither live nor by the certificate.
+
+**Consumer as anchor.** A consumer can be one of the anchors of the sets it uses, and rate the providers that delivered. Combined with `minAnchors ≥ 2`, the consumer alone never makes a provider pass. A consumer plus one complacent anchor does, so the second anchor matters.
+
+**Liveness.** Every consumer that fails closed depends on someone recertifying before `maxAge`. Submission is permissionless on open sets, so a consumer that runs the published solver can recertify itself. Listed submitters are a liveness dependency.
+
+⟦OPEN — désaccord 1 du tour 2 (dépendance de vivacité, AM-2.12) : E exige un mode dégradé ; A et D refusent tout mode qui paie sans certificat frais. Le texte ne définit aucun mode dégradé. Maintenu ouvert : D27 dit qui paie la recertification, pas ce qui arrive s'il ne paie plus.⟧
+
+**Transfers and reputation purchase.**
+- ERC-8004 clears `agentWallet` on transfer.
+- A transferred agent reads as `TRANSFERRED`, live in strict mode, after `proveTransfer` in fast mode, until the next certificate.
+- Its **outgoing** edges stay in the certified vectors until someone submits `proveWallet` or a new certificate is accepted. Until then, a bought agent keeps propagating the mass it had.
+- Feedback is undated, so reputation received before the transfer cannot be separated from reputation received after it: buying a reputable agent costs a pause, not a reset.
+- The committed owner is a 63-bit fingerprint. A transfer to an address that shares those 63 bits goes unnoticed. Finding one takes about 2⁶³ attempts.
+
+**Registry governance.** The registries of the deployment in Motivation are upgradeable proxies controlled by a single externally owned account, with no timelock *(verified 2026-09-27)*. Their owner can change any semantics this ERC relies on.
+- The version hash detects an upgrade only if the version string changes, and only for the sets on which someone calls `checkRegistry`. An upgrade that keeps the version string is detectable only off-chain, through `Upgraded` events.
+- Consumers of high-value flows should monitor those events.
+- `getVersion` and the reference registry's `isAuthorizedOrOwner` are not part of the ERC-8004 interface. An aggregator on a registry without them refuses every submission. It can use the ERC-721 functions of §1 instead of `isAuthorizedOrOwner`.
+
+**The registry guard and shared wallets.**
+- The ERC-8004 guard does not reject an agent's own `agentWallet`: one agent of the deployment in Motivation received 78 feedback entries from it. §3.3 rejects every current controller, `agentWallet` included.
+- Former owners are not rejected, because past ownership cannot be checked on-chain. A seller can rate the agent it sold, with the weight of its own mass, like any third party.
+- A wallet shared by several agents makes each of them emit the same row with its own mass. A platform wallet whose agents are all reputable therefore speaks with their combined mass. That is concentration, not a Sybil gain, and it is visible in the certificate.
+
+**Permanent negatives.** Negative feedback dominates until its author revokes it, and only its author can revoke it. If the author loses its key, the negative is permanent. The provider's recourse is out of protocol: ERC-8004 `appendResponse`, and the consumer's choice of set.
+
+⟦OPEN — désaccord 1 du tour 3 (négatif permanent) : A et E veulent une échéance ou une levée ; D refuse toute échéance (l'attaquant attendrait l'expiration). Rien n'est tranché : la révocation par l'auteur reste le seul mécanisme, et le texte n'en définit pas d'autre.⟧
+
+**Refusal oracle.** `triggerTag` tells any caller which tag caused a veto. The state is public anyway.
+
+**Measurement leakage.** A set that declares an automated measurement tag as an endorsement recreates attack edges. On the deployment of Motivation, taking a scanner as the only anchor leaked 34.6 % of its mass into the farm. Reference schemas should classify every tag posted by automated monitors as a measurement.
+
+**Payment is not honesty.** Payment-backed feedback raises the cost of an attack but does not prevent self-funded rings, as observed on-chain. Payment is neither a weight nor a pass condition in this ERC.
+
+**Rounding.** Every term of `y` and every contribution `c_a` is rounded down. Margins, bounds, proof amounts and distrust are rounded up. Rounding never helps an agent pass.
+
+**Gas.** Every external call made by a read is gas-capped, so a hostile registry cannot exhaust the caller's gas. A decision can still cost more than a micropayment. Payers may cache decisions per payee for a bounded number of blocks (§8.3), and should call reads with an explicit gas limit, treating out-of-gas as untrusted.
+
+**Same chain.** All registry reads are same-chain. Using a certificate on another chain would reintroduce trust in a bridge.
+
+⟦Correspondance : AM-02.1 (« ce que garantit un certificat »), AM-02.2 / AM-INT.1 / AM-INT.15 (ensembles ouverts), AM-02.4 / AM-INT.4 (bornes globales, 18 wei → 0,556 WAD MESURÉ sur fork le 01/10), AM-02.3 (asymétrie ≈ 20×, 13 k contre 271 k MESURÉS), AM-02.6 et AM-4.7 (veto), AM-08.4 (gel des sortantes), AM-08.9 (empreinte 63 bits), AM-3.5 / D17 / AM-08.5 (gouvernance), AM-08.10 (fonctions non standard), AM-3.3 / AM-2.8 (78 cas), D20 (anciens owners), désaccord 1 du tour 4 (concentration), désaccord 3 du tour 2 (consommateur-ancre), R4 (34,6 %), D25 (cache), AM-R5.9 (appels plafonnés). Aucun mot-clé RFC 2119 hors de la Specification (EIP-1) : les MUST de sécurité (minAnchors ≥ 2, cache borné) sont passés en §8.3.⟧
 
 ## Copyright
 
