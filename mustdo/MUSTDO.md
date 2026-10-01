@@ -90,6 +90,18 @@
   - Faut-il émettre les **noms des tags** (pas seulement leur hash) dans l'event d'enregistrement d'un ensemble, pour la lisibilité ?
   - **Relayer au chantier 03** le fichier `docs/chantiers/relais/vers-03.md` : il faut pousser la branche, ou que tu le transmettes depuis l'autre machine.
 
+- [ ] **14g. Décisions issues du chantier 08, la norme (01/10)** :
+  - **⏰ La plus urgente : la divulgation** (brouillon `docs/erc/drafts/` c). Envoie-t-on avant le **05/10**, comme le recommande D29 ? **Canal** (contact des auteurs ou issue GitHub sobre), **signataires**, et **date de la mention publique**. Elle doit partir **avant** toute PR et avant que le dépôt devienne public, parce que les autres brouillons citent le contournement.
+  - **PR sur `ethereum/ERCs` avant ou après le 13/10 ?** La relecture recommande « après » (confiance 0,6, experts partagés).
+  - **Auteurs de l'ERC et fil Magicians dédié** : les éditeurs l'exigent avant toute PR. Qui signe ?
+  - **Code de référence** : rend-on le dépôt public, ou copie-t-on le contrat dans `docs/erc/assets/` ?
+  - **Contacter ColinkaMir (brouillon e) ? Et Kanmani ?**
+  - **Démo, à régler avant que le dépôt devienne public** :
+    - (a) **changer les ancres de démo** pour qu'aucune ne soit le wallet d'un agent (défaut AM-08.A) ;
+    - (b) **lister les soumetteurs** (D27) ;
+    - (c) **fixer `minRefresh = maxAge`**.
+  - **Autoriser une session de correction du contrat** pour les trois défauts AM-08.A, B et C. Le texte de la norme n'est pas soumettable tant qu'ils ne sont pas corrigés ou explicitement assumés.
+
 ## 🟡 Avant le 12/10
 
 - [ ] **15. Déclarer le niveau de certification de la démo** après la mesure du chantier 02 : Registry-verified, chaque arête relue (~13,6 M gas estimés), ou Submitter-attested (D32).
