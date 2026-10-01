@@ -278,7 +278,7 @@ Mettre un `intent.summary` lisible (« Pay 0.10 USDC to agent #182 — ANCRE: OK
 2. Il faut `@metamask/agent-wallet` en **peerDependency**, pas en dependency, sinon on charge une seconde copie du CLI (DOC).
 3. Ne pas déclarer `oclif.hooks` ou `oclif.plugins`. Livrer `oclif.manifest.json` (DOC).
 4. Installer **depuis le dossier**, pas depuis une archive `.tgz`, sinon l'écran de consentement est incomplet (DOC).
-5. **Testnet Monad** : le proxy RPC de MetaMask rejette 10143 en 6.2.0 (shim nécessaire), un MFA est demandé à chaque transaction (chaîne hors `allowed_chains`), et la simulation est probablement absente (TIERS / DÉDUIT). À tester en 7.0.0. Les registres 8004 sont absents du testnet (CLAUDE.md §3) : utiliser nos propres déploiements.
+5. **Testnet Monad** : le proxy RPC de MetaMask rejette 10143 en 6.2.0 (shim nécessaire), un MFA est demandé à chaque transaction (chaîne hors `allowed_chains`), et la simulation est probablement absente (TIERS / DÉDUIT). À tester en 7.0.0. ~~Les registres 8004 sont absents du testnet~~ **FAUX** (vérifié par `cast` le 27/09) : ils existent à `0x8004A818…BD9e` (Identity) et `0x8004B663…8713` (Reputation).
 6. **Mainnet 143** : on paie la gas limit (CLAUDE.md §7). L'exécuteur estime lui-même le gas, et l'on ne sait pas si l'on peut imposer une limite serrée via `transaction` (champ `gas` d'`EVMTransaction` non vérifié).
 7. La fenêtre `validBefore` d'un x402 **expire si le MFA est lent**. Pour la démo, choisir un parcours sans MFA : destinataire en allowlist, ou signature (DOC).
 8. Trois modes de connexion donnent trois adresses de server-wallet. Toujours vérifier avec `mm wallet address` avant de financer (DOC).
