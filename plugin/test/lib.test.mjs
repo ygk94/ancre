@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { hashTypedData, keccak256, toHex, size, recoverTypedDataAddress, slice, getAddress } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { resolveConfig, parseUsdc, fmtUsdc } from "../dist/lib/config.js";
-import { ancrePaymentTypedData, encodeExactBlob, normalizeSignature, usdcAuthorizationDigest, REASONS, STATUSES } from "../dist/lib/payer.js";
+import { ancrePaymentTypedData, ancreUptoTypedData, encodeUptoBlob, encodeExactBlob, normalizeSignature, usdcAuthorizationDigest, REASONS, STATUSES } from "../dist/lib/payer.js";
 import { parsePaymentRequired, selectOffer, resolveAgentId, newAuthorization, buildPaymentPayload, encodeB64Json, decodeB64Json, decodePaymentResponse } from "../dist/lib/x402.js";
 import { describe as verdictOf, tagName } from "../dist/lib/verdict.js";
 
@@ -90,7 +90,8 @@ test("selectOffer: exact USDC on this chain, within both caps", () => {
   const want = { network: "eip155:143", usdc: USDC_143, maxAmount: 20_000n, maxPerPayment: 15_000n };
   assert.equal(selectOffer(pr([offer({ scheme: "upto" }), offer()]), want).scheme, "exact");
   for (const bad of [offer({ network: "eip155:10143" }), offer({ asset: PAYTO }), offer({ amount: "16000" }), offer({ amount: "1e6" }),
-    offer({ payTo: "nope" }), offer({ extra: { assetTransferMethod: "permit2" } })]) {
+    offer({ payTo: "nope" }), offer({ extra: { name: "USDC", version: "2", assetTransferMethod: "permit2" } }),
+    offer({ extra: { name: "USD Coin", version: "2" } }), offer({ extra: {} })]) {
     assert.throws(() => selectOffer(pr([bad]), want), (e) => e.code === "ANCRE_NO_OFFER");
   }
   assert.throws(() => selectOffer(pr([offer({ amount: "30000" })]), { ...want, maxPerPayment: undefined }), /max-amount/);
@@ -107,6 +108,9 @@ test("authorization window and payload: from = payer, signature = blob, decimal 
   const a = newAuthorization(PAYER, offer(), 1_000_000, auth.nonce);
   assert.equal(a.validAfter, 1_000_000n - 600n);
   assert.equal(a.validBefore, 1_000_060n);
+  assert.equal(newAuthorization(PAYER, offer({ maxTimeoutSeconds: "120" }), 1_000_000, auth.nonce).validBefore, 1_000_060n, "string timeout ignored");
+  assert.equal(newAuthorization(PAYER, offer({ maxTimeoutSeconds: 1e9 }), 1_000_000, auth.nonce).validBefore, 1_000_300n, "clamped to 300 s");
+  assert.equal(newAuthorization(PAYER, offer({ maxTimeoutSeconds: 60.5 }), 1_000_000, auth.nonce).validBefore, 1_000_060n);
   const p = buildPaymentPayload(pr([offer()]), offer(), a, "0xbeef", "https://x/y");
   assert.equal(p.x402Version, 2);
   assert.equal(p.payload.authorization.from, PAYER);
@@ -130,4 +134,16 @@ test("verdicts: reason x status -> what the skill does", () => {
   assert.equal(verdictOf(7, A(), 1n, PAYTO).verdict, "WALLET_MISMATCH");
   assert.equal(verdictOf(42, A(), 1n, PAYTO).verdict, "UNTRUSTED", "unknown reason fails closed");
   assert.equal(tagName(keccak256(toHex("no-such-tag"))), keccak256(toHex("no-such-tag")));
+});
+
+test("upto blob: 266 bytes at the contract's offsets", async () => {
+  const acct = privateKeyToAccount("0x" + "11".repeat(32));
+  const u = { from: PAYER, to: PAYTO, cap: 5000n, nonce: 7n, deadline: 2_000_000_000n, facilitator: PAYTO, validAfter: 0n };
+  const sig = await acct.signTypedData(ancreUptoTypedData(10143, u, 3n));
+  const b = encodeUptoBlob(u, 3n, sig);
+  assert.equal(size(b), 266);
+  assert.equal(slice(b, 0, 1), "0x02");
+  assert.equal(BigInt(slice(b, 53, 85)), 5000n);
+  assert.equal(slice(b, 149, 169).toLowerCase(), PAYTO.toLowerCase());
+  assert.equal(slice(b, 201, 266), sig);
 });

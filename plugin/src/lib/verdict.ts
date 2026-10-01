@@ -32,7 +32,8 @@ export type VerdictName =
   | "BAD_OPERATOR_SIG"
   | "DIGEST_MISMATCH"
   | "BAD_FORMAT"
-  | "BAD_KIND";
+  | "BAD_KIND"
+  | "SETTLEMENT_FAILED";
 
 export type Verdict = {
   verdict: VerdictName;
@@ -76,7 +77,14 @@ const ACTIONS: Record<VerdictName, string> = {
   DIGEST_MISMATCH: "Internal error: the authorisation does not match the blob",
   BAD_FORMAT: "Internal error: malformed blob",
   BAD_KIND: "Internal error: unsupported payment kind",
+  SETTLEMENT_FAILED:
+    "Not paid, and not because of ANCRE (expired window, facilitator or server failure). Do not retry or sign again automatically; tell the human",
 };
+
+/** After a failed paid request, an explain() that says OK means the failure was not the policy: never report PAY. */
+export function afterFailure(v: Verdict): Verdict {
+  return v.verdict === "PAY" ? { ...v, verdict: "SETTLEMENT_FAILED", pay: false, action: ACTIONS.SETTLEMENT_FAILED } : v;
+}
 
 /** Maps (TrustGatedPayer.Reason, Assessment) to the verdict the skill acts on. */
 export function describe(reasonIdx: number, a: Assessment, agentId: bigint, payTo: string): Verdict {

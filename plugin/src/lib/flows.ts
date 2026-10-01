@@ -8,7 +8,7 @@ import {
   usdcAuthorizationDigest,
 } from "./payer.js";
 import { ancreAbi, payerAbi } from "./payerAbi.js";
-import { type Assessment, describe, type Verdict } from "./verdict.js";
+import { afterFailure, type Assessment, describe, type Verdict } from "./verdict.js";
 import {
   buildPaymentPayload,
   decodePaymentResponse,
@@ -140,8 +140,10 @@ export async function inspectFlow(d: Deps, cfg: Config, url: string, agentIdFlag
 async function inspectChallenge(d: Deps, cfg: Config, c: Challenge): Promise<InspectResult> {
   const to = getAddress(c.offer.payTo);
   const amount = BigInt(c.offer.amount);
-  const v = await decideFor(d, cfg, c.agentId, to, amount);
-  const bal = await read<bigint>(d, cfg.usdc, erc20Abi, "balanceOf", [cfg.payer]);
+  const [v, bal] = await Promise.all([
+    decideFor(d, cfg, c.agentId, to, amount),
+    read<bigint>(d, cfg.usdc, erc20Abi, "balanceOf", [cfg.payer]),
+  ]);
   return {
     url: c.url,
     offer: { scheme: c.offer.scheme, network: c.offer.network, amount: c.offer.amount, amountUsdc: fmtUsdc(amount), asset: c.offer.asset, payTo: to },
@@ -155,8 +157,12 @@ async function inspectChallenge(d: Deps, cfg: Config, c: Challenge): Promise<Ins
 
 // ------------------------------------------------------------------ pay
 export type PayResult = InspectResult & {
+  /** PAID: 2xx with a successful PAYMENT-RESPONSE carrying a hash; REFUSED; UNKNOWN: no settlement evidence */
+  outcome: "PAID" | "REFUSED" | "UNKNOWN" | "NOT_SIGNED";
   paid: boolean;
   signed: boolean;
+  /** set once a signed authorisation left the plugin and was not settled: it stays usable until validBefore */
+  liveAuthorization?: { nonce: string; validBefore: string; note: string };
   transaction?: string;
   settlement?: SettleResponse;
   settlementError?: { httpStatus: number; body: string };
@@ -180,7 +186,7 @@ export async function payFlow(
   if (!d.signTypedData) throw new FlowError("ANCRE_NO_SIGNER", "No wallet executor", "This command needs the wallet-submit capability");
   const c = await challenge(d, cfg, url, opts.agentId, opts.maxAmount);
   const ins = await inspectChallenge(d, cfg, c);
-  if (!ins.pay) return { ...ins, paid: false, signed: false };
+  if (!ins.pay) return { ...ins, outcome: "NOT_SIGNED", paid: false, signed: false };
   if (!ins.balanceOk) {
     throw new FlowError("ANCRE_PAYER_UNFUNDED", `Payer balance ${ins.payerBalanceUsdc} USDC < ${ins.offer.amountUsdc}`, "Ask the human to run `mm ancre payer fund <amount> --confirm`");
   }
@@ -203,28 +209,43 @@ export async function payFlow(
   const blob = encodeExactBlob(auth, c.agentId, sig);
   const payload = buildPaymentPayload(c.pr, c.offer, auth, blob, url);
 
+  const live = {
+    nonce: auth.nonce,
+    validBefore: auth.validBefore.toString(),
+    note: "This signed authorisation can still be settled by the server until validBefore (unix seconds) if ANCRE trusts the agent then. Do not sign another payment for this resource before it expires; tell the human.",
+  };
+  const base = { ...ins, signed: true };
   let res: Response;
   try {
     res = await d.fetch(url, { method: "GET", headers: { [H_SIGNATURE]: encodeB64Json(payload) }, signal: d.signal });
   } catch (e) {
-    throw new FlowError("ANCRE_HTTP_ERROR", `Paid GET ${url} failed: ${(e as Error).message}`, "Do not retry automatically; run inspect again");
+    return { ...base, outcome: "UNKNOWN", paid: false, liveAuthorization: live, settlementError: { httpStatus: 0, body: `paid GET failed: ${(e as Error).message}` } };
   }
-  const body = await res.text();
+  let body = "";
+  try {
+    body = await res.text();
+  } catch {
+    /* body lost: the status and headers still decide */
+  }
   const settlement = decodePaymentResponse(res.headers);
-  if (res.ok && (settlement === undefined || settlement.success !== false)) {
-    return { ...ins, paid: true, signed: true, transaction: settlement?.transaction, settlement, responseBody: body.slice(0, 2000) };
+  if (res.ok && settlement?.success === true && settlement.transaction) {
+    return { ...base, outcome: "PAID", paid: true, transaction: settlement.transaction, settlement, responseBody: body.slice(0, 2000) };
+  }
+  const settlementError = { httpStatus: res.status, body: body.slice(0, 2000) };
+  if (res.ok) {
+    // 2xx without settlement evidence: x402 v2 requires PAYMENT-RESPONSE; the authorisation may still be settled later
+    return { ...base, outcome: "UNKNOWN", paid: false, settlement, settlementError, liveAuthorization: live, responseBody: body.slice(0, 2000) };
   }
   // refused or failed at /verify or /settle: ask the contract why, at this block (e.g. a veto between verify and settle)
-  const digest = usdcAuthorizationDigest(cfg.chainId, cfg.usdc, auth);
-  const [reason, , , , , a] = await read<[number, number, bigint, Address, bigint, Assessment]>(d, cfg.payer, payerAbi, "explain", [digest, blob]);
-  return {
-    ...ins,
-    paid: false,
-    signed: true,
-    settlement,
-    settlementError: { httpStatus: res.status, body: body.slice(0, 2000) },
-    explainAfterFailure: describe(Number(reason), a, c.agentId, auth.to),
-  };
+  let explainAfterFailure: Verdict | undefined;
+  try {
+    const digest = usdcAuthorizationDigest(cfg.chainId, cfg.usdc, auth);
+    const [reason, , , , , a] = await read<[number, number, bigint, Address, bigint, Assessment]>(d, cfg.payer, payerAbi, "explain", [digest, blob]);
+    explainAfterFailure = afterFailure(describe(Number(reason), a, c.agentId, auth.to));
+  } catch {
+    explainAfterFailure = undefined; // the refusal stands; only its explanation is missing
+  }
+  return { ...base, outcome: "REFUSED", paid: false, settlement, settlementError, explainAfterFailure, liveAuthorization: live };
 }
 
 // ------------------------------------------------------------------ payer status / fund
@@ -263,10 +284,9 @@ export async function statusFlow(d: Deps, cfg: Config, wallet?: Address): Promis
   if (getAddress(usdc) !== cfg.usdc) {
     throw new FlowError("ANCRE_WRONG_CHAIN", `Payer USDC ${usdc} is not the USDC of chain ${cfg.chainId}`, "Check --chain-id");
   }
-  const bal = await read<bigint>(d, cfg.usdc, erc20Abi, "balanceOf", [cfg.payer]);
-  const p = await read<{ theta: bigint; rhoN: number; rhoD: number; minAnchors: number; vetoQuorum: number; maxAge: bigint; registryVerified: boolean }>(
+  const [bal, p] = await Promise.all([read<bigint>(d, cfg.usdc, erc20Abi, "balanceOf", [cfg.payer]), read<{ theta: bigint; rhoN: number; rhoD: number; minAnchors: number; vetoQuorum: number; maxAge: bigint; registryVerified: boolean }>(
     d, ancre, ancreAbi, "policyOf", [setId],
-  );
+  )]);
   const operators = ops.filter((o) => o !== zeroAddress);
   const walletIsOperator = wallet ? operators.some((o) => getAddress(o) === getAddress(wallet)) : undefined;
   return {

@@ -36,8 +36,10 @@ export default class AncrePay extends PluginCommand<PayResult> {
   }
 
   override successHint(r: PayResult): string {
-    if (r.paid) return `Paid ${r.offer.amountUsdc} USDC to agent #${r.agentId} (tx ${r.transaction ?? "?"})`;
-    if (!r.signed) return `Not paid, nothing signed: ${r.verdict}. ${r.action}`;
-    return `Not paid: settlement refused (${r.explainAfterFailure?.verdict ?? r.settlementError?.httpStatus}). ${r.explainAfterFailure?.action ?? ""}`;
+    if (r.outcome === "PAID") return `Paid ${r.offer.amountUsdc} USDC to agent #${r.agentId} (tx ${r.transaction})`;
+    if (r.outcome === "NOT_SIGNED") return `Not paid, nothing signed: ${r.verdict}. ${r.action}`;
+    const live = r.liveAuthorization ? ` The signed authorisation stays valid until ${r.liveAuthorization.validBefore}: do not sign again before.` : "";
+    if (r.outcome === "UNKNOWN") return `Payment outcome UNKNOWN (HTTP ${r.settlementError?.httpStatus}, no settlement proof). Tell the human, do not retry.${live}`;
+    return `Not paid: refused (${r.explainAfterFailure?.verdict ?? `HTTP ${r.settlementError?.httpStatus}`}). ${r.explainAfterFailure?.action ?? ""}${live}`;
   }
 }

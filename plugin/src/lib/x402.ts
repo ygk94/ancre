@@ -81,6 +81,8 @@ export function selectOffer(
     if (o.scheme !== "exact") return why.push(`${tag}: scheme ${o.scheme}`), false;
     if (o.network !== want.network) return why.push(`${tag}: network ${o.network}`), false;
     if (!isAddress(o.asset) || getAddress(o.asset) !== want.usdc) return why.push(`${tag}: asset ${o.asset}`), false;
+    // the facilitator builds the EIP-712 domain from extra.name/version: anything else than FiatToken's would not match
+    if (o.extra?.name !== "USDC" || o.extra?.version !== "2") return why.push(`${tag}: EIP-712 domain ${String(o.extra?.name)}/${String(o.extra?.version)}`), false;
     const method = o.extra?.assetTransferMethod;
     if (method !== undefined && method !== "eip3009") return why.push(`${tag}: method ${String(method)}`), false;
     if (!isAddress(o.payTo)) return why.push(`${tag}: payTo ${o.payTo}`), false;
@@ -114,9 +116,15 @@ export function resolveAgentId(flag: string | undefined, offer: PaymentRequireme
   return BigInt(s);
 }
 
+/** The server picks the window, within [MIN, MAX] seconds: a signed authorisation must not outlive the payment attempt. */
+export const MIN_TIMEOUT_S = 10;
+export const MAX_TIMEOUT_S = 300;
+
 /** Same choices as the official x402_pay.py: validAfter = now - 600, validBefore = now + maxTimeoutSeconds, random nonce. */
 export function newAuthorization(payer: Address, offer: PaymentRequirements, nowSec: number, nonce: Hex): Authorization {
-  const timeout = offer.maxTimeoutSeconds && offer.maxTimeoutSeconds > 0 ? offer.maxTimeoutSeconds : 60;
+  const raw = offer.maxTimeoutSeconds;
+  const t = typeof raw === "number" && Number.isInteger(raw) && raw > 0 ? raw : 60; // a string or 60.5 is not trusted
+  const timeout = Math.min(Math.max(t, MIN_TIMEOUT_S), MAX_TIMEOUT_S);
   return {
     from: payer,
     to: getAddress(offer.payTo),

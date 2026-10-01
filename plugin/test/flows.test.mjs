@@ -112,6 +112,7 @@ test("pay: PAY -> one AncrePayment signature, x402 retry with from = payer and t
   const w = world();
   const r = await payFlow(w.deps, cfg, "https://p/quote", { confirm: true });
   assert.equal(r.paid, true);
+  assert.equal(r.outcome, "PAID");
   assert.equal(r.transaction, "0x" + "77".repeat(32));
   assert.equal(w.signs.length, 1);
   assert.match(w.signs[0].summary, /Pay 0\.01 USDC to ERC-8004 agent #12/);
@@ -178,4 +179,34 @@ test("payer status: flags a wallet that is not an operator", async () => {
   assert.equal(bad.walletIsOperator, false);
   assert.ok(bad.guardModeChecklist.some((l) => l.startsWith("WARNING")));
   await assert.rejects(statusFlow(w.deps, { ...cfg, usdc: PAYTO }), (e) => e.code === "ANCRE_WRONG_CHAIN");
+});
+
+test("pay: a refusal whose explain says OK is reported SETTLEMENT_FAILED, never PAY", async () => {
+  const w = world({ settle: 500, explain: [0, 1, 12n, PAYTO, 10000n, A({ trusted: true })] });
+  const r = await payFlow(w.deps, cfg, "https://p/quote", { confirm: true });
+  assert.equal(r.outcome, "REFUSED");
+  assert.equal(r.explainAfterFailure.verdict, "SETTLEMENT_FAILED");
+  assert.equal(r.explainAfterFailure.pay, false);
+  assert.ok(r.liveAuthorization.validBefore, "the live authorisation is reported");
+});
+
+test("pay: 200 without PAYMENT-RESPONSE is UNKNOWN, not paid", async () => {
+  const w = world();
+  const orig = w.deps.fetch;
+  w.deps.fetch = async (url, init = {}) => (init.headers ? new Response("{}", { status: 200 }) : orig(url, init));
+  const r = await payFlow(w.deps, cfg, "https://p/quote", { confirm: true });
+  assert.equal(r.outcome, "UNKNOWN");
+  assert.equal(r.paid, false);
+  assert.ok(r.liveAuthorization);
+});
+
+test("pay: an RPC failure after sending keeps signed=true and the live authorisation", async () => {
+  const w = world({ settle: 500 });
+  const orig = w.deps.readContract;
+  w.deps.readContract = async (a) => { if (a.functionName === "explain") throw new Error("429"); return orig(a); };
+  const r = await payFlow(w.deps, cfg, "https://p/quote", { confirm: true });
+  assert.equal(r.signed, true);
+  assert.equal(r.outcome, "REFUSED");
+  assert.equal(r.explainAfterFailure, undefined);
+  assert.ok(r.liveAuthorization);
 });

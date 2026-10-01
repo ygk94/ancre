@@ -8,13 +8,13 @@
 // and the oracle by AnchoredReputation; see plugin/DEMO.md.
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { bytesToHex, createPublicClient, createWalletClient, encodeFunctionData, getAddress, http } from "viem";
+import { bytesToHex, createPublicClient, createWalletClient, getAddress, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { randomBytes } from "node:crypto";
 import { payFlow } from "../dist/lib/flows.js";
 import { ancrePaymentTypedData, encodeExactBlob } from "../dist/lib/payer.js";
 import { buildPaymentPayload, encodeB64Json, newAuthorization } from "../dist/lib/x402.js";
-import { CHAIN_ID, DEV_D, DEV_F, DEV_P, NETWORK, USDC, dealUsdc, emulatedFacilitator, forgeScript, oracleAbi, startAnvil, usdcAbi } from "./local.mjs";
+import { CHAIN_ID, DEV_D, DEV_F, DEV_P, NETWORK, USDC, dealUsdc, emulatedFacilitator, exactSettlementCall, forgeScript, oracleAbi, startAnvil, usdcAbi } from "./local.mjs";
 import { startX402Server } from "./x402-server.mjs";
 import { ancreGuard } from "../dist/lib/x402-guard.js";
 import { wrapFetchWithPayment, x402Client } from "@x402/fetch";
@@ -45,12 +45,7 @@ async function main() {
     };
     await setAgent(2n, DEV_F, false, 0); // the farm: a registered agent ANCRE gives no mass
 
-    const settleVia = (phase, payload) => {
-      const a = payload.payload.authorization;
-      const data = encodeFunctionData({ abi: usdcAbi, functionName: "transferWithAuthorization",
-        args: [a.from, a.to, BigInt(a.value), BigInt(a.validAfter), BigInt(a.validBefore), a.nonce, payload.payload.signature] });
-      return emulatedFacilitator(pub, phase, USDC, data);
-    };
+    const settleVia = (phase, payload) => emulatedFacilitator(pub, phase, USDC, exactSettlementCall(payload));
     let vetoBeforeSettle = false;
     server = await startX402Server({
       port: Number(process.env.SERVER_PORT ?? 4021), network: NETWORK, usdc: USDC,

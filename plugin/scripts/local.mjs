@@ -2,7 +2,10 @@
 // T1 deploy (same forge script as the real run), and an x402-rs-like facilitator emulated over RPC.
 // Nothing here touches a real network beyond reading the fork's state.
 import { spawn, execFileSync } from "node:child_process";
-import { createPublicClient, createWalletClient, encodeAbiParameters, getAddress, http, keccak256, parseAbi, toHex } from "viem";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createPublicClient, createWalletClient, encodeAbiParameters, encodeFunctionData, getAddress, http, keccak256, parseAbi, toHex } from "viem";
 
 export const FOUNDRY = `${process.env.HOME}/.foundry/bin`;
 export const CONTRACTS = new URL("../../contracts/", import.meta.url).pathname;
@@ -40,9 +43,15 @@ export async function startAnvil(port = "8546") {
   throw new Error("anvil did not start");
 }
 
+/** Local fork only: broadcast records go to a temp dir, never over contracts/broadcast/T1.s.sol/10143 of the real run. */
 export function forgeScript(rpc, env, auth) {
+  const scratch = mkdtempSync(join(tmpdir(), "ancre-t1-"));
   const out = execFileSync(`${FOUNDRY}/forge`, ["script", "script/t1/T1.s.sol", "--rpc-url", rpc, ...auth, "--broadcast",
-    "--gas-estimate-multiplier", "110", "--slow"], { cwd: CONTRACTS, env: { ...process.env, ...env, ETH_RPC_TIMEOUT: "900" }, encoding: "utf8" });
+    "--gas-estimate-multiplier", "110", "--slow"], {
+    cwd: CONTRACTS,
+    env: { ...process.env, ...env, ETH_RPC_TIMEOUT: "900", FOUNDRY_BROADCAST: join(scratch, "broadcast"), FOUNDRY_CACHE_PATH: join(scratch, "cache") },
+    encoding: "utf8",
+  });
   const grab = (k) => (out.match(new RegExp(`${k}=(0x[0-9a-fA-F]{40})`)) || [])[1];
   return { oracle: grab("T1_ORACLE"), payer: grab("T1_PAYER"), out };
 }
@@ -77,4 +86,17 @@ export async function emulatedFacilitator(pub, phase, to, data) {
   const hash = await w.sendTransaction({ to, data, gas, chain: null });
   const r = await pub.waitForTransactionReceipt({ hash });
   return { ok: r.status === "success", phase, hash, gasLimit: gas, gasUsed: r.gasUsed, status: r.status };
+}
+
+/** calldata of USDC.transferWithAuthorization(..., bytes) for an x402 v2 `exact` payload */
+export function exactSettlementCall(payload) {
+  const a = payload.payload.authorization;
+  return encodeFunctionData({ abi: usdcAbi, functionName: "transferWithAuthorization",
+    args: [a.from, a.to, BigInt(a.value), BigInt(a.validAfter), BigInt(a.validBefore), a.nonce, payload.payload.signature] });
+}
+
+/** advance the fork's clock (so that a refused authorisation expires before the next scene) */
+export async function warp(pub, seconds) {
+  await pub.request({ method: "evm_increaseTime", params: [toHex(seconds)] });
+  await pub.request({ method: "evm_mine", params: [] });
 }
