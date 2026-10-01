@@ -65,7 +65,7 @@ the range with `semver.satisfies`.
 ## Tests
 
 ```bash
-npm test                       # 24 tests on stubs: manifest (official schema), x402, blob, verdicts, flows with a spy executor
+npm test                       # 30 tests on stubs: manifest (official schema), x402, blobs, verdicts, flows with a spy executor, client guard
 node scripts/demo-local.mjs    # rehearsal of the demo on an anvil --network monad fork (no real transaction)
 node scripts/t1.mjs --local    # test T1 dry run: the facilitator emulated as x402-rs does it
 ```
@@ -81,6 +81,26 @@ an explicit gas limit. The contract side has 45 unit and 11 fork tests in `../co
 - `pay` and `payer fund` through the real Agent Wallet executor need a `mm login` session. **Not yet tried.**
 - On a real network, the hard guard depends on the facilitator accepting an ERC-1271 payer. That is test T1
   (`../contracts/PAYER.md` §6), which has passed only in the dry run so far.
+
+## Client-side guard for the x402 SDK (no payer contract)
+
+For an agent that pays from a plain EOA with the official SDK, `dist/lib/x402-guard.js` exports `ancreGuard`,
+a hook for `x402Client.onBeforePaymentCreation`. It aborts before signing unless `agentWallet(agentId) == payTo`
+and `isTrusted(agentId, setId)`, and refuses on any error:
+
+```ts
+import { x402Client, wrapFetchWithPayment } from "@x402/fetch";
+import { ExactEvmScheme } from "@x402/evm/exact/client";
+import { ancreGuard } from "mm-plugin-ancre/dist/lib/x402-guard.js";
+
+const client = new x402Client().register("eip155:*", new ExactEvmScheme(account));
+client.onBeforePaymentCreation(ancreGuard({ readContract: publicClient.readContract, ancre: ANCRE, setId: SET_ID }));
+const pay = wrapFetchWithPayment(fetch, client);
+```
+
+It is advisory by construction: a compromised agent can sign anyway. The enforceable gate is the payer contract.
+Note that an EOA delegated with EIP-7702 (as every anvil dev account is on the Monad testnet) cannot pay in
+EIP-3009 unless its delegate implements ERC-1271: the USDC routes the signature through `isValidSignature`.
 
 ## Works with
 

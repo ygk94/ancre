@@ -145,10 +145,13 @@ cd contracts
 T1_STEP=deploy T1_PROVIDER=0x<P> forge script script/t1/T1.s.sol \
   --rpc-url monad_testnet --account ancre-t1 --broadcast --gas-estimate-multiplier 110 --slow
 cd ../plugin && npm run build
-T1_GO=hugo node scripts/t1.mjs --live --account ancre-t1 --provider 0x<P> --payer 0x<payer> --oracle 0x<oracle>
+node scripts/t1.mjs --live --account ancre-t1 --provider 0x<P> --payer 0x<payer> --oracle 0x<oracle>
 ```
 
-`--live` refuses to run without `T1_GO=hugo`. Results go to `plugin/t1-results/live-*.json`: HTTP status and
+`--live` runs only at an interactive terminal, after the human types a confirmation phrase (no environment
+variable can stand in for it), then asks the keystore password for each transaction. The refusal scenes use
+60 s authorisations, and the script waits for them to expire before it trusts the agent again, so a refused
+authorisation can never be settled later. Results go to `plugin/t1-results/live-*.json`: HTTP status and
 body of every `/verify` and `/settle`, the settlement hash, gas limit and gas used, and the facilitator's
 nonce delta (0 = nothing broadcast on a refusal).
 
