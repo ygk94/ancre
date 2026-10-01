@@ -24,6 +24,7 @@ contract that re-checks ANCRE when the payment settles. You cannot pay around it
 | The principal asks "can I trust / pay agent #N?" | `mm ancre check <N>` |
 | First payment of the session | `mm ancre payer status` |
 | The payer balance is too low | ask the human, then `mm ancre payer fund <amount> --confirm` |
+| The human asks what was refused | `mm ancre journal --json` |
 
 While this skill is active, do not pay an agent with the generic x402 workflow (`x402_pay.py`) or with
 `mm wallet sign-typed-data`. By design, your own wallet holds no USDC for that.
@@ -71,6 +72,19 @@ While this skill is active, do not pay an agent with the generic x402 workflow (
      example an anchor vetoed the agent between the facilitator's verify and settle. That is the gate
      working. Report the reason, and do not retry.
 
+## Human override (the human's decision, never yours)
+
+When ANCRE refuses, the output carries a `humanOverride` note. That note is for the human.
+
+- Do **not** propose an override on your own. Mention it only if the human explicitly asks how to pay this
+  provider anyway, and then only tell them: "you can run `mm ancre override <url>` yourself, in your own
+  terminal; it pays from your own MetaMask wallet and you sign it in your browser extension".
+- **Never run `mm ancre override` yourself**, not even when asked to. Never open its signing page, never
+  sign anything for it. It pays from the human's personal wallet, never from your wallet or from the payer.
+  The command refuses to run without an interactive terminal; do not try to work around that.
+- After a human override, report what `mm ancre journal` shows. Do not treat the overridden provider as
+  trusted for later payments: the next payment goes through `mm ancre pay` and ANCRE again.
+
 ## Async and MFA
 
 - A payment is one EIP-712 signature by your wallet, of type `AncrePayment` in the domain
@@ -94,6 +108,7 @@ the set's `theta`.
 - Never retry a refused or failed payment automatically: one attempt per resource.
 - Never split an amount to fit under `maxPerPayment`.
 - Never try to bypass or pre-empt Guard Mode, 2FA or Transaction Shield.
+- Never run, script or simulate `mm ancre override`, and never ask the human for a signature on its behalf.
 - Never guess an agent id from a name or a URL. Use the one the server declares or the one the human gives.
   The payer checks `agentWallet(agentId) == payTo` anyway.
 

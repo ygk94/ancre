@@ -117,6 +117,26 @@
           143,
           10143
         ]
+      },
+      {
+        "id": "ancre:override",
+        "capabilities": [
+          "wallet-read"
+        ],
+        "dataAccess": [
+          "network",
+          "accounts",
+          "balances"
+        ],
+        "targetChains": [
+          143,
+          10143
+        ]
+      },
+      {
+        "id": "ancre:journal",
+        "capabilities": [],
+        "dataAccess": []
       }
     ]
   },

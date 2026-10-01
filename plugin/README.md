@@ -27,6 +27,8 @@ Transaction Shield apply. The plugin never sees a key, and the payer contract ha
 | `mm ancre pay <url> [--agent-id N] [--max-amount X] --confirm` | `wallet-read`, `wallet-submit` | The full x402 v2 flow: decide, one `AncrePayment` signature, then the paid request. No retry |
 | `mm ancre payer status` | `wallet-read` | Balance, owner, treasury, operators (is your mm wallet one?), the anchor set policy, and a Guard Mode checklist |
 | `mm ancre payer fund <amount> --confirm` | `wallet-read`, `wallet-submit` | One `USDC.transfer(payer, amount)` with an explicit gas limit (Monad bills the limit) |
+| `mm ancre override <url>` | `wallet-read` | **Human only.** Pays a provider ANCRE refused, from the human's own wallet, signed in their MetaMask extension (see below) |
+| `mm ancre journal` | none | Every refusal, payment and override, from the local journal (for the demo screen) |
 
 Common flags: `--payer 0x…` (or `ANCRE_PAYER`), `--chain-id 143|10143` (or `ANCRE_CHAIN_ID`, default 143).
 The read commands also take `--rpc-url` (or `ANCRE_RPC_URL`): they then read through a plain RPC and work
@@ -47,6 +49,49 @@ mm ancre check 182 --chain-id 143 --payer 0x… --naive
 `minCliVersion` is `">=6.2.0 <8"`. The template's `"^6.2.0"` rejects the current 7.0.0, because the CLI checks
 the range with `semver.satisfies`.
 
+## When does the gate actually hold?
+
+The hard guard is a guarantee only under these conditions. `mm ancre payer status` checks what it can.
+
+1. The Agent Wallet runs in **server-wallet mode** (keys in MetaMask's TEE), **not BYOK**: in BYOK mode the agent's
+   host holds the mnemonic and could sign anything outside the plugin.
+2. **No USDC on the Agent Wallet.** The funds live in the payer contract. A key that holds USDC can always pay
+   with a plain `transfer`; that is the one bypass no contract can stop.
+3. **Guard Mode allowlists only the payer contract and the USDC contract**, so that any other transaction asks
+   the human for 2FA.
+4. The payer's **operator is the Agent Wallet**, and its **owner and treasury are the human** (a different
+   wallet). The operator can only sign payments that the contract re-checks. Only the owner changes the anchor
+   set or the cap, and funds leave only to the treasury.
+
+Outside these conditions the plugin still refuses to sign for an untrusted agent (soft guard), but that refusal
+is advisory.
+
+## Human override
+
+ANCRE can be wrong, and the principal keeps the last word. When `pay` refuses, it shows the verdict (status,
+reason, trigger tag) and notes that **a human** may override:
+
+```bash
+mm ancre override http://provider.example/quote     # run by the human, in their own terminal
+```
+
+- The override **pays from the human's personal wallet**: the plugin prepares an ordinary EIP-3009 payment
+  and opens a one-time page on `127.0.0.1`; the human signs it in **their MetaMask browser extension**. It never
+  uses the Agent Wallet and never touches the payer contract's funds. There is no switching between the two
+  wallets: a signature from the Agent Wallet or from any operator of the payer is refused.
+- **An agent cannot run it.** The command declares no `wallet-submit` capability (the host refuses it the wallet
+  executor), refuses to run without an interactive terminal or with `--json`, asks for a typed confirmation,
+  and needs a signature that only the human's extension can produce. `test/override.test.mjs` checks each of
+  these paths, plus that no file other than `lib/host.ts` reaches the executor.
+- An override is not a precedent: the next payment to that provider goes through ANCRE again.
+
+## Journal
+
+Every refusal, payment, settlement refusal and override is appended to `~/.ancre/journal.jsonl` (or
+`ANCRE_JOURNAL`), one JSON object per line: kind, URL, agent id, payee, amount, ANCRE verdict, reason, status,
+trigger tag, who paid, transaction. `mm ancre journal --json` prints the latest entries; the demo screen
+(chantier 07) can tail the file directly.
+
 ## How a payment works
 
 1. `GET url` returns 402 + `PAYMENT-REQUIRED` (x402 v2). The plugin keeps the `exact` USDC offer on this chain,
@@ -65,7 +110,7 @@ the range with `semver.satisfies`.
 ## Tests
 
 ```bash
-npm test                       # 30 tests on stubs: manifest (official schema), x402, blobs, verdicts, flows with a spy executor, client guard
+npm test                       # 40 tests on stubs: manifest (official schema), x402, blobs, verdicts, flows with a spy executor, client guard, human override
 node scripts/demo-local.mjs    # rehearsal of the demo on an anvil --network monad fork (no real transaction)
 node scripts/t1.mjs --local    # test T1 dry run: the facilitator emulated as x402-rs does it
 ```

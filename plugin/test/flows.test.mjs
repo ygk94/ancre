@@ -172,8 +172,10 @@ test("payer fund: one USDC.transfer(payer) with an explicit gas limit, only with
 
 test("payer status: flags a wallet that is not an operator", async () => {
   const w = world();
-  const ok = await statusFlow(w.deps, cfg, op.address);
+  const ok = await statusFlow(w.deps, cfg, op.address, "server");
   assert.equal(ok.walletIsOperator, true);
+  assert.deepEqual(ok.guarantee.map((g) => g.ok), [true, false, true, true, null], "the stub gives the wallet 1 USDC: flagged");
+  assert.equal((await statusFlow(w.deps, cfg, op.address, "byok")).guarantee[0].ok, false);
   assert.deepEqual(ok.operators, [op.address]);
   const bad = await statusFlow(w.deps, cfg, getAddress("0x00000000000000000000000000000000000000f0"));
   assert.equal(bad.walletIsOperator, false);

@@ -2,6 +2,7 @@ import { type CommandIO, InputFieldType, type InputSchema, PluginCommand, schema
 import { parseUsdc, resolveConfig } from "../../lib/config.js";
 import { type PayResult, payFlow } from "../../lib/flows.js";
 import { hostDeps, toCommandError } from "../../lib/host.js";
+import { fileJournal } from "../../lib/journal.js";
 
 const inputs = {
   url: { type: InputFieldType.Text, flag: "url", message: "x402 resource URL", required: true, index: 0 },
@@ -24,7 +25,7 @@ export default class AncrePay extends PluginCommand<PayResult> {
     try {
       const inp = await io.resolveInputs(inputs);
       const cfg = resolveConfig({ chainId: inp.chainId, payer: inp.payer });
-      const d = await hostDeps(this.ctx, io, cfg, inp.confirm ? "ancre:pay" : null);
+      const d = { ...(await hostDeps(this.ctx, io, cfg, inp.confirm ? "ancre:pay" : null)), journal: fileJournal() };
       return await payFlow(d, cfg, inp.url, {
         agentId: inp.agentId,
         maxAmount: inp.maxAmount ? parseUsdc(inp.maxAmount) : undefined,
@@ -37,7 +38,7 @@ export default class AncrePay extends PluginCommand<PayResult> {
 
   override successHint(r: PayResult): string {
     if (r.outcome === "PAID") return `Paid ${r.offer.amountUsdc} USDC to agent #${r.agentId} (tx ${r.transaction})`;
-    if (r.outcome === "NOT_SIGNED") return `Not paid, nothing signed: ${r.verdict}. ${r.action}`;
+    if (r.outcome === "NOT_SIGNED") return `Not paid, nothing signed: ${r.verdict}. ${r.action} ${r.humanOverride ?? ""}`;
     const live = r.liveAuthorization ? ` The signed authorisation stays valid until ${r.liveAuthorization.validBefore}: do not sign again before.` : "";
     if (r.outcome === "UNKNOWN") return `Payment outcome UNKNOWN (HTTP ${r.settlementError?.httpStatus}, no settlement proof). Tell the human, do not retry.${live}`;
     return `Not paid: refused (${r.explainAfterFailure?.verdict ?? `HTTP ${r.settlementError?.httpStatus}`}). ${r.explainAfterFailure?.action ?? ""}${live}`;

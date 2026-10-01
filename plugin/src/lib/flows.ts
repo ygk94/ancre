@@ -9,6 +9,7 @@ import {
 } from "./payer.js";
 import { ancreAbi, payerAbi } from "./payerAbi.js";
 import { afterFailure, type Assessment, describe, type Verdict } from "./verdict.js";
+import type { Journal } from "./journal.js";
 import {
   buildPaymentPayload,
   decodePaymentResponse,
@@ -35,6 +36,8 @@ export type Deps = {
   /** transaction through ctx.walletExecutor */
   sendTransaction?: (tx: { to: Address; data: Hex; value: bigint; gas: bigint }, summary: string) => Promise<{ hash?: Hex; status: string }>;
   signal?: AbortSignal;
+  /** every refusal and payment is journaled (D47, for the demo screen) */
+  journal?: Journal;
 };
 
 export class FlowError extends Error {
@@ -67,12 +70,12 @@ const reputationAbi = [
   },
 ] as const;
 
-const read = <T>(d: Deps, address: Address, abi: readonly unknown[], functionName: string, args: readonly unknown[] = []) =>
+export const read = <T>(d: Pick<Deps, "readContract">, address: Address, abi: readonly unknown[], functionName: string, args: readonly unknown[] = []) =>
   d.readContract({ address, abi, functionName, args }).catch((e: unknown) => {
     throw new FlowError("ANCRE_RPC_ERROR", `${functionName}() failed on ${address}: ${(e as Error).message ?? String(e)}`, "Check --payer and --chain-id");
   }) as Promise<T>;
 
-async function decideFor(d: Deps, cfg: Config, agentId: bigint, to: Address, value: bigint): Promise<Verdict> {
+async function decideFor(d: Pick<Deps, "readContract">, cfg: Config, agentId: bigint, to: Address, value: bigint): Promise<Verdict> {
   const [reason, a] = await read<[number, Assessment]>(d, cfg.payer, payerAbi, "decide", [agentId, to, value]);
   return describe(Number(reason), a, agentId, to);
 }
@@ -119,7 +122,7 @@ export type InspectResult = {
   wouldSign: { primaryType: "AncrePayment"; domain: string; to: string; value: string; agentId: string };
 } & Verdict;
 
-async function challenge(d: Deps, cfg: Config, url: string, agentIdFlag: string | undefined, maxAmount: bigint | undefined): Promise<Challenge> {
+export async function challenge(d: Pick<Deps, "readContract" | "fetch" | "signal">, cfg: Config, url: string, agentIdFlag: string | undefined, maxAmount: bigint | undefined): Promise<Challenge> {
   let res: Response;
   try {
     res = await d.fetch(url, { method: "GET", signal: d.signal });
@@ -137,7 +140,7 @@ export async function inspectFlow(d: Deps, cfg: Config, url: string, agentIdFlag
   return inspectChallenge(d, cfg, c);
 }
 
-async function inspectChallenge(d: Deps, cfg: Config, c: Challenge): Promise<InspectResult> {
+export async function inspectChallenge(d: Pick<Deps, "readContract">, cfg: Config, c: Challenge): Promise<InspectResult> {
   const to = getAddress(c.offer.payTo);
   const amount = BigInt(c.offer.amount);
   const [v, bal] = await Promise.all([
@@ -156,7 +159,12 @@ async function inspectChallenge(d: Deps, cfg: Config, c: Challenge): Promise<Ins
 }
 
 // ------------------------------------------------------------------ pay
+/** D47: shown with every ANCRE refusal. The override is the human's, in their own terminal and wallet. */
+export const HUMAN_OVERRIDE_NOTE =
+  "Only the human may override this refusal, from their own wallet: they run `mm ancre override <url>` themselves in an interactive terminal and sign in their MetaMask extension. An agent never runs it.";
+
 export type PayResult = InspectResult & {
+  humanOverride?: string;
   /** PAID: 2xx with a successful PAYMENT-RESPONSE carrying a hash; REFUSED; UNKNOWN: no settlement evidence */
   outcome: "PAID" | "REFUSED" | "UNKNOWN" | "NOT_SIGNED";
   paid: boolean;
@@ -186,7 +194,13 @@ export async function payFlow(
   if (!d.signTypedData) throw new FlowError("ANCRE_NO_SIGNER", "No wallet executor", "This command needs the wallet-submit capability");
   const c = await challenge(d, cfg, url, opts.agentId, opts.maxAmount);
   const ins = await inspectChallenge(d, cfg, c);
-  if (!ins.pay) return { ...ins, outcome: "NOT_SIGNED", paid: false, signed: false };
+  const j = (kind: Parameters<Journal>[0]["kind"], extra: Record<string, string | undefined> = {}, v: Verdict = ins) =>
+    d.journal?.({ kind, url, agentId: ins.agentId, payTo: ins.offer.payTo, amount: ins.offer.amount, verdict: v.verdict, reason: v.reason,
+      status: v.status, triggerTag: v.triggerTag, payer: cfg.payer, ...extra });
+  if (!ins.pay) {
+    j("refusal");
+    return { ...ins, outcome: "NOT_SIGNED", paid: false, signed: false, humanOverride: HUMAN_OVERRIDE_NOTE };
+  }
   if (!ins.balanceOk) {
     throw new FlowError("ANCRE_PAYER_UNFUNDED", `Payer balance ${ins.payerBalanceUsdc} USDC < ${ins.offer.amountUsdc}`, "Ask the human to run `mm ancre payer fund <amount> --confirm`");
   }
@@ -229,11 +243,13 @@ export async function payFlow(
   }
   const settlement = decodePaymentResponse(res.headers);
   if (res.ok && settlement?.success === true && settlement.transaction) {
+    j("paid", { transaction: settlement.transaction });
     return { ...base, outcome: "PAID", paid: true, transaction: settlement.transaction, settlement, responseBody: body.slice(0, 2000) };
   }
   const settlementError = { httpStatus: res.status, body: body.slice(0, 2000) };
   if (res.ok) {
     // 2xx without settlement evidence: x402 v2 requires PAYMENT-RESPONSE; the authorisation may still be settled later
+    j("unknown", { detail: `HTTP ${res.status} without PAYMENT-RESPONSE` });
     return { ...base, outcome: "UNKNOWN", paid: false, settlement, settlementError, liveAuthorization: live, responseBody: body.slice(0, 2000) };
   }
   // refused or failed at /verify or /settle: ask the contract why, at this block (e.g. a veto between verify and settle)
@@ -245,7 +261,9 @@ export async function payFlow(
   } catch {
     explainAfterFailure = undefined; // the refusal stands; only its explanation is missing
   }
-  return { ...base, outcome: "REFUSED", paid: false, settlement, settlementError, explainAfterFailure, liveAuthorization: live };
+  j("settlement_refused", { detail: `HTTP ${res.status}` }, explainAfterFailure ?? ins);
+  return { ...base, outcome: "REFUSED", paid: false, settlement, settlementError, explainAfterFailure, liveAuthorization: live,
+    ...(explainAfterFailure && !explainAfterFailure.pay ? { humanOverride: HUMAN_OVERRIDE_NOTE } : {}) };
 }
 
 // ------------------------------------------------------------------ payer status / fund
@@ -257,6 +275,10 @@ export type StatusResult = {
   operators: string[];
   wallet?: string;
   walletIsOperator?: boolean;
+  walletMode?: "byok" | "server";
+  walletUsdc?: string;
+  /** the conditions under which the hard guard holds (README "When does the gate actually hold?") */
+  guarantee: { check: string; ok: boolean | null }[];
   paused: boolean;
   setId: string;
   maxPerPaymentUsdc: string;
@@ -268,7 +290,7 @@ export type StatusResult = {
   guardModeChecklist: string[];
 };
 
-export async function statusFlow(d: Deps, cfg: Config, wallet?: Address): Promise<StatusResult> {
+export async function statusFlow(d: Deps, cfg: Config, wallet?: Address, walletMode?: "byok" | "server"): Promise<StatusResult> {
   const r = <T>(fn: string, args: readonly unknown[] = []) => read<T>(d, cfg.payer, payerAbi, fn, args);
   const [owner, treasury, ops, paused, setId, maxPer, usdc, ancre, identity] = await Promise.all([
     r<Address>("owner"),
@@ -289,13 +311,23 @@ export async function statusFlow(d: Deps, cfg: Config, wallet?: Address): Promis
   )]);
   const operators = ops.filter((o) => o !== zeroAddress);
   const walletIsOperator = wallet ? operators.some((o) => getAddress(o) === getAddress(wallet)) : undefined;
+  const walletUsdc = wallet ? await read<bigint>(d, cfg.usdc, erc20Abi, "balanceOf", [wallet]) : undefined;
+  const isHuman = (x: Address) => getAddress(x) !== cfg.payer && !operators.some((o) => getAddress(o) === getAddress(x)) && (!wallet || getAddress(x) !== getAddress(wallet));
+  const guarantee = [
+    { check: "Agent Wallet in server-wallet mode (not BYOK)", ok: walletMode === undefined ? null : walletMode === "server" },
+    { check: "no USDC on the Agent Wallet (funds only in the payer)", ok: walletUsdc === undefined ? null : walletUsdc === 0n },
+    { check: "the Agent Wallet is an operator of the payer", ok: walletIsOperator ?? null },
+    { check: "owner and treasury are the human (neither the payer, an operator nor the Agent Wallet)", ok: isHuman(owner) && isHuman(treasury) },
+    { check: "Guard Mode allowlist = payer + USDC only (check with `mm wallet policy get`)", ok: null },
+  ];
   return {
     payer: cfg.payer,
     chainId: cfg.chainId,
     owner,
     treasury,
     operators,
-    ...(wallet ? { wallet, walletIsOperator } : {}),
+    ...(wallet ? { wallet, walletIsOperator, walletMode, walletUsdc: walletUsdc === undefined ? undefined : fmtUsdc(walletUsdc) } : {}),
+    guarantee,
     paused,
     setId,
     maxPerPaymentUsdc: fmtUsdc(maxPer),

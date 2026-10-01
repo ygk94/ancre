@@ -46,6 +46,16 @@ export async function hostDeps(ctx: PluginCommandContext, io: CommandIO, cfg: Co
   return deps;
 }
 
+/** Selected wallet and its mode: "byok" if found among byokWallets, "server" among remoteWallets (host-owned shape). */
+export function selectedWallet(snapshot: unknown): { address: Address; mode?: "byok" | "server" } | undefined {
+  const a = selectedAddress(snapshot);
+  if (!a) return undefined;
+  const rec = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
+  const has = (l: unknown) => Array.isArray(l) && l.some((w) => rec(w) && typeof w.address === "string" && isAddress(w.address) && getAddress(w.address) === a);
+  const snap = snapshot as Record<string, unknown>;
+  return { address: a, mode: has(snap.byokWallets) ? "byok" : has(snap.remoteWallets) ? "server" : undefined };
+}
+
 /** Selected EVM address of the host wallet, narrowed at runtime (the snapshot type is host-owned). */
 export function selectedAddress(snapshot: unknown): Address | undefined {
   const rec = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
