@@ -135,7 +135,7 @@ Le calcul se fait hors chaîne. Le contrat le **vérifie on-chain en une passe**
 ### 4.4 Certificat et vérification on-chain
 
 - **Deux niveaux** (D32) :
-  - **Registry-verified** : `submitCertificate` **relit chaque arête dans le registre**. Il vérifie `readFeedback`, que l'index est bien le dernier du tag, le wallet et les contrôleurs. **C'est le seul niveau ouvert à tous.** Coût ESTIMÉ à ≈ 13,6 M gas par certificat de démo : **à mesurer en premier**, dans le chantier 02.
+  - **Registry-verified** : `submitCertificate` **relit chaque arête dans le registre**. Il vérifie `readFeedback`, que l'index est bien le dernier du tag, le wallet et les contrôleurs. **C'est le seul niveau ouvert à tous.** **Coût MESURÉ (chantier 02, 28/09) : 14,97 M gas pour le certificat de démo**, soit ≈ 1,53 MON sur le mainnet, avec un plafond d'environ 630 arêtes par transaction. ⚠️ Il bloque la fabrication, **pas la dilution ni l'omission**, qui se corrigent par preuve (AM-02.1).
   - **Submitter-attested** : une liste de soumetteurs est engagée dans le `setId`. Par défaut, c'est le propriétaire de l'ensemble, qui paie (D27). Les preuves d'écart restent actives.
   - ⚠️ **Faille actuelle** (AM-5.9, MESURÉ) : le contrat R5 ne relit aucune arête. Un certificat qui fabrique 0x0730 → #4 donne t(#4) = 0,111 au lieu de 0, avec le même eUp, et **remplace le certificat honnête**. D32 corrige la spec ; l'implémentation reste à faire.
 - **La passe** :
@@ -468,7 +468,8 @@ Ancres : clés « demo » ; Mera (PRF du passkey) pour un usage hors wallet ─�
 
 ## 13. Questions ouvertes (état au 27/09)
 
-0. **Faits récents** : les registres existent sur le testnet ; le registre du mainnet n'est plus dormant (95 nouveaux avis) ; les inscriptions fermeraient le 06/10 (non confirmé).
+0. **Chantiers 02 et 04 livrés le 28/09** : P1 est tranchée (Registry-verified faisable), et la chaîne honnête est rétablie par D20. La réconciliation de leurs formats v1 est en cours (branche `chantier/integration-02-04`).
+0b. **Faits récents** : les registres existent sur le testnet ; le registre du mainnet n'est plus dormant (95 nouveaux avis) ; les inscriptions fermeraient le 06/10 (non confirmé).
 1. **Niveau de certification de la démo** : Registry-verified ou Submitter-attested. On tranche après la mesure du chantier 02.
 2. **Réseau de l'acte 2** : H-B recommandé (D40), à valider par Hugo.
 3. **Concept Mera (D43)** : il réintroduit la pré-rotation dans la démo, à valider par Hugo.

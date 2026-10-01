@@ -1236,3 +1236,56 @@ Délibération complète en annexe : `docs/conseil/tour6.md`. Décisions : **D44
 | AM-7.4 | La pause `TRANSFERRED` ne gelait que la confiance **entrante** : un agent racheté pouvait émettre dès le certificat suivant | D44 |
 | AM-7.5 | Un filtre « reçu vrai » par défaut récompenserait une ferme qui s'auto-paie | D46 |
 | AM-7.6 | Temps de bloc : 266 ms selon Sentinel, 302 ms mesurés par nous. Ça dépend de la fenêtre : aucune valeur ne doit être codée en dur | noté |
+
+---
+
+# Résultats des chantiers 02 et 04 — sessions du 2026-09-28
+
+Rapports complets : `docs/chantiers/rapports/02.md` et `04.md` (branches `chantier/02-contrat` et `chantier/04-solveur`, réunies dans `chantier/integration-02-04`). Tests revérifiés par le pilote le 01/10 : **128 verts pour le 04** (1 sauté), **68 verts pour le 02** hors fork (78 annoncés avec les forks).
+
+**Porte P1, tranchée : Registry-verified est faisable** (MESURÉ par le 02)
+- Certificat de démo (300 arêtes, 100 nœuds, k = 3) : **14,97 M gas**, soit ≈ 1,53 MON sur le mainnet. L'estimation de 13,6 M était juste à 10 % près.
+- Graphe réel du mainnet : 0,65 M.
+- Refus d'une ferme par `isTrusted` : 29 k.
+- `assess` : 80 k sans veto, 139 à 166 k avec veto.
+- Plafond : ≈ 630 arêtes par transaction.
+- Déploiement simulé : 8,8 M gas.
+
+**Livré par le 02**
+- D39 : la politique complète est engagée dans le `setId`.
+- D32 : les deux niveaux sont en place, avec `proveEdge`, qui couvre les preuves (i), (ii), (iii) et (v), et `proveWallet`, qui couvre (iv).
+- D33, D35, D36 : veto au dernier avis, mode strict, budget d'élargissement.
+- D37 : `PROOFS.md`, lemmes L1 à L6, fuzz, test différentiel, vecteurs des violations.
+- D28 : l'upgrade vers la PR #80 est testée en fork.
+- `/security-review` : aucune faille ≥ 8/10.
+- Contrat de 30,8 Ko : passe sur Monad (limite 128 Ko), pas sur Ethereum (24 Ko).
+
+**Livré par le 04**
+- Règles d'arêtes normatives R1 à R8.
+- D20 (copie de ligne) en place ; règle « ancien owner » supprimée ; D44 prêt derrière un drapeau, désactivé.
+- Sous-solution calculée depuis 0, sPlus déclaré.
+- Format `ancre-cert-v1`.
+- Certificateur, surveillant et bot de preuves, testés sur un fork du mainnet : environ 390 ms du recalcul au reçu, reprise correcte après un crash.
+- Snapshot du mainnet versionné dans `solver/data/` (9 283 avis).
+
+**Acte 1 recalculé** (MESURÉ par le 04)
+- **D20 rétablit la chaîne honnête** : #2 et #3 reçoivent 0,074 par colonne, et le slash sur #4 devient visible (méfiance 0,148).
+- Eve-8004 garde une masse de 0.
+- D44 n'a aucun effet sur le graphe de référence. Le chiffre « +48 arêtes » du tour 6 tombe à **37 arêtes utiles**.
+
+**Problème de méthode**
+- **02 et 04 n'ont pas communiqué.** `ListAgents` affichait deux sessions « ancre-* » sans indiquer leur dossier, et chacune a appliqué la règle « en cas de doute, n'envoie rien ».
+- **Conséquence : deux formats v1 divergents** (B⁺ déclaré contre sPlus, deux définitions de l'alias). La session d'intégration est lancée le 01/10 pour les réconcilier.
+
+## Angles morts des chantiers 02 et 04 (les plus importants ; liste complète dans les rapports)
+
+| Id | Angle mort | Statut |
+|---|---|---|
+| AM-02.1 | **Registry-verified ne ferme pas la dilution ni l'omission** : pas d'index par client. t ≤ t* n'est garanti qu'une fois tous les écarts prouvés. Ne jamais dire « infalsifiable » | documenté (`PROOFS.md`) |
+| AM-02.2 | Sur un ensemble **ouvert**, un certificat dilué peut remplacer un honnête. C'est un argument pour **un soumetteur attesté (D27) même en Registry-verified**, plus un surveillant | question pour Hugo |
+| AM-02.3 | Balayage non borné de l'historique d'un couple : un client peut empiler des avis pour rendre une preuve chère. Le rapport de coût est d'environ 20× en faveur du défenseur | accepté, chiffré |
+| AM-02.6 | Veto en direct au dernier avis : n'importe quel avis ultérieur de l'ancre le lève. Seul le bit certifié reste | règle à publier pour les ancres |
+| AM-04.1 | **La règle de remplacement bloque les mises à jour honnêtes** d'un graphe qui grandit | en cours d'intégration |
+| AM-04.2 | **Noms de tags limités à 32 octets** : un vrai tag du registre en fait 33, et l'ensemble est refusé | en cours d'intégration |
+| AM-04.10, 04.12 | Parité avec l'indexeur : sémantique d'`OUT_OF_BOUNDS` (par tag ou par couple), ordre des tags (UTF-8 contre UTF-16 en JavaScript) | **à relayer au chantier 03** |
+| AM-PIL.1 | **Le repérage des sessions par `ListAgents` ne marche pas** (dossier non affiché). Les prompts doivent passer par un fichier de présence ou par le seul journal | prompts à corriger |
