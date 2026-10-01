@@ -2,7 +2,7 @@
  "format": "ancre-cert-v1",
  "label": "mainnet_honest_d20",
  "notes": "Acte 1 (d), 9 283 avis, bloc 108 835 675 : ancres 0x0730/0xf7d5, filtre core, D20. #18 porte la copie de la ligne de 0xea0b (wallet de #18, #22, #23) : #2 et #3 reçoivent de la masse, #4 de la méfiance (slash).",
- "alignedWith": "solver/FORMAT.md v1 (2026-09-28). contracts/ENCODING.md still v0 (27/09): alias rows, VIA_OWNER, sPlus and t <= y are PROPOSED to chantier 02, not yet in the contract.",
+ "alignedWith": "contracts/ENCODING.md unified v1 (2026-10-01), AnchoredReputation v1 (integration 02+04)",
  "identityBlock": 108835675,
  "set": {
   "anchors": [
@@ -16,6 +16,7 @@
   "alphaN": 1,
   "alphaD": 3,
   "minAnchors": 2,
+  "tagSchemaHash": "0x5fcc51b8a1fdd4bd34b3e0f1cdad630952920f9e3b6c2b80af97b4af3e72afed",
   "tags": [
    {
     "tag": "vouch",
@@ -38,7 +39,24 @@
     "max": "0",
     "kind": 0
    }
-  ]
+  ],
+  "policy": {
+   "theta": "1000000000000000",
+   "rhoN": 1,
+   "rhoD": 2,
+   "minAnchors": 2,
+   "vetoQuorum": 1,
+   "vetoMax": -1,
+   "maxAge": 288000,
+   "minRefresh": 600,
+   "slackRefresh": "0",
+   "eLowMax": "10000000000000000",
+   "strictTransfer": true,
+   "registryVerified": true,
+   "ownerFallback": false,
+   "submitters": []
+  },
+  "setId": "0xfd4b69bbd1df79f6baa55baa0943741d54ed0f9c0a7b8a7c25ef293719e30301"
  },
  "nCert": 6,
  "nodes": [
@@ -223,6 +241,8 @@
    "15"
   ],
   "eEff": "16",
+  "qEff": "0",
+  "mass": "703703703703703702",
   "d": [
    "0",
    "0",

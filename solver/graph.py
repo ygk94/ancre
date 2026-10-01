@@ -10,7 +10,8 @@ ports them to TypeScript; `tests/test_indexer_parity.py` is the judge. Decisions
   R4 (D18)  Weight q = quantize(value, decimals, spec): int16 on the 1e-4 grid, truncated toward zero.
             Out of bounds => rejected, never clamped.
   R5 (D14)  Per (client, agent): combine the tags of the filter by negative dominance:
-            q = min over tags if some q < 0, else max. q == 0 => no edge.
+            q = min over tags if some q < 0, else max. q == 0 => no edge. Ties between tags of equal weight:
+            the feedback with the HIGHEST feedbackIndex decides (feedbackIndex, decidingTag). Unified v1 (01/10).
   R6 (D20)  Reject the pair if the client is a CURRENT controller of the target agent:
             owner, agentWallet, getApproved, or an approved-for-all operator of the owner.
             (The "past owner" rule of D16 is REMOVED: unverifiable on-chain, false for platforms, AM-4.2.)
@@ -475,7 +476,9 @@ def combine_pairs(feedbacks: list[Feedback], identity: Identity, schema: dict[st
                     r6.add((c, a))
                 continue
         neg = [x for x in lst if x[0] < 0]                                  # R5
-        q, f = min(neg, key=lambda x: (x[0], x[1].tag1)) if neg else max(lst, key=lambda x: (x[0], x[1].tag1))
+        # ties between tags of equal weight: the HIGHEST feedbackIndex (unified v1, F-6: the contract stores only
+        # tag hashes, so it cannot compare tag strings; it scans from the last index down and keeps the first)
+        q, f = min(neg, key=lambda x: (x[0], -x[1].index)) if neg else max(lst, key=lambda x: (x[0], x[1].index))
         if q == 0:
             log["poids_nul"] += 1
             continue

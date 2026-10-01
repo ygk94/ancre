@@ -2,7 +2,7 @@
  "format": "ancre-cert-v1",
  "label": "violation_fabricated",
  "notes": "D37 normative violation vector (mainnet_slash_anchor). committed edge with no registry feedback: readFeedback(4, 0x0730, 7) does not exist",
- "alignedWith": "solver/FORMAT.md v1 (2026-09-28). contracts/ENCODING.md still v0 (27/09): alias rows, VIA_OWNER, sPlus and t <= y are PROPOSED to chantier 02, not yet in the contract.",
+ "alignedWith": "contracts/ENCODING.md unified v1 (2026-10-01), AnchoredReputation v1 (integration 02+04)",
  "identityBlock": 108835675,
  "set": {
   "anchors": [
@@ -16,6 +16,7 @@
   "alphaN": 1,
   "alphaD": 3,
   "minAnchors": 2,
+  "tagSchemaHash": "0x31dc82a4a713b67d06c4598103c4e7a50e8972c20d4e3b392a37e21f21e4f2fb",
   "tags": [
    {
     "tag": "vouch",
@@ -38,7 +39,24 @@
     "max": "0",
     "kind": 0
    }
-  ]
+  ],
+  "policy": {
+   "theta": "1000000000000000",
+   "rhoN": 1,
+   "rhoD": 2,
+   "minAnchors": 2,
+   "vetoQuorum": 1,
+   "vetoMax": -1,
+   "maxAge": 288000,
+   "minRefresh": 600,
+   "slackRefresh": "0",
+   "eLowMax": "10000000000000000",
+   "strictTransfer": true,
+   "registryVerified": true,
+   "ownerFallback": false,
+   "submitters": []
+  },
+  "setId": "0xd280dd5b2ed3bd35266c114df6c96171c8cdb02d1d3d9da4b96ed974aa60c67e"
  },
  "nCert": 6,
  "nodes": [
@@ -257,6 +275,8 @@
    "21"
   ],
   "eEff": "22",
+  "qEff": "0",
+  "mass": "592592592592592591",
   "d": [
    "0",
    "0",

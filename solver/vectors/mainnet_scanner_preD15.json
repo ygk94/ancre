@@ -2,7 +2,7 @@
  "format": "ancre-cert-v1",
  "label": "mainnet_scanner_preD15",
  "notes": "Acte 1 (b) SANS D15 (schéma modifié : tout propage) : fuite du scanner vers la ferme. Grand certificat.",
- "alignedWith": "solver/FORMAT.md v1 (2026-09-28). contracts/ENCODING.md still v0 (27/09): alias rows, VIA_OWNER, sPlus and t <= y are PROPOSED to chantier 02, not yet in the contract.",
+ "alignedWith": "contracts/ENCODING.md unified v1 (2026-10-01), AnchoredReputation v1 (integration 02+04)",
  "identityBlock": 108835675,
  "set": {
   "anchors": [
@@ -16,6 +16,7 @@
   "alphaN": 1,
   "alphaD": 3,
   "minAnchors": 2,
+  "tagSchemaHash": "0x759181e3d4934dcf989fcb2f226d6609a4c8c4d2338433f56e9947f3054871d3",
   "tags": [
    {
     "tag": "vouch",
@@ -66,7 +67,24 @@
     "max": "0",
     "kind": 0
    }
-  ]
+  ],
+  "policy": {
+   "theta": "1000000000000000",
+   "rhoN": 1,
+   "rhoD": 2,
+   "minAnchors": 2,
+   "vetoQuorum": 1,
+   "vetoMax": -1,
+   "maxAge": 288000,
+   "minRefresh": 600,
+   "slackRefresh": "0",
+   "eLowMax": "10000000000000000",
+   "strictTransfer": true,
+   "registryVerified": true,
+   "ownerFallback": false,
+   "submitters": []
+  },
+  "setId": "0x822b0e058f03a4f263cea2a47430a14ae9e0487e07e0c8fb8bdc3d679931b322"
  },
  "nCert": 35,
  "nodes": [
@@ -1310,6 +1328,8 @@
    "174"
   ],
   "eEff": "174",
+  "qEff": "0",
+  "mass": "698754053592763246",
   "d": [
    "0",
    "0",

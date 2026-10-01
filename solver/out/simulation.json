@@ -8,107 +8,413 @@
  "vectors": [
   {
    "vector": "mainnet_em_d44",
-   "result": "set NOT registrable on v0: BadParams(8)",
-   "tagsOver32Bytes": [
-    "requester_rating:knowledge_access"
-   ]
+   "level": "Registry-verified",
+   "ownerFallback": true,
+   "setIdMatch": true,
+   "registerGas": 619611,
+   "mutated": "rejected: NotSubSolution(0, 12)",
+   "result": "ACCEPTED",
+   "estimate": 3703522,
+   "gasLimit": 3986287,
+   "gasUsed": 3703522,
+   "eEffOnChain": 148,
+   "eEffExpected": 148,
+   "graphRootMatch": true,
+   "vectorRootMatch": true,
+   "massMatch": true,
+   "qMatch": true
   },
   {
    "vector": "mainnet_honest_d20",
+   "level": "Registry-verified",
+   "ownerFallback": false,
+   "setIdMatch": true,
+   "registerGas": 413966,
+   "mutated": "rejected: NotSubSolution(0, 5)",
    "result": "ACCEPTED",
-   "mutated": "rejected: ResidualTooLarge(2500015, 16)",
-   "estimate": 520480,
-   "gasLimit": 564516,
-   "gasUsed": 520480,
+   "estimate": 993697,
+   "gasLimit": 1073225,
+   "gasUsed": 993697,
    "eEffOnChain": 16,
    "eEffExpected": 16,
-   "graphRootMatch": true
+   "graphRootMatch": true,
+   "vectorRootMatch": true,
+   "massMatch": true,
+   "qMatch": true
   },
   {
    "vector": "mainnet_scanner_preD15",
+   "level": "Registry-verified",
+   "ownerFallback": false,
+   "setIdMatch": true,
+   "registerGas": 572462,
+   "mutated": "rejected: NotSubSolution(0, 5)",
    "result": "ACCEPTED",
-   "mutated": "rejected: ResidualTooLarge(2500173, 174)",
-   "estimate": 1975312,
-   "gasLimit": 2128461,
-   "gasUsed": 1975312,
+   "estimate": 6064898,
+   "gasLimit": 6524766,
+   "gasUsed": 6064898,
    "eEffOnChain": 174,
    "eEffExpected": 174,
-   "graphRootMatch": true
+   "graphRootMatch": true,
+   "vectorRootMatch": true,
+   "massMatch": true,
+   "qMatch": true
   },
   {
    "vector": "mainnet_slash_anchor",
+   "level": "Registry-verified",
+   "ownerFallback": false,
+   "setIdMatch": true,
+   "registerGas": 413966,
+   "mutated": "rejected: NotSubSolution(0, 5)",
    "result": "ACCEPTED",
-   "mutated": "rejected: ResidualTooLarge(2500017, 18)",
-   "estimate": 522146,
-   "gasLimit": 566307,
-   "gasUsed": 522146,
+   "estimate": 1004890,
+   "gasLimit": 1085257,
+   "gasUsed": 1004890,
    "eEffOnChain": 18,
    "eEffExpected": 18,
-   "graphRootMatch": true
+   "graphRootMatch": true,
+   "vectorRootMatch": true,
+   "massMatch": true,
+   "qMatch": true
   },
   {
    "vector": "toy_alias_owner_rowmax",
-   "result": "not v0-encodable (row 7 has a declared sPlus (ROW_MAX cap): v0 cannot express it)"
+   "level": "Submitter-attested",
+   "ownerFallback": true,
+   "setIdMatch": true,
+   "registerGas": 432567,
+   "mutated": "rejected: NotSubSolution(0, 263)",
+   "result": "ACCEPTED",
+   "estimate": 19735885,
+   "gasLimit": 21221077,
+   "gasUsed": 19735885,
+   "eEffOnChain": 1124556900135260,
+   "eEffExpected": 1124556900135260,
+   "graphRootMatch": true,
+   "vectorRootMatch": true,
+   "massMatch": true,
+   "qMatch": true
   },
   {
    "vector": "toy_alpha_1_2",
+   "level": "Submitter-attested",
+   "ownerFallback": false,
+   "setIdMatch": true,
+   "registerGas": 432555,
+   "mutated": "rejected: NotSubSolution(0, 4)",
    "result": "ACCEPTED",
-   "mutated": "rejected: ResidualTooLarge(1000064, 14)",
-   "estimate": 490196,
-   "gasLimit": 531961,
-   "gasUsed": 490196,
+   "estimate": 640915,
+   "gasLimit": 693984,
+   "gasUsed": 640915,
    "eEffOnChain": 14,
    "eEffExpected": 14,
-   "graphRootMatch": true
+   "graphRootMatch": true,
+   "vectorRootMatch": true,
+   "massMatch": true,
+   "qMatch": true
   },
   {
    "vector": "toy_alpha_1_3",
+   "level": "Submitter-attested",
+   "ownerFallback": false,
+   "setIdMatch": true,
+   "registerGas": 432555,
+   "mutated": "rejected: NotSubSolution(0, 4)",
    "result": "ACCEPTED",
-   "mutated": "rejected: ResidualTooLarge(1500122, 22)",
-   "estimate": 490256,
-   "gasLimit": 532026,
-   "gasUsed": 490256,
+   "estimate": 640975,
+   "gasLimit": 694049,
+   "gasUsed": 640975,
    "eEffOnChain": 22,
    "eEffExpected": 22,
-   "graphRootMatch": true
+   "graphRootMatch": true,
+   "vectorRootMatch": true,
+   "massMatch": true,
+   "qMatch": true
   },
   {
    "vector": "toy_alpha_1_4",
+   "level": "Submitter-attested",
+   "ownerFallback": false,
+   "setIdMatch": true,
+   "registerGas": 432555,
+   "mutated": "rejected: NotSubSolution(0, 4)",
    "result": "ACCEPTED",
-   "mutated": "rejected: ResidualTooLarge(2000178, 28)",
-   "estimate": 490208,
-   "gasLimit": 531974,
-   "gasUsed": 490208,
+   "estimate": 640927,
+   "gasLimit": 693997,
+   "gasUsed": 640927,
    "eEffOnChain": 28,
    "eEffExpected": 28,
-   "graphRootMatch": true
+   "graphRootMatch": true,
+   "vectorRootMatch": true,
+   "massMatch": true,
+   "qMatch": true
   },
   {
    "vector": "toy_truncated",
+   "level": "Submitter-attested",
+   "ownerFallback": false,
+   "setIdMatch": true,
+   "registerGas": 432555,
+   "mutated": "rejected: NotSubSolution(0, 4)",
    "result": "ACCEPTED",
-   "mutated": "rejected: ResidualTooLarge(19542096576823470, 19542096574323471)",
-   "estimate": 487409,
-   "gasLimit": 528965,
-   "gasUsed": 487409,
+   "estimate": 635272,
+   "gasLimit": 687918,
+   "gasUsed": 635272,
    "eEffOnChain": 19542096574323471,
    "eEffExpected": 19542096574323471,
-   "graphRootMatch": true
+   "graphRootMatch": true,
+   "vectorRootMatch": true,
+   "massMatch": true,
+   "qMatch": true
+  }
+ ],
+ "violations": [
+  {
+   "vector": "fabricated",
+   "level": "Registry-verified",
+   "submission": "REJECTED",
+   "reason": "EdgeMismatch(0, 0)",
+   "gasUsed": null
+  },
+  {
+   "vector": "inflated",
+   "level": "Registry-verified",
+   "submission": "REJECTED",
+   "reason": "EdgeMismatch(4, 2)",
+   "gasUsed": null
+  },
+  {
+   "vector": "dilution",
+   "level": "Registry-verified",
+   "submission": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 990693,
+   "detected": [
+    "DILUTION"
+   ],
+   "proofs": [
+    {
+     "kind": "DILUTION",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 304293,
+     "error": null
+    }
+   ],
+   "eLowEffBefore": "0",
+   "eLowEffAfter": "111111111111111111",
+   "eEffBefore": "16",
+   "eEffAfter": "111111111111111127"
+  },
+  {
+   "vector": "omitted_negative",
+   "level": "Registry-verified",
+   "submission": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 857555,
+   "detected": [
+    "OMITTED_NEGATIVE",
+    "OMITTED_NEGATIVE"
+   ],
+   "proofs": [
+    {
+     "kind": "OMITTED_NEGATIVE",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 275451,
+     "error": null
+    },
+    {
+     "kind": "OMITTED_NEGATIVE",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 283920,
+     "error": null
+    }
+   ],
+   "eLowEffBefore": "0",
+   "eLowEffAfter": "0",
+   "eEffBefore": "18",
+   "eEffAfter": "555555555555555573"
+  },
+  {
+   "vector": "two_omissions_one_row",
+   "level": "Registry-verified",
+   "submission": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 969303,
+   "detected": [
+    "DILUTION",
+    "OMITTED_NEGATIVE"
+   ],
+   "proofs": [
+    {
+     "kind": "OMITTED_NEGATIVE",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 278551,
+     "error": null
+    },
+    {
+     "kind": "DILUTION",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 258685,
+     "error": null
+    }
+   ],
+   "eLowEffBefore": "0",
+   "eLowEffAfter": "166666666666666667",
+   "eEffBefore": "16",
+   "eEffAfter": "500000000000000015"
+  },
+  {
+   "vector": "fabricated",
+   "level": "Submitter-attested",
+   "submission": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 696045,
+   "detected": [
+    "FABRICATED"
+   ],
+   "proofs": [
+    {
+     "kind": "FABRICATED",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 281585,
+     "error": null
+    }
+   ],
+   "eLowEffBefore": "0",
+   "eLowEffAfter": "166666666666666667",
+   "eEffBefore": "22",
+   "eEffAfter": "166666666666666688"
+  },
+  {
+   "vector": "inflated",
+   "level": "Submitter-attested",
+   "submission": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 690240,
+   "detected": [
+    "INFLATED"
+   ],
+   "proofs": [
+    {
+     "kind": "INFLATED",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 285182,
+     "error": null
+    }
+   ],
+   "eLowEffBefore": "0",
+   "eLowEffAfter": "0",
+   "eEffBefore": "18",
+   "eEffAfter": "222200000000000018"
+  },
+  {
+   "vector": "dilution",
+   "level": "Submitter-attested",
+   "submission": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 688072,
+   "detected": [
+    "DILUTION"
+   ],
+   "proofs": [
+    {
+     "kind": "DILUTION",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 304293,
+     "error": null
+    }
+   ],
+   "eLowEffBefore": "0",
+   "eLowEffAfter": "111111111111111111",
+   "eEffBefore": "16",
+   "eEffAfter": "111111111111111127"
+  },
+  {
+   "vector": "omitted_negative",
+   "level": "Submitter-attested",
+   "submission": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 638026,
+   "detected": [
+    "OMITTED_NEGATIVE",
+    "OMITTED_NEGATIVE"
+   ],
+   "proofs": [
+    {
+     "kind": "OMITTED_NEGATIVE",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 275451,
+     "error": null
+    },
+    {
+     "kind": "OMITTED_NEGATIVE",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 283920,
+     "error": null
+    }
+   ],
+   "eLowEffBefore": "0",
+   "eLowEffAfter": "0",
+   "eEffBefore": "18",
+   "eEffAfter": "555555555555555573"
+  },
+  {
+   "vector": "two_omissions_one_row",
+   "level": "Submitter-attested",
+   "submission": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 685467,
+   "detected": [
+    "DILUTION",
+    "OMITTED_NEGATIVE"
+   ],
+   "proofs": [
+    {
+     "kind": "OMITTED_NEGATIVE",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 278551,
+     "error": null
+    },
+    {
+     "kind": "DILUTION",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 258685,
+     "error": null
+    }
+   ],
+   "eLowEffBefore": "0",
+   "eLowEffAfter": "166666666666666667",
+   "eEffBefore": "16",
+   "eEffAfter": "500000000000000015"
   }
  ],
  "service": [
   {
    "fn": "registerAnchorSet",
-   "estimate": 394812,
-   "gasUsed": 394812
+   "estimate": 414002,
+   "gasUsed": 414002
   },
   {
-   "ts": 1790627373.32,
+   "ts": 1790849643.574,
    "action": "certified",
-   "latencyMs": 236.0,
+   "latencyMs": 390.5,
    "txs": 1,
    "refresh": false,
-   "lastTx": "0x4935be4adc7baff8f24be6b8d7d86e2a07c48e66a4f931ab1ebd3359b8cfe5a8",
-   "txBlock": 108835692,
+   "lastTx": "0x9ead36e27b37d713bab428e644c9e8c48cded9ea152c87968b04a1d79c6bb4f3",
+   "txBlock": 108835726,
    "set": "mainnet-honest",
    "reason": "first certificate",
    "block": null,
@@ -116,12 +422,14 @@
    "rows": 5,
    "newNodes": 4,
    "eEff": 16,
+   "qEff": 0,
+   "mass": 703703703703703702,
    "iterations": 4,
    "graphRoot": "0x202e848c99665e17fb9a3d736394b98b794356f8ed7edca925639d24a6db69cd",
-   "computeMs": 173.5
+   "computeMs": 329.1
   },
   {
-   "ts": 1790627373.368,
+   "ts": 1790849643.641,
    "action": "skip_identical",
    "set": "mainnet-honest",
    "reason": "recompute, nothing changed",
@@ -130,49 +438,89 @@
    "rows": 5,
    "newNodes": 0,
    "eEff": 16,
+   "qEff": 0,
+   "mass": 703703703703703702,
    "iterations": 4,
    "graphRoot": "0x202e848c99665e17fb9a3d736394b98b794356f8ed7edca925639d24a6db69cd",
-   "computeMs": 48.3
+   "computeMs": 66.7
+  },
+  {
+   "registryWrite": "anchor 0x0730 vouches #22 (impersonated on the fork)",
+   "ok": true
   },
   {
    "trigger": "NewFeedback 0x0730 -> #22",
    "relevant": true
   },
   {
-   "ts": 1790627373.388,
-   "action": "deferred_replacement_rule",
-   "waitBlocks": 601,
-   "eCur": 16,
-   "head": 108835692,
-   "set": "mainnet-honest",
-   "reason": "new feedback by a support client",
-   "block": null,
-   "nCert": 7,
-   "rows": 6,
-   "newNodes": 1,
-   "eEff": 24,
-   "iterations": 4,
-   "graphRoot": "0xd38e9a1fb352aeff20d24a390b498c6c91bdeb4dec597b292885067b3aaede8d",
-   "computeMs": 20.2
-  },
-  {
-   "ts": 1790627374.576,
+   "ts": 1790849652.633,
    "action": "certified",
-   "latencyMs": 1109.1,
+   "latencyMs": 395.1,
    "txs": 1,
    "refresh": false,
-   "lastTx": "0x4663bda754dcc104ea126d09c59b9c438759378aaf8f134e8041ef0eae496e28",
-   "txBlock": 108836294,
+   "lastTx": "0xe7792a28940d5d63e78fd3f79e8e44aaa4531ebc2c8566fac0fa789c81c4ed0a",
+   "txBlock": 108835728,
    "set": "mainnet-honest",
-   "reason": "retry after minRefresh",
+   "reason": "growing graph: new feedback by an anchor (AM-04.1)",
    "block": null,
    "nCert": 7,
    "rows": 6,
    "newNodes": 1,
    "eEff": 24,
+   "qEff": 0,
+   "mass": 703703703703703702,
    "iterations": 4,
-   "graphRoot": "0xd38e9a1fb352aeff20d24a390b498c6c91bdeb4dec597b292885067b3aaede8d",
-   "computeMs": 30.0
+   "graphRoot": "0xecd6e49b4d71cd6a4403ae48e1f18dd5cfc91d4414c57591acf687bdf235c1ad",
+   "computeMs": 54.2
+  },
+  {
+   "censorship": "third party resubmits without the new endorsement of #22",
+   "result": "ACCEPTED (same mass and q: the omission is a dilution, AM-02.2)",
+   "eEffCensor": 16,
+   "eEffCurrent": 24,
+   "qCensor": 0,
+   "massCensor": 703703703703703702,
+   "massCurrent": 703703703703703702
+  },
+  {
+   "watcherEvents": [
+    "skip_replaced",
+    "audit"
+   ],
+   "watcher": [
+    "DILUTION"
+   ],
+   "proofs": [
+    {
+     "kind": "DILUTION",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 294388
+    }
+   ],
+   "eLowEffAfter": 166666666666666667,
+   "massCur": 703703703703703702
+  },
+  {
+   "ts": 1790849654.185,
+   "action": "certified",
+   "latencyMs": 120.8,
+   "txs": 1,
+   "refresh": false,
+   "lastTx": "0xf3ee1e655ae6420e93f1097c522b167e44bdf756c5982540d3699b07ae2636d8",
+   "txBlock": 108835731,
+   "set": "mainnet-honest",
+   "reason": "honest certificate after the dilution proof",
+   "block": null,
+   "nCert": 7,
+   "rows": 6,
+   "newNodes": 0,
+   "eEff": 24,
+   "qEff": 0,
+   "mass": 703703703703703702,
+   "iterations": 4,
+   "graphRoot": "0xecd6e49b4d71cd6a4403ae48e1f18dd5cfc91d4414c57591acf687bdf235c1ad",
+   "computeMs": 62.8
   },
   {
    "trigger": "NewFeedback scanner -> #2",
@@ -180,16 +528,16 @@
   },
   {
    "frontRun": "third party addNodes(#999999, #23)",
-   "tx": "0xe6ed60d3cf83c66348c81e361ce1b82f43962948d30728f6071af1c38ab5589d"
+   "tx": "0x7ffedc2ad3241eafcabafe5f72a9e53d5e2397e916f9f03e3f1fa8be10ee31d0"
   },
   {
-   "ts": 1790627375.085,
+   "ts": 1790849663.949,
    "action": "certified",
-   "latencyMs": 152.8,
+   "latencyMs": 400.8,
    "txs": 1,
    "refresh": false,
-   "lastTx": "0xc31947eb36c73d2316c8df3a09838b97c7f0e3c240b7680c4a17f4dd6ce146fe",
-   "txBlock": 108836897,
+   "lastTx": "0x20b87387d6ee6e70b9a0f2ce5124b695a9b1722bb7d70a6458bbc1db1165e22f",
+   "txBlock": 108835734,
    "set": "mainnet-honest",
    "reason": "after a third-party addNodes",
    "block": null,
@@ -197,18 +545,20 @@
    "rows": 7,
    "newNodes": 0,
    "eEff": 34,
+   "qEff": 0,
+   "mass": 703703703703703702,
    "iterations": 4,
-   "graphRoot": "0x51687d9f2ddbda3c030fcbcfa0ae846d7a82ef0d6b84443ac7101c7353264809",
-   "computeMs": 65.8
+   "graphRoot": "0xbbb69180f483adb52668bd5c33e1ee6807e15dc328234f29d16a7e5a62454e9e",
+   "computeMs": 75.8
   },
   {
-   "ts": 1790627382.561,
+   "ts": 1790849682.824,
    "action": "certified",
-   "latencyMs": 98.3,
+   "latencyMs": 117.1,
    "txs": 1,
    "refresh": true,
-   "lastTx": "0x760ae920b4ec2da9c81af9996cdc36dbe90a8e7af57527eb4e0abe226565e0fa",
-   "txBlock": 108861899,
+   "lastTx": "0x99314cced156872401c2ff3baf81dd627568a5d464ede4299b1177c5ce932138",
+   "txBlock": 108860736,
    "set": "mainnet-honest",
    "reason": "age refresh, identical graph",
    "block": null,
@@ -216,22 +566,24 @@
    "rows": 7,
    "newNodes": 0,
    "eEff": 34,
+   "qEff": 0,
+   "mass": 703703703703703702,
    "iterations": 4,
-   "graphRoot": "0x51687d9f2ddbda3c030fcbcfa0ae846d7a82ef0d6b84443ac7101c7353264809",
-   "computeMs": 40.0
+   "graphRoot": "0xbbb69180f483adb52668bd5c33e1ee6807e15dc328234f29d16a7e5a62454e9e",
+   "computeMs": 58.0
   },
   {
    "journal": [
     {
-     "ts": 1790627373.319,
+     "ts": 1790849643.573,
      "action": "submitCertificate",
      "note": "nCert 6, rows 5",
-     "estimate": 503480,
-     "gasLimit": 546241,
-     "gasUsed": 503480,
-     "tx": "0x4935be4adc7baff8f24be6b8d7d86e2a07c48e66a4f931ab1ebd3359b8cfe5a8",
+     "estimate": 993697,
+     "gasLimit": 1073225,
+     "gasUsed": 993697,
+     "tx": "0x9ead36e27b37d713bab428e644c9e8c48cded9ea152c87968b04a1d79c6bb4f3",
      "status": true,
-     "txBlock": 108835692,
+     "txBlock": 108835726,
      "set": "mainnet-honest",
      "reason": "first certificate",
      "block": null,
@@ -239,18 +591,20 @@
      "rows": 5,
      "newNodes": 4,
      "eEff": 16,
+     "qEff": 0,
+     "mass": 703703703703703702,
      "iterations": 4,
      "graphRoot": "0x202e848c99665e17fb9a3d736394b98b794356f8ed7edca925639d24a6db69cd",
-     "computeMs": 173.5
+     "computeMs": 329.1
     },
     {
-     "ts": 1790627373.32,
+     "ts": 1790849643.574,
      "action": "certified",
-     "latencyMs": 236.0,
+     "latencyMs": 390.5,
      "txs": 1,
      "refresh": false,
-     "lastTx": "0x4935be4adc7baff8f24be6b8d7d86e2a07c48e66a4f931ab1ebd3359b8cfe5a8",
-     "txBlock": 108835692,
+     "lastTx": "0x9ead36e27b37d713bab428e644c9e8c48cded9ea152c87968b04a1d79c6bb4f3",
+     "txBlock": 108835726,
      "set": "mainnet-honest",
      "reason": "first certificate",
      "block": null,
@@ -258,12 +612,14 @@
      "rows": 5,
      "newNodes": 4,
      "eEff": 16,
+     "qEff": 0,
+     "mass": 703703703703703702,
      "iterations": 4,
      "graphRoot": "0x202e848c99665e17fb9a3d736394b98b794356f8ed7edca925639d24a6db69cd",
-     "computeMs": 173.5
+     "computeMs": 329.1
     },
     {
-     "ts": 1790627373.368,
+     "ts": 1790849643.641,
      "action": "skip_identical",
      "set": "mainnet-honest",
      "reason": "recompute, nothing changed",
@@ -272,77 +628,110 @@
      "rows": 5,
      "newNodes": 0,
      "eEff": 16,
+     "qEff": 0,
+     "mass": 703703703703703702,
      "iterations": 4,
      "graphRoot": "0x202e848c99665e17fb9a3d736394b98b794356f8ed7edca925639d24a6db69cd",
-     "computeMs": 48.3
+     "computeMs": 66.7
     },
     {
-     "ts": 1790627373.388,
-     "action": "deferred_replacement_rule",
-     "waitBlocks": 601,
-     "eCur": 16,
-     "head": 108835692,
-     "set": "mainnet-honest",
-     "reason": "new feedback by a support client",
-     "block": null,
-     "nCert": 7,
-     "rows": 6,
-     "newNodes": 1,
-     "eEff": 24,
-     "iterations": 4,
-     "graphRoot": "0xd38e9a1fb352aeff20d24a390b498c6c91bdeb4dec597b292885067b3aaede8d",
-     "computeMs": 20.2
-    },
-    {
-     "ts": 1790627374.574,
+     "ts": 1790849652.632,
      "action": "submitCertificate",
      "note": "nCert 7, rows 6",
-     "estimate": 187129,
-     "gasLimit": 206164,
-     "gasUsed": 187129,
-     "tx": "0x4663bda754dcc104ea126d09c59b9c438759378aaf8f134e8041ef0eae496e28",
+     "estimate": 618353,
+     "gasLimit": 669730,
+     "gasUsed": 618353,
+     "tx": "0xe7792a28940d5d63e78fd3f79e8e44aaa4531ebc2c8566fac0fa789c81c4ed0a",
      "status": true,
-     "txBlock": 108836294,
+     "txBlock": 108835728,
      "set": "mainnet-honest",
-     "reason": "retry after minRefresh",
+     "reason": "growing graph: new feedback by an anchor (AM-04.1)",
      "block": null,
      "nCert": 7,
      "rows": 6,
      "newNodes": 1,
      "eEff": 24,
+     "qEff": 0,
+     "mass": 703703703703703702,
      "iterations": 4,
-     "graphRoot": "0xd38e9a1fb352aeff20d24a390b498c6c91bdeb4dec597b292885067b3aaede8d",
-     "computeMs": 30.0
+     "graphRoot": "0xecd6e49b4d71cd6a4403ae48e1f18dd5cfc91d4414c57591acf687bdf235c1ad",
+     "computeMs": 54.2
     },
     {
-     "ts": 1790627374.576,
+     "ts": 1790849652.633,
      "action": "certified",
-     "latencyMs": 1109.1,
+     "latencyMs": 395.1,
      "txs": 1,
      "refresh": false,
-     "lastTx": "0x4663bda754dcc104ea126d09c59b9c438759378aaf8f134e8041ef0eae496e28",
-     "txBlock": 108836294,
+     "lastTx": "0xe7792a28940d5d63e78fd3f79e8e44aaa4531ebc2c8566fac0fa789c81c4ed0a",
+     "txBlock": 108835728,
      "set": "mainnet-honest",
-     "reason": "retry after minRefresh",
+     "reason": "growing graph: new feedback by an anchor (AM-04.1)",
      "block": null,
      "nCert": 7,
      "rows": 6,
      "newNodes": 1,
      "eEff": 24,
+     "qEff": 0,
+     "mass": 703703703703703702,
      "iterations": 4,
-     "graphRoot": "0xd38e9a1fb352aeff20d24a390b498c6c91bdeb4dec597b292885067b3aaede8d",
-     "computeMs": 30.0
+     "graphRoot": "0xecd6e49b4d71cd6a4403ae48e1f18dd5cfc91d4414c57591acf687bdf235c1ad",
+     "computeMs": 54.2
     },
     {
-     "ts": 1790627375.085,
+     "ts": 1790849654.185,
+     "action": "submitCertificate",
+     "note": "nCert 7, rows 6",
+     "estimate": 566833,
+     "gasLimit": 614346,
+     "gasUsed": 566833,
+     "tx": "0xf3ee1e655ae6420e93f1097c522b167e44bdf756c5982540d3699b07ae2636d8",
+     "status": true,
+     "txBlock": 108835731,
+     "set": "mainnet-honest",
+     "reason": "honest certificate after the dilution proof",
+     "block": null,
+     "nCert": 7,
+     "rows": 6,
+     "newNodes": 0,
+     "eEff": 24,
+     "qEff": 0,
+     "mass": 703703703703703702,
+     "iterations": 4,
+     "graphRoot": "0xecd6e49b4d71cd6a4403ae48e1f18dd5cfc91d4414c57591acf687bdf235c1ad",
+     "computeMs": 62.8
+    },
+    {
+     "ts": 1790849654.185,
+     "action": "certified",
+     "latencyMs": 120.8,
+     "txs": 1,
+     "refresh": false,
+     "lastTx": "0xf3ee1e655ae6420e93f1097c522b167e44bdf756c5982540d3699b07ae2636d8",
+     "txBlock": 108835731,
+     "set": "mainnet-honest",
+     "reason": "honest certificate after the dilution proof",
+     "block": null,
+     "nCert": 7,
+     "rows": 6,
+     "newNodes": 0,
+     "eEff": 24,
+     "qEff": 0,
+     "mass": 703703703703703702,
+     "iterations": 4,
+     "graphRoot": "0xecd6e49b4d71cd6a4403ae48e1f18dd5cfc91d4414c57591acf687bdf235c1ad",
+     "computeMs": 62.8
+    },
+    {
+     "ts": 1790849663.949,
      "action": "submitCertificate",
      "note": "nCert 9, rows 7",
-     "estimate": 231725,
-     "gasLimit": 254105,
-     "gasUsed": 231725,
-     "tx": "0xc31947eb36c73d2316c8df3a09838b97c7f0e3c240b7680c4a17f4dd6ce146fe",
+     "estimate": 721372,
+     "gasLimit": 780475,
+     "gasUsed": 721372,
+     "tx": "0x20b87387d6ee6e70b9a0f2ce5124b695a9b1722bb7d70a6458bbc1db1165e22f",
      "status": true,
-     "txBlock": 108836897,
+     "txBlock": 108835734,
      "set": "mainnet-honest",
      "reason": "after a third-party addNodes",
      "block": null,
@@ -350,18 +739,20 @@
      "rows": 7,
      "newNodes": 0,
      "eEff": 34,
+     "qEff": 0,
+     "mass": 703703703703703702,
      "iterations": 4,
-     "graphRoot": "0x51687d9f2ddbda3c030fcbcfa0ae846d7a82ef0d6b84443ac7101c7353264809",
-     "computeMs": 65.8
+     "graphRoot": "0xbbb69180f483adb52668bd5c33e1ee6807e15dc328234f29d16a7e5a62454e9e",
+     "computeMs": 75.8
     },
     {
-     "ts": 1790627375.085,
+     "ts": 1790849663.949,
      "action": "certified",
-     "latencyMs": 152.8,
+     "latencyMs": 400.8,
      "txs": 1,
      "refresh": false,
-     "lastTx": "0xc31947eb36c73d2316c8df3a09838b97c7f0e3c240b7680c4a17f4dd6ce146fe",
-     "txBlock": 108836897,
+     "lastTx": "0x20b87387d6ee6e70b9a0f2ce5124b695a9b1722bb7d70a6458bbc1db1165e22f",
+     "txBlock": 108835734,
      "set": "mainnet-honest",
      "reason": "after a third-party addNodes",
      "block": null,
@@ -369,20 +760,22 @@
      "rows": 7,
      "newNodes": 0,
      "eEff": 34,
+     "qEff": 0,
+     "mass": 703703703703703702,
      "iterations": 4,
-     "graphRoot": "0x51687d9f2ddbda3c030fcbcfa0ae846d7a82ef0d6b84443ac7101c7353264809",
-     "computeMs": 65.8
+     "graphRoot": "0xbbb69180f483adb52668bd5c33e1ee6807e15dc328234f29d16a7e5a62454e9e",
+     "computeMs": 75.8
     },
     {
-     "ts": 1790627382.561,
+     "ts": 1790849682.824,
      "action": "submitCertificate",
      "note": "nCert 9, rows 7",
-     "estimate": 160366,
-     "gasLimit": 177394,
-     "gasUsed": 160366,
-     "tx": "0x760ae920b4ec2da9c81af9996cdc36dbe90a8e7af57527eb4e0abe226565e0fa",
+     "estimate": 630501,
+     "gasLimit": 682789,
+     "gasUsed": 630501,
+     "tx": "0x99314cced156872401c2ff3baf81dd627568a5d464ede4299b1177c5ce932138",
      "status": true,
-     "txBlock": 108861899,
+     "txBlock": 108860736,
      "set": "mainnet-honest",
      "reason": "age refresh, identical graph",
      "block": null,
@@ -390,18 +783,20 @@
      "rows": 7,
      "newNodes": 0,
      "eEff": 34,
+     "qEff": 0,
+     "mass": 703703703703703702,
      "iterations": 4,
-     "graphRoot": "0x51687d9f2ddbda3c030fcbcfa0ae846d7a82ef0d6b84443ac7101c7353264809",
-     "computeMs": 40.0
+     "graphRoot": "0xbbb69180f483adb52668bd5c33e1ee6807e15dc328234f29d16a7e5a62454e9e",
+     "computeMs": 58.0
     },
     {
-     "ts": 1790627382.561,
+     "ts": 1790849682.824,
      "action": "certified",
-     "latencyMs": 98.3,
+     "latencyMs": 117.1,
      "txs": 1,
      "refresh": true,
-     "lastTx": "0x760ae920b4ec2da9c81af9996cdc36dbe90a8e7af57527eb4e0abe226565e0fa",
-     "txBlock": 108861899,
+     "lastTx": "0x99314cced156872401c2ff3baf81dd627568a5d464ede4299b1177c5ce932138",
+     "txBlock": 108860736,
      "set": "mainnet-honest",
      "reason": "age refresh, identical graph",
      "block": null,
@@ -409,9 +804,11 @@
      "rows": 7,
      "newNodes": 0,
      "eEff": 34,
+     "qEff": 0,
+     "mass": 703703703703703702,
      "iterations": 4,
-     "graphRoot": "0x51687d9f2ddbda3c030fcbcfa0ae846d7a82ef0d6b84443ac7101c7353264809",
-     "computeMs": 40.0
+     "graphRoot": "0xbbb69180f483adb52668bd5c33e1ee6807e15dc328234f29d16a7e5a62454e9e",
+     "computeMs": 58.0
     }
    ]
   }
@@ -419,21 +816,21 @@
  "split": [
   {
    "fn": "registerAnchorSet",
-   "estimate": 229790,
-   "gasUsed": 229790
+   "estimate": 318299,
+   "gasUsed": 318299
   },
   {
    "journal": [
     {
-     "ts": 1790627382.956,
+     "ts": 1790849683.276,
      "action": "addNodes",
      "note": "nodes 0..499",
-     "estimate": 14390760,
-     "gasLimit": 15475067,
-     "gasUsed": 14390760,
-     "tx": "0x93911f87381ad2c413da82795a9db637f0c4bd0b691476fd0fa9b432705697fe",
+     "estimate": 22959400,
+     "gasLimit": 24686355,
+     "gasUsed": 22959400,
+     "tx": "0xf266bfc7f9c950c02971b5765ba7c730008c9490dd71a455c47095ea311efd1b",
      "status": true,
-     "txBlock": 108861901,
+     "txBlock": 108860738,
      "set": "split",
      "reason": "first large certificate (crashes)",
      "block": null,
@@ -441,20 +838,22 @@
      "rows": 1237,
      "newNodes": 1235,
      "eEff": 11226,
+     "qEff": 0,
+     "mass": 997403656985208874,
      "iterations": 98,
      "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 256.3
+     "computeMs": 294.0
     },
     {
-     "ts": 1790627383.184,
+     "ts": 1790849683.585,
      "action": "addNodes",
      "note": "nodes 0..499",
-     "estimate": 14393736,
-     "gasLimit": 15478267,
-     "gasUsed": 14393736,
-     "tx": "0xa231df4d52bc7930256ce72d1307fe70a5270f6a668d1075c5e8e65f447f6ece",
+     "estimate": 22973176,
+     "gasLimit": 24701165,
+     "gasUsed": 22973176,
+     "tx": "0x52fa16b5be5604c3a5a9fc93f79e4da42f50af9c78c39b4847a5201157e9c68b",
      "status": true,
-     "txBlock": 108861902,
+     "txBlock": 108860739,
      "set": "split",
      "reason": "restart after crash, state file lost",
      "block": null,
@@ -462,20 +861,22 @@
      "rows": 1237,
      "newNodes": 735,
      "eEff": 11226,
+     "qEff": 0,
+     "mass": 997403656985208874,
      "iterations": 98,
      "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 128.8
+     "computeMs": 183.2
     },
     {
-     "ts": 1790627383.449,
+     "ts": 1790849683.648,
      "action": "addNodes",
      "note": "nodes 500..734",
-     "estimate": 6783932,
-     "gasLimit": 7297727,
-     "gasUsed": 6783932,
-     "tx": "0x48c3f1a12564763ed1e5b0ffc58661d77f3800276117633ea50401850b0f5b90",
+     "estimate": 10823787,
+     "gasLimit": 11640572,
+     "gasUsed": 10823787,
+     "tx": "0x3c7e42b3fb87f1298b350b568dcb7dcad18d3f459101840d7ba06a796a14e2a6",
      "status": true,
-     "txBlock": 108861903,
+     "txBlock": 108860740,
      "set": "split",
      "reason": "restart after crash, state file lost",
      "block": null,
@@ -483,20 +884,22 @@
      "rows": 1237,
      "newNodes": 735,
      "eEff": 11226,
+     "qEff": 0,
+     "mass": 997403656985208874,
      "iterations": 98,
      "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 128.8
+     "computeMs": 183.2
     },
     {
-     "ts": 1790627383.535,
+     "ts": 1790849683.705,
      "action": "reserveCapacity",
-     "note": "upto 600",
-     "estimate": 10396784,
-     "gasLimit": 11181543,
-     "gasUsed": 10396784,
-     "tx": "0x2cd217f886169001b7e3db272dfa8d5847c8570259af2535cbf4e720dcbe4916",
+     "note": "upto 480",
+     "estimate": 10380543,
+     "gasLimit": 11164084,
+     "gasUsed": 10380543,
+     "tx": "0xd8b6acd4c3c290813ead31fa15a4c4578e1f2e9eb3bfc90c69d14d1f8eb408a8",
      "status": true,
-     "txBlock": 108861904,
+     "txBlock": 108860741,
      "set": "split",
      "reason": "restart after crash, state file lost",
      "block": null,
@@ -504,20 +907,22 @@
      "rows": 1237,
      "newNodes": 735,
      "eEff": 11226,
+     "qEff": 0,
+     "mass": 997403656985208874,
      "iterations": 98,
      "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 128.8
+     "computeMs": 183.2
     },
     {
-     "ts": 1790627383.604,
+     "ts": 1790849683.763,
      "action": "reserveCapacity",
-     "note": "upto 1200",
-     "estimate": 10390584,
-     "gasLimit": 11174878,
-     "gasUsed": 10390584,
-     "tx": "0xece71bd3de4840341805a5b23a1960292beb6003503e1e9001135c81b8ac7a9b",
+     "note": "upto 960",
+     "estimate": 10391343,
+     "gasLimit": 11175694,
+     "gasUsed": 10391343,
+     "tx": "0x3c0332c678f3f3fd6468bb13d556228566bb56e5be295d88887dbcd6395183c1",
      "status": true,
-     "txBlock": 108861905,
+     "txBlock": 108860742,
      "set": "split",
      "reason": "restart after crash, state file lost",
      "block": null,
@@ -525,20 +930,22 @@
      "rows": 1237,
      "newNodes": 735,
      "eEff": 11226,
+     "qEff": 0,
+     "mass": 997403656985208874,
      "iterations": 98,
      "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 128.8
+     "computeMs": 183.2
     },
     {
-     "ts": 1790627383.661,
+     "ts": 1790849683.821,
      "action": "reserveCapacity",
      "note": "upto 1237",
-     "estimate": 730904,
-     "gasLimit": 790722,
-     "gasUsed": 730904,
-     "tx": "0xb3c0f25e6722f438fec0a431c0010fc9c755285faf0516344b99322932f5735c",
+     "estimate": 6081493,
+     "gasLimit": 6542605,
+     "gasUsed": 6081493,
+     "tx": "0x7dc5b01d45b0583ee9f116c2b41801fa9313823edf3a93e62d2ec0376960af4e",
      "status": true,
-     "txBlock": 108861906,
+     "txBlock": 108860743,
      "set": "split",
      "reason": "restart after crash, state file lost",
      "block": null,
@@ -546,20 +953,22 @@
      "rows": 1237,
      "newNodes": 735,
      "eEff": 11226,
+     "qEff": 0,
+     "mass": 997403656985208874,
      "iterations": 98,
      "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 128.8
+     "computeMs": 183.2
     },
     {
-     "ts": 1790627383.966,
+     "ts": 1790849684.13,
      "action": "submitCertificate",
      "note": "nCert 1237, rows 1237",
-     "estimate": 7940345,
-     "gasLimit": 8540871,
-     "gasUsed": 7940345,
-     "tx": "0x91261f6113fd863917143d7efdc73b3196ca69e954e9744d67613533cef8100b",
+     "estimate": 14250876,
+     "gasLimit": 15324692,
+     "gasUsed": 14250876,
+     "tx": "0xca22c76c82a8ab4b30977462e6f7c179db6682dd2e3fb3427eaddbaf0b7517bf",
      "status": true,
-     "txBlock": 108861907,
+     "txBlock": 108860744,
      "set": "split",
      "reason": "restart after crash, state file lost",
      "block": null,
@@ -567,18 +976,20 @@
      "rows": 1237,
      "newNodes": 735,
      "eEff": 11226,
+     "qEff": 0,
+     "mass": 997403656985208874,
      "iterations": 98,
      "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 128.8
+     "computeMs": 183.2
     },
     {
-     "ts": 1790627383.967,
+     "ts": 1790849684.131,
      "action": "certified",
-     "latencyMs": 985.9,
+     "latencyMs": 800.8,
      "txs": 6,
      "refresh": false,
-     "lastTx": "0x91261f6113fd863917143d7efdc73b3196ca69e954e9744d67613533cef8100b",
-     "txBlock": 108861907,
+     "lastTx": "0xca22c76c82a8ab4b30977462e6f7c179db6682dd2e3fb3427eaddbaf0b7517bf",
+     "txBlock": 108860744,
      "set": "split",
      "reason": "restart after crash, state file lost",
      "block": null,
@@ -586,20 +997,22 @@
      "rows": 1237,
      "newNodes": 735,
      "eEff": 11226,
+     "qEff": 0,
+     "mass": 997403656985208874,
      "iterations": 98,
      "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 128.8
+     "computeMs": 183.2
     }
    ]
   },
   {
-   "ts": 1790627383.967,
+   "ts": 1790849684.131,
    "action": "certified",
-   "latencyMs": 985.9,
+   "latencyMs": 800.8,
    "txs": 6,
    "refresh": false,
-   "lastTx": "0x91261f6113fd863917143d7efdc73b3196ca69e954e9744d67613533cef8100b",
-   "txBlock": 108861907,
+   "lastTx": "0xca22c76c82a8ab4b30977462e6f7c179db6682dd2e3fb3427eaddbaf0b7517bf",
+   "txBlock": 108860744,
    "set": "split",
    "reason": "restart after crash, state file lost",
    "block": null,
@@ -607,111 +1020,11 @@
    "rows": 1237,
    "newNodes": 735,
    "eEff": 11226,
+   "qEff": 0,
+   "mass": 997403656985208874,
    "iterations": 98,
    "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-   "computeMs": 128.8
-  }
- ],
- "watch": [
-  {
-   "vector": "fabricated",
-   "detected": [
-    "FABRICATED"
-   ],
-   "proofs": [],
-   "eEffBefore": "22",
-   "eEffAfter": "22"
-  },
-  {
-   "vector": "omitted_negative",
-   "detected": [
-    "OMITTED_NEGATIVE",
-    "OMITTED_NEGATIVE"
-   ],
-   "proofs": [
-    {
-     "kind": "OMITTED_NEGATIVE",
-     "agentJ": 4,
-     "u": 1,
-     "estimate": 236356,
-     "gasLimit": 259083,
-     "tx": "0x51b6c1e6efdbb8bbe223c72388c8921ec9b06ae21a71160c8aca7e433c0cec2a",
-     "status": true,
-     "gasUsed": 236356
-    },
-    {
-     "kind": "OMITTED_NEGATIVE",
-     "agentJ": 4,
-     "u": 4,
-     "estimate": 235002,
-     "gasLimit": 257628,
-     "tx": "0x97424d1d81ae046cce551561f7ce8e71b277e8ab10445695d9017a61b140ab18",
-     "status": true,
-     "gasUsed": 235002
-    }
-   ],
-   "eEffBefore": "18",
-   "eEffAfter": "555555555555555573"
-  },
-  {
-   "vector": "inflated",
-   "detected": [
-    "INFLATED"
-   ],
-   "proofs": [],
-   "eEffBefore": "18",
-   "eEffAfter": "18"
-  },
-  {
-   "vector": "dilution",
-   "detected": [
-    "DILUTION"
-   ],
-   "proofs": [
-    {
-     "kind": "DILUTION",
-     "agentJ": 3,
-     "u": 5,
-     "estimate": 221088,
-     "gasLimit": 242670,
-     "tx": "0x9b6f00a4785f2061984193c1b8ce895b98430d73872b868c6525db1141e44a5a",
-     "status": true,
-     "gasUsed": 221088
-    }
-   ],
-   "eEffBefore": "16",
-   "eEffAfter": "222222222222222238"
-  },
-  {
-   "vector": "two_omissions_one_row",
-   "detected": [
-    "DILUTION",
-    "OMITTED_NEGATIVE"
-   ],
-   "proofs": [
-    {
-     "kind": "OMITTED_NEGATIVE",
-     "agentJ": 4,
-     "u": 1,
-     "estimate": 235279,
-     "gasLimit": 257925,
-     "tx": "0x6ef4726a13ec711315581f3fbf6eba91f1dff53b4a0b726f738ea3d3a8874843",
-     "status": true,
-     "gasUsed": 235279
-    },
-    {
-     "kind": "DILUTION",
-     "agentJ": 2,
-     "u": 1,
-     "estimate": 202972,
-     "gasLimit": 223195,
-     "tx": "0xc5f9eb385811ebe6c1dfc3a67921df09877a7c222f65db31f1602bfccc076c0e",
-     "status": true,
-     "gasUsed": 202972
-    }
-   ],
-   "eEffBefore": "16",
-   "eEffAfter": "666666666666666682"
+   "computeMs": 183.2
   }
  ]
 }

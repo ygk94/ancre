@@ -45,21 +45,29 @@ def test_align_on_existing_table_keeps_indices_and_values(mainnet):
         C.align(g, cert, table, prev_ncert=len(al.nodes) + 1)
 
 
-def test_encode_v0_expands_alias_and_refuses_splus():
+def test_encode_v1_alias_repeats_source_and_flags():
+    """Unified v1 (ENCODING §3.2): alias = u ‖ hdr(SRC|ALIAS[|VIA_OWNER]) ‖ src ‖ ref; SPLUS for the capped row;
+    VIA_OWNER for #3 (owner fallback); the decoder re-expands everything."""
     fbs, idn, anc = X.toy_identity_graph()
     sch = {k: v for k, v in C.SetConfig(name="x", anchors=[], lambdas=[], alphaN=1, alphaD=3,
                                          filter_tags=[]).schema().items() if k in ("vouch", "review", "slash")}
     g = build_graph(fbs, idn, sch, list(sch), anc, owner_fallback=True)
     cert = certify(g, Fraction(1, 3))
     nodes = [g.nodes[i] for i in cert.node_map]
-    with pytest.raises(X.NotEncodable):
-        X.encode(cert, nodes, idn, version="v0")
-    fbs2 = [f for f in fbs if f.client != "0x" + "f" * 40]                   # drop the ROW_MAX row
-    g2 = build_graph(fbs2, idn, sch, list(sch), anc, owner_fallback=True)
-    c2 = certify(g2, Fraction(1, 3))
-    enc = X.encode(c2, [g2.nodes[i] for i in c2.node_map], idn, version="v0")
-    rows, splus, meta, _ = X.decode_rows("0x" + enc["rows"].hex())
-    assert rows == c2.rows and all(m[2] is None for m in meta.values())    # no alias in v0
+    enc = X.encode(cert, nodes, idn)
+    rows, splus, meta, slices = X.decode_rows("0x" + enc["rows"].hex())
+    assert rows == cert.rows and splus == cert.splus
+    (u_al, ref), = enc["aliases"].items()
+    raw = slices[sorted(rows).index(u_al)]
+    W = enc["W"]
+    hdr = int.from_bytes(raw[W:W + 2], "big")
+    assert hdr & X.HDR_ALIAS and hdr & X.HDR_SRC and not hdr & X.HDR_SPLUS and hdr & X.HDR_NE_MASK == 0
+    assert len(raw) == W + 2 + 20 + W and int.from_bytes(raw[-W:], "big") == ref
+    assert meta[u_al][0] == meta[ref][0] and meta[u_al][2] == ref                # same source, repeated
+    assert any(m[1] for m in meta.values()), "a VIA_OWNER row"
+    assert any(splus[u] > sum(q for _, q, _ in rows[u] if q > 0) for u in rows), "a declared sPlus row"
+    i3 = nodes.index((AGENT, 3))
+    assert meta[i3][1] and meta[i3][0] == idn.owner[3]
 
 
 def test_plan_splits_large_first_certificate(mainnet):
@@ -69,12 +77,12 @@ def test_plan_splits_large_first_certificate(mainnet):
     al = C.align(g, certify(g, cfg.alpha), C.anchor_table(cfg.anchors), 0)
     cfg.gas.inline_nodes_max = 1
     cfg.gas.reserve_slots_per_tx = 4                                        # k = 2: 1 chunk of 4 nodes per tx
-    txs = C.plan(cfg, "0x" + "00" * 32, al, X.encode(al.cert, al.nodes, idn, version="v0"), 0, 16)
+    txs = C.plan(cfg, "0x" + "00" * 32, al, X.encode(al.cert, al.nodes, idn), 0, 16)
     assert [t.fn for t in txs] == ["addNodes", "addNodes", "reserveCapacity", "reserveCapacity",
                                    "submitCertificate"]
     assert [t.args[1] for t in txs if t.fn == "reserveCapacity"] == ["4", "6"]
     assert txs[-1].args[3] == "0x"                                          # nodes already added
-    small = C.plan(honest_cfg(fbs), "0x" + "00" * 32, al, X.encode(al.cert, al.nodes, idn, version="v0"), 0, 16)
+    small = C.plan(honest_cfg(fbs), "0x" + "00" * 32, al, X.encode(al.cert, al.nodes, idn), 0, 16)
     assert [t.fn for t in small] == ["submitCertificate"] and small[0].args[3] == "0x" + al.new_nodes.hex()
 
 
@@ -92,17 +100,22 @@ def test_triggers_ignore_zero_mass_clients(mainnet):
 
 
 def test_replacement_wait_and_gas_limit(tmp_path):
+    """Mirror of the contract's rule (ENCODING §5): quality (q, mass) instead of eUp."""
     cfg = C.SetConfig(name="w", anchors=["0x" + "1" * 40], lambdas=[10**18], alphaN=1, alphaD=3, filter_tags=["vouch"],
                       min_refresh=600, max_age=10_000, slack_refresh=10)
-    oc = lambda blk, e, rc=False: C.OnChain(blk, e, "", "", 0, rc)
-    assert C.replacement_wait(oc(0, 0), 100, 50, cfg) == 0                  # no certificate yet
-    assert C.replacement_wait(oc(100, 16), 150, 16, cfg) == 0               # not worse
-    assert C.replacement_wait(oc(100, 16), 150, 24, cfg) == 551             # within slack: wait minRefresh
-    assert C.replacement_wait(oc(100, 16), 150, 99, cfg) == 9951            # beyond slack: wait maxAge
-    assert C.replacement_wait(oc(100, 16, True), 150, 99, cfg) == 0         # REGISTRY_CHANGED lifts the rule
-    assert C.replacement_wait(oc(100, 40), 150, 30, cfg) == 0               # a proof widened eCur on chain
+    oc = lambda blk, mass=100, q=5, rc=False, elow=0: C.OnChain(blk, 0, "", "", 0, rc, elow, mass, q)
+    assert C.replacement_wait(oc(0, 0, 0), 100, 50, 0, cfg) == 0            # no certificate yet
+    assert C.replacement_wait(oc(100), 150, 5, 100, cfg) == 0               # same quality: accepted (non-strict)
+    assert C.replacement_wait(oc(100), 150, 0, 140, cfg) == 0               # AM-04.1: a growing graph passes at once
+    assert C.replacement_wait(oc(100), 150, 0, 90, cfg) == 551              # less mass (censorship or unproven
+    assert C.replacement_wait(oc(100), 150, 99, 140, cfg) == 9951           #   decrease): window; worse q: maxAge
+    assert C.replacement_wait(oc(100, rc=True), 150, 99, 0, cfg) == 0       # REGISTRY_CHANGED lifts the rule
+    assert C.replacement_wait(oc(100, elow=10), 150, 0, 90, cfg) == 0       # a proof credits eLow to the newcomer
+    assert C.replacement_wait(oc(100, elow=10**17), 150, 99, 0, cfg) == 0   # eLow budget exhausted: anyone replaces
+    attested = C.SetConfig(**{**cfg.__dict__, "submitters": ["0x" + "2" * 40], "registry_verified": False})
+    assert C.replacement_wait(oc(100), 150, 99, 0, attested) == 0           # D27: listed submitters always replace
     short = C.SetConfig(**{**cfg.__dict__, "max_age": 300})
-    assert C.replacement_wait(oc(100, 16), 150, 24, short) == 251           # maxAge < minRefresh: the earlier wins
+    assert C.replacement_wait(oc(100), 150, 0, 90, short) == 251            # maxAge < minRefresh: the earlier wins
     assert C.GasPolicy(margin_bps=200, margin_abs=5000).limit(1_000_000) == 1_025_000
     st = C.State.load(tmp_path / "s.json", "0xaa", "0xbb")
     st.save(tmp_path / "s.json")
@@ -115,7 +128,9 @@ def test_cast_argv_order_and_error_selectors():
     out = ch._run("send", "--gas-limit", "500000", "--json", "0xto", "f(uint256)", "500000", sign=True)
     assert out.split() == ["send", "--rpc-url", "http://x", "--unlocked", "--from", "0x" + "1" * 40, "--gas-limit",
                            "500000", "--json", "0xto", "f(uint256)", "500000"]
-    assert C.ERRORS["0x0cb49808"] == "BadProof" and C.ERRORS["0xee3f07f1"] == "NotBetter"
+    assert C.ERRORS["0x0cb49808"] == "BadProof"
+    assert C.ERRORS[C._selector("NotBetter(uint256,uint256,uint256,uint256)")] == "NotBetter"
+    assert C.ERRORS[C._selector("EdgeMismatch(uint256,uint256)")] == "EdgeMismatch"
 
 
 def test_trigger_on_transfer_of_a_controller_rejected_target():

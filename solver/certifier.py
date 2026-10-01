@@ -20,7 +20,7 @@ Per anchor set:
      password reaches cast through the CHILD environment (ETH_PASSWORD), or an unlocked account on a local fork;
   9. JSONL journal (one event per line) for the demo screen (chantier 07), with latencies.
 
-Encodings: "v1" (solver/FORMAT.md, proposed) or "v0" (contracts/ENCODING.md, the deployable R5 contract).
+Encoding: the unified v1 format of contracts/ENCODING.md (AnchoredReputation v1, integration 02+04, 01/10).
 Chain access goes through Foundry's `cast` (no web3 dependency); `simulate.py` runs everything on an anvil fork.
 """
 from __future__ import annotations
@@ -35,7 +35,7 @@ from dataclasses import dataclass, field
 from fractions import Fraction
 from pathlib import Path
 
-from export import encode, keccak, node_entry, node_key, sorted_tags
+from export import POLICY_FIELDS, encode, keccak, node_entry, node_key, quality, set_id, sorted_tags
 from graph import ADDR, AGENT, ANCHOR, Graph, Identity, build_graph, load_schema
 from ppr import Certificate, certify, e_eff, verify
 
@@ -43,11 +43,13 @@ HERE = Path(__file__).parent
 SUBMIT_SIG = "submitCertificate(bytes32,uint32,uint256,bytes,bytes,bytes)"
 ADD_NODES_SIG = "addNodes(bytes32,bytes)"
 RESERVE_SIG = "reserveCapacity(bytes32,uint32)"
-CERT_VIEW = "certificate(bytes32)(uint64,uint256,bytes32,bytes32,bytes32,uint32,uint32,bool)"
+CERT_VIEW = "certificate(bytes32)(uint64,uint256,uint256,bytes32,bytes32,bytes32,uint32,uint32,bool)"
+QUALITY_VIEW = "quality(bytes32)(uint256,uint256)"
 NODES_ADDED = "NodesAdded(bytes32 indexed,uint256,uint256)"
-CERT_SUBMITTED = "CertificateSubmitted(bytes32 indexed,uint64 indexed,uint256,bytes32,bytes32,bytes32,uint32,uint32)"
-SET_PARAMS_SIG = ("(address[],uint64[],uint32,uint32,bytes32,(string,int128,int128,int128,uint8)[],"
-                  "(uint8,uint64,uint64,uint64))")
+CERT_SUBMITTED = ("CertificateSubmitted(bytes32 indexed,uint64 indexed,uint256,bytes32,bytes32,bytes32,uint32,uint32,"
+                  "bool)")
+POLICY_SIG = "(uint64,uint32,uint32,uint8,uint8,int16,uint64,uint64,uint64,uint64,bool,bool,bool,address[])"
+SET_PARAMS_SIG = "(address[],uint64[],uint32,uint32,bytes32,(string,int128,int128,int128,uint8)[]," + POLICY_SIG + ")"
 
 
 # ----------------------------------------------------------------------------- configuration
@@ -80,10 +82,19 @@ class SetConfig:
     min_refresh: int = 600
     slack_refresh: int = 0
     refresh_lead: int = 20_000       # recertify when age > maxAge − refreshLead
-    owner: str = ""                  # D27: the set owner is the attested submitter
-    owner_fallback: bool = False     # D44, pending Hugo
-    encoding: str = "v0"
+    owner: str = ""                  # D27: the set owner pays and submits
+    owner_fallback: bool = False     # D44, pending Hugo: committed in the setId (policy.ownerFallback)
     tag_schema_hash: str = "0x" + "00" * 32
+    # D39 policy (committed in the setId, ENCODING.md §1)
+    theta: int = 10**15
+    rho_n: int = 1
+    rho_d: int = 2
+    veto_quorum: int = 1
+    veto_max: int = -1
+    e_low_max: int = 10**16
+    strict_transfer: bool = True
+    registry_verified: bool = True   # D32: open sets require it
+    submitters: list = field(default_factory=list)   # D32: empty = open submission (Registry-verified)
     gas: GasPolicy = field(default_factory=GasPolicy)
 
     @classmethod
@@ -99,16 +110,42 @@ class SetConfig:
         p = Path(self.schema_path)
         return load_schema(p if p.is_absolute() else HERE / p)
 
-    def set_params_tuple(self) -> str:
-        """SetParams of the v0 contract as a cast tuple literal."""
+    def policy(self) -> dict:
+        """D39 policy in the JSON shape of a vector's `set.policy` (export.POLICY_FIELDS order)."""
+        return {"theta": self.theta, "rhoN": self.rho_n, "rhoD": self.rho_d, "minAnchors": self.min_anchors,
+                "vetoQuorum": self.veto_quorum, "vetoMax": self.veto_max, "maxAge": self.max_age,
+                "minRefresh": self.min_refresh, "slackRefresh": self.slack_refresh, "eLowMax": self.e_low_max,
+                "strictTransfer": self.strict_transfer, "registryVerified": self.registry_verified,
+                "ownerFallback": self.owner_fallback, "submitters": sorted(a.lower() for a in self.submitters)}
+
+    def set_block(self) -> dict:
+        """The `set` block of a vector for this configuration (export.set_id computes the setId off-chain)."""
         sch = self.schema()
-        tags = sorted_tags(self.filter_tags)
-        ts = ",".join(f"({t},{sch[t].min_wad},{sch[t].neutral_wad},{sch[t].max_wad},"
-                      f"{0 if sch[t].kind == 'endorsement' else 1})" for t in tags)
-        anchors = sorted(a.lower() for a in self.anchors)
-        return (f"([{','.join(anchors)}],[{','.join(str(x) for x in self.lambdas)}],{self.alphaN},{self.alphaD},"
-                f"{self.tag_schema_hash},[{ts}],({self.min_anchors},{self.max_age},{self.min_refresh},"
-                f"{self.slack_refresh}))")
+        return {"anchors": sorted(a.lower() for a in self.anchors), "lambdas": [str(x) for x in self.lambdas],
+                "alphaN": self.alphaN, "alphaD": self.alphaD, "tagSchemaHash": self.tag_schema_hash,
+                "tags": [{"tag": t, "min": str(sch[t].min_wad), "neutral": str(sch[t].neutral_wad),
+                          "max": str(sch[t].max_wad), "kind": 0 if sch[t].kind == "endorsement" else 1}
+                         for t in sorted_tags(self.filter_tags)],
+                "policy": self.policy()}
+
+    @property
+    def set_id(self) -> str:
+        return set_id(self.set_block())
+
+    def set_params_tuple(self) -> str:
+        """SetParams (v1, with the D39 policy) as a cast tuple literal."""
+        st = self.set_block()
+        for t in st["tags"]:                            # cast tuple literals have no escaping
+            if any(c in t["tag"] for c in ',()[]" '):
+                raise ValueError(f"tag {t['tag']!r} cannot be written as a cast literal")
+        ts = ",".join(f"({t['tag']},{t['min']},{t['neutral']},{t['max']},{t['kind']})" for t in st["tags"])
+        pol = st["policy"]
+        pv = []
+        for f, _ in POLICY_FIELDS:
+            v = pol[f]
+            pv.append(f"[{','.join(v)}]" if f == "submitters" else str(v).lower() if isinstance(v, bool) else str(v))
+        return (f"([{','.join(st['anchors'])}],[{','.join(st['lambdas'])}],{self.alphaN},{self.alphaD},"
+                f"{self.tag_schema_hash},[{ts}],({','.join(pv)}))")
 
 
 # ----------------------------------------------------------------------------- chain adapter (cast)
@@ -122,9 +159,10 @@ class ChainError(Exception):
 
 # custom errors of AnchoredReputation (R5): selectors derived from the declarations, never copied by hand
 ERROR_SIGS = ["BadParams(uint256)", "AlreadyRegistered()", "UnknownSet()", "NodeExists(bytes32)", "BadNodes()",
-              "BadNCert()", "BadVectors()", "BadRows(uint256)", "BadEdge(uint256)", "ValueTooLarge()",
-              "RegistryUnreadable()", "ResidualTooLarge(uint256,uint256)", "NotBetter(uint256,uint256)", "NoCert()",
-              "BadProof(uint256)"]
+              "BadNCert()", "BadVectors()", "BadRows(uint256)", "BadEdge(uint256)", "NotSubSolution(uint256,uint256)",
+              "EdgeMismatch(uint256,uint256)", "ValueTooLarge()", "RegistryUnreadable()",
+              "ResidualTooLarge(uint256,uint256)", "NotBetter(uint256,uint256,uint256,uint256)", "NoCert()",
+              "BadProof(uint256)", "NothingToProve()", "NotSubmitter()"]
 
 
 def _selector(sig: str) -> str:
@@ -374,9 +412,9 @@ def plan(cfg: SetConfig, set_id: str, al: Aligned, enc: dict, reserved_nodes: in
     Small case: newNodes inline in submitCertificate. Large case (more than inline_nodes_max new nodes, or more
     unreserved vector slots than one reserve chunk): addNodes chunks, then reserveCapacity chunks up to nCert
     (the certificate then pays x→y, 100 gas/slot, instead of 0→x), then submitCertificate. Chunks follow the slot
-    count ⌈n/4⌉·(k+2) of the contract's vector layout (ENCODING.md §5), so k is taken into account."""
+    count ⌈n/4⌉·(k+3) of the contract's vector layout (ENCODING.md §6: t columns, d, ownerFp, flags)."""
     n = al.cert.n
-    stride = al.cert.k + 2
+    stride = al.cert.k + 3
     unreserved_slots = max(0, (n + 3) // 4 - (reserved_nodes + 3) // 4) * stride
     large = len(al.appended) > cfg.gas.inline_nodes_max or unreserved_slots > cfg.gas.reserve_slots_per_tx
     txs: list[Tx] = []
@@ -421,11 +459,16 @@ class OnChain:
     vector_root: str
     n_cert: int
     registry_changed: bool
+    e_low_eff: int = 0
+    mass: int = 0                    # quality(setId): replacement rule (ENCODING.md §5)
+    q_cur: int = 0
 
     @classmethod
     def read(cls, chain: Chain, contract: str, set_id: str) -> "OnChain":
         v = [x.split()[0] for x in chain.call(contract, CERT_VIEW, set_id).split("\n")]
-        return cls(int(v[0]), int(v[1]), v[2].lower(), v[3].lower(), int(v[5]), v[7] == "true")
+        q = [x.split()[0] for x in chain.call(contract, QUALITY_VIEW, set_id).split("\n")]
+        return cls(int(v[0]), int(v[1]), v[3].lower(), v[4].lower(), int(v[6]), v[8] == "true", int(v[2]),
+                   int(q[0]), int(q[1]))
 
 
 @dataclass
@@ -451,15 +494,19 @@ class State:
         return st
 
 
-def replacement_wait(oc: OnChain, head: int, e_new: int, cfg: SetConfig) -> int:
-    """Blocks to wait before submitCertificate's replacement rule accepts e_new (0 = now):
-    no cert | registryChanged | age > maxAge | eNew <= eCur | (age > minRefresh and eNew <= eCur + slackRefresh).
-    Read from the chain: proofs widen eCur, other submitters replace the certificate."""
-    if oc.cert_block == 0 or oc.registry_changed or e_new <= oc.e_eff:
+def replacement_wait(oc: OnChain, head: int, q_new: int, mass_new: int, cfg: SetConfig) -> int:
+    """Blocks to wait before submitCertificate's replacement rule (ENCODING.md §5) accepts (q_new, mass_new), 0 = now:
+    attested set | no cert | registryChanged | age > maxAge | eLowEff > eLowMax
+    | (mass_new + eLowEff >= mass_cur and q_new <= q_cur) | (age > minRefresh and q_new <= q_cur + slackRefresh).
+    Read from the chain (quality view): proofs widen q_cur and credit eLow, other submitters replace the certificate.
+    A wait of maxAge means: prove the incumbent's overstatement first (watcher), or wait."""
+    if cfg.submitters or oc.cert_block == 0 or oc.registry_changed or oc.e_low_eff > cfg.e_low_max:
+        return 0
+    if mass_new + oc.e_low_eff >= oc.mass and q_new <= oc.q_cur:
         return 0
     age = head - oc.cert_block
     waits = [cfg.max_age + 1 - age]
-    if e_new <= oc.e_eff + cfg.slack_refresh:
+    if q_new <= oc.q_cur + cfg.slack_refresh:
         waits.append(cfg.min_refresh + 1 - age)
     return max(0, min(waits))
 
@@ -486,7 +533,7 @@ class Certifier:
                         owner_fallback=self.cfg.owner_fallback)
         cert = certify(g, self.cfg.alpha, lambdas=self.cfg.lambdas)
         al = align(g, cert, table, prev_ncert)
-        enc = encode(al.cert, al.nodes, idn, version=self.cfg.encoding)
+        enc = encode(al.cert, al.nodes, idn)
         self.support = Support.of(g, cert)
         return g, al, enc
 
@@ -509,9 +556,10 @@ class Certifier:
         g, al, enc = self.compute(fbs, idn, table, oc.n_cert if oc else 0)
         gr, vr = "0x" + enc["graphRoot"].hex(), "0x" + enc["vectorRoot"].hex()
         e_max = e_eff(al.cert)
+        q_new, mass_new = quality(al.cert)
         base = dict(set=self.cfg.name, reason=reason, block=block, nCert=al.cert.n, rows=len(al.cert.rows),
-                    newNodes=len(al.appended), eEff=e_max, iterations=al.cert.iterations, graphRoot=gr,
-                    computeMs=round((time.perf_counter() - t0) * 1000, 1))
+                    newNodes=len(al.appended), eEff=e_max, qEff=q_new, mass=mass_new, iterations=al.cert.iterations,
+                    graphRoot=gr, computeMs=round((time.perf_counter() - t0) * 1000, 1))
         reserved = max(self.state.reserved, oc.n_cert if oc else 0)
         txs = plan(self.cfg, self.set_id, al, enc, reserved, e_max)
         if oc is None:
@@ -519,10 +567,10 @@ class Certifier:
         refresh = self.due_refresh(oc, head)
         if (gr, vr) == (oc.graph_root, oc.vector_root) and not refresh and not oc.registry_changed:
             return self.journal.log(action="skip_identical", **base)
-        wait = replacement_wait(oc, head, e_max, self.cfg)
+        wait = replacement_wait(oc, head, q_new, mass_new, self.cfg)
         if wait:                                        # the contract would revert NotBetter: do not pay for it
-            return self.journal.log(action="deferred_replacement_rule", waitBlocks=wait, eCur=oc.e_eff, head=head,
-                                    **base)
+            return self.journal.log(action="deferred_replacement_rule", waitBlocks=wait, qCur=oc.q_cur,
+                                    massCur=oc.mass, eLowCur=oc.e_low_eff, head=head, **base)
         self.check_submitter()
         last = None
         for tx in txs:

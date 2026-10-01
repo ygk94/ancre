@@ -367,8 +367,11 @@ def test_leak_bound_holds():
 
 def test_export_roundtrip(tmp_path):
     g = rand_graph(3, n_agents=10, k=2)
+    for kind, v in g.nodes:                          # ENCODING §3.2: an agent row with edges carries its source
+        g.row_src[g.index[(kind, v)]] = (X.toy_wallet(v), "wallet") if kind == AGENT else (v, "anchor")
     cert = certify(g, Fraction(1, 3))
     obj = X.export_certificate(g, cert, None, schema=schema(), filter_tags=["vouch", "slash"])
+    assert obj["set"]["setId"] == X.set_id(obj["set"]) and obj["set"]["policy"]["submitters"]
     p = tmp_path / "c.json"
     p.write_text(json.dumps(obj))
     X.check_file(p)
@@ -434,3 +437,43 @@ def test_violation_vectors_are_valid_but_false():
         v = json.loads(p.read_text())["violation"]
         h, c = int(v["honestValue"]), int(v["committedValue"])
         assert (c > h) if v["affects"] == "t" else (c < h), p
+
+
+def test_tie_between_tags_highest_feedback_index_decides():
+    """Unified v1 (F-6): equal weights from two tags -> the feedback with the HIGHEST index decides, whatever the tag
+    names (the contract stores tag hashes only and scans from the last index down)."""
+    from graph import combine_pairs
+    A = "0x" + "a" * 40
+    idn = ident(owner={1: "0x" + "1" * 40}, wallet={1: "0x" + "1" * 40})
+    sch = schema()
+    for first, second in (("vouch", "review"), ("review", "vouch")):
+        fbs = [fb(1, A, 1, 100 if first == "vouch" else 1, first), fb(1, A, 2, 100 if second == "vouch" else 1, second)]
+        pe = combine_pairs(fbs, idn, sch, ["vouch", "review"])[(A, 1)]
+        assert pe.q == 10_000 and pe.feedback_index == 2 and pe.tag1 == second
+    fbs = [fb(1, A, 1, -100, "slash"), fb(1, A, 2, -1, "review")]          # negative tie: -10000 both
+    pe = combine_pairs(fbs, idn, sch, ["slash", "review"])[(A, 1)]
+    assert pe.q == -10_000 and pe.feedback_index == 2
+
+
+def test_set_id_of_published_vectors_matches_cast():
+    """The hand-written ABI encoder of export.set_id equals `cast abi-encode` (when Foundry is installed)."""
+    import shutil
+    import subprocess
+    cast = shutil.which("cast") or str(Path.home() / ".foundry" / "bin" / "cast")
+    if not Path(cast).exists():
+        pytest.skip("cast not installed")
+    import certifier as C
+    for p in sorted((Path(__file__).resolve().parents[1] / "vectors").rglob("*.json")):
+        obj = json.loads(p.read_text())
+        st = obj["set"]
+        assert X.set_id(st) == st["setId"]
+        pol = st["policy"]
+        tags = ",".join(f"({t['tag']},{t['min']},{t['neutral']},{t['max']},{t['kind']})" for t in st["tags"])
+        pv = ",".join(f"[{','.join(pol[f])}]" if f == "submitters" else str(pol[f]).lower()
+                      if isinstance(pol[f], bool) else str(pol[f]) for f, _ in X.POLICY_FIELDS)
+        out = subprocess.run([cast, "abi-encode", "f(address[],uint64[],uint32,uint32,bytes32,"
+                              "(string,int128,int128,int128,uint8)[]," + C.POLICY_SIG + ")",
+                              f"[{','.join(st['anchors'])}]", f"[{','.join(st['lambdas'])}]", str(st["alphaN"]),
+                              str(st["alphaD"]), st["tagSchemaHash"], f"[{tags}]", f"({pv})"],
+                             capture_output=True, text=True, check=True).stdout.strip()
+        assert out == "0x" + X.abi_encode(X.SET_T, X.set_params_values(st)).hex(), p.name

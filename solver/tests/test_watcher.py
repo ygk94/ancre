@@ -49,13 +49,14 @@ def test_audit_classifies_violation_vectors(name, kinds, tmp_path, monkeypatch):
     cert, nodes, enc = S.vector_calldata(obj)
     cfg = S.cfg_from_vector(obj, name)
     disc = Wt.audit("0x" + enc["rows"].hex(), nodes, fbs, idn, cfg)
-    assert {d.kind for d in disc if d.kind != "OMITTED_POSITIVE"} == kinds
+    assert {d.kind for d in disc if d.provable} == kinds
     for d in disc:
-        if d.provable_v0:
-            p = d.proof
-            leaf = keccak(bytes.fromhex(p["row"][2:]))
-            assert verify_merkle(leaf, p["rowPos"], len(cert.rows), [bytes.fromhex(x[2:]) for x in p["proof"]],
+        if d.provable:
+            r = d.proof["r"]
+            leaf = keccak(bytes.fromhex(r["row"][2:]))
+            assert verify_merkle(leaf, r["pos"], len(cert.rows), [bytes.fromhex(x[2:]) for x in r["path"]],
                                  enc["graphRoot"])
+            assert d.proof["fn"] == "proveEdge" and d.proof["agentJ"] == d.agent_id
 
 
 def test_audit_of_honest_vector_is_clean(tmp_path, monkeypatch):
@@ -64,7 +65,7 @@ def test_audit_of_honest_vector_is_clean(tmp_path, monkeypatch):
     obj = json.loads((HERE / "vectors" / "mainnet_slash_anchor.json").read_text())
     cert, nodes, enc = S.vector_calldata(obj)
     disc = Wt.audit("0x" + enc["rows"].hex(), nodes, fbs, idn, S.cfg_from_vector(obj, "honest"))
-    assert [d for d in disc if d.kind != "OMITTED_POSITIVE"] == []
+    assert [d for d in disc if d.provable] == []
 
 
 def test_liveness_alerts():
@@ -98,15 +99,37 @@ def test_audit_sign_flip_deflated_and_prepared_proof(tmp_path, monkeypatch):
     i2, i3 = nodes.index(("agent", 2)), nodes.index(("agent", 3))
     c.rows[u1] = [(d, (-9000 if d == i2 else 5000 if d == i3 else q), fi) for d, q, fi in c.rows[u1]]
     c.splus[u1] = sum(q for _, q, _ in c.rows[u1] if q > 0)
-    enc = encode(c, nodes, idn, version="v0")
+    enc = encode(c, nodes, idn)
     kinds = {d.kind for d in Wt.audit("0x" + enc["rows"].hex(), nodes, fbs, idn, cfg)}
     assert {"SIGN_FLIP"} <= kinds
     c.rows[u1] = [(d, q, fi) for d, q, fi in c.rows[u1] if d != i2]           # now committed S+ = 5000 + 3000 < GRID
     c.rows[u1] = [(d, (9500 if d == i3 else q), fi) for d, q, fi in c.rows[u1]]
     c.splus[u1] = sum(q for _, q, _ in c.rows[u1] if q > 0)
-    enc = encode(c, nodes, idn, version="v0")
+    enc = encode(c, nodes, idn)
     disc = Wt.audit("0x" + enc["rows"].hex(), nodes, fbs, idn, cfg)
     assert {d.kind for d in disc} >= {"INFLATED", "DILUTION"}
     om = next(d for d in disc if d.kind == "DILUTION")
     r = Wt.prove(C.Chain("http://unused"), "0x0", "0x0", om, C.GasPolicy())
-    assert r["status"] == "prepared" and r["args"][6] == "2"
+    assert r["status"] == "prepared" and r["fn"] == "proveEdge" and r["args"][4] == "2"
+    assert r["args"][2] == "(0,0x,[])" and r["args"][3] == "0x"               # not an alias, no amendment yet
+    # chaining: after a proof on agent 2, the next proof of the row carries (2, wCommitted, wRegistry), no path
+    am = Wt.amend([], om)
+    assert am == [(2, 0, om.w_registry)]
+    r2 = Wt.prove(C.Chain("http://unused"), "0x0", "0x0", om, C.GasPolicy(), amends=am)
+    assert r2["args"][1].endswith(",[])") and r2["args"][3] == "0x" + (2).to_bytes(4, "big").hex() + "0000" + \
+        (om.w_registry & 0xFFFF).to_bytes(2, "big").hex()
+
+
+def test_audit_source_change_is_proven_by_prove_wallet(tmp_path, monkeypatch):
+    """SOURCE (R7): the agent's wallet changed since the certificate -> proveWallet (iv), the row's edges are moot."""
+    monkeypatch.setattr(S, "SCR", tmp_path)
+    fbs, idn = R.load_mainnet()
+    obj = json.loads((HERE / "vectors" / "mainnet_slash_anchor.json").read_text())
+    cert, nodes, enc = S.vector_calldata(obj)
+    import copy
+    idn2 = copy.deepcopy(idn)
+    idn2.apply_wallet(18, "0x" + "de" * 20)
+    disc = Wt.audit("0x" + enc["rows"].hex(), nodes, fbs, idn2, S.cfg_from_vector(obj, "src"))
+    src = [d for d in disc if d.kind == "SOURCE"]
+    assert len(src) == 1 and src[0].agent_id == 18 and src[0].proof["fn"] == "proveWallet"
+    assert not [d for d in disc if d.u == src[0].u and d.kind != "SOURCE"]

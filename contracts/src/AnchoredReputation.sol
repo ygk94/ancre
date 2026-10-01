@@ -1965,6 +1965,14 @@ contract AnchoredReputation {
         return (s.certBlock, s.eEff, s.eLowEff, s.graphRoot, s.vectorRoot, s.versionHash, s.nCert, s.numRows, s.registryChanged);
     }
 
+    /// Quality of the current certificate for the replacement rule (ENCODING.md §5): its mass and its
+    /// q_cur = eEff - eFloor + eLowEff (widened by proofs). A certifier compares its own (qEff, mass) before paying.
+    function quality(bytes32 setId) external view returns (uint256 mass, uint256 qCur) {
+        SetState storage s = _set(setId);
+        if (s.certBlock == 0) return (0, 0);
+        return (s.mass, s.eEff - s.eFloor + s.eLowEff);
+    }
+
     /// per-column bounds (t-space, WAD)
     function columnBounds(bytes32 setId, uint256 a) external view returns (uint256 eUp, uint256 eLow) {
         ColState storage cs = _cols(setId);
