@@ -1,0 +1,158 @@
+{
+  "name": "mm-plugin-ancre",
+  "version": "0.1.0",
+  "description": "ANCRE trust gate for the MetaMask Agent Wallet: pay another agent over x402 only if its Sybil-resistant ERC-8004 reputation, relative to anchors you chose, says so. Funds sit in an ERC-1271 payer contract that re-checks ANCRE at settlement.",
+  "license": "MIT",
+  "type": "module",
+  "keywords": [
+    "oclif-plugin",
+    "mm-plugin",
+    "metamask",
+    "agent-wallet",
+    "x402",
+    "erc-8004",
+    "erc-1271",
+    "monad"
+  ],
+  "files": [
+    "dist",
+    "oclif.manifest.json",
+    "skills"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && oclif manifest",
+    "prepack": "npm run build",
+    "test": "tsc -p tsconfig.json && node --test \"test/*.test.mjs\""
+  },
+  "oclif": {
+    "bin": "mm",
+    "commands": "./dist/commands",
+    "topicSeparator": " ",
+    "topics": {
+      "ancre": {
+        "description": "Refuse to pay an agent that ANCRE does not trust (x402 + ERC-8004)"
+      },
+      "ancre:payer": {
+        "description": "Inspect and fund the ERC-1271 payer contract that enforces the gate"
+      }
+    }
+  },
+  "mm": {
+    "schemaVersion": 1,
+    "minCliVersion": ">=6.2.0 <8",
+    "capabilities": [],
+    "commands": [
+      {
+        "id": "ancre:check",
+        "capabilities": [
+          "wallet-read"
+        ],
+        "dataAccess": [
+          "network"
+        ],
+        "targetChains": [
+          143,
+          10143
+        ]
+      },
+      {
+        "id": "ancre:inspect",
+        "capabilities": [
+          "wallet-read"
+        ],
+        "dataAccess": [
+          "network",
+          "accounts"
+        ],
+        "targetChains": [
+          143,
+          10143
+        ]
+      },
+      {
+        "id": "ancre:pay",
+        "capabilities": [
+          "wallet-read",
+          "wallet-submit"
+        ],
+        "dataAccess": [
+          "network",
+          "accounts"
+        ],
+        "targetChains": [
+          143,
+          10143
+        ]
+      },
+      {
+        "id": "ancre:payer:status",
+        "capabilities": [
+          "wallet-read"
+        ],
+        "dataAccess": [
+          "network",
+          "accounts",
+          "balances"
+        ],
+        "targetChains": [
+          143,
+          10143
+        ]
+      },
+      {
+        "id": "ancre:payer:fund",
+        "capabilities": [
+          "wallet-read",
+          "wallet-submit"
+        ],
+        "dataAccess": [
+          "network",
+          "accounts",
+          "balances"
+        ],
+        "targetChains": [
+          143,
+          10143
+        ]
+      },
+      {
+        "id": "ancre:override",
+        "capabilities": [
+          "wallet-read"
+        ],
+        "dataAccess": [
+          "network",
+          "accounts",
+          "balances"
+        ],
+        "targetChains": [
+          143,
+          10143
+        ]
+      },
+      {
+        "id": "ancre:journal",
+        "capabilities": [],
+        "dataAccess": []
+      }
+    ]
+  },
+  "peerDependencies": {
+    "@metamask/agent-wallet": ">=6.2.0 <8"
+  },
+  "dependencies": {
+    "viem": "^2.37.0"
+  },
+  "devDependencies": {
+    "@metamask/agent-wallet": "7.0.0",
+    "@types/node": "^22",
+    "@x402/core": "^2.27.0",
+    "@x402/evm": "^2.27.0",
+    "@x402/fetch": "^2.27.0",
+    "oclif": "^4",
+    "typescript": "^5"
+  }
+}
