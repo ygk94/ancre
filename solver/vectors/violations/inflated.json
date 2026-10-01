@@ -1,13 +1,13 @@
 {
- "format": "ancre-cert-v0",
- "label": "mainnet_honest_relay",
- "notes": "Variante relais (non décidée) : #18,#22,#23 -> nœud-adresse 0xea0b (poids 1, feedbackIndex 0). Contient une arête négative (slash -> #4).",
- "alignedWith": "contracts/src/AnchoredReputation.sol (R5), état lu le 2026-09-27 ~12:55 ; ENCODING.md non publié",
- "identityBlock": 108434518,
+ "format": "ancre-cert-v1",
+ "label": "violation_inflated",
+ "notes": "D37 normative violation vector (mainnet_slash_anchor). committed weight above the registry weight (-1 > -10000): distrust of #4 shrinks",
+ "alignedWith": "solver/FORMAT.md v1 (2026-09-28). contracts/ENCODING.md still v0 (27/09): alias rows, VIA_OWNER, sPlus and t <= y are PROPOSED to chantier 02, not yet in the contract.",
+ "identityBlock": 108835675,
  "set": {
   "anchors": [
    "0x0730536018541c5149a049d35528a76c2c8f1e6b",
-   "0xf7d5543dfff21ac729626579216776412132fe74"
+   "0xea0b21fb2441464f4920ce3e34d478235605816b"
   ],
   "lambdas": [
    "500000000000000000",
@@ -40,7 +40,7 @@
    }
   ]
  },
- "nCert": 7,
+ "nCert": 6,
  "nodes": [
   {
    "i": 0,
@@ -51,7 +51,7 @@
   {
    "i": 1,
    "kind": "anchor",
-   "address": "0xf7d5543dfff21ac729626579216776412132fe74",
+   "address": "0xea0b21fb2441464f4920ce3e34d478235605816b",
    "hasRow": true
   },
   {
@@ -85,18 +85,15 @@
    "owner": "0xea0b21fb2441464f4920ce3e34d478235605816b",
    "agentWallet": "0xea0b21fb2441464f4920ce3e34d478235605816b",
    "hasRow": true
-  },
-  {
-   "i": 6,
-   "kind": "address",
-   "address": "0xea0b21fb2441464f4920ce3e34d478235605816b",
-   "hasRow": true
   }
  ],
  "rows": [
   {
    "u": 0,
-   "wallet": null,
+   "source": null,
+   "via": "anchor",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
@@ -112,53 +109,10 @@
   },
   {
    "u": 1,
-   "wallet": null,
-   "bPlus": 10000,
-   "bMinus": 10000,
-   "edges": [
-    {
-     "dst": 5,
-     "w": 10000,
-     "feedbackIndex": 1,
-     "client": "0xf7d5543dfff21ac729626579216776412132fe74",
-     "agentId": 18,
-     "tag1": "review"
-    }
-   ]
-  },
-  {
-   "u": 2,
-   "wallet": "0x8df64bacf6b70f7787f8d14429b258b3ff958ec1",
-   "bPlus": 10000,
-   "bMinus": 10000,
-   "edges": []
-  },
-  {
-   "u": 3,
-   "wallet": "0xe4cdd1ad7fae7d54441ef12db1a68ab9a4c2d7b5",
-   "bPlus": 10000,
-   "bMinus": 10000,
-   "edges": []
-  },
-  {
-   "u": 5,
-   "wallet": "0xea0b21fb2441464f4920ce3e34d478235605816b",
-   "bPlus": 10000,
-   "bMinus": 10000,
-   "edges": [
-    {
-     "dst": 6,
-     "w": 10000,
-     "feedbackIndex": 0,
-     "client": "0xea0b21fb2441464f4920ce3e34d478235605816b",
-     "agentId": 18,
-     "tag1": "<relay>"
-    }
-   ]
-  },
-  {
-   "u": 6,
-   "wallet": null,
+   "source": null,
+   "via": "anchor",
+   "aliasOf": null,
+   "sPlus": 20000,
    "bPlus": 20000,
    "bMinus": 10000,
    "edges": [
@@ -187,6 +141,61 @@
      "tag1": "slash"
     }
    ]
+  },
+  {
+   "u": 2,
+   "source": "0x8df64bacf6b70f7787f8d14429b258b3ff958ec1",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 0,
+   "bPlus": 10000,
+   "bMinus": 10000,
+   "edges": []
+  },
+  {
+   "u": 3,
+   "source": "0xe4cdd1ad7fae7d54441ef12db1a68ab9a4c2d7b5",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 0,
+   "bPlus": 10000,
+   "bMinus": 10000,
+   "edges": []
+  },
+  {
+   "u": 5,
+   "source": "0xea0b21fb2441464f4920ce3e34d478235605816b",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 20000,
+   "bPlus": 20000,
+   "bMinus": 10000,
+   "edges": [
+    {
+     "dst": 2,
+     "w": 10000,
+     "feedbackIndex": 1,
+     "client": "0xea0b21fb2441464f4920ce3e34d478235605816b",
+     "agentId": 2,
+     "tag1": "vouch"
+    },
+    {
+     "dst": 3,
+     "w": 10000,
+     "feedbackIndex": 1,
+     "client": "0xea0b21fb2441464f4920ce3e34d478235605816b",
+     "agentId": 3,
+     "tag1": "review"
+    },
+    {
+     "dst": 4,
+     "w": -1,
+     "feedbackIndex": 1,
+     "client": "0xea0b21fb2441464f4920ce3e34d478235605816b",
+     "agentId": 4,
+     "tag1": "slash"
+    }
+   ]
   }
  ],
  "vectors": {
@@ -194,20 +203,18 @@
    [
     "333333333333333333",
     "0",
-    "49382716049382716",
-    "49382716049382716",
+    "74074074074074074",
+    "74074074074074074",
     "0",
-    "222222222222222222",
-    "148148148148148148"
+    "222222222222222222"
    ],
    [
     "0",
     "333333333333333333",
-    "49382716049382716",
-    "49382716049382716",
+    "111111111111111111",
+    "111111111111111111",
     "0",
-    "222222222222222222",
-    "148148148148148148"
+    "0"
    ]
   ],
   "ownerFp": [
@@ -216,12 +223,13 @@
    "3004561431519923905",
    "3577699483930253237",
    "3757231150269854004",
-   "3806799678197301611",
-   "0"
+   "3806799678197301611"
   ]
  },
  "expected": {
   "residualMode": "contract",
+  "subSolution": true,
+  "iterationsFromZero": 4,
   "r": [
    "6",
    "6"
@@ -236,12 +244,11 @@
    "0",
    "0",
    "0",
-   "98765432098765432",
-   "0",
+   "111118518518518520",
    "0"
   ],
-  "graphRoot": "0x1047c3976c32007cd98cd07b3209e04e040bf763d73c0e4468ec3737479f15fd",
-  "vectorRoot": "0x313c6b4de07db712854d257f2b2c710a30b49796efda06b629c9e471f1742832",
+  "graphRoot": "0x2d5fb0e51893bfd2cccec6b470531aadc663adcddd12c08d08942d6ae3941718",
+  "vectorRoot": "0xf1bf6a6e53149837836ec1aeceef59626bfb6b74788384483ff893ca1ba6fc8b",
   "tight": {
    "r": [
     "1",
@@ -255,8 +262,22 @@
  },
  "calldata": {
   "W": 2,
-  "newNodes": "0x010000000201000000030100000004010000001202ea0b21fb2441464f4920ce3e34d478235605816b",
-  "vectors": "0x04a03ce68d21555500000000000000000000000000000000000000000000000004a03ce68d215555000000000000000000af7151902add3c00af7151902add3c29b258b3ff958ec100af7151902add3c00af7151902add3c31a68ab9a4c2d7b50000000000000000000000000000000034245dd312ddf13403157def08c0e38e03157def08c0e38e34d478235605816b020e53f4b08097b4020e53f4b08097b40000000000000000",
-  "rows": "0x0200000006000000010005271000000001000100010005271000000001000280008df64bacf6b70f7787f8d14429b258b3ff958ec100038000e4cdd1ad7fae7d54441ef12db1a68ab9a4c2d7b500058001ea0b21fb2441464f4920ce3e34d478235605816b000627100000000000060003000227100000000100032710000000010004d8f000000001"
+  "newNodes": "0x0100000002010000000301000000040100000012",
+  "vectors": "0x04a03ce68d21555500000000000000000000000000000000000000000000000004a03ce68d2155550000000000000000010729fa58404bda018abef7846071c729b258b3ff958ec1010729fa58404bda018abef7846071c731a68ab9a4c2d7b50000000000000000000000000000000034245dd312ddf13403157def08c0e38e000000000000000034d478235605816b",
+  "rows": "0x020000000500000001000527100000000100010003000227100000000100032710000000010004d8f000000001000280008df64bacf6b70f7787f8d14429b258b3ff958ec100038000e4cdd1ad7fae7d54441ef12db1a68ab9a4c2d7b500058003ea0b21fb2441464f4920ce3e34d478235605816b000227100000000100032710000000010004ffff00000001"
+ },
+ "violation": {
+  "kind": "inflated",
+  "graphNode": {
+   "u": 18,
+   "dst": 4
+  },
+  "wRegistry": -10000,
+  "wCommitted": -1,
+  "feedbackIndex": 1,
+  "affects": "d",
+  "honestValue": "185185185185185186",
+  "committedValue": "111118518518518520",
+  "mustBe": "rejected at submission (Registry-verified) or provable (Submitter-attested)"
  }
 }

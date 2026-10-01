@@ -1,9 +1,9 @@
 {
- "format": "ancre-cert-v0",
+ "format": "ancre-cert-v1",
  "label": "mainnet_scanner_preD15",
- "notes": "Acte 1 (b) SANS D15 (schéma modifié : tout propage) : fuite du scanner vers la ferme. Grand certificat (lignes Spawn -> #182).",
- "alignedWith": "contracts/src/AnchoredReputation.sol (R5), état lu le 2026-09-27 ~12:55 ; ENCODING.md non publié",
- "identityBlock": 108434518,
+ "notes": "Acte 1 (b) SANS D15 (schéma modifié : tout propage) : fuite du scanner vers la ferme. Grand certificat.",
+ "alignedWith": "solver/FORMAT.md v1 (2026-09-28). contracts/ENCODING.md still v0 (27/09): alias rows, VIA_OWNER, sPlus and t <= y are PROPOSED to chantier 02, not yet in the contract.",
+ "identityBlock": 108835675,
  "set": {
   "anchors": [
    "0x0730536018541c5149a049d35528a76c2c8f1e6b",
@@ -68,7 +68,7 @@
    }
   ]
  },
- "nCert": 32,
+ "nCert": 35,
  "nodes": [
   {
    "i": 0,
@@ -85,13 +85,37 @@
   {
    "i": 2,
    "kind": "agent",
+   "agentId": 2,
+   "owner": "0x8df64bacf6b70f7787f8d14429b258b3ff958ec1",
+   "agentWallet": "0x8df64bacf6b70f7787f8d14429b258b3ff958ec1",
+   "hasRow": true
+  },
+  {
+   "i": 3,
+   "kind": "agent",
+   "agentId": 3,
+   "owner": "0xe4cdd1ad7fae7d54441ef12db1a68ab9a4c2d7b5",
+   "agentWallet": "0xe4cdd1ad7fae7d54441ef12db1a68ab9a4c2d7b5",
+   "hasRow": true
+  },
+  {
+   "i": 4,
+   "kind": "agent",
+   "agentId": 4,
+   "owner": "0x734b0e337bfa7d4764f4b806b4245dd312ddf134",
+   "agentWallet": "0x734b0e337bfa7d4764f4b806b4245dd312ddf134",
+   "hasRow": false
+  },
+  {
+   "i": 5,
+   "kind": "agent",
    "agentId": 18,
    "owner": "0xea0b21fb2441464f4920ce3e34d478235605816b",
    "agentWallet": "0xea0b21fb2441464f4920ce3e34d478235605816b",
    "hasRow": true
   },
   {
-   "i": 3,
+   "i": 6,
    "kind": "agent",
    "agentId": 182,
    "owner": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
@@ -99,7 +123,7 @@
    "hasRow": true
   },
   {
-   "i": 4,
+   "i": 7,
    "kind": "agent",
    "agentId": 1829,
    "owner": "0xb420dd543a9a68138be740ac2ec3f44b43cc9fc1",
@@ -107,7 +131,7 @@
    "hasRow": true
   },
   {
-   "i": 5,
+   "i": 8,
    "kind": "agent",
    "agentId": 2422,
    "owner": "0xb73788bf5afc8c3ce75d89645d65d33e37db9800",
@@ -115,7 +139,7 @@
    "hasRow": true
   },
   {
-   "i": 6,
+   "i": 9,
    "kind": "agent",
    "agentId": 3156,
    "owner": "0x7c26cfb8ffc3afc2e58175b33955252afadbcc95",
@@ -123,7 +147,7 @@
    "hasRow": true
   },
   {
-   "i": 7,
+   "i": 10,
    "kind": "agent",
    "agentId": 4078,
    "owner": "0xd84382f1fa353222d040e67ff429ad81cceb5a1a",
@@ -131,7 +155,7 @@
    "hasRow": true
   },
   {
-   "i": 8,
+   "i": 11,
    "kind": "agent",
    "agentId": 4442,
    "owner": "0xb6bb848a8e00b77698cab1626c893dc8dde4927c",
@@ -139,7 +163,7 @@
    "hasRow": true
   },
   {
-   "i": 9,
+   "i": 12,
    "kind": "agent",
    "agentId": 4557,
    "owner": "0xe4040b00ea4b4765de13abcf983f054ae334b982",
@@ -147,7 +171,7 @@
    "hasRow": true
   },
   {
-   "i": 10,
+   "i": 13,
    "kind": "agent",
    "agentId": 4993,
    "owner": "0x05e6b8c70092c154a2c9f1434579893e0a7dac7b",
@@ -155,7 +179,7 @@
    "hasRow": true
   },
   {
-   "i": 11,
+   "i": 14,
    "kind": "agent",
    "agentId": 5117,
    "owner": "0x857f4d0bf5bc7ff549a7af95dfcb9f7539d75dcb",
@@ -163,7 +187,7 @@
    "hasRow": true
   },
   {
-   "i": 12,
+   "i": 15,
    "kind": "agent",
    "agentId": 5169,
    "owner": "0x42e6e6b51ffb3b2f6f900e1a99b7e71d92fee8b2",
@@ -171,7 +195,7 @@
    "hasRow": true
   },
   {
-   "i": 13,
+   "i": 16,
    "kind": "agent",
    "agentId": 5205,
    "owner": "0x335a0db1e94d1d3a765e33356256abafc5058dc8",
@@ -179,7 +203,7 @@
    "hasRow": true
   },
   {
-   "i": 14,
+   "i": 17,
    "kind": "agent",
    "agentId": 5240,
    "owner": "0x5b49438db4689adfab2967d1dd15576cae91ebbe",
@@ -187,7 +211,7 @@
    "hasRow": true
   },
   {
-   "i": 15,
+   "i": 18,
    "kind": "agent",
    "agentId": 5329,
    "owner": "0xf190aac02080c72d94a89eeaa117aa5169016166",
@@ -195,7 +219,7 @@
    "hasRow": true
   },
   {
-   "i": 16,
+   "i": 19,
    "kind": "agent",
    "agentId": 5710,
    "owner": "0x943b8e7a92dd1a4bc4ee96ea6337a6f208412d00",
@@ -203,7 +227,7 @@
    "hasRow": true
   },
   {
-   "i": 17,
+   "i": 20,
    "kind": "agent",
    "agentId": 5720,
    "owner": "0x3b3639a93757a37c70a4320806bdabdd0622ad8d",
@@ -211,7 +235,7 @@
    "hasRow": true
   },
   {
-   "i": 18,
+   "i": 21,
    "kind": "agent",
    "agentId": 5779,
    "owner": "0x481d84086a5aa4971b284d916c0e78d8888a881e",
@@ -219,7 +243,7 @@
    "hasRow": true
   },
   {
-   "i": 19,
+   "i": 22,
    "kind": "agent",
    "agentId": 5957,
    "owner": "0xf755796c4558a7aa8b0a444e4b31e1a6aaf05128",
@@ -227,7 +251,7 @@
    "hasRow": true
   },
   {
-   "i": 20,
+   "i": 23,
    "kind": "agent",
    "agentId": 6149,
    "owner": "0x59de0ec4e62fc31e36fc5682e2c3afdf99d31a4d",
@@ -235,7 +259,7 @@
    "hasRow": true
   },
   {
-   "i": 21,
+   "i": 24,
    "kind": "agent",
    "agentId": 6238,
    "owner": "0xd85978134ec38ae5899748f76624614bd9644524",
@@ -243,7 +267,7 @@
    "hasRow": true
   },
   {
-   "i": 22,
+   "i": 25,
    "kind": "agent",
    "agentId": 6618,
    "owner": "0x222f2b06c530a9a1404bb7adbb117ffaa633c3a0",
@@ -251,7 +275,7 @@
    "hasRow": true
   },
   {
-   "i": 23,
+   "i": 26,
    "kind": "agent",
    "agentId": 6906,
    "owner": "0xa9936226bcec34914988d9cd0f3d6780b569b630",
@@ -259,7 +283,7 @@
    "hasRow": true
   },
   {
-   "i": 24,
+   "i": 27,
    "kind": "agent",
    "agentId": 7222,
    "owner": "0x73cc5c553985fd3eadbafc140e9d5554274a108a",
@@ -267,7 +291,7 @@
    "hasRow": true
   },
   {
-   "i": 25,
+   "i": 28,
    "kind": "agent",
    "agentId": 7362,
    "owner": "0xb9e9bbd21f62153ea7e4f83d67ff81938f9309c6",
@@ -275,7 +299,7 @@
    "hasRow": true
   },
   {
-   "i": 26,
+   "i": 29,
    "kind": "agent",
    "agentId": 7537,
    "owner": "0x72f9cd551d3d34b2f0fc734df394ee0a639f5b57",
@@ -283,7 +307,7 @@
    "hasRow": true
   },
   {
-   "i": 27,
+   "i": 30,
    "kind": "agent",
    "agentId": 7657,
    "owner": "0x27b7cd80d61dbf3fa34f7c6e55d8f0b53c8c3aef",
@@ -291,7 +315,7 @@
    "hasRow": true
   },
   {
-   "i": 28,
+   "i": 31,
    "kind": "agent",
    "agentId": 8095,
    "owner": "0x449d490f6a76cafcfff1babeff839d4a5dee139c",
@@ -299,7 +323,7 @@
    "hasRow": true
   },
   {
-   "i": 29,
+   "i": 32,
    "kind": "agent",
    "agentId": 8216,
    "owner": "0x091825387d8f0f1966eed2ad6c8efb7ab876ad62",
@@ -307,7 +331,7 @@
    "hasRow": true
   },
   {
-   "i": 30,
+   "i": 33,
    "kind": "agent",
    "agentId": 8220,
    "owner": "0xcf0d7186f3db8b185ae928106c47832a44ce3176",
@@ -315,7 +339,7 @@
    "hasRow": true
   },
   {
-   "i": 31,
+   "i": 34,
    "kind": "agent",
    "agentId": 8357,
    "owner": "0x52ce108ae72712929fd2b8c6177a9b39e0ccf644",
@@ -326,12 +350,15 @@
  "rows": [
   {
    "u": 0,
-   "wallet": null,
+   "source": null,
+   "via": "anchor",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 2,
+     "dst": 5,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0x0730536018541c5149a049d35528a76c2c8f1e6b",
@@ -342,12 +369,15 @@
   },
   {
    "u": 1,
-   "wallet": null,
+   "source": null,
+   "via": "anchor",
+   "aliasOf": null,
+   "sPlus": 217000,
    "bPlus": 217000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 4,
+     "dst": 7,
      "w": 1000,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -355,7 +385,7 @@
      "tag1": "liveness"
     },
     {
-     "dst": 5,
+     "dst": 8,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -363,7 +393,7 @@
      "tag1": "liveness"
     },
     {
-     "dst": 6,
+     "dst": 9,
      "w": 8500,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -371,7 +401,7 @@
      "tag1": "trust"
     },
     {
-     "dst": 7,
+     "dst": 10,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -379,7 +409,7 @@
      "tag1": "liveness"
     },
     {
-     "dst": 8,
+     "dst": 11,
      "w": 6000,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -387,7 +417,7 @@
      "tag1": "trust"
     },
     {
-     "dst": 9,
+     "dst": 12,
      "w": 8500,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -395,7 +425,7 @@
      "tag1": "trust"
     },
     {
-     "dst": 10,
+     "dst": 13,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -403,7 +433,7 @@
      "tag1": "liveness"
     },
     {
-     "dst": 11,
+     "dst": 14,
      "w": 8500,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -411,7 +441,7 @@
      "tag1": "trust"
     },
     {
-     "dst": 12,
+     "dst": 15,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -419,7 +449,7 @@
      "tag1": "liveness"
     },
     {
-     "dst": 13,
+     "dst": 16,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -427,7 +457,7 @@
      "tag1": "liveness"
     },
     {
-     "dst": 14,
+     "dst": 17,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -435,7 +465,7 @@
      "tag1": "liveness"
     },
     {
-     "dst": 15,
+     "dst": 18,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -443,7 +473,7 @@
      "tag1": "liveness"
     },
     {
-     "dst": 16,
+     "dst": 19,
      "w": 3000,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -451,7 +481,7 @@
      "tag1": "trust"
     },
     {
-     "dst": 17,
+     "dst": 20,
      "w": 8500,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -459,7 +489,7 @@
      "tag1": "trust"
     },
     {
-     "dst": 18,
+     "dst": 21,
      "w": 3000,
      "feedbackIndex": 2,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -467,7 +497,7 @@
      "tag1": "trust"
     },
     {
-     "dst": 19,
+     "dst": 22,
      "w": 8500,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -475,7 +505,7 @@
      "tag1": "trust"
     },
     {
-     "dst": 20,
+     "dst": 23,
      "w": 8500,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -483,7 +513,7 @@
      "tag1": "trust"
     },
     {
-     "dst": 21,
+     "dst": 24,
      "w": 6000,
      "feedbackIndex": 3,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -491,7 +521,7 @@
      "tag1": "trust"
     },
     {
-     "dst": 22,
+     "dst": 25,
      "w": 8500,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -499,7 +529,7 @@
      "tag1": "trust"
     },
     {
-     "dst": 23,
+     "dst": 26,
      "w": 8500,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -507,7 +537,7 @@
      "tag1": "trust"
     },
     {
-     "dst": 24,
+     "dst": 27,
      "w": 8500,
      "feedbackIndex": 2,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -515,7 +545,7 @@
      "tag1": "trust"
     },
     {
-     "dst": 25,
+     "dst": 28,
      "w": 8500,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -523,7 +553,7 @@
      "tag1": "trust"
     },
     {
-     "dst": 26,
+     "dst": 29,
      "w": 6000,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -531,7 +561,7 @@
      "tag1": "trust"
     },
     {
-     "dst": 27,
+     "dst": 30,
      "w": 8500,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -539,7 +569,7 @@
      "tag1": "trust"
     },
     {
-     "dst": 28,
+     "dst": 31,
      "w": 8500,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -547,7 +577,7 @@
      "tag1": "trust"
     },
     {
-     "dst": 29,
+     "dst": 32,
      "w": 3000,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -555,7 +585,7 @@
      "tag1": "trust"
     },
     {
-     "dst": 30,
+     "dst": 33,
      "w": 8500,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -563,7 +593,7 @@
      "tag1": "trust"
     },
     {
-     "dst": 31,
+     "dst": 34,
      "w": 8500,
      "feedbackIndex": 1,
      "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
@@ -574,26 +604,80 @@
   },
   {
    "u": 2,
-   "wallet": "0xea0b21fb2441464f4920ce3e34d478235605816b",
+   "source": "0x8df64bacf6b70f7787f8d14429b258b3ff958ec1",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 0,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": []
   },
   {
    "u": 3,
-   "wallet": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+   "source": "0xe4cdd1ad7fae7d54441ef12db1a68ab9a4c2d7b5",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 0,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": []
   },
   {
-   "u": 4,
-   "wallet": "0xb420dd543a9a68138be740ac2ec3f44b43cc9fc1",
+   "u": 5,
+   "source": "0xea0b21fb2441464f4920ce3e34d478235605816b",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 20000,
+   "bPlus": 20000,
+   "bMinus": 10000,
+   "edges": [
+    {
+     "dst": 2,
+     "w": 10000,
+     "feedbackIndex": 1,
+     "client": "0xea0b21fb2441464f4920ce3e34d478235605816b",
+     "agentId": 2,
+     "tag1": "vouch"
+    },
+    {
+     "dst": 3,
+     "w": 10000,
+     "feedbackIndex": 1,
+     "client": "0xea0b21fb2441464f4920ce3e34d478235605816b",
+     "agentId": 3,
+     "tag1": "review"
+    },
+    {
+     "dst": 4,
+     "w": -10000,
+     "feedbackIndex": 1,
+     "client": "0xea0b21fb2441464f4920ce3e34d478235605816b",
+     "agentId": 4,
+     "tag1": "slash"
+    }
+   ]
+  },
+  {
+   "u": 6,
+   "source": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 0,
+   "bPlus": 10000,
+   "bMinus": 10000,
+   "edges": []
+  },
+  {
+   "u": 7,
+   "source": "0xb420dd543a9a68138be740ac2ec3f44b43cc9fc1",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0xb420dd543a9a68138be740ac2ec3f44b43cc9fc1",
@@ -603,13 +687,16 @@
    ]
   },
   {
-   "u": 5,
-   "wallet": "0xb73788bf5afc8c3ce75d89645d65d33e37db9800",
+   "u": 8,
+   "source": "0xb73788bf5afc8c3ce75d89645d65d33e37db9800",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0xb73788bf5afc8c3ce75d89645d65d33e37db9800",
@@ -619,13 +706,16 @@
    ]
   },
   {
-   "u": 6,
-   "wallet": "0x7c26cfb8ffc3afc2e58175b33955252afadbcc95",
+   "u": 9,
+   "source": "0x7c26cfb8ffc3afc2e58175b33955252afadbcc95",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0x7c26cfb8ffc3afc2e58175b33955252afadbcc95",
@@ -635,13 +725,16 @@
    ]
   },
   {
-   "u": 7,
-   "wallet": "0xd84382f1fa353222d040e67ff429ad81cceb5a1a",
+   "u": 10,
+   "source": "0xd84382f1fa353222d040e67ff429ad81cceb5a1a",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0xd84382f1fa353222d040e67ff429ad81cceb5a1a",
@@ -651,20 +744,26 @@
    ]
   },
   {
-   "u": 8,
-   "wallet": "0xb6bb848a8e00b77698cab1626c893dc8dde4927c",
+   "u": 11,
+   "source": "0xb6bb848a8e00b77698cab1626c893dc8dde4927c",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 0,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": []
   },
   {
-   "u": 9,
-   "wallet": "0xe4040b00ea4b4765de13abcf983f054ae334b982",
+   "u": 12,
+   "source": "0xe4040b00ea4b4765de13abcf983f054ae334b982",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0xe4040b00ea4b4765de13abcf983f054ae334b982",
@@ -674,13 +773,16 @@
    ]
   },
   {
-   "u": 10,
-   "wallet": "0x05e6b8c70092c154a2c9f1434579893e0a7dac7b",
+   "u": 13,
+   "source": "0x05e6b8c70092c154a2c9f1434579893e0a7dac7b",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0x05e6b8c70092c154a2c9f1434579893e0a7dac7b",
@@ -690,13 +792,16 @@
    ]
   },
   {
-   "u": 11,
-   "wallet": "0x857f4d0bf5bc7ff549a7af95dfcb9f7539d75dcb",
+   "u": 14,
+   "source": "0x857f4d0bf5bc7ff549a7af95dfcb9f7539d75dcb",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0x857f4d0bf5bc7ff549a7af95dfcb9f7539d75dcb",
@@ -706,13 +811,16 @@
    ]
   },
   {
-   "u": 12,
-   "wallet": "0x42e6e6b51ffb3b2f6f900e1a99b7e71d92fee8b2",
+   "u": 15,
+   "source": "0x42e6e6b51ffb3b2f6f900e1a99b7e71d92fee8b2",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0x42e6e6b51ffb3b2f6f900e1a99b7e71d92fee8b2",
@@ -722,13 +830,16 @@
    ]
   },
   {
-   "u": 13,
-   "wallet": "0x335a0db1e94d1d3a765e33356256abafc5058dc8",
+   "u": 16,
+   "source": "0x335a0db1e94d1d3a765e33356256abafc5058dc8",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0x335a0db1e94d1d3a765e33356256abafc5058dc8",
@@ -738,13 +849,16 @@
    ]
   },
   {
-   "u": 14,
-   "wallet": "0x5b49438db4689adfab2967d1dd15576cae91ebbe",
+   "u": 17,
+   "source": "0x5b49438db4689adfab2967d1dd15576cae91ebbe",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0x5b49438db4689adfab2967d1dd15576cae91ebbe",
@@ -754,13 +868,16 @@
    ]
   },
   {
-   "u": 15,
-   "wallet": "0xf190aac02080c72d94a89eeaa117aa5169016166",
+   "u": 18,
+   "source": "0xf190aac02080c72d94a89eeaa117aa5169016166",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0xf190aac02080c72d94a89eeaa117aa5169016166",
@@ -770,13 +887,16 @@
    ]
   },
   {
-   "u": 16,
-   "wallet": "0x943b8e7a92dd1a4bc4ee96ea6337a6f208412d00",
+   "u": 19,
+   "source": "0x943b8e7a92dd1a4bc4ee96ea6337a6f208412d00",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0x943b8e7a92dd1a4bc4ee96ea6337a6f208412d00",
@@ -786,13 +906,16 @@
    ]
   },
   {
-   "u": 17,
-   "wallet": "0x3b3639a93757a37c70a4320806bdabdd0622ad8d",
+   "u": 20,
+   "source": "0x3b3639a93757a37c70a4320806bdabdd0622ad8d",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0x3b3639a93757a37c70a4320806bdabdd0622ad8d",
@@ -802,13 +925,16 @@
    ]
   },
   {
-   "u": 18,
-   "wallet": "0x481d84086a5aa4971b284d916c0e78d8888a881e",
+   "u": 21,
+   "source": "0x481d84086a5aa4971b284d916c0e78d8888a881e",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0x481d84086a5aa4971b284d916c0e78d8888a881e",
@@ -818,13 +944,16 @@
    ]
   },
   {
-   "u": 19,
-   "wallet": "0xf755796c4558a7aa8b0a444e4b31e1a6aaf05128",
+   "u": 22,
+   "source": "0xf755796c4558a7aa8b0a444e4b31e1a6aaf05128",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0xf755796c4558a7aa8b0a444e4b31e1a6aaf05128",
@@ -834,13 +963,16 @@
    ]
   },
   {
-   "u": 20,
-   "wallet": "0x59de0ec4e62fc31e36fc5682e2c3afdf99d31a4d",
+   "u": 23,
+   "source": "0x59de0ec4e62fc31e36fc5682e2c3afdf99d31a4d",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0x59de0ec4e62fc31e36fc5682e2c3afdf99d31a4d",
@@ -850,13 +982,16 @@
    ]
   },
   {
-   "u": 21,
-   "wallet": "0xd85978134ec38ae5899748f76624614bd9644524",
+   "u": 24,
+   "source": "0xd85978134ec38ae5899748f76624614bd9644524",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0xd85978134ec38ae5899748f76624614bd9644524",
@@ -866,13 +1001,16 @@
    ]
   },
   {
-   "u": 22,
-   "wallet": "0x222f2b06c530a9a1404bb7adbb117ffaa633c3a0",
+   "u": 25,
+   "source": "0x222f2b06c530a9a1404bb7adbb117ffaa633c3a0",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0x222f2b06c530a9a1404bb7adbb117ffaa633c3a0",
@@ -882,13 +1020,16 @@
    ]
   },
   {
-   "u": 23,
-   "wallet": "0xa9936226bcec34914988d9cd0f3d6780b569b630",
+   "u": 26,
+   "source": "0xa9936226bcec34914988d9cd0f3d6780b569b630",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0xa9936226bcec34914988d9cd0f3d6780b569b630",
@@ -898,13 +1039,16 @@
    ]
   },
   {
-   "u": 24,
-   "wallet": "0x73cc5c553985fd3eadbafc140e9d5554274a108a",
+   "u": 27,
+   "source": "0x73cc5c553985fd3eadbafc140e9d5554274a108a",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0x73cc5c553985fd3eadbafc140e9d5554274a108a",
@@ -914,13 +1058,16 @@
    ]
   },
   {
-   "u": 25,
-   "wallet": "0xb9e9bbd21f62153ea7e4f83d67ff81938f9309c6",
+   "u": 28,
+   "source": "0xb9e9bbd21f62153ea7e4f83d67ff81938f9309c6",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0xb9e9bbd21f62153ea7e4f83d67ff81938f9309c6",
@@ -930,13 +1077,16 @@
    ]
   },
   {
-   "u": 26,
-   "wallet": "0x72f9cd551d3d34b2f0fc734df394ee0a639f5b57",
+   "u": 29,
+   "source": "0x72f9cd551d3d34b2f0fc734df394ee0a639f5b57",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0x72f9cd551d3d34b2f0fc734df394ee0a639f5b57",
@@ -946,13 +1096,16 @@
    ]
   },
   {
-   "u": 27,
-   "wallet": "0x27b7cd80d61dbf3fa34f7c6e55d8f0b53c8c3aef",
+   "u": 30,
+   "source": "0x27b7cd80d61dbf3fa34f7c6e55d8f0b53c8c3aef",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0x27b7cd80d61dbf3fa34f7c6e55d8f0b53c8c3aef",
@@ -962,13 +1115,16 @@
    ]
   },
   {
-   "u": 28,
-   "wallet": "0x449d490f6a76cafcfff1babeff839d4a5dee139c",
+   "u": 31,
+   "source": "0x449d490f6a76cafcfff1babeff839d4a5dee139c",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0x449d490f6a76cafcfff1babeff839d4a5dee139c",
@@ -978,13 +1134,16 @@
    ]
   },
   {
-   "u": 29,
-   "wallet": "0x091825387d8f0f1966eed2ad6c8efb7ab876ad62",
+   "u": 32,
+   "source": "0x091825387d8f0f1966eed2ad6c8efb7ab876ad62",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0x091825387d8f0f1966eed2ad6c8efb7ab876ad62",
@@ -994,13 +1153,16 @@
    ]
   },
   {
-   "u": 30,
-   "wallet": "0xcf0d7186f3db8b185ae928106c47832a44ce3176",
+   "u": 33,
+   "source": "0xcf0d7186f3db8b185ae928106c47832a44ce3176",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
     {
-     "dst": 3,
+     "dst": 6,
      "w": 10000,
      "feedbackIndex": 1,
      "client": "0xcf0d7186f3db8b185ae928106c47832a44ce3176",
@@ -1010,8 +1172,11 @@
    ]
   },
   {
-   "u": 31,
-   "wallet": "0x52ce108ae72712929fd2b8c6177a9b39e0ccf644",
+   "u": 34,
+   "source": "0x52ce108ae72712929fd2b8c6177a9b39e0ccf644",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 0,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": []
@@ -1021,6 +1186,9 @@
   "t": [
    [
     "333333333333333333",
+    "0",
+    "74074074074074074",
+    "74074074074074074",
     "0",
     "222222222222222222",
     "0",
@@ -1057,6 +1225,9 @@
     "0",
     "333333333333333333",
     "0",
+    "0",
+    "0",
+    "0",
     "138248847926267255",
     "1024065540194572",
     "10240655401945724",
@@ -1091,6 +1262,9 @@
   "ownerFp": [
    "0",
    "0",
+   "3004561431519923905",
+   "3577699483930253237",
+   "3757231150269854004",
    "3806799678197301611",
    "6000657686573812118",
    "3369805550300471233",
@@ -1125,18 +1299,23 @@
  },
  "expected": {
   "residualMode": "contract",
+  "subSolution": true,
+  "iterationsFromZero": 4,
   "r": [
-   "56",
-   "56"
+   "58",
+   "58"
   ],
   "e": [
-   "168",
-   "168"
+   "174",
+   "174"
   ],
-  "eEff": "168",
+  "eEff": "174",
   "d": [
    "0",
    "0",
+   "0",
+   "0",
+   "74074074074074074",
    "0",
    "0",
    "0",
@@ -1168,8 +1347,8 @@
    "0",
    "0"
   ],
-  "graphRoot": "0xa846cc9ba72adbdf6a310ddb42d5b997ee3a2f8eab53c36587f2424c8e5e562b",
-  "vectorRoot": "0xd6cac009f1c53577d6e0c1458493a61388449e16d87aed963105f673b83b2d48",
+  "graphRoot": "0x6910d4b6b0b73092bebc72909ca73223c75d32a6aedaf70301bcddf17b65cb32",
+  "vectorRoot": "0x845aa9605a3c71003ae21aaa175fa4ff3ca14dbde6e64de3707e4c79f3e247b2",
   "tight": {
    "r": [
     "1",
@@ -1183,8 +1362,8 @@
  },
  "calldata": {
   "W": 2,
-  "newNodes": "0x010000001201000000b6010000072501000009760100000c540100000fee010000115a01000011cd010000138101000013fd01000014310100001455010000147801000014d1010000164e0100001658010000169301000017450100001805010000185e01000019da0100001afa0100001c360100001cc20100001d710100001de90100001f9f0100002018010000201c01000020a5",
-  "vectors": "0x04a03ce68d21555500000000000000000000000000000000000000000000000004a03ce68d215555000000000000000003157def08c0e38e000000000000000034d478235605816b000000000000000001eb28983f408d7753469e5f82f3099600000000000000000003a361d6c0010c2ec3f44b43cc9fc10000000000000000002461d263800a7c5d65d33e37db98000000000000000000001eecbfa16008e93955252afadbcc950000000000000000002461d263800a7c7429ad81cceb5a1a00000000000000000015d44b0880064a6c893dc8dde4927c0000000000000000001eecbfa16008e9183f054ae334b9820000000000000000002461d263800a7c4579893e0a7dac7b0000000000000000001eecbfa16008e95fcb9f7539d75dcb0000000000000000002461d263800a7c19b7e71d92fee8b20000000000000000002461d263800a7c6256abafc5058dc80000000000000000002461d263800a7c5d15576cae91ebbe0000000000000000002461d263800a7c2117aa51690161660000000000000000000aea25844003256337a6f208412d000000000000000000001eecbfa16008e906bdabdd0622ad8d0000000000000000000aea25844003256c0e78d8888a881e0000000000000000001eecbfa16008e94b31e1a6aaf051280000000000000000001eecbfa16008e962c3afdf99d31a4d00000000000000000015d44b0880064a6624614bd96445240000000000000000001eecbfa16008e93b117ffaa633c3a00000000000000000001eecbfa16008e90f3d6780b569b6300000000000000000001eecbfa16008e90e9d5554274a108a0000000000000000001eecbfa16008e967ff81938f9309c600000000000000000015d44b0880064a7394ee0a639f5b570000000000000000001eecbfa16008e955d8f0b53c8c3aef0000000000000000001eecbfa16008e97f839d4a5dee139c0000000000000000000aea25844003256c8efb7ab876ad620000000000000000001eecbfa16008e96c47832a44ce31760000000000000000001eecbfa16008e9177a9b39e0ccf644",
-  "rows": "0x02000000200000000100022710000000010001001c000403e80000000100052710000000010006213400000001000727100000000100081770000000010009213400000001000a271000000001000b213400000001000c271000000001000d271000000001000e271000000001000f27100000000100100bb800000001001121340000000100120bb8000000020013213400000001001421340000000100151770000000030016213400000001001721340000000100182134000000020019213400000001001a177000000001001b213400000001001c213400000001001d0bb800000001001e213400000001001f21340000000100028000ea0b21fb2441464f4920ce3e34d478235605816b0003800097cd97cfe21799bacbf39d0a53469e5f82f3099600048001b420dd543a9a68138be740ac2ec3f44b43cc9fc1000327100000000100058001b73788bf5afc8c3ce75d89645d65d33e37db98000003271000000001000680017c26cfb8ffc3afc2e58175b33955252afadbcc95000327100000000100078001d84382f1fa353222d040e67ff429ad81cceb5a1a000327100000000100088000b6bb848a8e00b77698cab1626c893dc8dde4927c00098001e4040b00ea4b4765de13abcf983f054ae334b9820003271000000001000a800105e6b8c70092c154a2c9f1434579893e0a7dac7b0003271000000001000b8001857f4d0bf5bc7ff549a7af95dfcb9f7539d75dcb0003271000000001000c800142e6e6b51ffb3b2f6f900e1a99b7e71d92fee8b20003271000000001000d8001335a0db1e94d1d3a765e33356256abafc5058dc80003271000000001000e80015b49438db4689adfab2967d1dd15576cae91ebbe0003271000000001000f8001f190aac02080c72d94a89eeaa117aa5169016166000327100000000100108001943b8e7a92dd1a4bc4ee96ea6337a6f208412d000003271000000001001180013b3639a93757a37c70a4320806bdabdd0622ad8d000327100000000100128001481d84086a5aa4971b284d916c0e78d8888a881e000327100000000100138001f755796c4558a7aa8b0a444e4b31e1a6aaf0512800032710000000010014800159de0ec4e62fc31e36fc5682e2c3afdf99d31a4d000327100000000100158001d85978134ec38ae5899748f76624614bd9644524000327100000000100168001222f2b06c530a9a1404bb7adbb117ffaa633c3a0000327100000000100178001a9936226bcec34914988d9cd0f3d6780b569b63000032710000000010018800173cc5c553985fd3eadbafc140e9d5554274a108a000327100000000100198001b9e9bbd21f62153ea7e4f83d67ff81938f9309c60003271000000001001a800172f9cd551d3d34b2f0fc734df394ee0a639f5b570003271000000001001b800127b7cd80d61dbf3fa34f7c6e55d8f0b53c8c3aef0003271000000001001c8001449d490f6a76cafcfff1babeff839d4a5dee139c0003271000000001001d8001091825387d8f0f1966eed2ad6c8efb7ab876ad620003271000000001001e8001cf0d7186f3db8b185ae928106c47832a44ce31760003271000000001001f800052ce108ae72712929fd2b8c6177a9b39e0ccf644"
+  "newNodes": "0x010000000201000000030100000004010000001201000000b6010000072501000009760100000c540100000fee010000115a01000011cd010000138101000013fd01000014310100001455010000147801000014d1010000164e0100001658010000169301000017450100001805010000185e01000019da0100001afa0100001c360100001cc20100001d710100001de90100001f9f0100002018010000201c01000020a5",
+  "vectors": "0x04a03ce68d21555500000000000000000000000000000000000000000000000004a03ce68d2155550000000000000000010729fa58404bda000000000000000029b258b3ff958ec1010729fa58404bda000000000000000031a68ab9a4c2d7b50000000000000000000000000000000034245dd312ddf13403157def08c0e38e000000000000000034d478235605816b000000000000000001eb28983f408d7753469e5f82f3099600000000000000000003a361d6c0010c2ec3f44b43cc9fc10000000000000000002461d263800a7c5d65d33e37db98000000000000000000001eecbfa16008e93955252afadbcc950000000000000000002461d263800a7c7429ad81cceb5a1a00000000000000000015d44b0880064a6c893dc8dde4927c0000000000000000001eecbfa16008e9183f054ae334b9820000000000000000002461d263800a7c4579893e0a7dac7b0000000000000000001eecbfa16008e95fcb9f7539d75dcb0000000000000000002461d263800a7c19b7e71d92fee8b20000000000000000002461d263800a7c6256abafc5058dc80000000000000000002461d263800a7c5d15576cae91ebbe0000000000000000002461d263800a7c2117aa51690161660000000000000000000aea25844003256337a6f208412d000000000000000000001eecbfa16008e906bdabdd0622ad8d0000000000000000000aea25844003256c0e78d8888a881e0000000000000000001eecbfa16008e94b31e1a6aaf051280000000000000000001eecbfa16008e962c3afdf99d31a4d00000000000000000015d44b0880064a6624614bd96445240000000000000000001eecbfa16008e93b117ffaa633c3a00000000000000000001eecbfa16008e90f3d6780b569b6300000000000000000001eecbfa16008e90e9d5554274a108a0000000000000000001eecbfa16008e967ff81938f9309c600000000000000000015d44b0880064a7394ee0a639f5b570000000000000000001eecbfa16008e955d8f0b53c8c3aef0000000000000000001eecbfa16008e97f839d4a5dee139c0000000000000000000aea25844003256c8efb7ab876ad620000000000000000001eecbfa16008e96c47832a44ce31760000000000000000001eecbfa16008e9177a9b39e0ccf644",
+  "rows": "0x02000000220000000100052710000000010001001c000703e80000000100082710000000010009213400000001000a271000000001000b177000000001000c213400000001000d271000000001000e213400000001000f27100000000100102710000000010011271000000001001227100000000100130bb800000001001421340000000100150bb8000000020016213400000001001721340000000100181770000000030019213400000001001a213400000001001b213400000002001c213400000001001d177000000001001e213400000001001f21340000000100200bb80000000100212134000000010022213400000001000280008df64bacf6b70f7787f8d14429b258b3ff958ec100038000e4cdd1ad7fae7d54441ef12db1a68ab9a4c2d7b500058003ea0b21fb2441464f4920ce3e34d478235605816b000227100000000100032710000000010004d8f0000000010006800097cd97cfe21799bacbf39d0a53469e5f82f3099600078001b420dd543a9a68138be740ac2ec3f44b43cc9fc1000627100000000100088001b73788bf5afc8c3ce75d89645d65d33e37db98000006271000000001000980017c26cfb8ffc3afc2e58175b33955252afadbcc950006271000000001000a8001d84382f1fa353222d040e67ff429ad81cceb5a1a0006271000000001000b8000b6bb848a8e00b77698cab1626c893dc8dde4927c000c8001e4040b00ea4b4765de13abcf983f054ae334b9820006271000000001000d800105e6b8c70092c154a2c9f1434579893e0a7dac7b0006271000000001000e8001857f4d0bf5bc7ff549a7af95dfcb9f7539d75dcb0006271000000001000f800142e6e6b51ffb3b2f6f900e1a99b7e71d92fee8b2000627100000000100108001335a0db1e94d1d3a765e33356256abafc5058dc80006271000000001001180015b49438db4689adfab2967d1dd15576cae91ebbe000627100000000100128001f190aac02080c72d94a89eeaa117aa5169016166000627100000000100138001943b8e7a92dd1a4bc4ee96ea6337a6f208412d000006271000000001001480013b3639a93757a37c70a4320806bdabdd0622ad8d000627100000000100158001481d84086a5aa4971b284d916c0e78d8888a881e000627100000000100168001f755796c4558a7aa8b0a444e4b31e1a6aaf0512800062710000000010017800159de0ec4e62fc31e36fc5682e2c3afdf99d31a4d000627100000000100188001d85978134ec38ae5899748f76624614bd9644524000627100000000100198001222f2b06c530a9a1404bb7adbb117ffaa633c3a00006271000000001001a8001a9936226bcec34914988d9cd0f3d6780b569b6300006271000000001001b800173cc5c553985fd3eadbafc140e9d5554274a108a0006271000000001001c8001b9e9bbd21f62153ea7e4f83d67ff81938f9309c60006271000000001001d800172f9cd551d3d34b2f0fc734df394ee0a639f5b570006271000000001001e800127b7cd80d61dbf3fa34f7c6e55d8f0b53c8c3aef0006271000000001001f8001449d490f6a76cafcfff1babeff839d4a5dee139c000627100000000100208001091825387d8f0f1966eed2ad6c8efb7ab876ad62000627100000000100218001cf0d7186f3db8b185ae928106c47832a44ce317600062710000000010022800052ce108ae72712929fd2b8c6177a9b39e0ccf644"
  }
 }

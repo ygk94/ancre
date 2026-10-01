@@ -1,8 +1,8 @@
 {
- "format": "ancre-cert-v0",
+ "format": "ancre-cert-v1",
  "label": "toy_alpha_1_3",
  "notes": "Jouet : ancre A2 sans arête (colonne triviale), arête négative, poids non ronds, cycle 1<->2.",
- "alignedWith": "contracts/src/AnchoredReputation.sol (R5), état lu le 2026-09-27 ~12:55 ; ENCODING.md non publié",
+ "alignedWith": "solver/FORMAT.md v1 (2026-09-28). contracts/ENCODING.md still v0 (27/09): alias rows, VIA_OWNER, sPlus and t <= y are PROPOSED to chantier 02, not yet in the contract.",
  "identityBlock": null,
  "set": {
   "anchors": [
@@ -76,7 +76,10 @@
  "rows": [
   {
    "u": 0,
-   "wallet": null,
+   "source": null,
+   "via": "anchor",
+   "aliasOf": null,
+   "sPlus": 15000,
    "bPlus": 15000,
    "bMinus": 10000,
    "edges": [
@@ -100,14 +103,20 @@
   },
   {
    "u": 1,
-   "wallet": null,
+   "source": null,
+   "via": "anchor",
+   "aliasOf": null,
+   "sPlus": 0,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": []
   },
   {
    "u": 2,
-   "wallet": null,
+   "source": null,
+   "via": "address",
+   "aliasOf": null,
+   "sPlus": 3333,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
@@ -131,7 +140,10 @@
   },
   {
    "u": 3,
-   "wallet": null,
+   "source": null,
+   "via": "address",
+   "aliasOf": null,
+   "sPlus": 10277,
    "bPlus": 10277,
    "bMinus": 10000,
    "edges": [
@@ -155,7 +167,10 @@
   },
   {
    "u": 4,
-   "wallet": null,
+   "source": null,
+   "via": "address",
+   "aliasOf": null,
+   "sPlus": 1,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
@@ -175,7 +190,7 @@
    [
     "333333333333333333",
     "0",
-    "208941169462108592",
+    "208941169462108591",
     "120500801928554602",
     "19542149448372515"
    ],
@@ -197,15 +212,17 @@
  },
  "expected": {
   "residualMode": "contract",
+  "subSolution": true,
+  "iterationsFromZero": 39,
   "r": [
-   "9",
+   "7",
    "7"
   ],
   "e": [
-   "27",
+   "21",
    "21"
   ],
-  "eEff": "25",
+  "eEff": "22",
   "d": [
    "0",
    "0",
@@ -214,7 +231,7 @@
    "69647056487369531"
   ],
   "graphRoot": "0x3aa28ccc59b6180a68959ef18e1a04601bc262f68e5e64b7ffd92d34107d1032",
-  "vectorRoot": "0xbff04b3f449e434c49c812c44360ee60c28590d041eca19caa33bb12807f38a7",
+  "vectorRoot": "0xeb5bbaad0572a6cc125a07292619585dfb268c1267ab4267fdbce88113f53148",
   "tight": {
    "r": [
     "5",
@@ -229,7 +246,7 @@
  "calldata": {
   "W": 2,
   "newNodes": "0x010000000101000000020100000003",
-  "vectors": "0x04a03ce68d21555500000000000000000000000000000000000000000000000004a03ce68d215555000000000000000002e64ee2f8be61b00000000000000000000000000000000001ac1ad74619e86a0000000000000000000000000000000000456d7b3c04912300000000000000000000000000000000",
+  "vectors": "0x04a03ce68d21555500000000000000000000000000000000000000000000000004a03ce68d215555000000000000000002e64ee2f8be61af0000000000000000000000000000000001ac1ad74619e86a0000000000000000000000000000000000456d7b3c04912300000000000000000000000000000000",
   "rows": "0x02000000050000000200022710000000010003138800000001000100000002000200030d05000000020004d8f0000000010003000200021e6100000001000409c400000004000400010002000100000001"
  }
 }
