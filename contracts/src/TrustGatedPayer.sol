@@ -14,13 +14,21 @@ interface IDomainSeparator {
     function DOMAIN_SEPARATOR() external view returns (bytes32);
 }
 
+interface IEIP3009State {
+    function authorizationState(address authorizer, bytes32 nonce) external view returns (bool);
+}
+
+interface IPermit2Nonces {
+    function nonceBitmap(address owner, uint256 wordPos) external view returns (uint256);
+}
+
 /// @title TrustGatedPayer — an x402 payer that refuses to pay agents ANCRE does not trust (D41).
 /// @notice A keyless ERC-1271 account that holds the USDC. An operator (the agent's wallet) signs an
 /// `AncrePayment` (EIP-712, this contract's domain) for each payment; the USDC (EIP-3009, `exact`) or
 /// Permit2 (`upto`) calls `isValidSignature` during the facilitator's settlement transaction, and the
 /// signature is valid only if, AT THAT BLOCK:
 ///   1. the presented hash is exactly the token authorisation rebuilt from the blob (from = this);
-///   2. the amount is <= maxPerPayment;
+///   2. the payer is not paused and the amount is <= maxPerPayment;
 ///   3. the payee is the ERC-8004 agentWallet of the declared agentId;
 ///   4. an operator signed the AncrePayment;
 ///   5. `AnchoredReputation.isTrusted(agentId, setId)` is true (D39: never the status alone, AM-6.1).
@@ -34,13 +42,20 @@ interface IDomainSeparator {
 ///   kind 3 cancel   : 0x03 | nonce b32 | opSig 65   (EIP-3009 cancelAuthorization, operator only, no ANCRE check)
 /// Any other digest (EIP-2612 permit, Permit2 PermitSingle/PermitBatch, receiveWithAuthorization, ...)
 /// is refused: those paths also go through ERC-1271 and would otherwise grant allowances.
+/// Known limit (D20, AM-05.1): agentWallet is not unique; paying a wallet shared by several agents on the
+/// reputation of one of them pays that wallet's controller, whichever agent actually served.
 contract TrustGatedPayer {
     // ------------------------------------------------------------------ constants
     bytes4 internal constant MAGIC = 0x1626ba7e;
     bytes4 internal constant INVALID = 0xffffffff;
     uint256 public constant MAX_OPERATORS = 4;
     uint256 internal constant HALF_N = 0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0;
-    uint256 internal constant WALLET_CALL_GAS = 60_000;
+    /// same per-call cap as AnchoredReputation.VIEW_CALL_GAS: a registry upgrade that makes the getter cost
+    /// more than this would already make ANCRE fail closed (REGISTRY_CHANGED); the payer fails closed too.
+    uint256 internal constant REGISTRY_CALL_GAS = 120_000;
+    /// DOMAIN_SEPARATOR of a cold FiatToken proxy on Monad: 2 cold accounts (10 100 each) + cold pages;
+    /// a 30 k cap was measured too low in fork (reportRefusal / eth_call paths with a cold USDC).
+    uint256 internal constant DOMAIN_CALL_GAS = REGISTRY_CALL_GAS;
 
     uint8 public constant KIND_EXACT = 1;
     uint8 public constant KIND_UPTO = 2;
@@ -78,7 +93,7 @@ contract TrustGatedPayer {
         OK,
         PAUSED, // the owner (or an operator) paused the payer
         BAD_FORMAT, // blob length does not match its kind
-        BAD_KIND, // unknown kind: never sign anything else (permit, PermitSingle, ...)
+        BAD_KIND, // unknown kind (or upto not configured): never sign anything else (permit, PermitSingle, ...)
         DIGEST_MISMATCH, // the presented hash is not the authorisation rebuilt from the blob
         OVER_LIMIT, // value (or upto cap) > maxPerPayment
         NO_WALLET, // agentWallet(agentId) unreadable or 0 (e.g. cleared by a transfer)
@@ -86,6 +101,20 @@ contract TrustGatedPayer {
         BAD_OPERATOR_SIG, // the AncrePayment is not signed by an operator (or high-s / bad v)
         ANCRE_STATUS, // ANCRE cannot conclude: status != OK (NO_CERT, STALE, TRANSFERRED, VETOED, REGISTRY_CHANGED)
         UNTRUSTED // status OK but isTrusted is false (unknown agent, below theta / rho)
+    }
+
+    /// A parsed blob. `parse` != OK means the blob is not a payment of this contract for `hash`.
+    struct Payment {
+        Reason parse; // OK, BAD_FORMAT, BAD_KIND or DIGEST_MISMATCH
+        uint8 kind;
+        uint256 agentId;
+        address to;
+        uint256 value; // exact: value; upto: cap (what the authorisation commits)
+        uint256 validAfter;
+        uint256 validUntil; // exact: validBefore (exclusive); upto: Permit2 deadline (inclusive)
+        bytes32 nonce; // exact: EIP-3009 nonce; upto: Permit2 nonce
+        bytes32 opDigest; // what the operator signed (this contract's EIP-712 domain)
+        uint256 sigOff; // offset of the 65-byte operator signature in the blob
     }
 
     // ------------------------------------------------------------------ immutables
@@ -98,12 +127,14 @@ contract TrustGatedPayer {
     uint256 internal immutable _chainId;
     bytes32 internal immutable _domainSeparator;
 
-    // ------------------------------------------------------------------ storage (one MIP-8 page)
+    // ------------------------------------------------------------------ storage (slots 0..6: one MIP-8 page)
     address public owner; // slot 0
     bool public paused; // slot 0
     bytes32 public setId; // slot 1
     uint256 public maxPerPayment; // slot 2, token base units (USDC: 6 decimals)
     address[4] internal _operators; // slots 3..6
+    /// token authorisation hash -> already reported (reportRefusal is one trace per authorisation)
+    mapping(bytes32 => bool) public reported;
 
     // ------------------------------------------------------------------ events
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
@@ -111,7 +142,8 @@ contract TrustGatedPayer {
     event PolicySet(bytes32 indexed setId, uint256 maxPerPayment);
     event PausedSet(bool paused, address indexed by);
     event Swept(address indexed token, address indexed treasury, uint256 amount);
-    /// A genuine operator-signed payment that the payer refuses at this block (permissionless trace, AM-6.8).
+    /// A genuine, still-settleable operator-signed payment that the payer refuses at this block
+    /// (permissionless trace: a refusal happens in a STATICCALL and cannot emit, AM-6.8).
     event RefusalReported(
         bytes32 indexed hash,
         uint256 indexed agentId,
@@ -127,9 +159,12 @@ contract TrustGatedPayer {
     error NotOwner();
     error NotOwnerOrOperator();
     error ZeroAddress();
+    error NoCode(address target);
     error OperatorsFull();
     error UnknownSet();
     error NotRefused(Reason reason); // reportRefusal: the payment would be paid (OK) or is not an operator's
+    error NotSettleable(); // reportRefusal: already used / cancelled, expired or not yet valid
+    error AlreadyReported();
     error TransferFailed();
 
     modifier onlyOwner() {
@@ -137,6 +172,7 @@ contract TrustGatedPayer {
         _;
     }
 
+    /// @param permit2_ / uptoProxy_ both 0 to disable `upto` (kind 2 is then refused as BAD_KIND)
     constructor(
         IERC20Min usdc_,
         address permit2_,
@@ -148,10 +184,14 @@ contract TrustGatedPayer {
         bytes32 setId_,
         uint256 maxPerPayment_
     ) {
-        if (
-            address(usdc_) == address(0) || address(ancre_) == address(0) || owner_ == address(0)
-                || treasury_ == address(0) || operator_ == address(0)
-        ) revert ZeroAddress();
+        if (owner_ == address(0) || treasury_ == address(0) || operator_ == address(0)) revert ZeroAddress();
+        if (address(usdc_).code.length == 0) revert NoCode(address(usdc_));
+        if (address(ancre_).code.length == 0) revert NoCode(address(ancre_));
+        if ((permit2_ == address(0)) != (uptoProxy_ == address(0))) revert ZeroAddress();
+        if (permit2_ != address(0)) {
+            if (permit2_.code.length == 0) revert NoCode(permit2_);
+            if (uptoProxy_.code.length == 0) revert NoCode(uptoProxy_);
+        }
         usdc = usdc_;
         permit2 = permit2_;
         uptoProxy = uptoProxy_;
@@ -169,53 +209,57 @@ contract TrustGatedPayer {
 
     // ================================================================== ERC-1271
     /// @notice Called in STATICCALL by the USDC (EIP-3009) or Permit2 during settlement. Never reverts.
+    /// Cheapest checks first; ANCRE (29 k to 170 k gas) last; no Assessment is built on this path.
     function isValidSignature(bytes32 hash, bytes calldata blob) external view returns (bytes4) {
-        (Reason r,,,,) = _check(hash, blob, false);
-        return r == Reason.OK ? MAGIC : INVALID;
+        Payment memory p = _parse(hash, blob);
+        if (p.parse != Reason.OK) return INVALID;
+        if (p.kind == KIND_CANCEL) return _sigOk(p, blob) ? MAGIC : INVALID; // never moves funds; works when paused
+        if (_policy(p.agentId, p.to, p.value) != Reason.OK) return INVALID;
+        if (!_sigOk(p, blob)) return INVALID;
+        return _isTrusted(p.agentId) ? MAGIC : INVALID;
     }
 
     // ================================================================== reading (screen, plugin)
-    /// @notice The payment decision BEFORE signing (soft guard of the plugin, D41): same rules as
-    /// isValidSignature minus the digest and the operator signature.
+    /// @notice The payment decision BEFORE signing (soft guard of the plugin, D41): the same rules as
+    /// isValidSignature minus the digest and the operator signature, with the full Assessment.
     /// @param value amount in token base units (0 = "may I pay this agent anything at all?")
     function decide(uint256 agentId, address to, uint256 value)
         external
         view
         returns (Reason reason, AnchoredReputation.Assessment memory a)
     {
-        if (paused) return (Reason.PAUSED, a);
-        if (value > maxPerPayment) return (Reason.OVER_LIMIT, a);
-        Reason w = _walletCheck(agentId, to);
-        if (w != Reason.OK) return (w, a);
-        return _ancreDetail(agentId);
+        a = ancre.assess(agentId, setId, true);
+        reason = _policy(agentId, to, value);
+        if (reason == Reason.OK) reason = _ancreReason(a);
     }
 
     /// @notice Why isValidSignature(hash, blob) accepts or refuses, at this block (eth_call it at the
     /// block of a refused attempt to rebuild the refusal for the screen: a refusal leaves no on-chain trace).
+    /// The reason is the first failing rule in isValidSignature's order; the Assessment is always filled
+    /// once the blob parses (the screen shows the trust next to an OVER_LIMIT or a WALLET_MISMATCH).
     function explain(bytes32 hash, bytes calldata blob)
         external
         view
         returns (Reason reason, uint8 kind, uint256 agentId, address to, uint256 value, AnchoredReputation.Assessment memory a)
     {
-        return _explain(hash, blob);
+        Payment memory p;
+        (reason, p, a,) = _explain(hash, blob);
+        return (reason, p.kind, p.agentId, p.to, p.value, a);
     }
 
-    /// @notice Permissionless on-chain trace of a refusal (the refusal itself happens in a STATICCALL and
-    /// cannot emit). Only for a genuine operator-signed payment whose refusal comes from the policy
-    /// (paused, limit, wallet, ANCRE): a forged or malformed blob cannot be used to post fake refusals.
+    /// @notice Permissionless on-chain trace of a refusal, once per authorisation. Only for a genuine
+    /// operator-signed payment that could still settle (unused nonce, inside its validity window) and that
+    /// the policy refuses (paused, limit, wallet, ANCRE): forged, malformed, already paid, cancelled or
+    /// expired authorisations cannot be used to post refusals.
     function reportRefusal(bytes32 hash, bytes calldata blob) external returns (Reason reason) {
-        uint8 kind;
-        uint256 agentId;
-        address to;
-        uint256 value;
-        AnchoredReputation.Assessment memory a;
-        (reason, kind, agentId, to, value, a) = _explain(hash, blob);
-        if (
-            reason == Reason.OK || reason == Reason.BAD_FORMAT || reason == Reason.BAD_KIND
-                || reason == Reason.DIGEST_MISMATCH || reason == Reason.BAD_OPERATOR_SIG || kind == KIND_CANCEL
-        ) revert NotRefused(reason);
-        if (!_operatorSigned(kind, blob)) revert NotRefused(Reason.BAD_OPERATOR_SIG); // checks skipped by an early refusal
-        emit RefusalReported(hash, agentId, to, reason, uint8(a.status), a.triggerTag, a.trustLow, a.distrustUp, value);
+        (Reason r, Payment memory p, AnchoredReputation.Assessment memory a, bool sigOk) = _explain(hash, blob);
+        if (p.parse != Reason.OK || r == Reason.OK || p.kind == KIND_CANCEL) revert NotRefused(r);
+        if (!sigOk) revert NotRefused(Reason.BAD_OPERATOR_SIG);
+        if (!_settleable(p)) revert NotSettleable();
+        if (reported[hash]) revert AlreadyReported();
+        reported[hash] = true;
+        emit RefusalReported(hash, p.agentId, p.to, r, uint8(a.status), a.triggerTag, a.trustLow, a.distrustUp, p.value);
+        return r;
     }
 
     function operators() external view returns (address[4] memory) {
@@ -308,14 +352,16 @@ contract TrustGatedPayer {
     /// One-time allowance for `upto`. Safe: Permit2 can only move funds with a signature of this contract,
     /// and isValidSignature never validates a PermitSingle / PermitBatch digest.
     function approvePermit2(uint256 amount) external onlyOwner {
+        if (permit2 == address(0)) revert ZeroAddress();
         if (!usdc.approve(permit2, amount)) revert TransferFailed();
     }
 
     /// Funds leave only to the immutable treasury (the human), never to the operator (AM-6.9).
     function sweep(address token, uint256 amount) external {
         if (msg.sender != owner && msg.sender != treasury) revert NotOwner();
+        if (token.code.length == 0) revert NoCode(token);
         (bool ok, bytes memory ret) = token.call(abi.encodeCall(IERC20Min.transfer, (treasury, amount)));
-        if (!ok || (ret.length != 0 && !abi.decode(ret, (bool)))) revert TransferFailed();
+        if (!ok || (ret.length != 0 && (ret.length != 32 || abi.decode(ret, (uint256)) != 1))) revert TransferFailed();
         emit Swept(token, treasury, amount);
     }
 
@@ -327,129 +373,134 @@ contract TrustGatedPayer {
         emit PolicySet(setId_, maxPerPayment_);
     }
 
-    /// The decision of _check with the full Assessment whenever the blob parses (even when an earlier rule
-    /// refused: the screen shows the trust next to an OVER_LIMIT or a WALLET_MISMATCH).
-    function _explain(bytes32 hash, bytes calldata blob)
-        internal
-        view
-        returns (Reason reason, uint8 kind, uint256 agentId, address to, uint256 value, AnchoredReputation.Assessment memory a)
-    {
-        (reason, kind, agentId, to, value) = _check(hash, blob, true);
-        if (reason != Reason.BAD_FORMAT && reason != Reason.BAD_KIND && kind != KIND_CANCEL) {
-            a = ancre.assess(agentId, setId, true);
+    /// Parses the blob, rebuilds the token digest and checks it against `hash`. Never reverts.
+    function _parse(bytes32 hash, bytes calldata blob) internal view returns (Payment memory p) {
+        if (blob.length == 0) {
+            p.parse = Reason.BAD_FORMAT;
+            return p;
         }
-    }
-
-    /// @param detail use assess (full Assessment, explain path) instead of the cheaper isTrusted
-    function _check(bytes32 hash, bytes calldata blob, bool detail)
-        internal
-        view
-        returns (Reason r, uint8 kind, uint256 agentId, address to, uint256 value)
-    {
-        if (blob.length == 0) return (Reason.BAD_FORMAT, 0, 0, address(0), 0);
-        kind = uint8(blob[0]);
+        p.kind = uint8(blob[0]);
+        bool ok;
+        bytes32 dom;
         bytes32 digest;
-        bytes32 opDigest;
-        bytes calldata opSig;
-        if (kind == KIND_EXACT) {
-            if (blob.length != LEN_EXACT) return (Reason.BAD_FORMAT, kind, 0, address(0), 0);
-            agentId = uint256(bytes32(blob[1:33]));
-            to = address(bytes20(blob[33:53]));
-            value = uint256(bytes32(blob[53:85]));
-            uint256 va = uint256(bytes32(blob[85:117]));
-            uint256 vb = uint256(bytes32(blob[117:149]));
-            bytes32 n = bytes32(blob[149:181]);
-            opSig = blob[181:246];
+        if (p.kind == KIND_EXACT) {
+            if (blob.length != LEN_EXACT) {
+                p.parse = Reason.BAD_FORMAT;
+                return p;
+            }
+            p.agentId = uint256(bytes32(blob[1:33]));
+            p.to = address(bytes20(blob[33:53]));
+            p.value = uint256(bytes32(blob[53:85]));
+            p.validAfter = uint256(bytes32(blob[85:117]));
+            p.validUntil = uint256(bytes32(blob[117:149]));
+            p.nonce = bytes32(blob[149:181]);
+            p.sigOff = 181;
+            (ok, dom) = _domainOf(address(usdc));
             digest = _typed(
-                IDomainSeparator(address(usdc)).DOMAIN_SEPARATOR(),
-                keccak256(abi.encode(TWA_TYPEHASH, address(this), to, value, va, vb, n))
+                dom, keccak256(abi.encode(TWA_TYPEHASH, address(this), p.to, p.value, p.validAfter, p.validUntil, p.nonce))
             );
-            opDigest = paymentDigest(to, value, va, vb, n, agentId);
-        } else if (kind == KIND_UPTO) {
-            if (permit2 == address(0) || uptoProxy == address(0)) return (Reason.BAD_KIND, kind, 0, address(0), 0);
-            if (blob.length != LEN_UPTO) return (Reason.BAD_FORMAT, kind, 0, address(0), 0);
-            agentId = uint256(bytes32(blob[1:33]));
-            to = address(bytes20(blob[33:53]));
-            value = uint256(bytes32(blob[53:85])); // the cap is what the authorisation commits
-            uint256 p2n = uint256(bytes32(blob[85:117]));
-            uint256 dl = uint256(bytes32(blob[117:149]));
+            p.opDigest = paymentDigest(p.to, p.value, p.validAfter, p.validUntil, p.nonce, p.agentId);
+        } else if (p.kind == KIND_UPTO) {
+            if (permit2 == address(0)) {
+                p.parse = Reason.BAD_KIND;
+                return p;
+            }
+            if (blob.length != LEN_UPTO) {
+                p.parse = Reason.BAD_FORMAT;
+                return p;
+            }
+            p.agentId = uint256(bytes32(blob[1:33]));
+            p.to = address(bytes20(blob[33:53]));
+            p.value = uint256(bytes32(blob[53:85]));
+            p.nonce = bytes32(blob[85:117]);
+            p.validUntil = uint256(bytes32(blob[117:149]));
             address fac = address(bytes20(blob[149:169]));
-            uint256 va = uint256(bytes32(blob[169:201]));
-            opSig = blob[201:266];
+            p.validAfter = uint256(bytes32(blob[169:201]));
+            p.sigOff = 201;
+            (ok, dom) = _domainOf(permit2);
             digest = _typed(
-                IDomainSeparator(permit2).DOMAIN_SEPARATOR(),
+                dom,
                 keccak256(
                     abi.encode(
                         PWTF_TYPEHASH,
-                        keccak256(abi.encode(TP_TYPEHASH, address(usdc), value)),
+                        keccak256(abi.encode(TP_TYPEHASH, address(usdc), p.value)),
                         uptoProxy,
-                        p2n,
-                        dl,
-                        keccak256(abi.encode(WITNESS_TYPEHASH, to, fac, va))
+                        uint256(p.nonce),
+                        p.validUntil,
+                        keccak256(abi.encode(WITNESS_TYPEHASH, p.to, fac, p.validAfter))
                     )
                 )
             );
-            opDigest = uptoDigest(to, value, p2n, dl, fac, va, agentId);
-        } else if (kind == KIND_CANCEL) {
-            if (blob.length != LEN_CANCEL) return (Reason.BAD_FORMAT, kind, 0, address(0), 0);
-            bytes32 n = bytes32(blob[1:33]);
-            opSig = blob[33:98];
-            digest = _typed(
-                IDomainSeparator(address(usdc)).DOMAIN_SEPARATOR(),
-                keccak256(abi.encode(CANCEL_AUTH_TYPEHASH, address(this), n))
-            );
-            if (digest != hash) return (Reason.DIGEST_MISMATCH, kind, 0, address(0), 0);
-            // cancelling a nonce never moves funds: operator only, works even when paused
-            return (isOperator(_recover(cancelDigest(n), opSig)) ? Reason.OK : Reason.BAD_OPERATOR_SIG, kind, 0, address(0), 0);
+            p.opDigest = uptoDigest(p.to, p.value, uint256(p.nonce), p.validUntil, fac, p.validAfter, p.agentId);
+        } else if (p.kind == KIND_CANCEL) {
+            if (blob.length != LEN_CANCEL) {
+                p.parse = Reason.BAD_FORMAT;
+                return p;
+            }
+            p.nonce = bytes32(blob[1:33]);
+            p.sigOff = 33;
+            (ok, dom) = _domainOf(address(usdc));
+            digest = _typed(dom, keccak256(abi.encode(CANCEL_AUTH_TYPEHASH, address(this), p.nonce)));
+            p.opDigest = cancelDigest(p.nonce);
         } else {
-            return (Reason.BAD_KIND, kind, 0, address(0), 0);
+            p.parse = Reason.BAD_KIND;
+            return p;
         }
-
-        // cheapest checks first; ANCRE (29 k to 170 k gas) last
-        if (digest != hash) return (Reason.DIGEST_MISMATCH, kind, agentId, to, value);
-        if (paused) return (Reason.PAUSED, kind, agentId, to, value);
-        if (value > maxPerPayment) return (Reason.OVER_LIMIT, kind, agentId, to, value);
-        r = _walletCheck(agentId, to);
-        if (r != Reason.OK) return (r, kind, agentId, to, value);
-        if (!isOperator(_recover(opDigest, opSig))) return (Reason.BAD_OPERATOR_SIG, kind, agentId, to, value);
-        if (detail) {
-            (r,) = _ancreDetail(agentId);
-        } else {
-            r = _isTrusted(agentId) ? Reason.OK : Reason.UNTRUSTED; // reason detail only via explain
-        }
+        if (!ok || digest != hash) p.parse = Reason.DIGEST_MISMATCH;
     }
 
-    /// Re-verifies the operator signature (used by reportRefusal when _check stopped before it).
-    function _operatorSigned(uint8 kind, bytes calldata blob) internal view returns (bool) {
-        uint256 agentId = uint256(bytes32(blob[1:33]));
-        address to = address(bytes20(blob[33:53]));
-        uint256 v = uint256(bytes32(blob[53:85]));
-        if (kind == KIND_EXACT) {
-            bytes32 d = paymentDigest(
-                to, v, uint256(bytes32(blob[85:117])), uint256(bytes32(blob[117:149])), bytes32(blob[149:181]), agentId
+    /// paused, then cap, then payee == agentWallet(agentId)
+    function _policy(uint256 agentId, address to, uint256 value) internal view returns (Reason) {
+        if (paused) return Reason.PAUSED;
+        if (value > maxPerPayment) return Reason.OVER_LIMIT;
+        return _walletCheck(agentId, to);
+    }
+
+    /// Same decision as isValidSignature, with the Assessment and the signature verdict always computed.
+    function _explain(bytes32 hash, bytes calldata blob)
+        internal
+        view
+        returns (Reason r, Payment memory p, AnchoredReputation.Assessment memory a, bool sigOk)
+    {
+        p = _parse(hash, blob);
+        if (p.parse != Reason.OK) return (p.parse, p, a, false);
+        sigOk = _sigOk(p, blob);
+        if (p.kind == KIND_CANCEL) return (sigOk ? Reason.OK : Reason.BAD_OPERATOR_SIG, p, a, sigOk);
+        a = ancre.assess(p.agentId, setId, true);
+        r = _policy(p.agentId, p.to, p.value);
+        if (r == Reason.OK) r = sigOk ? _ancreReason(a) : Reason.BAD_OPERATOR_SIG;
+    }
+
+    /// The authorisation could still be settled now (otherwise a "refusal" trace would be misleading).
+    function _settleable(Payment memory p) internal view returns (bool) {
+        if (p.kind == KIND_EXACT) {
+            if (block.timestamp <= p.validAfter || block.timestamp >= p.validUntil) return false;
+            (bool ok, bytes memory ret) = address(usdc).staticcall(
+                abi.encodeCall(IEIP3009State.authorizationState, (address(this), p.nonce))
             );
-            return isOperator(_recover(d, blob[181:246]));
+            return ok && ret.length == 32 && uint256(bytes32(ret)) == 0;
         }
-        bytes32 du = uptoDigest(
-            to,
-            v,
-            uint256(bytes32(blob[85:117])),
-            uint256(bytes32(blob[117:149])),
-            address(bytes20(blob[149:169])),
-            uint256(bytes32(blob[169:201])),
-            agentId
-        );
-        return isOperator(_recover(du, blob[201:266]));
+        // upto: Permit2 unordered nonce (word = nonce >> 8, bit = nonce & 0xff), deadline, witness validAfter
+        if (block.timestamp > p.validUntil || block.timestamp < p.validAfter) return false;
+        uint256 n = uint256(p.nonce);
+        (bool ok2, bytes memory ret2) =
+            permit2.staticcall(abi.encodeCall(IPermit2Nonces.nonceBitmap, (address(this), n >> 8)));
+        return ok2 && ret2.length == 32 && (uint256(bytes32(ret2)) >> (n & 0xff)) & 1 == 0;
+    }
+
+    function _sigOk(Payment memory p, bytes calldata blob) internal view returns (bool) {
+        return isOperator(_recover(p.opDigest, blob[p.sigOff:p.sigOff + 65]));
     }
 
     /// payee must be the agent's ERC-8004 agentWallet: a server lying about agentId can only claim an
     /// agent whose wallet it already controls. No fallback to ownerOf: the wallet is cleared on transfer,
     /// and a transferred agent is not payable anyway (TRANSFERRED).
     function _walletCheck(uint256 agentId, address to) internal view returns (Reason) {
-        (bool ok, bytes memory ret) =
-            address(identity).staticcall{gas: WALLET_CALL_GAS}(abi.encodeCall(IIdentityRegistry8004.getAgentWallet, (agentId)));
+        (bool ok, bytes memory ret) = address(identity).staticcall{gas: REGISTRY_CALL_GAS}(
+            abi.encodeCall(IIdentityRegistry8004.getAgentWallet, (agentId))
+        );
         if (!ok || ret.length != 32) return Reason.NO_WALLET;
-        uint256 w = abi.decode(ret, (uint256));
+        uint256 w = uint256(bytes32(ret));
         if (w == 0 || w >> 160 != 0) return Reason.NO_WALLET;
         return address(uint160(w)) == to ? Reason.OK : Reason.WALLET_MISMATCH;
     }
@@ -460,10 +511,16 @@ contract TrustGatedPayer {
         return ok && ret.length == 32 && uint256(bytes32(ret)) == 1; // fail closed
     }
 
-    function _ancreDetail(uint256 agentId) internal view returns (Reason r, AnchoredReputation.Assessment memory a) {
-        a = ancre.assess(agentId, setId, true);
-        if (a.status != AnchoredReputation.Status.OK) return (Reason.ANCRE_STATUS, a);
-        return (a.trusted ? Reason.OK : Reason.UNTRUSTED, a);
+    function _ancreReason(AnchoredReputation.Assessment memory a) internal pure returns (Reason) {
+        if (a.status != AnchoredReputation.Status.OK) return Reason.ANCRE_STATUS;
+        return a.trusted ? Reason.OK : Reason.UNTRUSTED;
+    }
+
+    function _domainOf(address token) internal view returns (bool ok, bytes32 dom) {
+        bytes memory ret;
+        (ok, ret) = token.staticcall{gas: DOMAIN_CALL_GAS}(abi.encodeCall(IDomainSeparator.DOMAIN_SEPARATOR, ()));
+        ok = ok && ret.length == 32;
+        if (ok) dom = bytes32(ret);
     }
 
     function _recover(bytes32 h, bytes calldata sig) internal pure returns (address) {

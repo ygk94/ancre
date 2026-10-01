@@ -5,8 +5,21 @@ import "./utils/PayerBase.sol";
 import {MockUSDC3009} from "./utils/MockUSDC3009.sol";
 
 contract MockPermit2Domain {
+    mapping(address => mapping(uint256 => uint256)) public nonceBitmap;
+
     function DOMAIN_SEPARATOR() external pure returns (bytes32) {
         return keccak256("mock permit2 domain");
+    }
+
+    function useNonce(address owner, uint256 nonce) external {
+        nonceBitmap[owner][nonce >> 8] |= 1 << (nonce & 0xff);
+    }
+}
+
+/// a "token" whose DOMAIN_SEPARATOR reverts: isValidSignature must still return, not revert
+contract NoDomainToken {
+    function approve(address, uint256) external pure returns (bool) {
+        return true;
     }
 }
 
@@ -31,6 +44,8 @@ contract TrustGatedPayerTest is PayerBase {
     address constant ATTACKER = address(0xBAD);
 
     MockUSDC3009 usdc;
+    MockPermit2Domain p2;
+    address upto;
     TrustGatedPayer payer;
     bytes32 setId;
     address[] anchors;
@@ -49,9 +64,9 @@ contract TrustGatedPayerTest is PayerBase {
         setId = _certify();
         usdc = new MockUSDC3009();
         op = vm.addr(OP_KEY);
-        payer = new TrustGatedPayer(
-            IERC20Min(address(usdc)), address(new MockPermit2Domain()), address(0x9940), ar, OWNER, TREASURY, op, setId, 1e6
-        );
+        p2 = new MockPermit2Domain();
+        upto = address(new NoDomainToken()); // any contract: the proxy is only a field of the Permit2 digest here
+        payer = new TrustGatedPayer(IERC20Min(address(usdc)), address(p2), upto, ar, OWNER, TREASURY, op, setId, 1e6);
         usdc.mint(address(payer), 10e6);
     }
 
@@ -513,5 +528,140 @@ contract TrustGatedPayerTest is PayerBase {
         vm.prank(address(0x0E2));
         payer.setPaused(true);
         assertTrue(payer.paused());
+    }
+
+    // ------------------------------------------------------------------ code-review fixes (E1, high)
+    function test_reportRefusalRefusesSettledExpiredAndDuplicate() public {
+        (Auth memory a, bytes memory blob) = _good(90);
+        bytes32 d = _twaDigest(address(usdc), address(payer), a);
+        _settle(a, blob); // paid
+        vm.prank(anchors[0]);
+        rep.giveFeedback(GOOD, -100, 0, "slash", "");
+        vm.expectRevert(TrustGatedPayer.NotSettleable.selector); // a paid authorisation is not a refusal
+        payer.reportRefusal(d, blob);
+
+        (Auth memory b, bytes memory blobB) = _good(91);
+        bytes32 db = _twaDigest(address(usdc), address(payer), b);
+        payer.reportRefusal(db, blobB);
+        vm.expectRevert(TrustGatedPayer.AlreadyReported.selector);
+        payer.reportRefusal(db, blobB);
+        assertTrue(payer.reported(db));
+
+        (Auth memory c, bytes memory blobC) = _good(92);
+        bytes32 dc = _twaDigest(address(usdc), address(payer), c);
+        vm.warp(c.validBefore); // validBefore is exclusive
+        vm.expectRevert(TrustGatedPayer.NotSettleable.selector);
+        payer.reportRefusal(dc, blobC);
+    }
+
+    function test_reportRefusalRefusesCancelledNonce() public {
+        vm.prank(anchors[0]);
+        rep.giveFeedback(GOOD, -100, 0, "slash", "");
+        (Auth memory a, bytes memory blob) = _good(93);
+        (bytes memory cb,) = _cancel(address(usdc), address(payer), OP_KEY, a.nonce);
+        usdc.cancelAuthorization(address(payer), a.nonce, cb);
+        bytes32 d = _twaDigest(address(usdc), address(payer), a); // before expectRevert: it catches the next call
+        vm.expectRevert(TrustGatedPayer.NotSettleable.selector);
+        payer.reportRefusal(d, blob);
+    }
+
+    function _uptoGood(uint256 cap, uint256 n) internal view returns (Upto memory u, bytes memory blob, bytes32 d) {
+        u = Upto(OG, cap, n, block.timestamp + 300, FAC, 0, GOOD);
+        blob = _upto(address(payer), OP_KEY, u);
+        d = _uptoDigest(address(usdc), address(p2), upto, u);
+    }
+
+    function test_uptoUnitPaths() public {
+        (Upto memory u, bytes memory blob, bytes32 d) = _uptoGood(5000, 7);
+        assertEq(blob.length, 266);
+        assertEq(payer.isValidSignature(d, blob), bytes4(0x1626ba7e), "trusted upto accepted");
+        assertEq(payer.uptoDigest(u.to, u.cap, u.nonce, u.deadline, u.facilitator, u.validAfter, u.agentId),
+            _typed(_payerDomain(address(payer)), keccak256(abi.encode(ANCRE_UPTO, u.to, u.cap, u.nonce, u.deadline, u.facilitator, u.validAfter, u.agentId))));
+        // the facilitator is part of the Permit2 witness: another facilitator's digest does not match
+        Upto memory other = Upto(u.to, u.cap, u.nonce, u.deadline, ATTACKER, u.validAfter, u.agentId); // a fresh struct, not an alias
+        assertEq(uint8(_reason(_uptoDigest(address(usdc), address(p2), upto, other), blob)), uint8(TrustGatedPayer.Reason.DIGEST_MISMATCH));
+        // stranger signature
+        Upto memory s = Upto(u.to, u.cap, u.nonce, u.deadline, u.facilitator, u.validAfter, u.agentId);
+        bytes memory forged = abi.encodePacked(
+            uint8(2), s.agentId, s.to, s.cap, s.nonce, s.deadline, s.facilitator, s.validAfter,
+            _sig(0xBADBAD, _typed(_payerDomain(address(payer)), keccak256(abi.encode(ANCRE_UPTO, s.to, s.cap, s.nonce, s.deadline, s.facilitator, s.validAfter, s.agentId))))
+        );
+        assertEq(uint8(_reason(d, forged)), uint8(TrustGatedPayer.Reason.BAD_OPERATOR_SIG));
+        // veto -> ANCRE_STATUS
+        vm.prank(anchors[1]);
+        rep.giveFeedback(GOOD, -100, 0, "slash", "");
+        assertEq(payer.isValidSignature(d, blob), bytes4(0xffffffff));
+        assertEq(uint8(_reason(d, blob)), uint8(TrustGatedPayer.Reason.ANCRE_STATUS));
+    }
+
+    function test_uptoReportRefusalOverLimitAndNonce() public {
+        (, bytes memory blob, bytes32 d) = _uptoGood(2e6, 8); // cap > maxPerPayment
+        bytes memory forged;
+        // genuine upto OVER_LIMIT is reportable (exercises the upto signature offsets)
+        assertEq(uint8(payer.reportRefusal(d, blob)), uint8(TrustGatedPayer.Reason.OVER_LIMIT));
+        // forged upto OVER_LIMIT is not
+        Upto memory u = Upto(OG, 2e6, 9, block.timestamp + 300, FAC, 0, GOOD);
+        forged = abi.encodePacked(
+            uint8(2), u.agentId, u.to, u.cap, u.nonce, u.deadline, u.facilitator, u.validAfter,
+            _sig(0xBADBAD, _typed(_payerDomain(address(payer)), keccak256(abi.encode(ANCRE_UPTO, u.to, u.cap, u.nonce, u.deadline, u.facilitator, u.validAfter, u.agentId))))
+        );
+        bytes32 du = _uptoDigest(address(usdc), address(p2), upto, u);
+        vm.expectRevert(abi.encodeWithSelector(TrustGatedPayer.NotRefused.selector, TrustGatedPayer.Reason.BAD_OPERATOR_SIG));
+        payer.reportRefusal(du, forged);
+        // a used Permit2 nonce is not settleable
+        (, bytes memory b10, bytes32 d10) = _uptoGood(2e6, 10);
+        p2.useNonce(address(payer), 10);
+        vm.expectRevert(TrustGatedPayer.NotSettleable.selector);
+        payer.reportRefusal(d10, b10);
+    }
+
+    function test_uptoDisabledIsBadKind() public {
+        TrustGatedPayer noUpto =
+            new TrustGatedPayer(IERC20Min(address(usdc)), address(0), address(0), ar, OWNER, TREASURY, op, setId, 1e6);
+        Upto memory u = Upto(OG, 5000, 7, block.timestamp + 300, FAC, 0, GOOD);
+        bytes memory blob = _upto(address(noUpto), OP_KEY, u);
+        assertEq(noUpto.isValidSignature(bytes32(0), blob), bytes4(0xffffffff));
+        (TrustGatedPayer.Reason r,,,,,) = noUpto.explain(bytes32(0), blob);
+        assertEq(uint8(r), uint8(TrustGatedPayer.Reason.BAD_KIND));
+        vm.prank(OWNER);
+        vm.expectRevert(TrustGatedPayer.ZeroAddress.selector);
+        noUpto.approvePermit2(1);
+    }
+
+    /// a token whose DOMAIN_SEPARATOR reverts: isValidSignature returns INVALID instead of reverting
+    function test_domainCallFailureNeverReverts() public {
+        NoDomainToken bad = new NoDomainToken();
+        TrustGatedPayer p = new TrustGatedPayer(IERC20Min(address(bad)), address(bad), address(bad), ar, OWNER, TREASURY, op, setId, 1e6);
+        Auth memory a = _auth(OG, 10_000, GOOD, 1);
+        bytes memory blob = _packExact(a, _sig(OP_KEY, _opDigest(address(p), a)));
+        assertEq(p.isValidSignature(keccak256("any"), blob), bytes4(0xffffffff));
+        (TrustGatedPayer.Reason r,,,,,) = p.explain(keccak256("any"), blob);
+        assertEq(uint8(r), uint8(TrustGatedPayer.Reason.DIGEST_MISMATCH));
+        Upto memory u = Upto(OG, 5000, 7, block.timestamp + 300, FAC, 0, GOOD);
+        assertEq(p.isValidSignature(keccak256("any"), _upto(address(p), OP_KEY, u)), bytes4(0xffffffff));
+    }
+
+    function test_constructorRequiresCode() public {
+        vm.expectRevert(abi.encodeWithSelector(TrustGatedPayer.NoCode.selector, address(0x1234)));
+        new TrustGatedPayer(IERC20Min(address(0x1234)), address(0), address(0), ar, OWNER, TREASURY, op, setId, 1e6);
+        vm.expectRevert(abi.encodeWithSelector(TrustGatedPayer.NoCode.selector, address(0x5678)));
+        new TrustGatedPayer(IERC20Min(address(usdc)), address(0x5678), upto, ar, OWNER, TREASURY, op, setId, 1e6);
+        vm.expectRevert(TrustGatedPayer.ZeroAddress.selector); // permit2 without proxy
+        new TrustGatedPayer(IERC20Min(address(usdc)), address(p2), address(0), ar, OWNER, TREASURY, op, setId, 1e6);
+    }
+
+    function test_sweepRefusesCodelessToken() public {
+        vm.prank(OWNER);
+        vm.expectRevert(abi.encodeWithSelector(TrustGatedPayer.NoCode.selector, address(0xDEAD)));
+        payer.sweep(address(0xDEAD), 1);
+    }
+
+    function test_decideFillsAssessmentOnEarlyRefusal() public view {
+        (TrustGatedPayer.Reason r, AnchoredReputation.Assessment memory x) = payer.decide(GOOD, OG, 2e6);
+        assertEq(uint8(r), uint8(TrustGatedPayer.Reason.OVER_LIMIT));
+        assertTrue(x.trusted, "trust shown next to OVER_LIMIT");
+        (r, x) = payer.decide(GOOD, ATTACKER, 0);
+        assertEq(uint8(r), uint8(TrustGatedPayer.Reason.WALLET_MISMATCH));
+        assertGt(x.trust, 0);
     }
 }
