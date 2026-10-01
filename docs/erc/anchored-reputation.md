@@ -648,7 +648,126 @@ If the registries change the semantics of `agentWallet`, of `feedbackIndex` or o
 
 ## Test Cases
 
-⟦E2 : à réécrire à partir de `solver/vectors/`, `solver/vectors/violations/` et `contracts/test/diff/`.⟧
+The vectors are in [`../assets/erc-0000/`](../assets/erc-0000/README.md), as JSON with a field-by-field description. They are normative for the quantities they fix:
+- the weight of a feedback;
+- the pair edge;
+- the `setId`;
+- the row bytes, `graphRoot` and `vectorRoot`;
+- the sub-solution check, `r`, `eUp`, `q`, `eEff`, `qEff`, mass, `d`, `D`;
+- the amounts of the discrepancy proofs.
+
+Every expected value is an exact integer. An independent checker, `verify.py`, recomputes each one from this specification with the Python standard library, and also checks `t ≤ t*` and `‖t* − t‖₁ ≤ eUp` in exact rational arithmetic. The reference implementation accepts every certificate vector with identical values.
+
+### TC-1 Normalization (§3.2): `quantization.json`, 19 cases
+
+| tag (min, neutral, max) | value | decimals | weight |
+|---|---|---|---|
+| `starred` (0, 50, 100) | 87 | 0 | 7400 |
+| `starred` | 33 | 0 | −3400 |
+| `starred` | 4999 | 2 | −2 |
+| `starred` | 10³⁸ | 0 | invalid (discarded, not clamped) |
+| `third` (0, 0, 3) | 1 | 0 | 3333 |
+| `minusthird` (−3, 0, 0) | −1 | 0 | −3333 (toward zero) |
+| `vouch` (0, 0, 1) | 1 | 19 | invalid (`valueDecimals > 18`) |
+
+### TC-2 Pair edge (§3.3): `pair-edge.json`, 13 cases
+
+| history of one (client, agent) pair, oldest first | expected |
+|---|---|
+| `slash −100` (1), `review +1` (2) | `w = −10000`, index 1 (negative dominance) |
+| `vouch 1` (1), `vouch 0` (2) | no edge (the latest `vouch` is neutral) |
+| `vouch 1` (1), `vouch 1` revoked (2) | `w = 10000`, index 1 |
+| `vouch 1` (1), `vouch 5` out of bounds (2) | no edge: the latest feedback of the tag is invalid, and the older one is not used |
+| `vouch 1` (1), `uptime 100` measurement (2) | `w = 10000`, index 1 |
+| `vouch 1` (1), `review +1` (2) | `w = 10000`, index 2 (tie: highest index) |
+| `vouch 1` from a controller of the agent | no edge |
+| `veto −1` (1), `review +1` (2) | `w = −10000`, index 1 (the live veto of §8.2 reads only index 2) |
+
+### TC-3 Reference certificate: `certificates/mainnet_slash_anchor.json`
+
+The state of a real registry at a fixed block, with `α = 1/3` and two anchors `A1`, `A2` weighted `1/2` each. `A2` is also the `agentWallet` of agent 18. Edges after §3:
+- `A1 → 18`: `+10000`;
+- `A2 → 2`: `+10000`;
+- `A2 → 3`: `+10000`;
+- `A2 → 4`: `−10000`.
+
+`A2`'s row is carried by the anchor node and copied into agent 18 (§3.5). Exact values:
+
+| node | `t^(A1)` | `t^(A2)` | `trust` | `trustRobust` (m = 2) | `d` |
+|---|---|---|---|---|---|
+| `A1` | 1/3 | 0 | — | — | 0 |
+| `A2` | 0 | 1/3 | — | — | 0 |
+| 18 | 2/9 | 0 | 1/9 | 0 | 0 |
+| 2 | 2/27 | 1/9 | 5/54 | 1/27 | 0 |
+| 3 | 2/27 | 1/9 | 5/54 | 1/27 | 0 |
+| 4 | 0 | 0 | 0 | 0 | 5/27 |
+
+The certified integers are the floors of these values, reached in 4 iterations from zero. Expected results:
+- `r = (6, 6)`, `eUp = (18, 18)`, `eEff = 18`, `qEff = 0`, mass `629629629629629628`;
+- `D = 185185185185185186`, that is 5/27 rounded up;
+- `graphRoot` and `vectorRoot` as in the file.
+
+The slash makes agent 4's distrust positive although a later `+1` exists under another tag, and sets `A2`'s certified veto bit on agent 4.
+
+### TC-4 Other certificates: `certificates/`
+
+| vector | nodes | edges | level | what it fixes |
+|---|---|---|---|---|
+| `mainnet_honest_d20` | 6 | 5 | `RegistryVerified` | row copy restores a two-hop honest chain |
+| `mainnet_scanner_preD15` | 35 | 58 | `RegistryVerified` | a set that declares a scanner's measurement tags as endorsements leaks trust into a farm |
+| `mainnet_em_d44` | 13 | 48 | `RegistryVerified` | `ownerFallback` and VIA_OWNER rows, a 33-byte tag, ties resolved by index |
+| `toy_alias_owner_rowmax` | 264 | 266 | `SubmitterAttested` | alias rows, wallet precedence, a row capped at `ROW_MAX` with declared `sPlus` (`eUp_A1 ≈ 2.2·10¹⁵` wei from the declared-omission margin) |
+| `toy_alpha_1_2`, `_1_3`, `_1_4` | 5 | 7 | `SubmitterAttested` | the same graph under three values of `α` |
+| `toy_truncated` | 5 | 6 | `SubmitterAttested` | truncation margin of a node without a row |
+
+### TC-5 Violations and proofs (§5, §6): `violations/`
+
+Four certificates satisfy `t ≤ F_bas(t)` for their committed graph, but that graph is not dominated by the registry. All four are built on TC-3.
+
+| violation | effect on the true graph | `RegistryVerified` at submission | proof (`proveEdge`) | `eLowEff` / `eEff` after |
+|---|---|---|---|---|
+| fabricated edge `A1 → 4` | `t(4)`: 0 → 0.0556 | refused (`EdgeMismatch`) | `SubmitterAttested`: row `A1`, agent 4, `wNew = 0` | 166666666666666667 / 166666666666666688 |
+| inflated slash (`−1` instead of `−10000`) | `d(4)`: 0.1852 → 0.1111 | refused (`EdgeMismatch`) | `SubmitterAttested`: row 18, agent 4, `wNew = −10000` | 0 / 222200000000000018 |
+| dilution: `18 → 3` omitted, no `sPlus` | `t(2)`: 0.0926 → 0.1296 | accepted | row 18, agent 3, `wNew = 10000` | 111111111111111111 / 111111111111111127 |
+| slash omitted (anchor row and copy) | `d(4)`: 0.1852 → 0 | accepted | row `A2`, then row 18, agent 4, `wNew = −10000` | 0 / 555555555555555573 |
+
+After the proofs, `‖(t − t*)⁺‖₁ ≤ eLow` and `d* ≤ d + eEff` hold again for the true graph. Resubmitting a proven certificate unchanged MUST revert (§5.9).
+
+### TC-6 Behaviour (§5.9, §7, §8)
+
+These cases need a chain. Their expected outcomes are normative:
+
+1. `assess` on an unknown `setId`, or on a set without a certificate, returns `NO_CERT` with every value zero, and does not revert.
+2. At `certBlock + maxAge + 1`, the status is `STALE`. It is also `STALE` as soon as proofs push `eLowEff` above `eLowMax`.
+3. After a registry version string changes and `checkRegistry(setId)` is called, the status is `REGISTRY_CHANGED`, and `RegistryChanged` is emitted. The next accepted certificate clears it.
+4. Transfers:
+   - strict mode: after `transferFrom` of a certified agent with non-zero trust, the agent is `TRANSFERRED`, and also if `ownerOf` reverts;
+   - fast mode: the agent is `TRANSFERRED` only after `proveTransfer`.
+5. An anchor's current key posts `veto −1` on agent `j`:
+   - in the next block, `assess(j, set, true)` returns `VETOED`, with `vetoCount = 1` and `triggerTag = keccak256("veto")`, without recertification;
+   - if the anchor then posts any other feedback on `j`, the live veto lapses. The agent stays `VETOED` only if the certificate carries the anchor's veto bit.
+6. An agent outside the certificate has status `OK`, zero trust, and `isTrusted = false`.
+7. An agent endorsed by a single anchor of a set with `minAnchors = 2` has `trustRobust = 0` and is not trusted.
+8. Open set, replacement:
+   - a certificate that omits endorsements (less mass) is refused;
+   - a certificate for a graph that gained an edge (more mass, same `q`) is accepted;
+   - the zero vector is refused against a live certificate;
+   - a certificate that omits a negative edge (lower `D`) is refused;
+   - a widened certificate resubmitted unchanged is refused.
+9. With a registry that reverts or returns malformed data, `assess`, `trustOf` and `isTrusted` do not revert, and `isTrusted` returns `false`.
+
+⟦Tests de l'implémentation de référence correspondants (`contracts/test/`) :
+1. `test_statuses` ;
+2. `test_statuses`, `test_dilutionProvenWidensLowerBound` ;
+3. `test_registryChanged`, `test_fork_upgradeDetected`, `test_fork_upgradeToPR80` ;
+4. `test_statuses`, `test_fastTransferMode` ;
+5. `test_vetoIsLastAnchorFeedback`, `test_certifiedVetoBit`, `test_fork_vetoOnRealSlash` ;
+6. `test_isTrusted` ;
+7. `test_leaveOneOut` ;
+8. `test_openReplacementRule`, `test_replacementRefusesOmittedNegative`, `test_replacementRefusesResubmittingProvenCertificate` ;
+9. `test_neverRevertsOnBrokenRegistry`.
+
+Ces cas ne sont pas dans `verify.py` : ils exigent un registre. Le chemin `assets/erc-0000` suit l'usage du dépôt ERCs (numéro provisoire 0000, à renommer quand un éditeur attribue le numéro).⟧
 
 ## Reference Implementation
 
