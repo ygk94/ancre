@@ -2,7 +2,7 @@
 """Differential vectors for AnchoredReputation (chantier 02, E5 / D37).
 
 Pure standard library. For random small graphs (truncated nodes, declared B+, alias rows, negative
-edges, k = 1..3, alpha in {1/4, 1/3, 1/2}) it computes, independently of the Solidity code:
+edges, k = 1..3, alpha in {1/4, 1/3, 1/2}); declared sPlus = true positive sum (may be < GRID) it computes, independently of the Solidity code:
   - the certificate t = F_floor^N(0) with the contract's integer arithmetic (ENCODING.md §4),
   - the expected eUp per column and the distrust d per node,
   - the EXACT fixed point t* of the committed graph (Fractions, Gaussian elimination),
@@ -51,9 +51,9 @@ def gen_case(rng, idx):
                 w = -w
             edges.append((d, w))
         sp = sum(w for _, w in edges if w > 0)
-        bDecl = 0
+        bDecl = 0  # declared TRUE positive sum sPlus (unified v1 format, 01/10): may be below GRID
         if rng.random() < 0.25:
-            bDecl = max(GRID, sp) + rng.randint(0, 2 * GRID)
+            bDecl = sp + rng.randint(1, 2 * GRID)
         rows.append(dict(u=u, edges=edges, bDecl=bDecl, alias=None))
     # alias rows must not self-loop: drop the alias if its source has an edge to it
     clean = []
@@ -77,7 +77,7 @@ def span(c, r):
 
 def budget(edges, bDecl):
     sp = sum(w for _, w in edges if w > 0)
-    return sp, (bDecl if bDecl else max(GRID, sp))
+    return sp, max(GRID, bDecl if bDecl else sp)  # B+ = max(GRID, sPlus)
 
 
 def apply_f(c, t):
@@ -118,9 +118,9 @@ def e_up(c, t):
         edges, bDecl = span(c, r)
         epos += sum(1 for _, w in edges if w > 0)
         sp, bP = budget(edges, bDecl)
-        if bDecl and bP > sp:
+        if bDecl > sp:  # declared omission (sPlus - S+) / B+
             for a in range(k):
-                q = t[a][x["u"]] * om * (bP - sp)
+                q = t[a][x["u"]] * om * (bDecl - sp)
                 marg[a] += ceil_div(q, aD * bP)
     out = []
     for a in range(k):

@@ -22,8 +22,9 @@ library CertLib {
         int256[] eW;
         uint256[] eIdx;
         uint64[] ownerFp;
-        uint256[] rowBDecl; // declared B+ (0 = computed max(GRID, S+))
+        uint256[] rowBDecl; // declared true positive sum sPlus (0 = none: sPlus = committed S+), D32
         uint256[] rowAlias; // index + 1 of the source row (0 = own edges), D20 alias rows
+        bool[] rowViaOwner; // D44: the row's source is ownerOf(u) (VIA_OWNER, 0x1000)
     }
 
     function newGraph(uint256 n, uint256 k, uint256 aN, uint256 aD, uint256 maxRows, uint256 maxEdges)
@@ -50,6 +51,7 @@ library CertLib {
         g.ownerFp = new uint64[](n);
         g.rowBDecl = new uint256[](maxRows);
         g.rowAlias = new uint256[](maxRows);
+        g.rowViaOwner = new bool[](maxRows);
     }
 
     /// rows must be added in increasing u; dsts strictly increasing
@@ -70,7 +72,7 @@ library CertLib {
         g.rowStart[r + 1] = g.numEdges;
     }
 
-    /// row with a declared budget B+ (D32): some positive edges of the true row may be omitted
+    /// row with a declared true positive sum sPlus (D32): some positive edges of the true row may be omitted
     function addRowDecl(Graph memory g, uint256 u, address wallet, uint256[] memory dsts, int256[] memory ws, uint256 bDecl)
         internal
         pure
@@ -100,7 +102,8 @@ library CertLib {
         for (uint256 e = e0; e < e1; ++e) {
             if (g.eW[e] > 0) sumP += uint256(g.eW[e]);
         }
-        bP = bDecl != 0 ? bDecl : (sumP > uint256(GRID) ? sumP : uint256(GRID));
+        uint256 sp = bDecl != 0 ? bDecl : sumP; // B+ = max(GRID, sPlus)
+        bP = sp > uint256(GRID) ? sp : uint256(GRID);
     }
 
     // ------------------------------------------------------------------ arithmetic (mirror of the contract)
@@ -180,9 +183,9 @@ library CertLib {
                 if (g.eW[e] > 0) ePos++;
             }
             (uint256 sumP, uint256 bP) = budget(g, rr);
-            if (bDecl != 0 && bP > sumP) {
+            if (bDecl > sumP) {
                 for (uint256 a; a < g.k; ++a) {
-                    uint256 q = t[a][g.rowU[rr]] * om * (bP - sumP);
+                    uint256 q = t[a][g.rowU[rr]] * om * (bDecl - sumP);
                     r[a] += (q + g.aD * bP - 1) / (g.aD * bP);
                 }
             }
@@ -236,7 +239,7 @@ library CertLib {
         uint256 o;
         _put(b, o, g.rowU[r], W);
         o += W;
-        _put(b, o, nE | (hw ? 0x8000 : 0) | (hb ? 0x4000 : 0) | (al ? 0x2000 : 0), 2);
+        _put(b, o, nE | (hw ? 0x8000 : 0) | (hb ? 0x4000 : 0) | (al ? 0x2000 : 0) | (g.rowViaOwner[r] ? 0x1000 : 0), 2);
         o += 2;
         if (hw) {
             _put(b, o, uint160(g.rowWallet[r]), 20);

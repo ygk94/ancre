@@ -206,7 +206,7 @@ contract AnchoredReputationTest is AncreBase {
         uint64 slashIdx = rep.giveFeedback(101, -100, 0, "slash", "");
         AnchoredReputation.Assessment memory x = ar.assess(101, setId, true);
         assertEq(uint8(x.status), uint8(AnchoredReputation.Status.VETOED));
-        assertEq(x.triggerTag, bytes32("slash"));
+        assertEq(x.triggerTag, keccak256("slash"));
         assertEq(x.vetoCount, 1);
         assertFalse(ar.isTrusted(101, setId));
 
@@ -358,7 +358,7 @@ contract AnchoredReputationTest is AncreBase {
         rep.giveFeedback(101, -1, 0, "review", "");
         x = ar.assess(101, setId, true);
         assertEq(uint8(x.status), uint8(AnchoredReputation.Status.VETOED));
-        assertEq(x.triggerTag, bytes32("slash"), "most negative veto names the reason");
+        assertEq(x.triggerTag, keccak256("slash"), "most negative veto names the reason");
         assertFalse(ar.isTrusted(101, setId));
     }
 

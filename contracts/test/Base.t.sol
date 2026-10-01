@@ -77,6 +77,7 @@ abstract contract AncreBase is Test {
             eLowMax: 1e16,
             strictTransfer: true,
             registryVerified: false,
+            ownerFallback: false,
             submitters: subs
         });
     }

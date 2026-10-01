@@ -55,8 +55,9 @@ contract VerifiedTest is AncreBase {
     function _expectSubmitRevert(bytes32 setId, CertLib.Graph memory g, bytes memory err) internal {
         uint256[][] memory t = g.fixedPoint(60);
         vm.expectRevert(err);
+        // with a low-level call, expectRevert does not fail by itself: ok is true iff it reverted with err
         (bool ok,) = address(ar).call(_cd(setId, g, t));
-        ok;
+        assertTrue(ok, "submission did not revert as expected");
     }
 
     // ------------------------------------------------------------------ Registry-verified
@@ -141,32 +142,84 @@ contract VerifiedTest is AncreBase {
         _expectSubmitRevert(setId, g, abi.encodeWithSelector(AnchoredReputation.EdgeMismatch.selector, type(uint256).max, 1));
     }
 
+    function _submitOk(bytes32 setId, CertLib.Graph memory g, uint256[][] memory t) internal {
+        ar.submitCertificate(setId, uint32(g.n), type(uint256).max, "", CertLib.encodeVectors(g, t), CertLib.encodeRows(g, 2));
+    }
+
+    function _submitRefused(bytes32 setId, CertLib.Graph memory g, uint256[][] memory t) internal {
+        (bool ok, bytes memory ret) = address(ar).call(_cd(setId, g, t));
+        assertFalse(ok, "replacement must be refused");
+        assertEq(bytes4(ret), AnchoredReputation.NotBetter.selector);
+    }
+
+    /// X's row: A -> X, X -> {Y: w1, Z: w2} (0 = absent); Y and Z absorbing (explicit empty rows)
+    function _chain(int256 w1, int256 w2) internal pure returns (CertLib.Graph memory g) {
+        g = CertLib.newGraph(4, 1, AN, AD, 4, 4);
+        g.addRow(0, address(0), _one(1), _oneW(10_000));
+        if (w1 != 0 && w2 != 0) g.addRow(1, OX, _two(2, 3), _twoW(w1, w2));
+        else if (w1 != 0) g.addRow(1, OX, _one(2), _oneW(w1));
+        else if (w2 != 0) g.addRow(1, OX, _one(3), _oneW(w2));
+        else g.addRow(1, OX, new uint256[](0), new int256[](0));
+        if (w1 != 0) g.addRow(2, OY, new uint256[](0), new int256[](0));
+        if (w2 != 0) g.addRow(3, OZ, new uint256[](0), new int256[](0));
+        g.ownerFp[1] = uint64(uint160(OX));
+        g.ownerFp[2] = uint64(uint160(OY));
+        g.ownerFp[3] = uint64(uint160(OZ));
+    }
+
+    /// AM-04.1 / AM-5.16 / AM-02.2: replacement rule of an open set, by quality (q, mass), not by eUp.
     function test_openReplacementRule() public {
         bytes32 setId = _set(true, true);
-        CertLib.Graph memory g = _honest();
-        uint256[][] memory t = g.fixedPoint(60);
-        (bool ok,) = address(ar).call(_cd(setId, g, t));
-        assertTrue(ok);
-        // same precision: refused before minRefresh (an open set is not replaceable at will)
-        vm.expectRevert();
-        (ok,) = address(ar).call(_cd(setId, g, t));
-        // after minRefresh, an equally precise one is accepted
-        vm.roll(block.number + 51);
-        (ok,) = address(ar).call(_cd(setId, g, t));
-        assertTrue(ok);
-        // a worse one (Y truncated) is refused until stale
-        CertLib.Graph memory g2 = CertLib.newGraph(4, 1, AN, AD, 4, 4);
-        g2.addRow(0, address(0), _one(1), _oneW(10_000));
-        g2.addRow(1, OX, _one(2), _oneW(5000));
-        g2.ownerFp[1] = uint64(uint160(OX));
-        g2.ownerFp[2] = uint64(uint160(OY));
-        uint256[][] memory t2 = g2.fixedPoint(60);
-        vm.roll(block.number + 51);
-        vm.expectRevert();
-        (ok,) = address(ar).call(_cd(setId, g2, t2));
-        vm.roll(block.number + 1001);
-        (ok,) = address(ar).call(_cd(setId, g2, t2));
-        assertTrue(ok, "stale -> any valid certificate");
+        _honest(); // A -> X (+1), X -> Y (+0.5)
+        CertLib.Graph memory g = _chain(5000, 0);
+        _submitOk(setId, g, g.fixedPoint(60));
+        // identical certificate: same quality, accepted (non-strict rule; the submitter pays)
+        _submitOk(setId, g, g.fixedPoint(60));
+
+        // censorship: X's endorsement of Y omitted (X's row kept, empty). It has FEWER positive edges, so a
+        // smaller eUp: the v1 rule (eNew < eCur) accepted it. Now: Y's mass is lost -> refused.
+        CertLib.Graph memory gc = _chain(0, 0);
+        assertLt(CertLib.eEff(gc, gc.fixedPoint(60)), CertLib.eEff(g, g.fixedPoint(60)), "censor has a smaller eUp");
+        _submitRefused(setId, gc, gc.fixedPoint(60));
+
+        // growing graph (AM-04.1): X now also vouches for Z (+0.4), the row stays under GRID (no dilution):
+        // more edges, larger eUp, same q (0) and more mass -> accepted at once, before minRefresh
+        vm.prank(OX);
+        rep.giveFeedback(103, 40, 0, "vouch", "");
+        CertLib.Graph memory g2 = _chain(5000, 4000);
+        assertGt(CertLib.eEff(g2, g2.fixedPoint(60)), CertLib.eEff(g, g.fixedPoint(60)), "growth raises eUp");
+        _submitOk(setId, g2, g2.fixedPoint(60));
+
+        // a revocation lowers the true mass: the honest update is refused until the incumbent is PROVEN to
+        // overstate (proveEdge widens its eLow, which is credited to the newcomer)
+        vm.prank(OX);
+        rep.revokeFeedback(102, 1);
+        CertLib.Graph memory g3 = _chain(0, 4000);
+        _submitRefused(setId, g3, g3.fixedPoint(60));
+        AnchoredReputation.RowRef memory r;
+        r.pos = 1;
+        r.row = CertLib.rowBytes(g2, 1, 2);
+        r.path = CertLib.merkleProof(CertLib.leaves(g2, 2), 1);
+        ar.proveEdge(setId, r, _none(), "", 102);
+        _submitOk(setId, g3, g3.fixedPoint(60));
+
+        // AM-5.16: the zero vector is a valid sub-solution, but q ~ 1 WAD: refused, even in the refresh window
+        uint256[][] memory zero = new uint256[][](1);
+        zero[0] = new uint256[](4);
+        CertLib.Graph memory gz = CertLib.newGraph(4, 1, AN, AD, 0, 0);
+        // (block numbers are explicit: via-IR caches block.number inside a test function)
+        _submitRefused(setId, gz, zero);
+        vm.roll(1051);
+        _submitRefused(setId, gz, zero);
+        // once stale, anything replaces, and the honest certificate replaces the zero vector at once
+        vm.roll(2052);
+        _submitOk(setId, gz, zero);
+        _submitOk(setId, g3, g3.fixedPoint(60));
+
+        // refresh window: after minRefresh, an equally precise certificate with less mass passes (a decrease
+        // that nobody proved): the price of liveness, bounded by minRefresh (AM-INT.2)
+        vm.roll(2103);
+        _submitOk(setId, gc, gc.fixedPoint(60));
     }
 
     // ------------------------------------------------------------------ alias rows (D20)
@@ -204,6 +257,7 @@ contract VerifiedTest is AncreBase {
         vm.roll(block.number + 2000);
         vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadRows.selector, 10));
         (ok,) = address(ar).call(_cd(setId, g, t));
+        assertTrue(ok, "alias with another wallet must revert BadRows(10)");
     }
 
     // ------------------------------------------------------------------ declared B+ and dilution (V4, V7)
@@ -421,5 +475,179 @@ contract VerifiedTest is AncreBase {
         ar.proveEdge(setId, _proofA(g), _none(), "", 102);
         assertEq(uint8(ar.assess(102, setId, true).status), uint8(AnchoredReputation.Status.VETOED), "bit restored");
         assertFalse(ar.isTrusted(102, setId));
+    }
+
+    // ------------------------------------------------------------------ unified v1 format (integration 02+04)
+    function _rowRef(CertLib.Graph memory g, uint256 r) internal pure returns (AnchoredReputation.RowRef memory x) {
+        x.pos = r;
+        x.row = CertLib.rowBytes(g, r, 2);
+        x.path = CertLib.merkleProof(CertLib.leaves(g, 2), r);
+    }
+
+    function _setFallback(bool fallback_) internal returns (bytes32 setId) {
+        AnchoredReputation.SetParams memory p = _params(_anchors(1), 1);
+        p.policy.registryVerified = true;
+        p.policy.submitters = new address[](0);
+        p.policy.ownerFallback = fallback_;
+        setId = ar.registerAnchorSet(p);
+        ar.addNodes(setId, _agentEntries(101, 3));
+    }
+
+    /// D44: Y (102) has agentWallet = 0; with the owner fallback, its row is its owner's row (VIA_OWNER)
+    function _viaOwnerGraph() internal returns (CertLib.Graph memory g) {
+        idr.setWallet(102, address(0));
+        vm.prank(A);
+        rep.giveFeedback(102, 100, 0, "vouch", "");
+        vm.prank(OY);
+        rep.giveFeedback(103, 100, 0, "vouch", "");
+        g = CertLib.newGraph(4, 1, AN, AD, 4, 4);
+        g.addRow(0, address(0), _one(2), _oneW(10_000));
+        g.addRow(2, OY, _one(3), _oneW(10_000));
+        g.rowViaOwner[1] = true;
+        g.addRow(3, OZ, new uint256[](0), new int256[](0));
+        g.ownerFp[2] = uint64(uint160(OY));
+        g.ownerFp[3] = uint64(uint160(OZ));
+    }
+
+    function test_viaOwnerRows() public {
+        CertLib.Graph memory g = _viaOwnerGraph();
+        uint256[][] memory t = g.fixedPoint(60);
+        // a set without the fallback refuses VIA_OWNER rows (the edge rule is committed in the setId)
+        bytes32 noFb = _setFallback(false);
+        _expectSubmitRevert(noFb, g, abi.encodeWithSelector(AnchoredReputation.EdgeMismatch.selector, 1, 256));
+        bytes32 setId = _setFallback(true);
+        _submitOk(setId, g, t);
+        assertGt(t[0][3], 0, "Z receives mass through Y's owner row");
+        assertTrue(ar.policyOf(setId).ownerFallback);
+        // proveEdge on a VIA_OWNER row reads the owner's feedback
+        vm.prank(OY);
+        rep.revokeFeedback(103, 1);
+        ar.proveEdge(setId, _rowRef(g, 1), _none(), "", 103);
+        assertGt(ar.rowStateOf(setId, 2).dim, 0);
+        // the wallet always wins: once Y gets a wallet, the owner row is no longer Y's row (D44 (iv-a))
+        AnchoredReputation.RowRef memory r = _rowRef(g, 1);
+        r.path = new bytes32[](0);
+        bytes memory amends = abi.encodePacked(uint32(103), int16(10_000), int16(0));
+        vm.expectRevert(AnchoredReputation.NothingToProve.selector);
+        ar.proveWallet(setId, r, amends);
+        idr.setWallet(102, address(0xBEEF));
+        ar.proveWallet(setId, r, amends);
+        assertTrue(ar.rowStateOf(setId, 2).voided);
+        // and at submission, a VIA_OWNER row of an agent that has a wallet is refused
+        vm.roll(5000);
+        _expectSubmitRevert(setId, g, abi.encodeWithSelector(AnchoredReputation.EdgeMismatch.selector, 1, 256));
+    }
+
+    function test_viaOwnerRowFollowsTransfer() public {
+        CertLib.Graph memory g = _viaOwnerGraph();
+        bytes32 setId = _setFallback(true);
+        _submitOk(setId, g, g.fixedPoint(60));
+        vm.expectRevert(AnchoredReputation.NothingToProve.selector);
+        ar.proveWallet(setId, _rowRef(g, 1), "");
+        idr.transfer(102, address(0xD00D)); // new owner: the committed source (OY) is stale
+        ar.proveWallet(setId, _rowRef(g, 1), "");
+        (, uint256 eLow0) = ar.columnBounds(setId, 0);
+        assertGt(eLow0, 0, "Y's outgoing mass frozen (D44)");
+    }
+
+    /// An agent with mass and agentWallet = 0 (no fallback) is absorbing: its empty row has no source (FORMAT
+    /// R7). It is accepted (no truncation margin) and stays challengeable once a wallet appears.
+    function test_sourcelessEmptyRow() public {
+        idr.setWallet(101, address(0));
+        vm.prank(A);
+        rep.giveFeedback(101, 100, 0, "vouch", "");
+        bytes32 setId = _setFallback(false);
+        CertLib.Graph memory g = CertLib.newGraph(4, 1, AN, AD, 4, 4);
+        g.addRow(0, address(0), _one(1), _oneW(10_000));
+        g.addRow(1, address(0), new uint256[](0), new int256[](0));
+        g.ownerFp[1] = uint64(uint160(OX));
+        uint256[][] memory t = g.fixedPoint(60);
+        CertLib.Graph memory gt = CertLib.newGraph(4, 1, AN, AD, 4, 4); // same, X truncated
+        gt.addRow(0, address(0), _one(1), _oneW(10_000));
+        gt.ownerFp[1] = uint64(uint160(OX));
+        assertLt(CertLib.eEff(g, t), CertLib.eEff(gt, t) / 1e6, "the empty row avoids the truncation margin");
+        // refused on a fallback set (src(X) would be its owner) and with edges (no client to read them from)
+        _expectSubmitRevert(_setFallback(true), g, abi.encodeWithSelector(AnchoredReputation.EdgeMismatch.selector, 1, 256));
+        _submitOk(setId, g, t);
+        (, uint256 eEffOn,,,,,,,) = ar.certificate(setId);
+        assertEq(eEffOn, CertLib.eEff(g, t));
+        vm.expectRevert(AnchoredReputation.NothingToProve.selector);
+        ar.proveWallet(setId, _rowRef(g, 1), "");
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadProof.selector, 7));
+        ar.proveEdge(setId, _rowRef(g, 1), _none(), "", 102);
+        idr.setWallet(101, OX);
+        ar.proveWallet(setId, _rowRef(g, 1), "");
+        (uint256 eUp0, uint256 eLow0) = ar.columnBounds(setId, 0);
+        assertEq(eLow0, 0, "an empty row loses nothing: dim capped at its committed mass (0)");
+        assertGt(eUp0, CertLib.eUp(g, t)[0], "the unknown new row widens the upper side");
+        // a source-less row is refused at submission once the agent has a wallet
+        vm.roll(5000);
+        _expectSubmitRevert(setId, g, abi.encodeWithSelector(AnchoredReputation.EdgeMismatch.selector, 1, 256));
+    }
+
+    /// AM-04.2: tags longer than 32 bytes (execution.market) are accepted; only keccak256(tag) is stored
+    function test_longTagsAccepted() public {
+        string memory longTag = "requester_rating:knowledge_access"; // 33 bytes, 3 feedbacks on the mainnet
+        assertEq(bytes(longTag).length, 33);
+        AnchoredReputation.SetParams memory p = _params(_anchors(1), 1);
+        AnchoredReputation.TagSpec[] memory t5 = new AnchoredReputation.TagSpec[](5);
+        for (uint256 i; i < 4; ++i) {
+            t5[i] = p.tags[i];
+        }
+        t5[4] = AnchoredReputation.TagSpec(longTag, 0, 50e18, 100e18, 0);
+        for (uint256 i; i < 5; ++i) {
+            for (uint256 j = i + 1; j < 5; ++j) {
+                if (keccak256(bytes(t5[j].tag)) < keccak256(bytes(t5[i].tag))) (t5[i], t5[j]) = (t5[j], t5[i]);
+            }
+        }
+        p.tags = t5;
+        p.policy.registryVerified = true;
+        p.policy.submitters = new address[](0);
+        bytes32 setId = ar.registerAnchorSet(p);
+        ar.addNodes(setId, _agentEntries(101, 3));
+        vm.startPrank(A);
+        rep.giveFeedback(101, 100, 0, longTag, ""); // 100 in [0, 50, 100] => +1
+        rep.giveFeedback(102, 0, 0, longTag, ""); // 0 => -1: a veto by a long tag
+        vm.stopPrank();
+        CertLib.Graph memory g = CertLib.newGraph(4, 1, AN, AD, 4, 4);
+        g.addRow(0, address(0), _two(1, 2), _twoW(10_000, -10_000));
+        g.addRow(1, OX, new uint256[](0), new int256[](0));
+        g.ownerFp[1] = uint64(uint160(OX));
+        _submitOk(setId, g, g.fixedPoint(60));
+        assertTrue(ar.isTrusted(101, setId));
+        AnchoredReputation.Assessment memory x = ar.assess(102, setId, true);
+        assertEq(uint8(x.status), uint8(AnchoredReputation.Status.VETOED));
+        assertEq(x.triggerTag, keccak256(bytes(longTag)), "triggerTag = keccak256(tag1)");
+    }
+
+    /// D32 unified: the declared value is the TRUE positive sum sPlus, and B+ = max(GRID, sPlus). Below GRID
+    /// the omission margin is exact, (sPlus - S)/GRID, where a declared B+ (= GRID) charged (GRID - S)/GRID.
+    function test_declaredSPlusBelowGrid() public {
+        bytes32 setId = _set(false, false);
+        vm.startPrank(A);
+        rep.giveFeedback(101, 30, 0, "vouch", ""); // +0.3
+        rep.giveFeedback(102, 20, 0, "vouch", ""); // +0.2, omitted below
+        vm.stopPrank();
+        CertLib.Graph memory g = CertLib.newGraph(4, 1, AN, AD, 4, 4);
+        g.addRowDecl(0, address(0), _one(1), _oneW(3000), 5000);
+        g.addRow(1, OX, new uint256[](0), new int256[](0));
+        g.ownerFp[1] = uint64(uint160(OX));
+        uint256[][] memory t = g.fixedPoint(60);
+        CertLib.Graph memory gOld = CertLib.newGraph(4, 1, AN, AD, 4, 4); // the 02 encoding: B+ = 10 000 declared
+        gOld.addRowDecl(0, address(0), _one(1), _oneW(3000), 10_000);
+        gOld.addRow(1, OX, new uint256[](0), new int256[](0));
+        assertLt(CertLib.eUp(g, t)[0] * 3, CertLib.eUp(gOld, t)[0], "exact margin: 0.2 instead of 0.7 of t_A");
+        _submitOk(setId, g, t);
+        (uint256 eUp0,) = ar.columnBounds(setId, 0);
+        assertEq(eUp0, CertLib.eUp(g, t)[0]);
+        // the omitted edge, proven: no dilution (0.5 < 1), already prepaid by the margin
+        ar.proveEdge(setId, _proofA(g), _none(), "", 102);
+        (uint256 eUp1, uint256 eLow1) = ar.columnBounds(setId, 0);
+        assertEq(eLow1, 0);
+        assertEq(eUp1, eUp0, "prepaid (sPlus - S0)/B+ = 0.2: not billed twice");
+        // a declared sPlus below the committed sum is refused
+        g.rowBDecl[0] = 2999;
+        vm.roll(5000);
+        _expectSubmitRevert(setId, g, abi.encodeWithSelector(AnchoredReputation.BadRows.selector, 7));
     }
 }
