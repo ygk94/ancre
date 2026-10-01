@@ -392,9 +392,9 @@ contract VerifiedTest is AncreBase {
         r.row = CertLib.rowBytes(g, 1, 2);
         r.path = CertLib.merkleProof(CertLib.leaves(g, 2), 1);
         vm.expectRevert(AnchoredReputation.NothingToProve.selector);
-        ar.proveWallet(setId, r, "");
+        ar.proveWallet(setId, r, _none(), "");
         idr.transfer(101, address(0xDEAD)); // agentWallet cleared on transfer
-        ar.proveWallet(setId, r, "");
+        ar.proveWallet(setId, r, _none(), "");
         (, uint256 eLow0) = ar.columnBounds(setId, 0);
         assertEq(eLow0, (t[0][1] * 2 * 1e18 + 1e18 - 1) / 1e18, "X's outgoing mass frozen (D44)");
         assertTrue(ar.rowStateOf(setId, 1).voided);
@@ -529,9 +529,9 @@ contract VerifiedTest is AncreBase {
         r.path = new bytes32[](0);
         bytes memory amends = abi.encodePacked(uint32(103), int16(10_000), int16(0));
         vm.expectRevert(AnchoredReputation.NothingToProve.selector);
-        ar.proveWallet(setId, r, amends);
+        ar.proveWallet(setId, r, _none(), amends);
         idr.setWallet(102, address(0xBEEF));
-        ar.proveWallet(setId, r, amends);
+        ar.proveWallet(setId, r, _none(), amends);
         assertTrue(ar.rowStateOf(setId, 2).voided);
         // and at submission, a VIA_OWNER row of an agent that has a wallet is refused
         vm.roll(5000);
@@ -543,9 +543,9 @@ contract VerifiedTest is AncreBase {
         bytes32 setId = _setFallback(true);
         _submitOk(setId, g, g.fixedPoint(60));
         vm.expectRevert(AnchoredReputation.NothingToProve.selector);
-        ar.proveWallet(setId, _rowRef(g, 1), "");
+        ar.proveWallet(setId, _rowRef(g, 1), _none(), "");
         idr.transfer(102, address(0xD00D)); // new owner: the committed source (OY) is stale
-        ar.proveWallet(setId, _rowRef(g, 1), "");
+        ar.proveWallet(setId, _rowRef(g, 1), _none(), "");
         (, uint256 eLow0) = ar.columnBounds(setId, 0);
         assertGt(eLow0, 0, "Y's outgoing mass frozen (D44)");
     }
@@ -572,11 +572,11 @@ contract VerifiedTest is AncreBase {
         (, uint256 eEffOn,,,,,,,) = ar.certificate(setId);
         assertEq(eEffOn, CertLib.eEff(g, t));
         vm.expectRevert(AnchoredReputation.NothingToProve.selector);
-        ar.proveWallet(setId, _rowRef(g, 1), "");
+        ar.proveWallet(setId, _rowRef(g, 1), _none(), "");
         vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadProof.selector, 7));
         ar.proveEdge(setId, _rowRef(g, 1), _none(), "", 102);
         idr.setWallet(101, OX);
-        ar.proveWallet(setId, _rowRef(g, 1), "");
+        ar.proveWallet(setId, _rowRef(g, 1), _none(), "");
         (uint256 eUp0, uint256 eLow0) = ar.columnBounds(setId, 0);
         assertEq(eLow0, 0, "an empty row loses nothing: dim capped at its committed mass (0)");
         assertGt(eUp0, CertLib.eUp(g, t)[0], "the unknown new row widens the upper side");
@@ -649,5 +649,89 @@ contract VerifiedTest is AncreBase {
         g.rowBDecl[0] = 2999;
         vm.roll(5000);
         _expectSubmitRevert(setId, g, abi.encodeWithSelector(AnchoredReputation.BadRows.selector, 7));
+    }
+
+    // ------------------------------------------------------------------ fixes of the integration review (01/10)
+    /// review 2a: omitting a negative edge changes neither mass nor q; the distrust mass now refuses it
+    function test_replacementRefusesOmittedNegative() public {
+        bytes32 setId = _set(true, true);
+        vm.startPrank(A);
+        rep.giveFeedback(101, 100, 0, "vouch", "");
+        rep.giveFeedback(102, -100, 0, "slash", "");
+        vm.stopPrank();
+        CertLib.Graph memory g = CertLib.newGraph(4, 1, AN, AD, 4, 4);
+        g.addRow(0, address(0), _two(1, 2), _twoW(10_000, -10_000));
+        g.addRow(1, OX, new uint256[](0), new int256[](0));
+        g.ownerFp[1] = uint64(uint160(OX));
+        _submitOk(setId, g, g.fixedPoint(60));
+        CertLib.Graph memory gc = CertLib.newGraph(4, 1, AN, AD, 4, 4); // the slash omitted
+        gc.addRow(0, address(0), _one(1), _oneW(10_000));
+        gc.addRow(1, OX, new uint256[](0), new int256[](0));
+        gc.ownerFp[1] = uint64(uint160(OX));
+        _submitRefused(setId, gc, gc.fixedPoint(60));
+    }
+
+    /// review 2b: a certificate proven wrong cannot be resubmitted as is to erase its proofs
+    function test_replacementRefusesResubmittingProvenCertificate() public {
+        bytes32 setId = _set(true, true);
+        vm.startPrank(A);
+        rep.giveFeedback(101, 100, 0, "vouch", "");
+        rep.giveFeedback(102, 100, 0, "vouch", "");
+        vm.stopPrank();
+        CertLib.Graph memory g = CertLib.newGraph(4, 1, AN, AD, 4, 4); // dilution: A -> Y omitted, no sPlus
+        g.addRow(0, address(0), _one(1), _oneW(10_000));
+        g.addRow(1, OX, new uint256[](0), new int256[](0));
+        g.ownerFp[1] = uint64(uint160(OX));
+        uint256[][] memory t = g.fixedPoint(60);
+        _submitOk(setId, g, t);
+        ar.proveEdge(setId, _proofA(g), _none(), "", 102);
+        _submitRefused(setId, g, t);
+        CertLib.Graph memory gh = CertLib.newGraph(4, 1, AN, AD, 4, 4); // the honest one replaces at once
+        gh.addRow(0, address(0), _two(1, 2), _twoW(10_000, 10_000));
+        gh.addRow(1, OX, new uint256[](0), new int256[](0));
+        gh.addRow(2, OY, new uint256[](0), new int256[](0));
+        gh.ownerFp[1] = uint64(uint160(OX));
+        gh.ownerFp[2] = uint64(uint160(OY));
+        _submitOk(setId, gh, gh.fixedPoint(60));
+    }
+
+    /// review 3 and 5: proveWallet on an alias bills its source's committed mass S0/B0 (not 1), and a declared
+    /// sPlus margin is not billed twice
+    function test_proveWalletAliasAndPrepaid() public {
+        bytes32 setId = _set(false, false);
+        idr.setWallet(103, OX); // X (101) and Z (103) share the wallet OX
+        CertLib.Graph memory g = CertLib.newGraph(4, 1, AN, AD, 4, 4);
+        g.addRow(0, address(0), _two(1, 3), _twoW(10_000, 10_000));
+        g.addRowDecl(1, OX, _one(2), _oneW(3000), 5000); // +0.3 committed, true positive sum 0.5
+        g.addRow(2, OY, new uint256[](0), new int256[](0));
+        g.addAlias(3, OX, 1);
+        g.ownerFp[1] = uint64(uint160(OX));
+        g.ownerFp[2] = uint64(uint160(OY));
+        g.ownerFp[3] = uint64(uint160(OZ));
+        uint256[][] memory t = g.fixedPoint(60);
+        _submit(setId, g, t, type(uint256).max);
+        (uint256 eUp0,) = ar.columnBounds(setId, 0);
+        idr.setWallet(103, address(0xBEEF));
+        ar.proveWallet(setId, _rowRef(g, 3), _rowRef(g, 1), "");
+        (uint256 eUp1, uint256 eLow1) = ar.columnBounds(setId, 0);
+        assertEq(eLow1, (t[0][3] * 2 * 3e17 + 1e18 - 1) / 1e18, "dim = S0/B0 = 0.3 of the source row");
+        // inc = (1 - prepaid 0.2) + 1 = 1.8
+        assertEq(eUp1 - eUp0, (t[0][3] * 2 * 18e17 + 1e18 - 1) / 1e18, "prepaid sPlus margin not billed twice");
+    }
+
+    /// review 4: a burnt agent's source-less row has nothing to prove (no new client can appear)
+    function test_burntSourcelessRowNothingToProve() public {
+        idr.setWallet(101, address(0));
+        vm.prank(A);
+        rep.giveFeedback(101, 100, 0, "vouch", "");
+        bytes32 setId = _setFallback(false);
+        CertLib.Graph memory g = CertLib.newGraph(4, 1, AN, AD, 4, 4);
+        g.addRow(0, address(0), _one(1), _oneW(10_000));
+        g.addRow(1, address(0), new uint256[](0), new int256[](0));
+        g.ownerFp[1] = uint64(uint160(OX));
+        _submitOk(setId, g, g.fixedPoint(60));
+        vm.mockCallRevert(address(idr), abi.encodeWithSelector(idr.getAgentWallet.selector, 101), "burnt");
+        vm.expectRevert(AnchoredReputation.NothingToProve.selector);
+        ar.proveWallet(setId, _rowRef(g, 1), _none(), "");
     }
 }

@@ -58,7 +58,8 @@
 **Énoncé.** Si t et t' sont deux sous-solutions du même graphe vrai (t, t' ≤ t* composante par composante, L2), alors ‖t* − t‖₁ = ‖t*‖₁ − ‖t‖₁ par colonne : la plus massive est la plus proche de t* en norme L1. De plus, si ‖(t − t*)⁺‖₁ ≤ eLow (borne prouvée sur le titulaire), alors ‖min(t, t*)‖₁ ≥ ‖t‖₁ − eLow.
 **Preuve.** t* − t ≥ 0 coordonnée par coordonnée, donc sa norme L1 est la somme des différences. Pour la seconde partie, ‖min(t, t*)‖₁ = ‖t‖₁ − ‖(t − t*)⁺‖₁. ∎
 **Conséquence.** La règle « masse_new + eLowEff_cur ≥ masse_cur » (ENCODING.md §5) n'accepte, hors fenêtre de rafraîchissement, qu'un certificat au moins aussi précis que la part prouvée-valide du titulaire, tant que les deux sont dominés par le registre. Une omission (censure) baisse la masse et est refusée ; une dilution peut l'augmenter et passe (AM-02.2, fermée seulement par `proveEdge`). q (eUp sans le plancher d'arrondi E⁺ + 1) borne le côté méfiance : r_a ≥ α‖t*_engagé − t‖₁ − (E⁺ + 1), car ‖(I − (1 − α)Cᵀ)x‖₁ ≥ α‖x‖₁ ; une sous-solution peu massive a donc un q grand (le vecteur nul : q ≈ 1 WAD, AM-5.16).
-**Test.** `test/Verified.t.sol::test_openReplacementRule` (censure refusée, croissance acceptée, révocation acceptée après preuve, vecteur nul refusé).
+Le côté méfiance a aussi sa masse : D = Σ_v d_v. Omettre une arête négative ne change ni la masse ni q, mais baisse D ; la voie rapide exige donc D_new ≥ D_cur (ajout après la revue de code du 01/10). Un certificat déjà prouvé faux ne peut pas revenir à l'identique : ses preuves seraient effacées.
+**Test.** `test/Verified.t.sol::test_openReplacementRule` (censure refusée, croissance acceptée, révocation acceptée après preuve, vecteur nul refusé), `test_replacementRefusesOmittedNegative`, `test_replacementRefusesResubmittingProvenCertificate`.
 
 ## Garanties du contrat v1, et ce qu'elles ne couvrent pas
 

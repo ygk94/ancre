@@ -147,3 +147,43 @@ MESURÉ : **9/9**. Violations :
 Remarque de mesure : il faut `ETH_RPC_TIMEOUT=900` et `anvil --timeout 120000 --retries 10`. Sans eux, deux vecteurs ont échoué au premier passage sur un délai d'attente entre `cast` et anvil (état distant lu slot par slot), sans rapport avec le contrat.
 
 **Non fait** : la simulation sur un fork du testnet. Le banc P1 du 02 (`RegistryBenchTest`) tourne déjà sur le testnet. Les vecteurs du solveur viennent du mainnet, donc le fork du mainnet est le bon juge.
+
+---
+
+## 2026-10-01 (reprise après coupure de la machine) — Étape 5 : revue de code, corrections, tests
+
+La première `/code-review` et les processus anvil sont morts avec la machine. **Revue relancée** avec la cible explicite `/Users/hugo/Projet/ancre-int`, diff `ae4c153..230be35`. Son rapport affiche la branche `chantier/integration-02-04` et ne cite que des chemins du worktree : AM-02.9 évité.
+
+**10 constats : 9 corrigés, 1 assumé** (détail dans le rapport, §7).
+
+Contrat :
+- (2a) une arête négative omise ne changeait ni la masse ni q → la voie rapide exige aussi D_new ≥ D_cur, avec D = Σ d (masse de méfiance) ;
+- (2b) un certificat prouvé faux, resoumis à l'identique, effaçait ses preuves → refusé ;
+- (3) `proveWallet` sur un alias facturait 1 au lieu de S⁰/B⁰ → paramètre `src` (la ligne source) ;
+- (5) `proveWallet` facturait deux fois la marge sPlus prépayée ;
+- (4) un agent brûlé avec une ligne sans source donnait un élargissement fictif → `NothingToProve` ;
+- vue `quality` → (masse, q_cur, D, prouvé).
+
+Solveur :
+- (6) DILUTION revérifiée sur la ligne amendée (`still_dilutes`) ;
+- (7) une ligne sans `row_src` est `NotEncodable` ;
+- (8) lambdas triés avec les ancres, `make_set_block` partagé ;
+- (9) test différentiel durci : resoumission vérifiée, D et « prouvé » comparés ;
+- (10) nettoyage.
+
+Constat (1), la fenêtre de rafraîchissement, est assumé (AM-INT.2).
+
+**Mesures** (MESURÉ, 01/10)
+- `forge test` (avec `ETH_RPC_TIMEOUT=900`) : **91 verts** ;
+- `pytest` : **134 verts, 1 sauté** ;
+- `simulate.py` relancé sur le contrat final : 9/9, violations identiques.
+
+Fait nouveau : **la republication de l'ancien graphe par un tiers est désormais refusée** (`NotBetter`), par D. La copie de la ligne de 0xea0b par #22 perd sa masse, donc sa méfiance. Une dilution purement positive passe encore (AM-INT.1).
+
+Gas :
+- somme de D en assembleur (la version Solidity vérifiée coûtait environ 250 gas par nœud) ;
+- mise à jour E = 300, k = 3 : +2,2 % par rapport au v1 du 02 ;
+- démo Registry-verified : inchangée ;
+- taille : 33 527 octets.
+
+Nouvel angle mort : AM-INT.15 (une variante d'un certificat dilué doit être reprouvée).

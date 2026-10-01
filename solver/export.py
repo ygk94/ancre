@@ -135,7 +135,20 @@ def set_params_values(st: dict) -> list:
     tags = [[x["tag"], int(x["min"]), int(x["neutral"]), int(x["max"]), x["kind"]] for x in st["tags"]]
     pol = st["policy"]
     return [st["anchors"], [int(x) for x in st["lambdas"]], st["alphaN"], st["alphaD"], st["tagSchemaHash"], tags,
-            [pol[f] if f != "submitters" else pol[f] for f, _ in POLICY_FIELDS]]
+            [pol[f] for f, _ in POLICY_FIELDS]]
+
+
+def make_set_block(anchors: list[str], lambdas: list[int], alphaN: int, alphaD: int, tag_schema_hash: str,
+                   schema: dict[str, TagSpec], filter_tags: list[str], policy: dict) -> dict:
+    """The JSON `set` block (FORMAT.md §1), shared by export_certificate and certifier.SetConfig so that the two
+    can never build different setIds. Anchors are sorted WITH their lambdas (registerAnchorSet order)."""
+    pairs = sorted(zip((a.lower() for a in anchors), lambdas))
+    return {"anchors": [a for a, _ in pairs], "lambdas": [str(l) for _, l in pairs], "alphaN": alphaN,
+            "alphaD": alphaD, "minAnchors": policy["minAnchors"], "tagSchemaHash": tag_schema_hash,
+            "tags": [{"tag": t, "min": str(schema[t].min_wad), "neutral": str(schema[t].neutral_wad),
+                      "max": str(schema[t].max_wad), "kind": 0 if schema[t].kind == "endorsement" else 1}
+                     for t in sorted_tags(filter_tags)],
+            "policy": policy}
 
 
 def set_id(st: dict) -> str:
@@ -174,7 +187,9 @@ def row_bytes(cert: Certificate, u: int, W: int, alias_of: dict[int, int]) -> by
     """Bytes of one row (contracts/ENCODING.md §3.2): u ‖ hdr ‖ [src:20] ‖ [sPlus:u32] ‖ [ref:W] ‖ edges.
     SRC for agent rows whose source resolves (via wallet or owner), VIA_OWNER when it resolves through the owner (D44),
     SPLUS when the declared true positive sum exceeds the committed one, ALIAS (with SRC repeated) for a copy."""
-    src, via = cert.row_src.get(u, (None, "address"))
+    if u not in cert.row_src:
+        raise NotEncodable(f"row {u} has no recorded source (row_src): its client is unknown")
+    src, via = cert.row_src[u]
     edges = cert.rows[u]
     has_src = via in ("wallet", "owner")
     owner_bit = HDR_VIA_OWNER if via == "owner" else 0
@@ -204,7 +219,7 @@ def aliases(cert: Certificate) -> dict[int, int]:
     count: dict[int, int] = {}
     out = {}
     for u in sorted(cert.rows):
-        src, via = cert.row_src.get(u, (None, "address"))
+        src, via = cert.row_src.get(u, (None, "missing"))
         if via not in ("wallet", "owner"):
             continue
         f = first.get(src)
@@ -256,14 +271,14 @@ def encode(cert: Certificate, nodes: list[tuple[str, object]], identity: Identit
             "graphRoot": merkle_root(leaves), "vectorRoot": keccak(vectors), "ownerFp": fps}
 
 
-def quality(cert: Certificate) -> tuple[int, int]:
-    """(qEff, mass) of the replacement rule (ENCODING.md §4-§5): q_a = ⌈(r_a − E⁺ − 1)·αD/αN⌉ aggregated with ⌈λ·/WAD⌉;
-    mass = Σ_a ⌊λ_a·Σ_v t_v^(a) / WAD⌋."""
+def quality(cert: Certificate) -> tuple[int, int, int]:
+    """(qEff, mass, distrustMass) of the replacement rule (ENCODING.md §4-§5): q_a = ⌈(r_a − E⁺ − 1)·αD/αN⌉
+    aggregated with ⌈λ·/WAD⌉; mass = Σ_a ⌊λ_a·Σ_v t_v^(a) / WAD⌋; distrustMass = Σ_v d_v."""
     e_pos = sum(1 for r in cert.rows.values() for _, q, _ in r if q > 0)
     q = [ceil_div((ra - e_pos - 1) * cert.alphaD, cert.alphaN) for ra in cert.r]
     q_eff = sum(ceil_div(l * qa, WAD) for l, qa in zip(cert.lambdas, q))
     mass = sum(l * sum(col) // WAD for l, col in zip(cert.lambdas, cert.t))
-    return q_eff, mass
+    return q_eff, mass, sum(cert.d)
 
 
 def export_certificate(g: Graph, cert: Certificate, identity: Identity | None, *, schema: dict[str, TagSpec],
@@ -285,17 +300,8 @@ def export_certificate(g: Graph, cert: Certificate, identity: Identity | None, *
         "notes": notes,
         "alignedWith": "contracts/ENCODING.md unified v1 (2026-10-01), AnchoredReputation v1 (integration 02+04)",
         "identityBlock": identity.block if identity else None,
-        "set": {
-            "anchors": [str(g.nodes[s][1]) for s in g.anchors],
-            "lambdas": [str(x) for x in cert.lambdas],
-            "alphaN": cert.alphaN, "alphaD": cert.alphaD,
-            "minAnchors": policy["minAnchors"],
-            "tagSchemaHash": tag_schema_hash,
-            "tags": [{"tag": t, "min": str(schema[t].min_wad), "neutral": str(schema[t].neutral_wad),
-                      "max": str(schema[t].max_wad), "kind": 0 if schema[t].kind == "endorsement" else 1}
-                     for t in sorted_tags(filter_tags)],
-            "policy": policy,
-        },
+        "set": make_set_block([str(g.nodes[s][1]) for s in g.anchors], cert.lambdas, cert.alphaN, cert.alphaD,
+                              tag_schema_hash, schema, filter_tags, policy),
         "nCert": cert.n,
         "nodes": [],
         "rows": [],
@@ -305,7 +311,7 @@ def export_certificate(g: Graph, cert: Certificate, identity: Identity | None, *
             "subSolution": True,
             "iterationsFromZero": cert.iterations,
             "r": [str(x) for x in cert.r], "e": [str(x) for x in cert.e], "eEff": str(e_eff(cert)),
-            "qEff": str(quality(cert)[0]), "mass": str(quality(cert)[1]),
+            **dict(zip(("qEff", "mass", "distrustMass"), map(str, quality(cert)))),
             "d": [str(x) for x in cert.d],
             "graphRoot": "0x" + enc["graphRoot"].hex(), "vectorRoot": "0x" + enc["vectorRoot"].hex(),
             "tight": {"r": [str(x) for x in tight_r],
@@ -421,7 +427,8 @@ def check_file_obj(obj: dict, path=None) -> None:
     vec = bytes.fromhex(obj["calldata"]["vectors"][2:])
     assert "0x" + keccak(vec).hex() == obj["expected"]["vectorRoot"]
     assert set_id(obj["set"]) == obj["set"]["setId"], path              # D39: policy committed in the setId
-    assert [str(x) for x in quality(cert)] == [obj["expected"]["qEff"], obj["expected"]["mass"]], path
+    cert.d = d
+    assert [str(x) for x in quality(cert)] == [obj["expected"][k] for k in ("qEff", "mass", "distrustMass")], path
 
 
 # ----------------------------------------------------------------------------- génération des vecteurs

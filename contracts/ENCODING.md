@@ -180,12 +180,16 @@ x = neutral ⇒ w = 0
 Submitter-attested sets: a listed submitter always replaces (D27). Open (Registry-verified) sets: a new certificate is
 accepted iff
 ```
+REFUSED first: the incumbent was proven wrong (eLowEff > 0 or eEff > eEff at submission) AND the newcomer has the
+         same vectorRoot and graphRoot (resubmitting would erase the proofs: review 01/10)
+then accepted iff:
 no certificate | registryChanged | age > maxAge | eLowEff_cur > eLowMax
-| ( mass_new + eLowEff_cur >= mass_cur   AND   qEff_new <= q_cur )            at least as good on both sides
-| ( age > minRefresh                     AND   qEff_new <= q_cur + slackRefresh )   refresh window
-with q_cur = eEff_cur − eFloor_cur + eLowEff_cur,   eFloor = eEff − qEff at submission (stored)
+| ( mass_new + eLowEff_cur >= mass_cur  AND  qEff_new <= q_cur  AND  D_new >= D_cur )   at least as good on every side
+| ( age > minRefresh                    AND  qEff_new <= q_cur + slackRefresh )        refresh window
+with q_cur = eEff_cur − eFloor_cur + eLowEff_cur,   eFloor = eEff − qEff at submission (stored),
+     D = Σ_v d_v (distrust mass: an omitted negative edge changes neither mass nor q, but lowers D)
 ```
-otherwise `NotBetter(qNew, qCur, massNew, massCur)`. Why (details in the integration report §2):
+otherwise `NotBetter(qNew, qCur, massNew, massCur)`. `quality(setId)` returns (mass, q_cur, D, proven). Why (details in the integration report §2):
 - comparing eUp itself (the 28/09 rule) blocked every honest update of a growing graph (each new positive edge adds
   one wei of floor slack to r) and **rewarded censorship**: fewer edges = smaller E⁺ = smaller eUp;
 - for two valid sub-solutions of the same graph, `‖t* − t‖₁ = ‖t*‖₁ − ‖t‖₁`: **more mass is more precise** on the
@@ -194,8 +198,10 @@ otherwise `NotBetter(qNew, qCur, massNew, massCur)`. Why (details in the integra
 - `q` keeps the distrust side honest: a certificate that truncates massive rows (huge margin) is refused even with the
   same mass;
 - AM-5.16: a zero vector has q ≈ 1 WAD: it never replaces a live certificate, and any honest one replaces it at once;
+- D keeps the negative edges and the certified vetoes: a forgiven slash (lower D) waits for the window;
 - the refresh window lets an unproven decrease (revocation) through after `minRefresh`; `minRefresh = maxAge`
-  disables it (censorship resistance first). Dilution (under-declared sPlus) still passes: AM-02.2, only a watcher
+  disables it (censorship resistance first). A certificate that slipped through it is re-replaced by the honest one
+  at once (more mass, same q); Dilution (under-declared sPlus) still passes: AM-02.2, only a watcher
   with `proveEdge` closes it.
 
 ## 6. Storage (MIP-8) and reading
@@ -235,12 +241,13 @@ eLow_a += ⌈ t_u^(a)·om·dec⁺ / (alphaN·WAD) ⌉        eUp_a += ⌈ t_u^(a
 ```
 Then eLowEff and eEff are recomputed; `eLowEff > eLowMax` ⇒ `STALE` (D36).
 
-### 7.2 `proveWallet(setId, r, amends)` — (iv) SOURCE
+### 7.2 `proveWallet(setId, r, src, amends)` — (iv) SOURCE
 An agent row whose committed source no longer resolves (§3.4): agentWallet changed (cleared at every transfer: this
 freezes the OUTGOING edges of a transferred agent, D44), owner of a VIA_OWNER row changed or the agent got a wallet
-(D44 (iv-a)), or a source-less row's agent got a wallet. Billed: eLow += the not-yet-billed part of the committed
-positive mass (`⌈WAD·S⁰/B⁰⌉` for a full row, WAD for an alias whose edges live in its source), eUp += both sides up
-to WAD. The row becomes void.
+(D44 (iv-a)), or a source-less row's agent got a wallet (a burnt agent's source-less row has nothing to prove). `src`:
+for an alias, its committed source row (Merkle path), as in `proveEdge`. Billed: eLow += the not-yet-billed part of the
+committed positive mass `⌈WAD·S⁰/B⁰⌉` (of the source row for an alias); eUp += (1 − prepaid⁺) not yet billed on the
+positive side + the rest of 1 on the negative side. The row becomes void.
 
 ### 7.3 `proveTransfer(setId, agentId)` — fast mode (D25/D35)
 Certified agent whose `ownerOf` no longer matches `ownerFp`: sets the transfer bit; `assess` returns `TRANSFERRED`.

@@ -144,3 +144,26 @@ def test_trigger_on_transfer_of_a_controller_rejected_target():
     assert (A, 1) not in g.pairs and (AGENT, 1) not in g.index
     sup = C.Support.of(g, certify(g, cfg.alpha))
     assert C.relevant({"kind": "Transfer", "agentId": 1}, sup)
+
+
+def test_set_config_sorts_lambdas_with_anchors():
+    """Review 01/10: anchors are sorted for registerAnchorSet; each lambda must stay on its anchor."""
+    B, A = "0x" + "b" * 40, "0x" + "a" * 40
+    cfg = C.SetConfig(name="o", anchors=[B, A], lambdas=[7 * 10**17, 3 * 10**17], alphaN=1, alphaD=3,
+                      filter_tags=["vouch"])
+    assert cfg.anchors == [A, B] and cfg.lambdas == [3 * 10**17, 7 * 10**17]
+    st = cfg.set_block()
+    assert st["anchors"] == [A, B] and st["lambdas"] == [str(3 * 10**17), str(7 * 10**17)]
+
+
+def test_encode_refuses_row_without_source():
+    """Review 01/10: a row whose source was never recorded is NotEncodable (it would be refused on chain)."""
+    from graph import Identity
+    g = build_graph([Feedback(1, "0x" + "a" * 40, 1, 100, 0, "vouch", "", False)],
+                    Identity(block=0, owner={1: "0x" + "1" * 40}, wallet={1: "0x" + "1" * 40}),
+                    C.SetConfig(name="x", anchors=[], lambdas=[], alphaN=1, alphaD=3, filter_tags=[]).schema(),
+                    ["vouch"], ["0x" + "a" * 40])
+    cert = certify(g, Fraction(1, 3))
+    cert.row_src.pop(0)
+    with pytest.raises(X.NotEncodable):
+        X.encode(cert, [g.nodes[i] for i in cert.node_map], None)

@@ -14,9 +14,9 @@
    "registerGas": 619611,
    "mutated": "rejected: NotSubSolution(0, 12)",
    "result": "ACCEPTED",
-   "estimate": 3703522,
-   "gasLimit": 3986287,
-   "gasUsed": 3703522,
+   "estimate": 3722033,
+   "gasLimit": 4006186,
+   "gasUsed": 3722033,
    "eEffOnChain": 148,
    "eEffExpected": 148,
    "graphRootMatch": true,
@@ -32,9 +32,9 @@
    "registerGas": 413966,
    "mutated": "rejected: NotSubSolution(0, 5)",
    "result": "ACCEPTED",
-   "estimate": 993697,
-   "gasLimit": 1073225,
-   "gasUsed": 993697,
+   "estimate": 1028760,
+   "gasLimit": 1110917,
+   "gasUsed": 1028760,
    "eEffOnChain": 16,
    "eEffExpected": 16,
    "graphRootMatch": true,
@@ -50,9 +50,9 @@
    "registerGas": 572462,
    "mutated": "rejected: NotSubSolution(0, 5)",
    "result": "ACCEPTED",
-   "estimate": 6064898,
-   "gasLimit": 6524766,
-   "gasUsed": 6064898,
+   "estimate": 6101533,
+   "gasLimit": 6564148,
+   "gasUsed": 6101533,
    "eEffOnChain": 174,
    "eEffExpected": 174,
    "graphRootMatch": true,
@@ -68,9 +68,9 @@
    "registerGas": 413966,
    "mutated": "rejected: NotSubSolution(0, 5)",
    "result": "ACCEPTED",
-   "estimate": 1004890,
-   "gasLimit": 1085257,
-   "gasUsed": 1004890,
+   "estimate": 1039953,
+   "gasLimit": 1122950,
+   "gasUsed": 1039953,
    "eEffOnChain": 18,
    "eEffExpected": 18,
    "graphRootMatch": true,
@@ -86,9 +86,9 @@
    "registerGas": 432567,
    "mutated": "rejected: NotSubSolution(0, 263)",
    "result": "ACCEPTED",
-   "estimate": 19735885,
-   "gasLimit": 21221077,
-   "gasUsed": 19735885,
+   "estimate": 19789596,
+   "gasLimit": 21278816,
+   "gasUsed": 19789596,
    "eEffOnChain": 1124556900135260,
    "eEffExpected": 1124556900135260,
    "graphRootMatch": true,
@@ -104,9 +104,9 @@
    "registerGas": 432555,
    "mutated": "rejected: NotSubSolution(0, 4)",
    "result": "ACCEPTED",
-   "estimate": 640915,
-   "gasLimit": 693984,
-   "gasUsed": 640915,
+   "estimate": 675948,
+   "gasLimit": 731645,
+   "gasUsed": 675948,
    "eEffOnChain": 14,
    "eEffExpected": 14,
    "graphRootMatch": true,
@@ -122,9 +122,9 @@
    "registerGas": 432555,
    "mutated": "rejected: NotSubSolution(0, 4)",
    "result": "ACCEPTED",
-   "estimate": 640975,
-   "gasLimit": 694049,
-   "gasUsed": 640975,
+   "estimate": 676008,
+   "gasLimit": 731709,
+   "gasUsed": 676008,
    "eEffOnChain": 22,
    "eEffExpected": 22,
    "graphRootMatch": true,
@@ -140,9 +140,9 @@
    "registerGas": 432555,
    "mutated": "rejected: NotSubSolution(0, 4)",
    "result": "ACCEPTED",
-   "estimate": 640927,
-   "gasLimit": 693997,
-   "gasUsed": 640927,
+   "estimate": 675960,
+   "gasLimit": 731657,
+   "gasUsed": 675960,
    "eEffOnChain": 28,
    "eEffExpected": 28,
    "graphRootMatch": true,
@@ -158,9 +158,9 @@
    "registerGas": 432555,
    "mutated": "rejected: NotSubSolution(0, 4)",
    "result": "ACCEPTED",
-   "estimate": 635272,
-   "gasLimit": 687918,
-   "gasUsed": 635272,
+   "estimate": 670306,
+   "gasLimit": 725579,
+   "gasUsed": 670306,
    "eEffOnChain": 19542096574323471,
    "eEffExpected": 19542096574323471,
    "graphRootMatch": true,
@@ -189,7 +189,7 @@
    "level": "Registry-verified",
    "submission": "ACCEPTED",
    "reason": null,
-   "gasUsed": 990693,
+   "gasUsed": 1025747,
    "detected": [
     "DILUTION"
    ],
@@ -198,8 +198,9 @@
      "kind": "DILUTION",
      "fn": "proveEdge",
      "status": true,
-     "gasUsed": 304293,
-     "error": null
+     "gasUsed": 304304,
+     "error": null,
+     "reason": null
     }
    ],
    "eLowEffBefore": "0",
@@ -212,7 +213,7 @@
    "level": "Registry-verified",
    "submission": "ACCEPTED",
    "reason": null,
-   "gasUsed": 857555,
+   "gasUsed": 875562,
    "detected": [
     "OMITTED_NEGATIVE",
     "OMITTED_NEGATIVE"
@@ -222,15 +223,17 @@
      "kind": "OMITTED_NEGATIVE",
      "fn": "proveEdge",
      "status": true,
-     "gasUsed": 275451,
-     "error": null
+     "gasUsed": 275462,
+     "error": null,
+     "reason": null
     },
     {
      "kind": "OMITTED_NEGATIVE",
      "fn": "proveEdge",
      "status": true,
-     "gasUsed": 283920,
-     "error": null
+     "gasUsed": 283931,
+     "error": null,
+     "reason": null
     }
    ],
    "eLowEffBefore": "0",
@@ -243,7 +246,7 @@
    "level": "Registry-verified",
    "submission": "ACCEPTED",
    "reason": null,
-   "gasUsed": 969303,
+   "gasUsed": 1004366,
    "detected": [
     "DILUTION",
     "OMITTED_NEGATIVE"
@@ -253,15 +256,17 @@
      "kind": "OMITTED_NEGATIVE",
      "fn": "proveEdge",
      "status": true,
-     "gasUsed": 278551,
-     "error": null
+     "gasUsed": 278562,
+     "error": null,
+     "reason": null
     },
     {
      "kind": "DILUTION",
      "fn": "proveEdge",
      "status": true,
-     "gasUsed": 258685,
-     "error": null
+     "gasUsed": 258696,
+     "error": null,
+     "reason": null
     }
    ],
    "eLowEffBefore": "0",
@@ -274,7 +279,7 @@
    "level": "Submitter-attested",
    "submission": "ACCEPTED",
    "reason": null,
-   "gasUsed": 696045,
+   "gasUsed": 731153,
    "detected": [
     "FABRICATED"
    ],
@@ -283,8 +288,9 @@
      "kind": "FABRICATED",
      "fn": "proveEdge",
      "status": true,
-     "gasUsed": 281585,
-     "error": null
+     "gasUsed": 281596,
+     "error": null,
+     "reason": null
     }
    ],
    "eLowEffBefore": "0",
@@ -297,7 +303,7 @@
    "level": "Submitter-attested",
    "submission": "ACCEPTED",
    "reason": null,
-   "gasUsed": 690240,
+   "gasUsed": 725348,
    "detected": [
     "INFLATED"
    ],
@@ -306,8 +312,9 @@
      "kind": "INFLATED",
      "fn": "proveEdge",
      "status": true,
-     "gasUsed": 285182,
-     "error": null
+     "gasUsed": 285193,
+     "error": null,
+     "reason": null
     }
    ],
    "eLowEffBefore": "0",
@@ -320,7 +327,7 @@
    "level": "Submitter-attested",
    "submission": "ACCEPTED",
    "reason": null,
-   "gasUsed": 688072,
+   "gasUsed": 723180,
    "detected": [
     "DILUTION"
    ],
@@ -329,8 +336,9 @@
      "kind": "DILUTION",
      "fn": "proveEdge",
      "status": true,
-     "gasUsed": 304293,
-     "error": null
+     "gasUsed": 304304,
+     "error": null,
+     "reason": null
     }
    ],
    "eLowEffBefore": "0",
@@ -343,7 +351,7 @@
    "level": "Submitter-attested",
    "submission": "ACCEPTED",
    "reason": null,
-   "gasUsed": 638026,
+   "gasUsed": 656059,
    "detected": [
     "OMITTED_NEGATIVE",
     "OMITTED_NEGATIVE"
@@ -353,15 +361,17 @@
      "kind": "OMITTED_NEGATIVE",
      "fn": "proveEdge",
      "status": true,
-     "gasUsed": 275451,
-     "error": null
+     "gasUsed": 275462,
+     "error": null,
+     "reason": null
     },
     {
      "kind": "OMITTED_NEGATIVE",
      "fn": "proveEdge",
      "status": true,
-     "gasUsed": 283920,
-     "error": null
+     "gasUsed": 283931,
+     "error": null,
+     "reason": null
     }
    ],
    "eLowEffBefore": "0",
@@ -374,7 +384,7 @@
    "level": "Submitter-attested",
    "submission": "ACCEPTED",
    "reason": null,
-   "gasUsed": 685467,
+   "gasUsed": 720575,
    "detected": [
     "DILUTION",
     "OMITTED_NEGATIVE"
@@ -384,15 +394,17 @@
      "kind": "OMITTED_NEGATIVE",
      "fn": "proveEdge",
      "status": true,
-     "gasUsed": 278551,
-     "error": null
+     "gasUsed": 278562,
+     "error": null,
+     "reason": null
     },
     {
      "kind": "DILUTION",
      "fn": "proveEdge",
      "status": true,
-     "gasUsed": 258685,
-     "error": null
+     "gasUsed": 258696,
+     "error": null,
+     "reason": null
     }
    ],
    "eLowEffBefore": "0",
@@ -408,12 +420,12 @@
    "gasUsed": 414002
   },
   {
-   "ts": 1790849643.574,
+   "ts": 1790854698.226,
    "action": "certified",
-   "latencyMs": 390.5,
+   "latencyMs": 402.8,
    "txs": 1,
    "refresh": false,
-   "lastTx": "0x9ead36e27b37d713bab428e644c9e8c48cded9ea152c87968b04a1d79c6bb4f3",
+   "lastTx": "0xe50f3856f5d12efb8c3d4981b7bc34fd2118d127140034db53d3fa1f7e9c6080",
    "txBlock": 108835726,
    "set": "mainnet-honest",
    "reason": "first certificate",
@@ -426,10 +438,10 @@
    "mass": 703703703703703702,
    "iterations": 4,
    "graphRoot": "0x202e848c99665e17fb9a3d736394b98b794356f8ed7edca925639d24a6db69cd",
-   "computeMs": 329.1
+   "computeMs": 343.4
   },
   {
-   "ts": 1790849643.641,
+   "ts": 1790854698.282,
    "action": "skip_identical",
    "set": "mainnet-honest",
    "reason": "recompute, nothing changed",
@@ -442,7 +454,7 @@
    "mass": 703703703703703702,
    "iterations": 4,
    "graphRoot": "0x202e848c99665e17fb9a3d736394b98b794356f8ed7edca925639d24a6db69cd",
-   "computeMs": 66.7
+   "computeMs": 56.4
   },
   {
    "registryWrite": "anchor 0x0730 vouches #22 (impersonated on the fork)",
@@ -453,12 +465,12 @@
    "relevant": true
   },
   {
-   "ts": 1790849652.633,
+   "ts": 1790854707.285,
    "action": "certified",
-   "latencyMs": 395.1,
+   "latencyMs": 251.1,
    "txs": 1,
    "refresh": false,
-   "lastTx": "0xe7792a28940d5d63e78fd3f79e8e44aaa4531ebc2c8566fac0fa789c81c4ed0a",
+   "lastTx": "0xca963ded147b6bf4464fa85f0f38dd34d4607358d53de4cc8f2e1fe4dce7bfe8",
    "txBlock": 108835728,
    "set": "mainnet-honest",
    "reason": "growing graph: new feedback by an anchor (AM-04.1)",
@@ -471,11 +483,11 @@
    "mass": 703703703703703702,
    "iterations": 4,
    "graphRoot": "0xecd6e49b4d71cd6a4403ae48e1f18dd5cfc91d4414c57591acf687bdf235c1ad",
-   "computeMs": 54.2
+   "computeMs": 61.1
   },
   {
    "censorship": "third party resubmits without the new endorsement of #22",
-   "result": "ACCEPTED (same mass and q: the omission is a dilution, AM-02.2)",
+   "result": "refused: NotBetter(0, 0, 703703703703703702, 703703703703703702)",
    "eEffCensor": 16,
    "eEffCurrent": 24,
    "qCensor": 0,
@@ -483,61 +495,21 @@
    "massCurrent": 703703703703703702
   },
   {
-   "watcherEvents": [
-    "skip_replaced",
-    "audit"
-   ],
-   "watcher": [
-    "DILUTION"
-   ],
-   "proofs": [
-    {
-     "kind": "DILUTION",
-     "fn": "proveEdge",
-     "status": true,
-     "gasUsed": 294388
-    }
-   ],
-   "eLowEffAfter": 166666666666666667,
-   "massCur": 703703703703703702
-  },
-  {
-   "ts": 1790849654.185,
-   "action": "certified",
-   "latencyMs": 120.8,
-   "txs": 1,
-   "refresh": false,
-   "lastTx": "0xf3ee1e655ae6420e93f1097c522b167e44bdf756c5982540d3699b07ae2636d8",
-   "txBlock": 108835731,
-   "set": "mainnet-honest",
-   "reason": "honest certificate after the dilution proof",
-   "block": null,
-   "nCert": 7,
-   "rows": 6,
-   "newNodes": 0,
-   "eEff": 24,
-   "qEff": 0,
-   "mass": 703703703703703702,
-   "iterations": 4,
-   "graphRoot": "0xecd6e49b4d71cd6a4403ae48e1f18dd5cfc91d4414c57591acf687bdf235c1ad",
-   "computeMs": 62.8
-  },
-  {
    "trigger": "NewFeedback scanner -> #2",
    "relevant": false
   },
   {
    "frontRun": "third party addNodes(#999999, #23)",
-   "tx": "0x7ffedc2ad3241eafcabafe5f72a9e53d5e2397e916f9f03e3f1fa8be10ee31d0"
+   "tx": "0x4488ed535969c78600ebfe6d782eadc3a4e4bfb836d46745bc567a733d928b2d"
   },
   {
-   "ts": 1790849663.949,
+   "ts": 1790854719.209,
    "action": "certified",
-   "latencyMs": 400.8,
+   "latencyMs": 442.7,
    "txs": 1,
    "refresh": false,
-   "lastTx": "0x20b87387d6ee6e70b9a0f2ce5124b695a9b1722bb7d70a6458bbc1db1165e22f",
-   "txBlock": 108835734,
+   "lastTx": "0x61626145a02fef9f34931944b893568a5933946eb00310c4072a8ebc58faf057",
+   "txBlock": 108835731,
    "set": "mainnet-honest",
    "reason": "after a third-party addNodes",
    "block": null,
@@ -549,16 +521,16 @@
    "mass": 703703703703703702,
    "iterations": 4,
    "graphRoot": "0xbbb69180f483adb52668bd5c33e1ee6807e15dc328234f29d16a7e5a62454e9e",
-   "computeMs": 75.8
+   "computeMs": 90.6
   },
   {
-   "ts": 1790849682.824,
+   "ts": 1790854737.675,
    "action": "certified",
-   "latencyMs": 117.1,
+   "latencyMs": 107.0,
    "txs": 1,
    "refresh": true,
-   "lastTx": "0x99314cced156872401c2ff3baf81dd627568a5d464ede4299b1177c5ce932138",
-   "txBlock": 108860736,
+   "lastTx": "0xaf29c987fefdb3f3f3fedbec0c36ad7e062a701a73b0b3d701ba05334516ebe3",
+   "txBlock": 108860733,
    "set": "mainnet-honest",
    "reason": "age refresh, identical graph",
    "block": null,
@@ -570,18 +542,18 @@
    "mass": 703703703703703702,
    "iterations": 4,
    "graphRoot": "0xbbb69180f483adb52668bd5c33e1ee6807e15dc328234f29d16a7e5a62454e9e",
-   "computeMs": 58.0
+   "computeMs": 48.7
   },
   {
    "journal": [
     {
-     "ts": 1790849643.573,
+     "ts": 1790854698.225,
      "action": "submitCertificate",
      "note": "nCert 6, rows 5",
-     "estimate": 993697,
-     "gasLimit": 1073225,
-     "gasUsed": 993697,
-     "tx": "0x9ead36e27b37d713bab428e644c9e8c48cded9ea152c87968b04a1d79c6bb4f3",
+     "estimate": 1028760,
+     "gasLimit": 1110917,
+     "gasUsed": 1028760,
+     "tx": "0xe50f3856f5d12efb8c3d4981b7bc34fd2118d127140034db53d3fa1f7e9c6080",
      "status": true,
      "txBlock": 108835726,
      "set": "mainnet-honest",
@@ -595,15 +567,15 @@
      "mass": 703703703703703702,
      "iterations": 4,
      "graphRoot": "0x202e848c99665e17fb9a3d736394b98b794356f8ed7edca925639d24a6db69cd",
-     "computeMs": 329.1
+     "computeMs": 343.4
     },
     {
-     "ts": 1790849643.574,
+     "ts": 1790854698.226,
      "action": "certified",
-     "latencyMs": 390.5,
+     "latencyMs": 402.8,
      "txs": 1,
      "refresh": false,
-     "lastTx": "0x9ead36e27b37d713bab428e644c9e8c48cded9ea152c87968b04a1d79c6bb4f3",
+     "lastTx": "0xe50f3856f5d12efb8c3d4981b7bc34fd2118d127140034db53d3fa1f7e9c6080",
      "txBlock": 108835726,
      "set": "mainnet-honest",
      "reason": "first certificate",
@@ -616,10 +588,10 @@
      "mass": 703703703703703702,
      "iterations": 4,
      "graphRoot": "0x202e848c99665e17fb9a3d736394b98b794356f8ed7edca925639d24a6db69cd",
-     "computeMs": 329.1
+     "computeMs": 343.4
     },
     {
-     "ts": 1790849643.641,
+     "ts": 1790854698.282,
      "action": "skip_identical",
      "set": "mainnet-honest",
      "reason": "recompute, nothing changed",
@@ -632,16 +604,16 @@
      "mass": 703703703703703702,
      "iterations": 4,
      "graphRoot": "0x202e848c99665e17fb9a3d736394b98b794356f8ed7edca925639d24a6db69cd",
-     "computeMs": 66.7
+     "computeMs": 56.4
     },
     {
-     "ts": 1790849652.632,
+     "ts": 1790854707.284,
      "action": "submitCertificate",
      "note": "nCert 7, rows 6",
-     "estimate": 618353,
-     "gasLimit": 669730,
-     "gasUsed": 618353,
-     "tx": "0xe7792a28940d5d63e78fd3f79e8e44aaa4531ebc2c8566fac0fa789c81c4ed0a",
+     "estimate": 619856,
+     "gasLimit": 671346,
+     "gasUsed": 619856,
+     "tx": "0xca963ded147b6bf4464fa85f0f38dd34d4607358d53de4cc8f2e1fe4dce7bfe8",
      "status": true,
      "txBlock": 108835728,
      "set": "mainnet-honest",
@@ -655,15 +627,15 @@
      "mass": 703703703703703702,
      "iterations": 4,
      "graphRoot": "0xecd6e49b4d71cd6a4403ae48e1f18dd5cfc91d4414c57591acf687bdf235c1ad",
-     "computeMs": 54.2
+     "computeMs": 61.1
     },
     {
-     "ts": 1790849652.633,
+     "ts": 1790854707.285,
      "action": "certified",
-     "latencyMs": 395.1,
+     "latencyMs": 251.1,
      "txs": 1,
      "refresh": false,
-     "lastTx": "0xe7792a28940d5d63e78fd3f79e8e44aaa4531ebc2c8566fac0fa789c81c4ed0a",
+     "lastTx": "0xca963ded147b6bf4464fa85f0f38dd34d4607358d53de4cc8f2e1fe4dce7bfe8",
      "txBlock": 108835728,
      "set": "mainnet-honest",
      "reason": "growing graph: new feedback by an anchor (AM-04.1)",
@@ -676,62 +648,18 @@
      "mass": 703703703703703702,
      "iterations": 4,
      "graphRoot": "0xecd6e49b4d71cd6a4403ae48e1f18dd5cfc91d4414c57591acf687bdf235c1ad",
-     "computeMs": 54.2
+     "computeMs": 61.1
     },
     {
-     "ts": 1790849654.185,
-     "action": "submitCertificate",
-     "note": "nCert 7, rows 6",
-     "estimate": 566833,
-     "gasLimit": 614346,
-     "gasUsed": 566833,
-     "tx": "0xf3ee1e655ae6420e93f1097c522b167e44bdf756c5982540d3699b07ae2636d8",
-     "status": true,
-     "txBlock": 108835731,
-     "set": "mainnet-honest",
-     "reason": "honest certificate after the dilution proof",
-     "block": null,
-     "nCert": 7,
-     "rows": 6,
-     "newNodes": 0,
-     "eEff": 24,
-     "qEff": 0,
-     "mass": 703703703703703702,
-     "iterations": 4,
-     "graphRoot": "0xecd6e49b4d71cd6a4403ae48e1f18dd5cfc91d4414c57591acf687bdf235c1ad",
-     "computeMs": 62.8
-    },
-    {
-     "ts": 1790849654.185,
-     "action": "certified",
-     "latencyMs": 120.8,
-     "txs": 1,
-     "refresh": false,
-     "lastTx": "0xf3ee1e655ae6420e93f1097c522b167e44bdf756c5982540d3699b07ae2636d8",
-     "txBlock": 108835731,
-     "set": "mainnet-honest",
-     "reason": "honest certificate after the dilution proof",
-     "block": null,
-     "nCert": 7,
-     "rows": 6,
-     "newNodes": 0,
-     "eEff": 24,
-     "qEff": 0,
-     "mass": 703703703703703702,
-     "iterations": 4,
-     "graphRoot": "0xecd6e49b4d71cd6a4403ae48e1f18dd5cfc91d4414c57591acf687bdf235c1ad",
-     "computeMs": 62.8
-    },
-    {
-     "ts": 1790849663.949,
+     "ts": 1790854719.208,
      "action": "submitCertificate",
      "note": "nCert 9, rows 7",
-     "estimate": 721372,
-     "gasLimit": 780475,
-     "gasUsed": 721372,
-     "tx": "0x20b87387d6ee6e70b9a0f2ce5124b695a9b1722bb7d70a6458bbc1db1165e22f",
+     "estimate": 722979,
+     "gasLimit": 782203,
+     "gasUsed": 722979,
+     "tx": "0x61626145a02fef9f34931944b893568a5933946eb00310c4072a8ebc58faf057",
      "status": true,
-     "txBlock": 108835734,
+     "txBlock": 108835731,
      "set": "mainnet-honest",
      "reason": "after a third-party addNodes",
      "block": null,
@@ -743,16 +671,16 @@
      "mass": 703703703703703702,
      "iterations": 4,
      "graphRoot": "0xbbb69180f483adb52668bd5c33e1ee6807e15dc328234f29d16a7e5a62454e9e",
-     "computeMs": 75.8
+     "computeMs": 90.6
     },
     {
-     "ts": 1790849663.949,
+     "ts": 1790854719.209,
      "action": "certified",
-     "latencyMs": 400.8,
+     "latencyMs": 442.7,
      "txs": 1,
      "refresh": false,
-     "lastTx": "0x20b87387d6ee6e70b9a0f2ce5124b695a9b1722bb7d70a6458bbc1db1165e22f",
-     "txBlock": 108835734,
+     "lastTx": "0x61626145a02fef9f34931944b893568a5933946eb00310c4072a8ebc58faf057",
+     "txBlock": 108835731,
      "set": "mainnet-honest",
      "reason": "after a third-party addNodes",
      "block": null,
@@ -764,18 +692,18 @@
      "mass": 703703703703703702,
      "iterations": 4,
      "graphRoot": "0xbbb69180f483adb52668bd5c33e1ee6807e15dc328234f29d16a7e5a62454e9e",
-     "computeMs": 75.8
+     "computeMs": 90.6
     },
     {
-     "ts": 1790849682.824,
+     "ts": 1790854737.674,
      "action": "submitCertificate",
      "note": "nCert 9, rows 7",
-     "estimate": 630501,
-     "gasLimit": 682789,
-     "gasUsed": 630501,
-     "tx": "0x99314cced156872401c2ff3baf81dd627568a5d464ede4299b1177c5ce932138",
+     "estimate": 632108,
+     "gasLimit": 684517,
+     "gasUsed": 632108,
+     "tx": "0xaf29c987fefdb3f3f3fedbec0c36ad7e062a701a73b0b3d701ba05334516ebe3",
      "status": true,
-     "txBlock": 108860736,
+     "txBlock": 108860733,
      "set": "mainnet-honest",
      "reason": "age refresh, identical graph",
      "block": null,
@@ -787,16 +715,16 @@
      "mass": 703703703703703702,
      "iterations": 4,
      "graphRoot": "0xbbb69180f483adb52668bd5c33e1ee6807e15dc328234f29d16a7e5a62454e9e",
-     "computeMs": 58.0
+     "computeMs": 48.7
     },
     {
-     "ts": 1790849682.824,
+     "ts": 1790854737.675,
      "action": "certified",
-     "latencyMs": 117.1,
+     "latencyMs": 107.0,
      "txs": 1,
      "refresh": true,
-     "lastTx": "0x99314cced156872401c2ff3baf81dd627568a5d464ede4299b1177c5ce932138",
-     "txBlock": 108860736,
+     "lastTx": "0xaf29c987fefdb3f3f3fedbec0c36ad7e062a701a73b0b3d701ba05334516ebe3",
+     "txBlock": 108860733,
      "set": "mainnet-honest",
      "reason": "age refresh, identical graph",
      "block": null,
@@ -808,7 +736,7 @@
      "mass": 703703703703703702,
      "iterations": 4,
      "graphRoot": "0xbbb69180f483adb52668bd5c33e1ee6807e15dc328234f29d16a7e5a62454e9e",
-     "computeMs": 58.0
+     "computeMs": 48.7
     }
    ]
   }
@@ -822,15 +750,15 @@
   {
    "journal": [
     {
-     "ts": 1790849683.276,
+     "ts": 1790854738.21,
      "action": "addNodes",
      "note": "nodes 0..499",
      "estimate": 22959400,
      "gasLimit": 24686355,
      "gasUsed": 22959400,
-     "tx": "0xf266bfc7f9c950c02971b5765ba7c730008c9490dd71a455c47095ea311efd1b",
+     "tx": "0x05801098e53809f530c7701a03ec89d5d93056217dc0963ddab0e5a82bf3dd56",
      "status": true,
-     "txBlock": 108860738,
+     "txBlock": 108860735,
      "set": "split",
      "reason": "first large certificate (crashes)",
      "block": null,
@@ -842,16 +770,85 @@
      "mass": 997403656985208874,
      "iterations": 98,
      "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 294.0
+     "computeMs": 400.2
     },
     {
-     "ts": 1790849683.585,
+     "ts": 1790854738.439,
      "action": "addNodes",
      "note": "nodes 0..499",
      "estimate": 22973176,
      "gasLimit": 24701165,
      "gasUsed": 22973176,
-     "tx": "0x52fa16b5be5604c3a5a9fc93f79e4da42f50af9c78c39b4847a5201157e9c68b",
+     "tx": "0x4dca63eca19066f17da8b86b3a3c04fd5ea4f6bb647e65de4f28af5a09c9ebf0",
+     "status": true,
+     "txBlock": 108860736,
+     "set": "split",
+     "reason": "restart after crash, state file lost",
+     "block": null,
+     "nCert": 1237,
+     "rows": 1237,
+     "newNodes": 735,
+     "eEff": 11226,
+     "qEff": 0,
+     "mass": 997403656985208874,
+     "iterations": 98,
+     "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
+     "computeMs": 139.0
+    },
+    {
+     "ts": 1790854738.5,
+     "action": "addNodes",
+     "note": "nodes 500..734",
+     "estimate": 10823787,
+     "gasLimit": 11640572,
+     "gasUsed": 10823787,
+     "tx": "0x67424d352f52364bd7b39ec7822a48b06398cdacbe2757103a121bd7fe75e864",
+     "status": true,
+     "txBlock": 108860737,
+     "set": "split",
+     "reason": "restart after crash, state file lost",
+     "block": null,
+     "nCert": 1237,
+     "rows": 1237,
+     "newNodes": 735,
+     "eEff": 11226,
+     "qEff": 0,
+     "mass": 997403656985208874,
+     "iterations": 98,
+     "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
+     "computeMs": 139.0
+    },
+    {
+     "ts": 1790854738.556,
+     "action": "reserveCapacity",
+     "note": "upto 480",
+     "estimate": 10380543,
+     "gasLimit": 11164084,
+     "gasUsed": 10380543,
+     "tx": "0xbc3bb38f002272ce17eace2690982133fe294b6ec3982e8f1d58d46127170445",
+     "status": true,
+     "txBlock": 108860738,
+     "set": "split",
+     "reason": "restart after crash, state file lost",
+     "block": null,
+     "nCert": 1237,
+     "rows": 1237,
+     "newNodes": 735,
+     "eEff": 11226,
+     "qEff": 0,
+     "mass": 997403656985208874,
+     "iterations": 98,
+     "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
+     "computeMs": 139.0
+    },
+    {
+     "ts": 1790854738.61,
+     "action": "reserveCapacity",
+     "note": "upto 960",
+     "estimate": 10391343,
+     "gasLimit": 11175694,
+     "gasUsed": 10391343,
+     "tx": "0x783ab0351f56507ff7bcf8ad5691dbb96f3a71e3edda74960a43d3eee3c49e8f",
      "status": true,
      "txBlock": 108860739,
      "set": "split",
@@ -865,16 +862,16 @@
      "mass": 997403656985208874,
      "iterations": 98,
      "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 183.2
+     "computeMs": 139.0
     },
     {
-     "ts": 1790849683.648,
-     "action": "addNodes",
-     "note": "nodes 500..734",
-     "estimate": 10823787,
-     "gasLimit": 11640572,
-     "gasUsed": 10823787,
-     "tx": "0x3c7e42b3fb87f1298b350b568dcb7dcad18d3f459101840d7ba06a796a14e2a6",
+     "ts": 1790854738.663,
+     "action": "reserveCapacity",
+     "note": "upto 1237",
+     "estimate": 6081493,
+     "gasLimit": 6542605,
+     "gasUsed": 6081493,
+     "tx": "0xc8ccbb3fac160bb01454472c604f6b8faf9a04a6771ab21c0a6e03081d632654",
      "status": true,
      "txBlock": 108860740,
      "set": "split",
@@ -888,16 +885,16 @@
      "mass": 997403656985208874,
      "iterations": 98,
      "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 183.2
+     "computeMs": 139.0
     },
     {
-     "ts": 1790849683.705,
-     "action": "reserveCapacity",
-     "note": "upto 480",
-     "estimate": 10380543,
-     "gasLimit": 11164084,
-     "gasUsed": 10380543,
-     "tx": "0xd8b6acd4c3c290813ead31fa15a4c4578e1f2e9eb3bfc90c69d14d1f8eb408a8",
+     "ts": 1790854738.954,
+     "action": "submitCertificate",
+     "note": "nCert 1237, rows 1237",
+     "estimate": 14357768,
+     "gasLimit": 15439601,
+     "gasUsed": 14357768,
+     "tx": "0x9dc8c7f27df4e9b2b70913bb0d3ea08acc017b0ba4a3f621d95305507a4353bc",
      "status": true,
      "txBlock": 108860741,
      "set": "split",
@@ -911,85 +908,16 @@
      "mass": 997403656985208874,
      "iterations": 98,
      "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 183.2
+     "computeMs": 139.0
     },
     {
-     "ts": 1790849683.763,
-     "action": "reserveCapacity",
-     "note": "upto 960",
-     "estimate": 10391343,
-     "gasLimit": 11175694,
-     "gasUsed": 10391343,
-     "tx": "0x3c0332c678f3f3fd6468bb13d556228566bb56e5be295d88887dbcd6395183c1",
-     "status": true,
-     "txBlock": 108860742,
-     "set": "split",
-     "reason": "restart after crash, state file lost",
-     "block": null,
-     "nCert": 1237,
-     "rows": 1237,
-     "newNodes": 735,
-     "eEff": 11226,
-     "qEff": 0,
-     "mass": 997403656985208874,
-     "iterations": 98,
-     "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 183.2
-    },
-    {
-     "ts": 1790849683.821,
-     "action": "reserveCapacity",
-     "note": "upto 1237",
-     "estimate": 6081493,
-     "gasLimit": 6542605,
-     "gasUsed": 6081493,
-     "tx": "0x7dc5b01d45b0583ee9f116c2b41801fa9313823edf3a93e62d2ec0376960af4e",
-     "status": true,
-     "txBlock": 108860743,
-     "set": "split",
-     "reason": "restart after crash, state file lost",
-     "block": null,
-     "nCert": 1237,
-     "rows": 1237,
-     "newNodes": 735,
-     "eEff": 11226,
-     "qEff": 0,
-     "mass": 997403656985208874,
-     "iterations": 98,
-     "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 183.2
-    },
-    {
-     "ts": 1790849684.13,
-     "action": "submitCertificate",
-     "note": "nCert 1237, rows 1237",
-     "estimate": 14250876,
-     "gasLimit": 15324692,
-     "gasUsed": 14250876,
-     "tx": "0xca22c76c82a8ab4b30977462e6f7c179db6682dd2e3fb3427eaddbaf0b7517bf",
-     "status": true,
-     "txBlock": 108860744,
-     "set": "split",
-     "reason": "restart after crash, state file lost",
-     "block": null,
-     "nCert": 1237,
-     "rows": 1237,
-     "newNodes": 735,
-     "eEff": 11226,
-     "qEff": 0,
-     "mass": 997403656985208874,
-     "iterations": 98,
-     "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 183.2
-    },
-    {
-     "ts": 1790849684.131,
+     "ts": 1790854738.955,
      "action": "certified",
-     "latencyMs": 800.8,
+     "latencyMs": 720.1,
      "txs": 6,
      "refresh": false,
-     "lastTx": "0xca22c76c82a8ab4b30977462e6f7c179db6682dd2e3fb3427eaddbaf0b7517bf",
-     "txBlock": 108860744,
+     "lastTx": "0x9dc8c7f27df4e9b2b70913bb0d3ea08acc017b0ba4a3f621d95305507a4353bc",
+     "txBlock": 108860741,
      "set": "split",
      "reason": "restart after crash, state file lost",
      "block": null,
@@ -1001,18 +929,18 @@
      "mass": 997403656985208874,
      "iterations": 98,
      "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-     "computeMs": 183.2
+     "computeMs": 139.0
     }
    ]
   },
   {
-   "ts": 1790849684.131,
+   "ts": 1790854738.955,
    "action": "certified",
-   "latencyMs": 800.8,
+   "latencyMs": 720.1,
    "txs": 6,
    "refresh": false,
-   "lastTx": "0xca22c76c82a8ab4b30977462e6f7c179db6682dd2e3fb3427eaddbaf0b7517bf",
-   "txBlock": 108860744,
+   "lastTx": "0x9dc8c7f27df4e9b2b70913bb0d3ea08acc017b0ba4a3f621d95305507a4353bc",
+   "txBlock": 108860741,
    "set": "split",
    "reason": "restart after crash, state file lost",
    "block": null,
@@ -1024,7 +952,7 @@
    "mass": 997403656985208874,
    "iterations": 98,
    "graphRoot": "0x9de0c9adf49323aea7392931ec477c3349927eb810e75976a59c2082c75b9e15",
-   "computeMs": 183.2
+   "computeMs": 139.0
   }
  ]
 }

@@ -48,7 +48,7 @@ class Discrepancy:
 
 
 PROVE_EDGE_SIG = "proveEdge(bytes32,(uint256,bytes,bytes32[]),(uint256,bytes,bytes32[]),bytes,uint256)"
-PROVE_WALLET_SIG = "proveWallet(bytes32,(uint256,bytes,bytes32[]),bytes)"
+PROVE_WALLET_SIG = "proveWallet(bytes32,(uint256,bytes,bytes32[]),(uint256,bytes,bytes32[]),bytes)"
 # proof order on one row: distrust first (V13), then what inflates trust, then dilution and deflation
 PRIORITY = {"SOURCE": -1, "OMITTED_NEGATIVE": 0, "FABRICATED": 1, "INFLATED": 1, "SIGN_FLIP": 2, "DILUTION": 3,
             "DEFLATED": 4}
@@ -91,7 +91,8 @@ def audit(rows_hex: str, nodes: list, fbs, idn: Identity, cfg: C.SetConfig) -> l
             have = (src, "owner" if via_owner else "wallet") if src is not None else (None, "")
             if have != want:                           # the row's client changed: void it (the edges are moot)
                 out.append(Discrepancy("SOURCE", u, None, str(src), int(val), None, None, provable=True,
-                                       proof={"fn": "proveWallet", "r": r, "committed": have, "registry": want}))
+                                       proof={"fn": "proveWallet", "r": r, "src": srow, "committed": have,
+                                              "registry": want}))
                 continue
             client = src
         else:
@@ -106,7 +107,8 @@ def audit(rows_hex: str, nodes: list, fbs, idn: Identity, cfg: C.SetConfig) -> l
         def disc(k, dst, a, w, q, fi, provable=True, hint=""):
             d = Discrepancy(k, u, dst, client, a, w, q, fi, provable=provable)
             d.proof = {"fn": "proveEdge", "r": r, "src": srow, "agentJ": a, "wCommitted": w or 0, "wRegistry": q or 0,
-                       "feedbacksOnPair": history.get((client, a), 0)} if provable else {"hint": hint}
+                       "feedbacksOnPair": history.get((client, a), 0), "rowSPlus": s_plus,
+                       "rowBPlus": b_plus} if provable else {"hint": hint}
             out.append(d)
         for dst, w, fi in rows[u]:
             a = nodes[dst][1] if nodes[dst][0] == AGENT else None
@@ -150,7 +152,7 @@ def prove(chain: C.Chain, contract: str, set_id: str, d: Discrepancy, gas: C.Gas
     am = "0x" + b"".join(a.to_bytes(4, "big") + (wc & 0xFFFF).to_bytes(2, "big") + (wn & 0xFFFF).to_bytes(2, "big")
                          for a, wc, wn in amends).hex()
     if p["fn"] == "proveWallet":
-        sig, args = PROVE_WALLET_SIG, [set_id, _tuple(p["r"], bool(amends)), am]
+        sig, args = PROVE_WALLET_SIG, [set_id, _tuple(p["r"], bool(amends)), _tuple(p["src"], False), am]
     else:
         sig, args = PROVE_EDGE_SIG, [set_id, _tuple(p["r"], bool(amends)), _tuple(p["src"], False), am,
                                      str(p["agentJ"])]
@@ -163,6 +165,15 @@ def prove(chain: C.Chain, contract: str, set_id: str, d: Discrepancy, gas: C.Gas
         rc = chain.send(contract, sig, *args, gas_limit=gas.limit(est))
         res.update(tx=rc["transactionHash"], status=rc["ok"], gasUsed=int(rc["gasUsed"], 16))
     return res
+
+
+def still_dilutes(amends: list[tuple[int, int, int]], d: Discrepancy) -> bool:
+    """DILUTION / DEFLATED were classified on the COMMITTED row; earlier proofs of the same pass may have lowered its
+    positive sum (a fabricated edge removed). Re-check on the amended row: prove only if S⁺ − w + q > max(GRID, sPlus)."""
+    s = d.proof["rowSPlus"]
+    for _, wc, wn in amends:
+        s += max(wn, 0) - max(wc, 0)
+    return s - max(d.w_committed or 0, 0) + max(d.w_registry or 0, 0) > d.proof["rowBPlus"]
 
 
 def amend(amends: list[tuple[int, int, int]], d: Discrepancy) -> list[tuple[int, int, int]]:
@@ -212,6 +223,10 @@ def watch_once(chain: C.Chain, contract: str, cfg: C.SetConfig, set_id: str, nod
         for u, lst in by_row.items():
             amends: list[tuple[int, int, int]] = []
             for d in sorted(lst, key=lambda d: (PRIORITY[d.kind], -abs(d.w_registry or 0))):
+                if d.kind in ("DILUTION", "DEFLATED") and not still_dilutes(amends, d):
+                    ev["proofs"].append({"kind": d.kind, "agentJ": d.agent_id, "u": u, "status": "skipped",
+                                         "reason": "no dilution any more on the amended row"})
+                    continue
                 try:
                     r = prove(chain, contract, set_id, d, cfg.gas, amends=amends, send=send)
                 except Exception as e:

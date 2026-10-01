@@ -167,6 +167,8 @@ contract AnchoredReputation {
         // replacement rule (AM-04.1, AM-5.16): quality of the incumbent, see submitCertificate
         uint256 mass; // sum_a floor(lambda_a * sum_v t_v^(a) / WAD): total certified lower-bound mass
         uint256 eFloor; // rounding-floor part of eEff at submission: q = eEff - eFloor (widened by proofs)
+        uint256 distrustMass; // sum_v d_v: the distrust side of the quality (negative edges, certified vetoes)
+        uint256 eSubmitted; // eEff at submission: eEff > eSubmitted or eLowEff > 0 <=> the incumbent was proven wrong
         uint256[16] anchors; // address | lambda << 160
         TagStored[16] tags;
         address[8] submitters; // D32 (inline: same page, no extra cold page at submission)
@@ -512,7 +514,7 @@ contract AnchoredReputation {
 
         uint256 eNew = _aggregate(s, P.eUp, k);
         if (eNew > eMax) revert ResidualTooLarge(eNew, eMax);
-        _replacementRule(s, eNew, P.q, P.mass);
+        _replacementRule(s, eNew, P, keccak256(vectors));
 
         _storeVectors(s, setId, n, k, vectors, P.d, P.veto);
 
@@ -538,9 +540,17 @@ contract AnchoredReputation {
     }
 
     /// Checks the replacement rule against the incumbent, then records the newcomer's quality.
-    function _replacementRule(SetState storage s, uint256 eNew, uint256[] memory q, uint256[] memory mass) internal {
-        uint256 qNew = _aggregate(s, q, s.k);
-        uint256 mNew = _massOf(s, mass, s.k);
+    function _replacementRule(SetState storage s, uint256 eNew, Pass memory P, bytes32 vRoot) internal {
+        uint256 qNew = _aggregate(s, P.q, s.k);
+        uint256 mNew = _massOf(s, P.mass, s.k);
+        uint256 dNew;
+        uint256[] memory d = P.d;
+        assembly ("memory-safe") {
+            // d values are < 2^256 / n (each is a sum of ceil terms bounded by T_u <= 2^64 per row): no overflow
+            for { let p := add(d, 32) let e := add(p, shl(5, mload(d))) } lt(p, e) { p := add(p, 32) } {
+                dNew := add(dNew, mload(p))
+            }
+        }
 
         // Replacement rule (AM-04.1, AM-5.16, AM-02.2). Submitter-attested: the listed submitters always
         // replace (D27: the set owner pays and decides). Open (Registry-verified) sets compare two qualities:
@@ -556,15 +566,23 @@ contract AnchoredReputation {
         //   | (age > minRefresh  and  q_new <= q_cur + slackRefresh)      (refresh window: decreases w/o proof)
         // with q_cur = eEff - eFloor + eLowEff (the incumbent widened by its proofs). A zero vector (AM-5.16)
         // has q ~ 1 WAD: it never replaces a live certificate, and any honest certificate replaces it at once.
+        // Distrust side (review 01/10): an omitted negative edge changes neither mass nor q, so the fast path
+        // also requires the newcomer's distrust mass sum_v d_v not to drop (a forgiven slash waits for the window).
+        // A certificate already proven wrong (widened) cannot be resubmitted as is: that would erase its proofs.
         if (s.certBlock != 0 && !s.registryChanged && s.numSubmitters == 0) {
             uint256 age = block.number - s.certBlock;
             uint256 qCur = s.eEff - s.eFloor + s.eLowEff;
-            bool ok = age > s.maxAge || s.eLowEff > s.eLowMax || (mNew + s.eLowEff >= s.mass && qNew <= qCur)
+            bool proven = s.eLowEff != 0 || s.eEff > s.eSubmitted;
+            if (proven && vRoot == s.vectorRoot && P.root == s.graphRoot) revert NotBetter(qNew, qCur, mNew, s.mass);
+            bool ok = age > s.maxAge || s.eLowEff > s.eLowMax
+                || (mNew + s.eLowEff >= s.mass && qNew <= qCur && dNew >= s.distrustMass)
                 || (age > s.minRefresh && qNew <= qCur + s.slackRefresh);
             if (!ok) revert NotBetter(qNew, qCur, mNew, s.mass);
         }
         s.mass = mNew;
         s.eFloor = eNew - qNew;
+        s.distrustMass = dNew;
+        s.eSubmitted = eNew;
     }
 
     /// Dry run for certifiers (no state change, no registry read): the per-column upper bounds, eEff and
@@ -1671,7 +1689,8 @@ contract AnchoredReputation {
     /// row's agent got a wallet. The row's client changed: worst case, all its committed positive mass is
     /// lost (eLow, capped at S0/B0 for a full row, at 1 for an alias) and the new client's row is unknown
     /// (eUp, both sides, capped). The row is then void.
-    function proveWallet(bytes32 setId, RowRef calldata r, bytes calldata amends) external {
+    /// @param src for an alias row: the committed source row (Merkle path required); ignored otherwise
+    function proveWallet(bytes32 setId, RowRef calldata r, RowRef calldata src, bytes calldata amends) external {
         SetState storage s = _set(setId);
         if (!s.registered || s.certBlock == 0) revert NoCert();
         (RowView memory v, bytes32 sk) = _openRow(s, setId, r, amends);
@@ -1679,13 +1698,14 @@ contract AnchoredReputation {
         if (key >> 248 != KIND_AGENT) revert BadProof(21);
         if (_sourceHolds(key & ID_MASK, v)) revert NothingToProve(); // a registry revert (burnt agent) = changed
         RowState storage st = _rows[sk];
-        uint256 capDim = WAD; // an alias row's edges live in its source row: worst case 1
-        if (!v.isAlias) {
-            EdgeSums memory m = _sums(s, setId, v, r.row, amends, 0);
-            capDim = (m.s0 * WAD + m.b0 - 1) / m.b0;
-        }
+        RowView memory e = v;
+        if (v.isAlias) e = _openSource(s, src, v.srcU);
+        EdgeSums memory m = _sums(s, setId, e, v.isAlias ? src.row : r.row, amends, 0);
+        uint256 capDim = (m.s0 * WAD + m.b0 - 1) / m.b0; // the committed positive mass S0/B0 (D22 cap)
         uint256 dim = _sat(capDim, st.dim); // what proveEdge has not billed yet of the committed mass
-        uint256 inc = (WAD - st.incP) + (WAD - st.incN);
+        // positive increase: the part prepaid by a declared sPlus at submission is not billed twice (as in proveEdge)
+        uint256 prepaid = e.sDecl != 0 ? ((e.sDecl - m.s0) * WAD) / m.b0 : 0;
+        uint256 inc = (_sat(WAD, prepaid) - _sat(st.incP, prepaid)) + (WAD - st.incN);
         st.dim = uint64(WAD);
         st.incP = uint64(WAD);
         st.incN = uint64(WAD);
@@ -1806,7 +1826,8 @@ contract AnchoredReputation {
     /// VIA_OWNER: agentWallet = 0 and ownerOf = SRC; no SRC: agentWallet = 0. A registry revert = changed.
     function _sourceHolds(uint256 j, RowView memory v) internal view returns (bool) {
         (bool okW, uint256 wal) = _staticWord(address(identity), abi.encodeCall(IIdentityRegistry8004.getAgentWallet, (j)));
-        if (!okW) return false;
+        // a burnt agent: a committed source no longer holds; a source-less row stays source-less (no new client)
+        if (!okW) return v.wallet == address(0);
         if (v.wallet == address(0) || v.hdr & H_VIA_OWNER != 0) {
             if (wal != 0) return false; // the wallet always wins (D44)
             if (v.wallet == address(0)) return true;
@@ -1965,12 +1986,16 @@ contract AnchoredReputation {
         return (s.certBlock, s.eEff, s.eLowEff, s.graphRoot, s.vectorRoot, s.versionHash, s.nCert, s.numRows, s.registryChanged);
     }
 
-    /// Quality of the current certificate for the replacement rule (ENCODING.md §5): its mass and its
-    /// q_cur = eEff - eFloor + eLowEff (widened by proofs). A certifier compares its own (qEff, mass) before paying.
-    function quality(bytes32 setId) external view returns (uint256 mass, uint256 qCur) {
+    /// Quality of the current certificate for the replacement rule (ENCODING.md §5): its mass, its
+    /// q_cur = eEff - eFloor + eLowEff (widened by proofs), its distrust mass sum_v d_v, and whether a proof widened it. A certifier compares its own (qEff, mass) before paying.
+    function quality(bytes32 setId)
+        external
+        view
+        returns (uint256 mass, uint256 qCur, uint256 distrustMass, bool proven)
+    {
         SetState storage s = _set(setId);
-        if (s.certBlock == 0) return (0, 0);
-        return (s.mass, s.eEff - s.eFloor + s.eLowEff);
+        if (s.certBlock == 0) return (0, 0, 0, false);
+        return (s.mass, s.eEff - s.eFloor + s.eLowEff, s.distrustMass, s.eLowEff != 0 || s.eEff > s.eSubmitted);
     }
 
     /// per-column bounds (t-space, WAD)

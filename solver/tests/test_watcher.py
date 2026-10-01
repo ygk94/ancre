@@ -133,3 +133,12 @@ def test_audit_source_change_is_proven_by_prove_wallet(tmp_path, monkeypatch):
     src = [d for d in disc if d.kind == "SOURCE"]
     assert len(src) == 1 and src[0].agent_id == 18 and src[0].proof["fn"] == "proveWallet"
     assert not [d for d in disc if d.u == src[0].u and d.kind != "SOURCE"]
+
+
+def test_dilution_rechecked_after_earlier_proofs():
+    """Review 01/10: S⁺ = 9000 with a fabricated +3000 and an omitted +2000. After the fabrication proof the row sum is
+    6000, so the omission no longer dilutes (8000 <= GRID) and must not be proven (it would only widen eUp)."""
+    fab = Wt.Discrepancy("FABRICATED", 0, 1, "0xc", 7, 3000, 0, proof={"rowSPlus": 9000, "rowBPlus": 10_000})
+    om = Wt.Discrepancy("DILUTION", 0, None, "0xc", 8, 0, 2000, proof={"rowSPlus": 9000, "rowBPlus": 10_000})
+    assert Wt.still_dilutes([], om)
+    assert not Wt.still_dilutes(Wt.amend([], fab), om)

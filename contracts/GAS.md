@@ -5,24 +5,24 @@ Environnement : Foundry 1.8.3, solc 0.8.28 via-IR, optimizer 200, `network = "mo
 
 ## Intégration 02 + 04 (2026-10-01) : contrat v1 unifié
 
-Changements qui touchent le gas : règle de remplacement par qualité (accumulation de la masse par colonne, deux slots de plus : `mass`, `eFloor`), contrôle de la source des lignes (`_clientOf` : chemin rapide et chemin rare pour VIA_OWNER et les lignes sans source), tags stockés par leur seul hash (un slot de moins par tag).
+Changements qui touchent le gas : règle de remplacement par qualité (accumulation de la masse par colonne, somme de la méfiance, quatre slots de plus : `mass`, `eFloor`, `distrustMass`, `eSubmitted` ; les deux derniers ajoutés après la revue de code), contrôle de la source des lignes (`_clientOf` : chemin rapide et chemin rare pour VIA_OWNER et les lignes sans source), tags stockés par leur seul hash (un slot de moins par tag).
 Méthode : mêmes bancs sur une copie du contrat v1 d'avant l'intégration (HEAD `ae4c153`, extraite dans le scratchpad) et sur le contrat intégré.
 Commande : `forge test --match-contract "GasTest|RegistryBenchTest|UpgradeTest" -vv`, plus `forge test --mc AnchoredReputationTest --gas-report` pour `registerAnchorSet`.
 
 | Cas | v1 du 02 | v1 intégré | Écart |
 |---|---|---|---|
 | `registerAnchorSet` (4 tags, médiane du gas report) | 492 634 | **423 614** | −14 % |
-| Démo P1, 300 arêtes, k = 3, mise à jour, Submitter-attested | 1 321 852 | 1 343 775 | +1,7 % |
-| Démo P1, 300 arêtes, k = 3, mise à jour, **Registry-verified** | 14 970 695 | **14 967 758** | 0 % |
-| Mainnet réel, 3 arêtes de 0xea0b…, premier certificat | 645 080 | 684 201 | +6 % (2 slots neufs) |
-| Recertification après l'upgrade PR #80 (D28) | 367 312 | 372 439 | +1,4 % |
-| GasTest, mise à jour E = 300, n = 100, k = 3 | 1 352 488 | 1 374 409 | +1,6 % |
-| GasTest, mise à jour E = 3 000, n = 1 000, k = 3 | 12 342 166 | 12 502 863 | +1,3 % |
+| Démo P1, 300 arêtes, k = 3, mise à jour, Submitter-attested | 1 321 852 | 1 351 917 | +2,3 % |
+| Démo P1, 300 arêtes, k = 3, mise à jour, **Registry-verified** | 14 970 695 | **14 974 802** | 0 % |
+| Mainnet réel, 3 arêtes de 0xea0b…, premier certificat | 645 080 | 719 202 | +11 % (4 slots neufs) |
+| Recertification après l'upgrade PR #80 (D28) | 367 312 | 373 440 | +1,7 % |
+| GasTest, mise à jour E = 300, n = 100, k = 3 | 1 352 488 | 1 382 551 | +2,2 % |
+| GasTest, mise à jour E = 3 000, n = 1 000, k = 3 | 12 342 166 | 12 578 055 | +1,9 % |
 | GasTest, mise à jour E = 3 000, n = 1 000, k = 8 | 17 300 964 | 17 668 493 | +2,1 % |
 | GasTest, premier certificat E = 10, n = 5, k = 1 | 397 715 | 434 979 | +9,4 % (2 slots neufs) |
 | `isTrusted`, agent inconnu (refus bon marché) | 29 210 | 29 231 | 0 % |
 
-(MESURÉ, 01/10.) Le surcoût des mises à jour (+0,1 % à +2,7 %) se répartit à peu près ainsi (MESURÉ par variantes du contrat) : 15 gas par nœud et par colonne pour la masse, 70 gas par ligne pour le contrôle de la source. La variante d'origine de `_storeVectors` ne compile plus en via-IR (pile trop profonde d'un slot) : la variante retenue enlève trois variables. Taille : **32 814 octets** (30 847 avant ; limite Monad 128 Ko).
+(MESURÉ, 01/10 ; les lignes k = 8 et E = 10 datent d'avant la revue, + environ 0,5 % depuis.) Le surcoût des mises à jour (+0,1 % à +3 %) se répartit à peu près ainsi (MESURÉ par variantes du contrat) : 15 gas par nœud et par colonne pour la masse, 70 gas par ligne pour le contrôle de la source. La variante d'origine de `_storeVectors` ne compile plus en via-IR (pile trop profonde d'un slot) : la variante retenue enlève trois variables. Taille : **33 527 octets** (30 847 avant ; limite Monad 128 Ko).
 
 ### Vecteurs du solveur sur un fork du mainnet (anvil `--network monad`, bloc 108 835 675)
 
@@ -30,12 +30,12 @@ Commande : `cd solver && .venv/bin/python simulate.py` → `solver/out/simulatio
 
 | Vecteur | Niveau | `submitCertificate` | `registerAnchorSet` |
 |---|---|---|---|
-| mainnet_honest_d20 (6 nœuds, 5 arêtes) | Registry-verified | 993 697 | 413 966 |
-| mainnet_slash_anchor (6 nœuds, 7 arêtes) | Registry-verified | 1 004 890 | 413 966 |
-| mainnet_scanner_preD15 (35 nœuds, 58 arêtes) | Registry-verified | 6 064 898 | 572 462 |
-| mainnet_em_d44 (13 nœuds, 48 arêtes, VIA_OWNER, tag de 33 octets) | Registry-verified | 3 703 522 | 619 611 |
-| toy_alpha_1_x, toy_truncated (5 nœuds) | Submitter-attested | 635 272 à 640 975 | 432 555 |
-| toy_alias_owner_rowmax (264 nœuds, 268 arêtes) | Submitter-attested | 19 735 885 | 432 567 |
+| mainnet_honest_d20 (6 nœuds, 5 arêtes) | Registry-verified | 1 028 760 | 413 966 |
+| mainnet_slash_anchor (6 nœuds, 7 arêtes) | Registry-verified | 1 039 953 | 413 966 |
+| mainnet_scanner_preD15 (35 nœuds, 58 arêtes) | Registry-verified | 6 101 533 | 572 462 |
+| mainnet_em_d44 (13 nœuds, 48 arêtes, VIA_OWNER, tag de 33 octets) | Registry-verified | 3 722 033 | 619 611 |
+| toy_alpha_1_x, toy_truncated (5 nœuds) | Submitter-attested | 670 306 à 676 008 | 432 555 |
+| toy_alias_owner_rowmax (264 nœuds, 268 arêtes) | Submitter-attested | 19 789 596 | 432 567 |
 
 Ces chiffres comprennent les nouveaux nœuds du premier certificat (`newNodes` : ≈ 46 k par nœud en v1, deux slots par nœud, mapping et clé contiguë ; le v0 du 04 mesurait 28,8 k). Le v0 du 04 donnait 487-522 k sur les petits vecteurs : la v1 coûte environ deux fois plus, à cause de la relecture du registre, de la 4ᵉ lane et des contrôles de forme.
 
@@ -48,7 +48,7 @@ Ces chiffres comprennent les nouveaux nœuds du premier certificat (`newNodes` :
 | `proveEdge`, deux omissions sur la même ligne (la seconde avec amendements) | 278 551 puis 258 685 |
 | `proveEdge` (v), fabrication au niveau Submitter-attested | 281 585 |
 | `proveEdge` (v), gonflement au niveau Submitter-attested | 285 182 |
-| `proveEdge`, dilution par un tiers dans le cycle du service | 294 388 |
+| `proveEdge`, dilution par un tiers dans le cycle du service (avant la revue ; depuis, refusée à la soumission par D) | 294 388 |
 
 ### Découpage d'un premier certificat (1 237 nœuds, ≈ 3 700 arêtes, k = 2, Submitter-attested)
 

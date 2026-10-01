@@ -8,6 +8,7 @@ import "./Base.t.sol";
 ///   - the setId recomputed by the contract (computeSetId) equals the solver's (D39, hand-written ABI encoder);
 ///   - the certificate is accepted, and eEff, graphRoot, vectorRoot, mass and q equal the solver's expectations;
 ///   - a copy whose t is raised by 1e6 wei on the last massive node is refused (NotSubSolution);
+///   - resubmitting the same certificate is accepted (same quality) and leaves quality() unchanged;
 ///   - the 4 violation vectors (D37): Registry-verified refuses fabrication and inflation at submission
 ///     (EdgeMismatch) and accepts dilution and the omitted negative (undetectable at submission, provable:
 ///     solver/simulate.py proves them on the fork); at the Submitter-attested level all 4 are accepted.
@@ -79,7 +80,7 @@ contract SolverVectorsTest is AncreBase {
     /// registers the vector's set (checking the setId) and submits its calldata, optionally with mutated vectors
     function _submit(string memory j, AnchoredReputation.SetParams memory p, bool mutate) internal returns (Outcome memory o) {
         o.setId = ar.computeSetId(p);
-        if (!mutate) ar.registerAnchorSet(p);
+        if (ar.nodeCount(o.setId) == 0) ar.registerAnchorSet(p);
         o.submitter = p.policy.submitters.length != 0 ? p.policy.submitters[0] : address(0xCAFE);
         bytes memory vec = vm.parseJsonBytes(j, ".calldata.vectors");
         uint256 n = vm.parseJsonUint(j, ".nCert");
@@ -92,6 +93,7 @@ contract SolverVectorsTest is AncreBase {
                     break;
                 }
             }
+            require(v < n, "vector without mass in column 0: nothing to mutate");
             uint256 t = uint64(bytes8(_slice8(vec, v * rec))) + 1e6;
             for (uint256 b; b < 8; ++b) {
                 vec[v * rec + b] = bytes1(uint8(t >> (8 * (7 - b))));
@@ -117,10 +119,6 @@ contract SolverVectorsTest is AncreBase {
         string memory j = _load(name);
         AnchoredReputation.SetParams memory p = _params(j);
         assertEq(ar.computeSetId(p), vm.parseJsonBytes32(j, ".set.setId"), string.concat(name, ": setId (D39)"));
-        Outcome memory bad = _submit(j, p, true);
-        assertFalse(bad.ok, string.concat(name, ": a mutated copy must be refused"));
-        bytes memory reg = abi.encodeWithSelector(AnchoredReputation.UnknownSet.selector);
-        assertEq(keccak256(bad.ret), keccak256(reg), "set not registered yet for the mutated probe");
         Outcome memory o = _submit(j, p, false);
         assertTrue(o.ok, string.concat(name, ": vector refused"));
         // the mutated copy, now on a registered set: t > y somewhere -> NotSubSolution
@@ -131,9 +129,17 @@ contract SolverVectorsTest is AncreBase {
         assertEq(eEff, _u(j, ".expected.eEff"), string.concat(name, ": eEff"));
         assertEq(gr, vm.parseJsonBytes32(j, ".expected.graphRoot"), string.concat(name, ": graphRoot"));
         assertEq(vr, vm.parseJsonBytes32(j, ".expected.vectorRoot"), string.concat(name, ": vectorRoot"));
-        (uint256 mass, uint256 q) = ar.quality(o.setId);
+        (uint256 mass, uint256 q, uint256 dm, bool proven) = ar.quality(o.setId);
+        assertFalse(proven);
         assertEq(mass, _u(j, ".expected.mass"), string.concat(name, ": mass"));
         assertEq(q, _u(j, ".expected.qEff"), string.concat(name, ": q"));
+        assertEq(dm, _u(j, ".expected.distrustMass"), string.concat(name, ": distrust mass"));
+        // replacement rule against the solver's own vector: resubmitting the same (unproven) certificate is
+        // accepted on every set (same quality), and leaves the quality unchanged
+        Outcome memory again = _submit(j, p, false);
+        assertTrue(again.ok, string.concat(name, ": same quality must be accepted"));
+        (uint256 mass2, uint256 q2, uint256 dm2,) = ar.quality(o.setId);
+        assertEq(mass2 + q2 + dm2, mass + q + dm);
         emit log_named_string("DIFF| accepted", name);
     }
 

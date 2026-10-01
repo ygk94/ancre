@@ -193,7 +193,7 @@ def _prove_all(chain, contract, cfg, set_id, nodes, fbs, idn, start) -> dict:
                        start, send=True)
     after = C.OnChain.read(chain, contract, set_id)
     return {"detected": [d["kind"] for e in ev for d in e.get("discrepancies", [])],
-            "proofs": [{k: p.get(k) for k in ("kind", "fn", "status", "gasUsed", "error")} for e in ev
+            "proofs": [{k: p.get(k) for k in ("kind", "fn", "status", "gasUsed", "error", "reason")} for e in ev
                        for p in e.get("proofs", [])],
             "eLowEffBefore": str(before.e_low_eff), "eLowEffAfter": str(after.e_low_eff),
             "eEffBefore": str(before.e_eff), "eEffAfter": str(after.e_eff)}
@@ -336,7 +336,7 @@ def _censor_attempt(chain, other, contract, set_id, cfg, fbs, idn, h1, send=Fals
     enc = encode(al.cert, al.nodes, idn)
     args = [set_id, str(al.cert.n), str(e_eff(al.cert)), "0x" + al.new_nodes.hex(), "0x" + enc["vectors"].hex(),
             "0x" + enc["rows"].hex()]
-    q, m = quality(al.cert)
+    q, m, _ = quality(al.cert)
     try:
         est = other.estimate(contract, C.SUBMIT_SIG, *args)
         res = "ACCEPTED (same mass and q: the omission is a dilution, AM-02.2)"

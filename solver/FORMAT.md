@@ -57,7 +57,7 @@ Only rated agents are agent nodes: an agent nobody rates has no incoming edge, i
 | `expected.iterationsFromZero` | integer power iterations until the integer fixed point |
 | `expected.r[a]`, `expected.e[a]` | residual and upper bound (distrust side) expected from the contract, in wei |
 | `expected.eEff` | Σ_a ⌈λ_a·e_a / WAD⌉ |
-| `expected.qEff`, `expected.mass` | quality of the replacement rule (ENCODING §4-§5), = `quality(setId)` on chain after submission |
+| `expected.qEff`, `expected.mass`, `expected.distrustMass` | quality of the replacement rule (ENCODING §4-§5), = `quality(setId)` on chain after submission |
 | `expected.d[i]` | combined distrust (§3) |
 | `expected.graphRoot` | Merkle root of the row bytes (§2) |
 | `expected.vectorRoot` | keccak256 of the `vectors` calldata |
@@ -103,6 +103,7 @@ truncated** (D21, raises). These are the ENCODING §3.2 rules seen from the solv
 | I-5 | vectors carry `set.policy`, `set.setId`, `set.tagSchemaHash`, `expected.qEff`, `expected.mass` | D39; replacement rule |
 | I-6 | toys get synthetic wallets (`toy_wallet(j)`): an agent row with edges needs SRC | ENCODING §3.2 shape rule |
 | I-7 | v0 encoding removed (`encode(..., version=)`) | the R5 contract is superseded |
+| I-8 | `expected.distrustMass`; a row without recorded source is `NotEncodable`; anchors sorted WITH their lambdas (`make_set_block`, shared by export and certifier) | code review 01/10 |
 
 ## 5. Vectors (01/10, MEASURED by `export.py`; all ACCEPTED by the contract, `SolverVectors.t.sol` and `simulate.py`)
 

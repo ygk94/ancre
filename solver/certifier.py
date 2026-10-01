@@ -35,7 +35,7 @@ from dataclasses import dataclass, field
 from fractions import Fraction
 from pathlib import Path
 
-from export import POLICY_FIELDS, encode, keccak, node_entry, node_key, quality, set_id, sorted_tags
+from export import POLICY_FIELDS, encode, keccak, make_set_block, node_entry, node_key, quality, set_id
 from graph import ADDR, AGENT, ANCHOR, Graph, Identity, build_graph, load_schema
 from ppr import Certificate, certify, e_eff, verify
 
@@ -44,7 +44,7 @@ SUBMIT_SIG = "submitCertificate(bytes32,uint32,uint256,bytes,bytes,bytes)"
 ADD_NODES_SIG = "addNodes(bytes32,bytes)"
 RESERVE_SIG = "reserveCapacity(bytes32,uint32)"
 CERT_VIEW = "certificate(bytes32)(uint64,uint256,uint256,bytes32,bytes32,bytes32,uint32,uint32,bool)"
-QUALITY_VIEW = "quality(bytes32)(uint256,uint256)"
+QUALITY_VIEW = "quality(bytes32)(uint256,uint256,uint256,bool)"
 NODES_ADDED = "NodesAdded(bytes32 indexed,uint256,uint256)"
 CERT_SUBMITTED = ("CertificateSubmitted(bytes32 indexed,uint64 indexed,uint256,bytes32,bytes32,bytes32,uint32,uint32,"
                   "bool)")
@@ -97,6 +97,13 @@ class SetConfig:
     submitters: list = field(default_factory=list)   # D32: empty = open submission (Registry-verified)
     gas: GasPolicy = field(default_factory=GasPolicy)
 
+    def __post_init__(self):
+        # anchors are nodes 0..k-1 in increasing address order (registerAnchorSet): sort the lambdas WITH them,
+        # so that build_graph / certify and the committed setId give each anchor the same lambda
+        if len(self.anchors) == len(self.lambdas):
+            pairs = sorted(zip((a.lower() for a in self.anchors), self.lambdas))
+            self.anchors, self.lambdas = [a for a, _ in pairs], [l for _, l in pairs]
+
     @classmethod
     def load(cls, path) -> "SetConfig":
         obj = json.loads(Path(path).read_text())
@@ -119,14 +126,9 @@ class SetConfig:
                 "ownerFallback": self.owner_fallback, "submitters": sorted(a.lower() for a in self.submitters)}
 
     def set_block(self) -> dict:
-        """The `set` block of a vector for this configuration (export.set_id computes the setId off-chain)."""
-        sch = self.schema()
-        return {"anchors": sorted(a.lower() for a in self.anchors), "lambdas": [str(x) for x in self.lambdas],
-                "alphaN": self.alphaN, "alphaD": self.alphaD, "tagSchemaHash": self.tag_schema_hash,
-                "tags": [{"tag": t, "min": str(sch[t].min_wad), "neutral": str(sch[t].neutral_wad),
-                          "max": str(sch[t].max_wad), "kind": 0 if sch[t].kind == "endorsement" else 1}
-                         for t in sorted_tags(self.filter_tags)],
-                "policy": self.policy()}
+        """The `set` block of a vector for this configuration (export.make_set_block: one builder for both)."""
+        return make_set_block(self.anchors, self.lambdas, self.alphaN, self.alphaD, self.tag_schema_hash,
+                              self.schema(), self.filter_tags, self.policy())
 
     @property
     def set_id(self) -> str:
@@ -462,13 +464,15 @@ class OnChain:
     e_low_eff: int = 0
     mass: int = 0                    # quality(setId): replacement rule (ENCODING.md §5)
     q_cur: int = 0
+    distrust_mass: int = 0
+    proven: bool = False             # a proof widened the incumbent: its exact content cannot come back
 
     @classmethod
     def read(cls, chain: Chain, contract: str, set_id: str) -> "OnChain":
         v = [x.split()[0] for x in chain.call(contract, CERT_VIEW, set_id).split("\n")]
         q = [x.split()[0] for x in chain.call(contract, QUALITY_VIEW, set_id).split("\n")]
         return cls(int(v[0]), int(v[1]), v[3].lower(), v[4].lower(), int(v[6]), v[8] == "true", int(v[2]),
-                   int(q[0]), int(q[1]))
+                   int(q[0]), int(q[1]), int(q[2]), q[3] == "true")
 
 
 @dataclass
@@ -494,15 +498,21 @@ class State:
         return st
 
 
-def replacement_wait(oc: OnChain, head: int, q_new: int, mass_new: int, cfg: SetConfig) -> int:
+def replacement_wait(oc: OnChain, head: int, q_new: int, mass_new: int, cfg: SetConfig, d_new: int = 0,
+                     same_content: bool = False) -> int:
     """Blocks to wait before submitCertificate's replacement rule (ENCODING.md §5) accepts (q_new, mass_new), 0 = now:
     attested set | no cert | registryChanged | age > maxAge | eLowEff > eLowMax
-    | (mass_new + eLowEff >= mass_cur and q_new <= q_cur) | (age > minRefresh and q_new <= q_cur + slackRefresh).
+    | (mass_new + eLowEff >= mass_cur and q_new <= q_cur and d_new >= distrust_cur)
+    | (age > minRefresh and q_new <= q_cur + slackRefresh); never the same content again once it was proven wrong.
     Read from the chain (quality view): proofs widen q_cur and credit eLow, other submitters replace the certificate.
     A wait of maxAge means: prove the incumbent's overstatement first (watcher), or wait."""
-    if cfg.submitters or oc.cert_block == 0 or oc.registry_changed or oc.e_low_eff > cfg.e_low_max:
+    if cfg.submitters or oc.cert_block == 0 or oc.registry_changed:
         return 0
-    if mass_new + oc.e_low_eff >= oc.mass and q_new <= oc.q_cur:
+    if same_content and oc.proven:
+        raise ValueError("the incumbent was proven wrong: resubmitting the same certificate is refused (recompute)")
+    if oc.e_low_eff > cfg.e_low_max:
+        return 0
+    if mass_new + oc.e_low_eff >= oc.mass and q_new <= oc.q_cur and d_new >= oc.distrust_mass:
         return 0
     age = head - oc.cert_block
     waits = [cfg.max_age + 1 - age]
@@ -556,7 +566,7 @@ class Certifier:
         g, al, enc = self.compute(fbs, idn, table, oc.n_cert if oc else 0)
         gr, vr = "0x" + enc["graphRoot"].hex(), "0x" + enc["vectorRoot"].hex()
         e_max = e_eff(al.cert)
-        q_new, mass_new = quality(al.cert)
+        q_new, mass_new, d_new = quality(al.cert)
         base = dict(set=self.cfg.name, reason=reason, block=block, nCert=al.cert.n, rows=len(al.cert.rows),
                     newNodes=len(al.appended), eEff=e_max, qEff=q_new, mass=mass_new, iterations=al.cert.iterations,
                     graphRoot=gr, computeMs=round((time.perf_counter() - t0) * 1000, 1))
@@ -567,7 +577,7 @@ class Certifier:
         refresh = self.due_refresh(oc, head)
         if (gr, vr) == (oc.graph_root, oc.vector_root) and not refresh and not oc.registry_changed:
             return self.journal.log(action="skip_identical", **base)
-        wait = replacement_wait(oc, head, q_new, mass_new, self.cfg)
+        wait = replacement_wait(oc, head, q_new, mass_new, self.cfg, d_new, (gr, vr) == (oc.graph_root, oc.vector_root))
         if wait:                                        # the contract would revert NotBetter: do not pay for it
             return self.journal.log(action="deferred_replacement_rule", waitBlocks=wait, qCur=oc.q_cur,
                                     massCur=oc.mass, eLowCur=oc.e_low_eff, head=head, **base)
