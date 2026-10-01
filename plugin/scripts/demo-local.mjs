@@ -16,6 +16,9 @@ import { ancrePaymentTypedData, encodeExactBlob } from "../dist/lib/payer.js";
 import { buildPaymentPayload, encodeB64Json, newAuthorization } from "../dist/lib/x402.js";
 import { CHAIN_ID, DEV_D, DEV_F, DEV_P, NETWORK, USDC, dealUsdc, emulatedFacilitator, forgeScript, oracleAbi, startAnvil, usdcAbi } from "./local.mjs";
 import { startX402Server } from "./x402-server.mjs";
+import { ancreGuard } from "../dist/lib/x402-guard.js";
+import { wrapFetchWithPayment, x402Client } from "@x402/fetch";
+import { ExactEvmScheme } from "@x402/evm/exact/client";
 
 const VETOED = 4;
 const out = [];
@@ -124,12 +127,38 @@ async function main() {
       explainAfterFailure: r.explainAfterFailure?.verdict, providerReceived: (await bal(DEV_P)) - p1,
     });
 
+    // ---- E4: client guard (b) with the official SDK, for an EOA payer (no payer contract)
+    await setAgent(1n, DEV_P, true, 0);
+    vetoBeforeSettle = false;
+    // a fresh key: every anvil dev account is EIP-7702-delegated on the real Monad testnet (MESURÉ 01/10), so the
+    // USDC would route its signature through ERC-1271 and refuse it (AM-05.6)
+    const eoa = privateKeyToAccount(bytesToHex(randomBytes(32)));
+    await dealUsdc(pub, eoa.address, 50_000n);
+    const decisions = [];
+    const client = new x402Client().register("eip155:*", new ExactEvmScheme(eoa)).setSpendControls(false);
+    client.onBeforePaymentCreation(ancreGuard({ readContract: (a) => pub.readContract(a), ancre: oracle, setId: ("0x" + "00".repeat(31) + "01"), onDecision: (x) => decisions.push(x) }));
+    const pay = wrapFetchWithPayment(fetch, client);
+    let farmOutcome;
+    try {
+      const fr = await pay(`${server.url}/farm`);
+      farmOutcome = `HTTP ${fr.status}`;
+    } catch (e) {
+      farmOutcome = `aborted: ${e.message}`;
+    }
+    const g0 = await bal(DEV_P);
+    const gr = await pay(`${server.url}/good`);
+    scene("7. client guard (b): @x402/fetch + onBeforePaymentCreation, EOA payer", {
+      farm: farmOutcome, good: `HTTP ${gr.status}`, goodBody: gr.status === 200 ? undefined : (await gr.text()).slice(0, 400), goodReceived: (await bal(DEV_P)) - g0, decisions,
+    });
+
     const ok = out.find((e) => e.scene === "2. pay /farm").signed === false
       && out.find((e) => e.scene === "3. pay /good").paid === true
       && out.find((e) => e.scene.startsWith("4.")).farmReceived === 0n
       && out.find((e) => e.scene.startsWith("5.")).signed === false
       && out.find((e) => e.scene.startsWith("6.")).paid === false
-      && out.find((e) => e.scene.startsWith("6.")).providerReceived === 0n;
+      && out.find((e) => e.scene.startsWith("6.")).providerReceived === 0n
+      && out.find((e) => e.scene.startsWith("7.")).farm.startsWith("aborted")
+      && out.find((e) => e.scene.startsWith("7.")).goodReceived === 10000n;
     console.log(`\nDEMO ${ok ? "PASS" : "FAIL"}`);
     if (!ok) process.exitCode = 1;
   } finally {
