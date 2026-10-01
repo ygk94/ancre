@@ -54,7 +54,7 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 - All byte strings are big-endian.
 - **Registries.** An aggregator is bound, for its whole life, to one ERC-8004 Identity Registry and the Reputation Registry linked to it, on the chain where the aggregator is deployed. It MUST NOT read registries on another chain.
 - **Feedback.** A tuple `(agentId, client, feedbackIndex, value, valueDecimals, tag1, tag2, isRevoked)` as returned by `readFeedback(agentId, client, feedbackIndex)`. `feedbackIndex` starts at 1 and is ordered per `(agentId, client)` pair, across all tags. `getLastIndex(agentId, client)` returns the highest index. `tag2` is ignored by this ERC.
-- **Controllers of an agent `j`.** `ownerOf(j)`, `getAgentWallet(j)`, `getApproved(j)`, and every address `o` with `isApprovedForAll(ownerOf(j), o)`, all read at the time of the check. Former owners are not controllers.
+- **Controllers of an agent `j`.** Read through the [ERC-721](./eip-721.md) interface of the Identity Registry: `ownerOf(j)`, `getAgentWallet(j)`, `getApproved(j)`, and every address `o` with `isApprovedForAll(ownerOf(j), o)`, all read at the time of the check. Former owners are not controllers.
 - **Blocks.** All ages and delays are counted in blocks (`block.number`), never in seconds.
 
 ### 2. Anchor sets
@@ -490,7 +490,7 @@ The registries are typically upgradeable proxies, and a contract cannot read ano
 - `versionHash = keccak256(abi.encode(identityRegistry, keccak256(bytes(identity.getVersion())), reputationRegistry, keccak256(bytes(reputation.getVersion()))))`. If either `getVersion()` call fails or returns malformed data, the registry is unreadable: submission MUST revert.
 - Every certificate stores the `versionHash` read in its submitting transaction.
 - `checkRegistry(setId)` is callable by anyone. It recomputes the hash and, if it differs from the certificate's hash or cannot be read, marks the set's certificate `REGISTRY_CHANGED` and emits `RegistryChanged`. A new certificate clears the mark.
-- Certifiers MUST check the registry versions before each certification. Operators SHOULD monitor the registries' ERC-1967 `Upgraded` events off-chain and call `checkRegistry` for every set they rely on when one is emitted.
+- Certifiers MUST check the registry versions before each certification. Operators SHOULD monitor the registries' [ERC-1967](./eip-1967.md) `Upgraded` events off-chain and call `checkRegistry` for every set they rely on when one is emitted.
 
 An upgrade that keeps the same version string is invisible on-chain (Security Considerations).
 
@@ -778,7 +778,7 @@ If the registries change the semantics of `agentWallet`, of `feedbackIndex` or o
 
 ## Test Cases
 
-The vectors are in [`../assets/erc-0000/`](../assets/erc-0000/README.md), as JSON with a field-by-field description. They are normative for the quantities they fix:
+The vectors are in the [assets directory](../assets/erc-0000/README.md), as JSON with a field-by-field description. They are normative for the quantities they fix:
 - the weight of a feedback;
 - the pair edge;
 - the `setId`;
@@ -922,7 +922,7 @@ It passes every vector of the Test Cases. On the deployment described in Motivat
 
 With a 30 M gas transaction limit, a `RegistryVerified` certificate holds about 630 single-feedback edges at `k = 3`. Splitting verification across transactions is not specified.
 
-The contract's runtime bytecode is 33,527 bytes. That is above the 24,576-byte limit of EIP-170, so it cannot be deployed unchanged on a chain that enforces that limit. A deployment on such a chain has to move the proof functions (`proveEdge`, `proveWallet`, `proveTransfer`) into a separate contract that shares the aggregator's storage, or move the verification pass into libraries. Either split leaves the interface of §10 unchanged.
+The contract's runtime bytecode is 33,527 bytes. That is above the 24,576-byte limit of [EIP-170](./eip-170.md), so it cannot be deployed unchanged on a chain that enforces that limit. A deployment on such a chain has to move the proof functions (`proveEdge`, `proveWallet`, `proveTransfer`) into a separate contract that shares the aggregator's storage, or move the verification pass into libraries. Either split leaves the interface of §10 unchanged.
 
 ⟦Chiffres : `contracts/GAS.md` (MESURÉ, intégration 02 + 04, 01/10 ; 630 arêtes CALCULÉ). Le dépôt est privé (décision de Hugo) : avant la PR, il faut soit le rendre public et le citer (EIP-1 n'autorise pas le lien GitHub, mais l'implémentation peut être copiée dans `assets/`), soit copier `AnchoredReputation.sol` dans `assets/erc-0000/`. Taille : AM-INT.9 et AM-08.13 ; ma recommandation est de découper APRÈS la soumission du hackathon (hors chemin critique : Monad accepte 128 Ko), mais AVANT la PR d'ERC si Hugo veut une implémentation de référence déployable sur Ethereum.⟧
 
