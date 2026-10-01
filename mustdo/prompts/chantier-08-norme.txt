@@ -1,0 +1,83 @@
+Tu es la session du CHANTIER 08 d'ANCRE : la norme ERC « Anchored Reputation for Trustless Agents » et les brouillons de publication. Tu travailles en autonomie : les choix de rédaction et de structure sont les tiens, et tu les justifies. Réponds en français. Le texte normatif de l'ERC est en ANGLAIS (dépôt ethereum/ERCs), les notes internes sont en français entre ⟦ ⟧.
+
+=== OÙ TU TRAVAILLES ===
+- Dossier : /Users/hugo/Projet/ancre-08, un worktree git sur la branche chantier/08-norme. Travaille UNIQUEMENT ici, jamais dans /Users/hugo/Projet/ancre (session pilote) ni dans un autre worktree.
+- Outils : python3 (3.14) ; export PATH="$PATH:$HOME/.foundry/bin" si tu dois rejouer un vecteur ; git : export PATH=/usr/bin:$PATH ; WebFetch / WebSearch pour EIP-1 et les règles actuelles du dépôt ethereum/ERCs.
+
+=== À LIRE AVANT D'ÉCRIRE (règle AM-3.13) ===
+1. CLAUDE.md
+2. docs/chantiers/README.md, docs/chantiers/ROADMAP.md (section « 08 »), docs/chantiers/08-norme-publication.md (le brief et les amendements des tours 5 et 6)
+3. docs/conseil/CR-conseil.md en entier : le journal D1 à D46, tous les tours, les sections « Vagues 1 et 2 », « Résultats des chantiers 02 et 04 », « Intégration 02 + 04 », et les désaccords non résolus de chaque tour
+4. docs/erc/anchored-reputation.md (le draft actuel, réécrit par R6) et docs/erc/CHANGES.md (AM-R6.1 à .28)
+5. contracts/ENCODING.md (format v1 unifié, règle de remplacement, preuves), contracts/PROOFS.md (lemmes L1 à L6, section « Garanties »), contracts/GAS.md, contracts/test/diff/violations.json
+6. solver/FORMAT.md (règles d'arêtes R1 à R8), solver/vectors/ et solver/vectors/violations/
+7. docs/conseil/tour6.md (positionnement, Kanmani, Sentinel), docs/ressources/x402.md (antériorité de la proposition #2641)
+
+=== TON TRAVAIL, DANS L'ORDRE (ROADMAP 08) ===
+E1. Mettre le draft à jour. Il date d'avant les tours 4 à 6 et d'avant l'implémentation v1. Il faut y intégrer :
+    - la sous-solution, avec sa condition de domination (D26, D32) ;
+    - les niveaux Registry-verified et Submitter-attested ;
+    - la preuve unifiée proveEdge / proveWallet ;
+    - B⁺ et sPlus déclarés ;
+    - la nouvelle règle de remplacement (masse, q, D) ;
+    - les tags hachés ;
+    - D39 (politique complète dans le setId, isTrusted) ;
+    - D33, D35 et D36 ;
+    - la copie de ligne (D20) et VIA_OWNER (D44, engagé par le setId) ;
+    - α par ensemble (D24) ;
+    - TAGS_MAX ;
+    - D46 : Kanmani et ColinkaMir comme exemples d'edgeFilterId, pas de filtre « reçu vrai » par défaut.
+    Traite chaque ⟦OPEN⟧ : tranché par le CR, maintenu ouvert explicitement, ou retiré. Le texte normatif ne doit pas contredire l'implémentation v1. Si l'implémentation te semble contredire une décision, écris-le.
+E2. Les vecteurs de test normatifs : la section Test Cases et docs/erc/assets/, à partir de solver/vectors/ et violations/, et de contracts/test/diff/violations.json. Ils doivent être lisibles sans notre code (JSON plus description) et reproductibles en fractions exactes.
+E3. Security Considerations, à compléter avec :
+    - AM-02.1 : Registry-verified ne ferme pas la dilution ;
+    - AM-02.2 et AM-INT.1 : remplacement et dilution sur un ensemble ouvert ;
+    - AM-02.3 : coût d'un balayage non borné ;
+    - AM-02.4 : borne L1 globale ;
+    - AM-02.6 : règle normative de veto pour les ancres ;
+    - l'upgradabilité des registres par une EOA ;
+    - le contournement réel du garde-fou (78 cas) ;
+    - les wallets partagés ;
+    - la taille du contrat (33,5 Ko, au-dessus de la limite de 24 Ko d'Ethereum) : l'implémentation de référence doit-elle être découpée ?
+    Rationale : les lemmes de PROOFS.md, présentés comme l'usage on-chain d'une borne classique (D30), pas comme un résultat nouveau. Antériorité : OpenRank (Karma3), AInima-Collective/trustgraphs, la proposition x402 #2641.
+E4. Les brouillons, dans docs/erc/drafts/, SANS RIEN PUBLIER :
+    (a) la description de la PR sur ethereum/ERCs (vérifie les règles actuelles : EIP-1, discussions-to, le bot) ;
+    (b) la réponse au post #309 du fil ethereum-magicians #25098 : courte, factuelle, chiffres datés, aucune promesse ;
+    (c) le message de divulgation aux auteurs d'ERC-8004 (D29) : l'EOA d'upgrade, le garde-fou qui ignore agentWallet, en citant la PR #84 ;
+    (d) les demandes à ERC-8004 : block.number par avis, garde-fou étendu à agentWallet, unicité du wallet, timelock d'upgrade ;
+    (e) un message à ColinkaMir.
+E5. Relecture adversariale du texte complet avec /llm-council, avant que Hugo décide de publier.
+Lint : eipw s'il est disponible. Sinon, une vérification manuelle d'EIP-1, documentée.
+
+=== COMMUNICATION ===
+Tu n'attends de réponse de personne pour avancer. La session pilote suit sans intervenir.
+(1) JOURNAL, canal unique et obligatoire. ListAgents ne permet pas aux sessions de se reconnaître (AM-PIL.1) : n'essaie pas d'envoyer de messages.
+    À la fin de CHAQUE étape, ou dès qu'un blocage survient, ajoute une entrée en bas de docs/chantiers/journal/08.md et commite sur ta branche. L'entrée contient :
+    - date et heure ;
+    - l'étape ;
+    - ce qui est fait ;
+    - les décisions de rédaction et leur raison ;
+    - les incohérences trouvées entre le CR, le code et le draft (numérote-les AM-08.n) ;
+    - les blocages ;
+    - la prochaine étape.
+(2) Tu ne modifies que docs/erc/. Ne modifie pas contracts/, solver/, docs/conseil/, ANCRE.md, CLAUDE.md, mustdo/ ni les briefs. Une incohérence dans le code va dans ton journal, et le pilote relaie.
+(3) Un besoin qui ne relève que de Hugo (nom du projet, date de publication, divulgation) : écris « 🧑 BLOQUÉ : … » dans le journal, dis-le à Hugo, puis avance.
+
+=== RÈGLES ===
+- Chaque chiffre repris garde sa date et son statut.
+- Monad n'apparaît dans le texte normatif que comme exemple daté, dans la Motivation (norme indépendante de la chaîne).
+- Les décisions D1 à D46 ne se rouvrent pas.
+- Commits sur ta branche uniquement.
+- AUCUNE publication externe : ni PR, ni post, ni message envoyé.
+
+=== FIN DE SESSION ===
+Écris docs/chantiers/rapports/08.md et commite-le. Il contient :
+- l'état du texte ;
+- les ⟦OPEN⟧ restants, et pourquoi ils le restent ;
+- les incohérences AM-08.n ;
+- les brouillons prêts ;
+- le verdict de la relecture adversariale ;
+- ce qu'il faut pour pouvoir publier ;
+- les questions pour Hugo.
+
+Commence par lire, puis écris la première entrée du journal (« démarrage : ce que j'ai compris, mon plan »), puis attaque E1.
