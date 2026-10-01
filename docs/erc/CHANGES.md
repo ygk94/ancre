@@ -175,3 +175,25 @@ Ce ne sont pas des désaccords du CR. Chacun est marqué d'une note dans le text
 | AM-08.8 | D9/D43 contre code | Ancres par adresse, pas d'`anchorId` ni de registre de clés : la décision D9 n'est pas implémentée, et le `setId` n'a pas de champ pour elle | Extension hors version (§11), ⟦OPEN⟧ |
 | AM-08.9 | D10 contre code | Le certificat n'engage pas l'owner mais une empreinte de 63 bits (`ownerFp`). Un transfert vers une adresse qui partage ces 63 bits n'est pas vu ; il faut ≈ 2⁶³ essais pour en fabriquer une | Security (E3) |
 | AM-08.10 | norme contre code | L'implémentation appelle `isAuthorizedOrOwner` et `getVersion`, qui sont des fonctions de l'implémentation de référence d'ERC-8004, pas de son interface. Sur un déploiement d'ERC-8004 qui ne les a pas, la soumission revert (`getVersion`) ou toute arête paraît rejetée | La norme définit les contrôleurs par ERC-721 (§1) ; demande 5 à ERC-8004 ; Security |
+
+## 7. Incohérences et défauts trouvés en E2 et E5 (relecture `/llm-council`, 01/10)
+
+| Id | Où | Constat | Traitement |
+|---|---|---|---|
+| AM-08.11 | vecteurs du solveur | `tagSchemaHash` = `keccak("ancre-vector:" + label)` n'est le hash d'aucun document de schéma | Signalé dans le README des vecteurs ; le certificateur (04) devra produire le document de §2.4 |
+| AM-08.12 | `simulate.py` | Les violations sont rejouées en Submitter-attested sur un `setId` absent des vecteurs | Noté dans le JSON |
+| AM-08.13 | contrat | 33 527 octets > EIP-170 (= AM-INT.9) | Reference Implementation ; découpage avant la PR d'ERC |
+| **AM-08.14** | D20/R8 contre D8 | **Une ancre dont l'adresse est la source d'un agent rend m ≥ 2 inopérant** : sa ligne copiée dans l'agent porte la masse des autres colonnes. Vérifié en fractions exactes sur TC-3 : la Sybil obtient trustRobust = 0,0247, comme l'honnête #2 | Texte : SHOULD en §2.1, plus un paragraphe Security. **Code (02)** : refuser SRC ∈ ancres à la soumission. **Démo (06)** : aucune ancre qui soit le wallet d'un agent |
+| **AM-08.15** | R6/D20 contre le garde-fou d'ERC-8004 | **Mise sous silence par `setApprovalForAll`** : les critiques et les ancres rendus opérateurs perdent leurs négatifs (rejet des contrôleurs quel que soit le signe, l. 1130) et ne peuvent plus poster | Texte : Security, avec renvoi depuis §3.3. **Conseil** : rejeter les contrôleurs seulement pour w > 0, et compter comme veto une ancre approuvée. Ajouté aux brouillons (c) et (d) |
+| **AM-08.16** | §5.9 contre code l. 572-576 | Le refus de resoumettre un certificat prouvé est exact à l'octet près (une ligne vide de plus ou W = 4 le contournent) et sauté sous REGISTRY_CHANGED | Texte : portée exacte écrite, plus Security. **Code (02)** : amélioration stricte exigée si prouvé |
+| AM-08.17 | D23 contre code l. 406 | `addNodes` ouvert sur un ensemble ouvert : gonflement de la table, gel de l'ensemble | Security ; zone de préparation D23 non implémentée |
+| AM-08.18 | §5.9 | La fenêtre de rafraîchissement ne vérifie ni la masse ni D ; `minRefresh = 0` est permis | Security ; démo : `minRefresh = maxAge` |
+| AM-08.19 | §1 contre `proveEdge` l. 1652 | Un registre sans `isAuthorizedOrOwner` fait « prouver » l'absence de toute arête | Security ; code : quatre appels ERC-721 |
+| AM-08.20 | §7 | `getVersion` est requis, alors qu'il n'est pas dans ERC-8004 : la norme est inapplicable à un registre ERC-8004 minimal | Écrit en §1 et §7 ; demande 5 |
+| AM-08.21 | interface | Ni `certNonce` exposé, ni vue des paramètres d'un ensemble, ni tags dans l'event | §8.3 : clé de cache (certBlock, eEff, eLowEff) ; §2.4 : `setParams` dans le document |
+| AM-08.22 | vecteurs | Non couverts : k = 1, W = 4, croissance de nCert, `proveWallet`/`proveTransfer`, suite d'amendements, veto, remplacement | À produire (04/08) avant la PR |
+| AM-08.23 | ENCODING.md | La règle de W (« W = 2 if nCert ≤ 65 535 ») et « 0 if the registry reverts » (§7.1) sont périmés face au code | Relais vers le 02 |
+
+## 8. Corrections du texte après la relecture (01/10)
+
+Abstract : « exact » retiré, veto « sans recertification ». §1 : masse, plages u32, `getVersion` requis, agrégateur non upgradable, préséance. §2.1 : recommandation « ancre ≠ source ». §2.4 : `setParams` dans le document, RFC 8785, plus d'`edgeFilterId`. §3.3 : renvoi vers D2-a. §3.8 : aucun champ. §4.2 : SHOULD. §4.4 : plafond de d en 63 bits. §4.5 : bornes qualifiées. §5.1 : soumetteurs listés à tous les niveaux. §5.3 : u64 < 2⁶³. §5.4 : alias seulement vers une ligne d'agent, forme canonique. §5.7 : « address node », agents brûlés. §5.9 : portée du refus. §6 : ordre des amendements, ligne sans source. §7 : `getVersion` requis. §8.2 : égalité et timing. §8.3 : `payTo`, clé de cache, m ≥ 2 non appliqué, agrégateur épinglé. §8.4 : 120 000 gas. §10 : types déclarés, `identity`, `reputation`, `nodeCount`, `nodeKeyAt`. §11 : ancres en compte-contrat. Rationale : Cheng-Friedman, linéarité, limites de L7 et de « Two bounds ». Security : AM-08.14 à .19, compromission d'un nœud, concentration de méfiance, rachat discret, empoisonnement de paire, disponibilité des données, coût d'un registre hostile, EIP-7825. TC-3 : écart avec §2.1 signalé.

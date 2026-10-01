@@ -17,9 +17,9 @@ requires: 721, 8004
 
 [ERC-8004](./eip-8004.md) records feedback about agents but leaves aggregation and Sybil filtering to readers: `getSummary` requires a caller-supplied list of clients, and the ERC states that Sybil attacks are possible. This ERC standardizes that missing layer.
 
-An **anchor set** is an immutable, content-addressed description of *whom the reader trusts to start with* (anchors and their weights), *how feedback becomes edges* (a tag schema with declared scales and kinds), and *when an agent may be paid* (a policy). For each anchor set, a **certificate** publishes, per anchor, a personalized-PageRank trust column over the ERC-8004 feedback graph and a one-hop distrust vector. The aggregator contract accepts a certificate only if every submitted trust value is a **sub-solution** of the committed graph (`t ≤ F(t)` coordinate by coordinate), which makes it an exact per-agent **lower bound** of the true trust as long as the committed graph is dominated by the registry. At the `RegistryVerified` level, the contract re-reads every committed edge in the registry at submission, so fabricated or inflated edges are refused. Edges that are omitted, diluted or changed after submission can be proven by anyone. A proof only widens the certificate's bounds. It never moves funds.
+An **anchor set** is an immutable, content-addressed description of *whom the reader trusts to start with* (anchors and their weights), *how feedback becomes edges* (a tag schema with declared scales and kinds), and *when an agent may be paid* (a policy). For each anchor set, a **certificate** publishes, per anchor, a personalized-PageRank trust column over the ERC-8004 feedback graph and a one-hop distrust vector. The aggregator contract accepts a certificate only if every submitted trust value is a **sub-solution** of the committed graph (`t ≤ F(t)` coordinate by coordinate), which makes it a per-agent **lower bound** of the true trust, with no error term, as long as the committed graph is dominated by the registry's graph. At the `RegistryVerified` level, the contract re-reads every committed edge in the registry at submission, so fabricated or inflated edges are refused. Edges that are omitted, diluted or changed after submission can be proven by anyone. A proof only widens the certificate's bounds. It never moves funds.
 
-Contracts read the result synchronously. `isTrusted(agentId, setId)` applies the policy committed in the set: leave-one-anchor-out trust, distrust ratio, live anchor veto, freshness and transfer. It never reverts. Anchors veto an agent with immediate effect by posting negative feedback in the registry.
+Contracts read the result synchronously. `isTrusted(agentId, setId)` applies the policy committed in the set: leave-one-anchor-out trust, distrust ratio, live anchor veto, freshness and transfer. It never reverts. Anchors veto an agent, without recertification, by posting negative feedback in the registry.
 
 ## Motivation
 
@@ -56,6 +56,10 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 - **Feedback.** A tuple `(agentId, client, feedbackIndex, value, valueDecimals, tag1, tag2, isRevoked)` as returned by `readFeedback(agentId, client, feedbackIndex)`. `feedbackIndex` starts at 1 and is ordered per `(agentId, client)` pair, across all tags. `getLastIndex(agentId, client)` returns the highest index. `tag2` is ignored by this ERC.
 - **Controllers of an agent `j`.** Read through the [ERC-721](./eip-721.md) interface of the Identity Registry: `ownerOf(j)`, `getAgentWallet(j)`, `getApproved(j)`, and every address `o` with `isApprovedForAll(ownerOf(j), o)`, all read at the time of the check. Former owners are not controllers.
 - **Blocks.** All ages and delays are counted in blocks (`block.number`), never in seconds.
+- **Mass.** A node has *mass* if `t_i^(a) ≠ 0` for at least one column `a`.
+- **Ranges.** This version supports `agentId < 2^32` and `feedbackIndex < 2^32`. An agent with a larger `agentId` cannot be a node, and is read as unknown.
+- **Registry functions.** Besides the ERC-8004 and ERC-721 functions named above, this version requires the registries to expose `getVersion()` (§7). An aggregator MUST be bound to its registries immutably: it MUST NOT be upgradeable in a way that changes the registries it reads.
+- **Precedence.** If this specification and a test vector disagree, this specification prevails.
 
 ### 2. Anchor sets
 
@@ -107,6 +111,7 @@ setId = keccak256(abi.encode(anchors, lambdas, alphaN, alphaD, tagSchemaHash, ta
 - `α` is a parameter of the set. The RECOMMENDED value is `1/3`.
 - A set is identified globally by `(chainId, aggregator address, setId)`. The aggregator address binds the registries (§1). The `setId` alone does not.
 - This ERC defines **no default anchor set**.
+- An anchor address SHOULD NOT be the source (§3.5) of any agent. Otherwise its row is copied into that agent, which carries mass from the other anchors' columns, and a stolen anchor key defeats `minAnchors` (Security Considerations).
 
 ⟦D1, D24, D39. Le préimage est celui de l'implémentation v1 (`computeSetId`, ENCODING §1), pas celui du draft R6 (`chainId`, registres, `metadataURI`, `edgeFilterId`, `anchorKeyRegistry`) : AM-08.1. α par ensemble : D24, ce qui ferme le désaccord 6 du tour 2 (⟦OPEN⟧ retiré). TAGS_MAX = 16 : D24. `K_MAX = 16`, `SUBMITTERS_MAX = 8` : constantes v1.⟧
 
@@ -144,11 +149,10 @@ At both levels, discrepancy proofs (§6) are permissionless and remain available
 
 `tagSchemaHash` is the keccak256 of a UTF-8 JSON document that the set's author publishes off-chain. The document MUST contain:
 
-- `tags`: the full tag list, identical to `SetParams.tags`, with each tag in clear text;
-- `name`, `author` and `rationale`: who the anchors are, who chose them and why;
-- `edgeFilterId`: the 32-byte identifier of the edge filter (§3.8), or the zero value.
+- `setParams`: the complete `SetParams` of the set, from which any reader can recompute the `setId` (§2.1) and therefore check that the document describes the registered set;
+- `name`, `author` and `rationale`: who the anchors are, who chose them and why.
 
-The document SHOULD state whether the set is for demonstration. Consumers SHOULD read the schema document before relying on a set. The aggregator does not read it.
+`tagSchemaHash` is the keccak256 of the document's RFC 8785 canonical JSON serialization, with `setParams.tagSchemaHash` set to the zero value. The document SHOULD state whether the set is for demonstration and SHOULD be published at a content-addressed location. Consumers SHOULD recompute the `setId` from the document before relying on a set. The aggregator does not read the document. How a consumer discovers sets is out of scope.
 
 ⟦Le `metadataURI` du draft R6 et l'`edgeFilterId` n'existent pas dans le `SetParams` v1. Ils sont rattachés au document engagé par `tagSchemaHash`, ce qui les met dans le `setId` sans changer le contrat (AM-08.1, AM-08.2). Le format exact du document (clés JSON, canonicalisation avant hachage) n'est pas fixé par le CR : je propose un JSON canonique (RFC 8785) dans E2, à valider.⟧
 
@@ -182,7 +186,7 @@ For a client address `c` and an agent `j`, the **pair weight** `w(c, j)` is comp
 1. For each endorsement tag `τ` of the set, take the feedback from `c` about `j` with `tag1 = τ` that has the **highest `feedbackIndex` among the non-revoked ones**. If that feedback is invalid (§3.2), the tag yields nothing. An older feedback of the same tag is **not** used instead.
 2. **Negative dominance.** If at least one tag yields a negative weight, `w(c, j)` is the most negative one; otherwise it is the largest one. If no tag yields a non-zero weight, there is no edge.
 3. **Deciding feedback.** The `feedbackIndex` of the pair edge is the index of the feedback that gives `w(c, j)`. Between tags of equal weight, the feedback with the **highest** `feedbackIndex` decides.
-4. **Rejection.** There is no edge if `c` is a controller of `j` (§1), read at the time the edge is evaluated.
+4. **Rejection.** There is no edge if `c` is a controller of `j` (§1), read at the time the edge is evaluated, whatever the sign of `w(c, j)`. (See Security Considerations, *Silencing critics through approvals*.)
 
 ⟦D14, R3, R5, R6 de FORMAT.md. Deux changements par rapport au draft R6 : (a) un avis hors bornes ne laisse plus passer l'avis précédent du même tag (R3 « latest then reject », choisi par le 04 et le contrat ; R6 avait pris « latest valid », AM-R6.21) ; (b) l'égalité entre tags se départage par l'index le plus grand (F-6 de l'intégration : le contrat ne stocke que des hashes de tags) et non par le plus petit tag (AM-R6.24 fermé). La règle « ancien owner » de D16 est retirée par D20 (AM-R6.4 fermé).⟧
 
@@ -233,7 +237,7 @@ This ERC does not define any use of measurement tags. A consumer that refuses an
 
 #### 3.8 Edge filters (reserved)
 
-An edge filter removes edges from the graph according to a property of the feedback or of its client (for example, payment provenance or payment-claim verification). This version defines **no** edge filter: the schema document's `edgeFilterId` MUST be zero, and conforming aggregators compute every quantity on the unfiltered graph. A future version that defines a filter MUST also define its on-chain predicate, because discrepancy proofs (§6) would otherwise widen honest certificates for every edge that the filter legitimately removed. A filter MUST only remove edges. It MUST NOT add edges or increase weights. Payment MUST NOT be an edge weight or a pass condition of the core algorithm.
+An edge filter removes edges from the graph according to a property of the feedback or of its client (for example, payment provenance or payment-claim verification). This version defines **no** edge filter and no field to name one: conforming certifiers and aggregators compute every quantity on the unfiltered graph. A future version that defines a filter MUST also define its on-chain predicate, because discrepancy proofs (§6) would otherwise widen honest certificates for every edge that the filter legitimately removed. A filter MUST only remove edges. It MUST NOT add edges or increase weights. Payment MUST NOT be an edge weight or a pass condition of the core algorithm.
 
 ⟦D3, D46. Pas de filtre « reçu vrai » par défaut (D46, AM-7.5). Le draft R6 autorisait un `edgeFilterId` non nul hors du niveau contesté ; c'est intenable en v1, où les preuves sont actives à tous les niveaux (AM-08.2).⟧
 
@@ -261,7 +265,7 @@ y_v^(a) = [v = a] · ⌊alphaN · WAD / alphaD⌋ + Σ_{rows u, w_uv > 0} ⌊ t_
 
 and accepts submitted columns `t^(a)` only if `t_v^(a) ≤ y_v^(a)` for every node `v` and every column `a`. Because `F` is monotone, such a `t` satisfies `t ≤ t*` coordinate by coordinate for the committed graph. It is also a lower bound for the registry's graph whenever the committed graph is **dominated** by it, that is, when every committed `C_uv` is at most the true one (Rationale).
 
-A certifier MUST compute `t` by iterating `t⁰ = 0`, `t^{n+1} = F_bas(t^n)` with exactly the arithmetic above. Every iterate is a sub-solution, and the certifier MAY stop at any iterate. A floating-point fixed point rounded to integers is not guaranteed to be a sub-solution.
+A certifier SHOULD compute `t` by iterating `t⁰ = 0`, `t^{n+1} = F_bas(t^n)` with exactly the arithmetic above. Every iterate is a sub-solution, and the certifier MAY stop at any iterate. A floating-point fixed point rounded to integers is not guaranteed to be a sub-solution, and is refused if it is not.
 
 #### 4.3 Distrust
 
@@ -278,10 +282,10 @@ The submitter does not supply `d`.
 ```
 c_a(i)      = ⌊λ_a · t_i^(a) / WAD⌋
 trust(i)    = Σ_a c_a(i)
-trustRobust(i) = trust(i) − (sum of the m − 1 largest c_a(i))         // 0 if m − 1 ≥ k
+trustRobust(i) = trust(i) − (sum of the m − 1 largest c_a(i))
 trustLow(i)    = max(trustRobust(i) − eLowEff, 0)
-distrust(i)    = d_i
-distrustUp(i)  = d_i + eEff
+distrust(i)    = min(d_i, 2^63 − 1)          // stored in 63 bits
+distrustUp(i)  = distrust(i) + eEff
 ```
 
 `trustRobust` is the trust that no `m − 1` anchors can produce alone. It remains a lower bound because removing the largest contributions is non-decreasing in each contribution. Distrust is not leave-one-out, because it only pushes toward refusal.
@@ -292,8 +296,8 @@ An agent outside the certificate has zero trust and zero distrust: *unknown* is 
 
 Each certificate carries two bounds per column, in WAD and in `t`-space:
 
-- **`eUp_a`**, an upper bound on `‖t*^(a) − t^(a)‖₁`. It bounds the error of distrust (§5.6). Proofs that show an omitted or increased edge widen it (§6).
-- **`eLow_a`**, an upper bound on `‖(t^(a) − t*^(a))⁺‖₁`. It is `0` at submission and is widened by proofs that show a decrease (revocation, lower weight, dilution, source change).
+- **`eUp_a`**, an upper bound on `‖t*^(a) − t^(a)‖₁` for the committed graph (and for the registry's graph when it differs only by truncated rows and positive edges omitted under an exact `sPlus`). It bounds the error of distrust (§5.6). Proofs that show an omitted or increased edge widen it (§6).
+- **`eLow_a`**, an upper bound on `‖(t^(a) − t*^(a))⁺‖₁` for the graph whose rows are the committed rows amended by every proof so far. It is `0` at submission and is widened by proofs that show a decrease (revocation, lower weight, dilution, source change).
 
 ```
 eEff    = Σ_a ⌈λ_a · eUp_a / WAD⌉
@@ -310,7 +314,7 @@ Both are global over the set: a widening on one row lowers `trustLow`, or raises
 
 For each set, the aggregator keeps an **append-only node table**. Node `i` has a 32-byte key `kind << 248 | value`: kind `1` agent (`agentId`), `2` address, `3` anchor (address). Anchors are nodes `0 … k−1`, in the order of `SetParams.anchors`, and are inserted at registration. Indices are stable: a node keeps its index for the life of the set.
 
-Nodes are appended as entries `0x01 ‖ agentId:u32` or `0x02 ‖ address:20`, either through `submitCertificate(…, newNodes, …)` or beforehand through `addNodes`. An entry whose key already exists MUST be refused. At the `SubmitterAttested` level, only listed submitters may append. Certifiers SHOULD order the nodes of a first certificate as anchors, then agents by increasing `agentId`, then addresses by increasing value.
+Nodes are appended as entries `0x01 ‖ agentId:u32` or `0x02 ‖ address:20`, either through `submitCertificate(…, newNodes, …)` or beforehand through `addNodes`. An entry whose key already exists MUST be refused. On any set with a non-empty `submitters` list, only listed submitters may append. On an open set, appending is permissionless (see Security Considerations). Certifiers SHOULD order the nodes of a first certificate as anchors, then agents by increasing `agentId`, then addresses by increasing value.
 
 A certificate covers the nodes `[0, nCert)`. `nCert` MUST satisfy `k ≤ nCert ≤ nodeCount` and MUST NOT decrease from one certificate to the next.
 
@@ -331,7 +335,7 @@ vectors = for i in [0, nCert): t_i^(0):u64 ‖ … ‖ t_i^(k−1):u64 ‖ owner
 vectorRoot = keccak256(vectors)
 ```
 
-- Each `t_i^(a)` is in WAD and MUST be `< 2^63`.
+- Each `t_i^(a)` is in WAD. Every u64 field, `ownerFp` included, MUST be `< 2^63`.
 - `ownerFp_i = uint160(ownerOf(agentId)) & (2^63 − 1)` for an agent node, and `0` for any other node. It records the owner at certification for the transfer check (§8.3).
 
 #### 5.4 Rows
@@ -351,9 +355,11 @@ edge  = dst:W ‖ w:int16 ‖ feedbackIndex:u32
 
 **Edges.** Each edge is the pair edge (§3.3) of the row's client on the agent `dst`, with its combined weight `w` and the `feedbackIndex` of the deciding feedback.
 
-**Alias rows.** An alias row `u` (`u ≥ k`) repeats the client `src` of the earlier, non-alias row `ref < u`, and inherits its edges and its `sPlus`. It spreads them with its **own** mass `t_u`. This is how row copy (§3.5) is encoded without duplicating calldata. Each copy counts its positive edges in `E⁺` (§5.6).
+**Alias rows.** An alias row `u` (`u ≥ k`) repeats the client `src` of the earlier, non-alias row `ref < u`, and inherits its edges and its `sPlus`. It spreads them with its **own** mass `t_u`. This is how row copy (§3.5) is encoded without duplicating calldata. `ref` MUST be an agent row that carries SRC: an anchor or address row cannot be aliased. The alias's own VIA_OWNER bit states how agent `u` resolves to the client, and MAY differ from that of `ref`. Each copy counts its positive edges in `E⁺` (§5.6).
 
 **sPlus.** The true positive sum of the client's full row, over all its pair edges. A certifier MAY omit **positive** edges of a row, for example to stay within `ROW_MAX` or to skip pairs that are expensive to re-read, provided it declares `sPlus`. The remaining edges then keep their true normalized weight (`B⁺ = max(GRID, sPlus)`), and the omitted mass enters the margin of `eUp` (§5.6). Without SPLUS, `sPlus = S⁺` of the committed edges.
+
+**Canonical form.** Certifiers SHOULD use `W = 2` whenever `nCert ≤ 65 535`, and SHOULD set SPLUS exactly when `sPlus` exceeds the positive sum of the committed edges. Both forms are accepted, but only the canonical one reproduces the roots of the test vectors.
 
 **Certifier obligations.**
 - Negative edges MUST NOT be omitted. Nothing declares the negative sum, so an omitted negative edge makes `distrustUp` unsound. It is a provable fault (§6), not an option.
@@ -406,12 +412,12 @@ eEff = Σ_a ⌈λ_a · eUp_a / WAD⌉        qEff = Σ_a ⌈λ_a · q_a / WAD⌉
 | agent row with VIA_OWNER | `getAgentWallet(u) == 0` and `ownerOf(u) == src` |
 | agent row without SRC | `getAgentWallet(u) == 0` |
 | each edge of a non-alias row | the client is not a controller of `dst`, and `(w, feedbackIndex)` equals the pair edge (§3.3) re-read in the Reputation Registry |
-| each agent node of non-zero trust | `ownerFp == uint160(ownerOf(agentId)) & (2^63 − 1)` |
-| each other node | `ownerFp == 0` |
+| each agent node with mass | `ownerFp == uint160(ownerOf(agentId)) & (2^63 − 1)` |
+| each address node | `ownerFp == 0` |
 
 Re-reading a pair edge requires `getLastIndex`, then `readFeedback` from the highest index downward until every endorsement tag of the set has been seen or index 1 is reached. The cost is proportional to the history of the pair and is borne by the submitter.
 
-What cannot be checked at submission, at any level, because ERC-8004 has no per-client index: that a row is complete, and that a declared `sPlus` is the true sum.
+A burned target agent, or a burned agent with mass, makes the registry call revert and the submission with it: certifiers have to exclude them. What cannot be checked at submission, at any level, because ERC-8004 has no per-client index: that a row is complete, and that a declared `sPlus` is the true sum.
 
 ⟦ENCODING §3.2 et §3.4. La relecture coûte ≈ 45,5 k gas par arête à avis unique et ≈ 13 k par avis supplémentaire du couple (MESURÉ 28/09, GAS.md) : chiffres déplacés en Reference Implementation, hors texte normatif.⟧
 
@@ -423,7 +429,7 @@ A certifier reads the registries at a recent block, derives the edges (§3), res
 
 At the `SubmitterAttested` level, and on any set with a non-empty `submitters` list, a listed submitter always replaces the current certificate.
 
-On an open set, the aggregator MUST refuse a new certificate whose `vectorRoot` and `graphRoot` both equal those of a current certificate that has been widened by a proof. Otherwise it MUST accept the new certificate if and only if one of these holds:
+On an open set whose current certificate is not `REGISTRY_CHANGED`, the aggregator MUST refuse a new certificate whose `vectorRoot` and `graphRoot` both equal those of the current certificate when that certificate has been widened by a proof. This check is byte-exact: it does not stop a variant with the same content and different bytes (Security Considerations). Otherwise it MUST accept the new certificate if and only if one of these holds:
 
 ```
 no current certificate
@@ -442,11 +448,11 @@ The fourth clause accepts a certificate that is at least as good on every side. 
 
 ### 6. Discrepancy proofs
 
-A discrepancy proof shows that a committed row differs from the registry **now**. It never invalidates a certificate and never moves funds: it widens `eLow` and/or `eUp`. Proofs are permissionless, apply to the current certificate, and are paid by the prover. Each fact is billed once: a row carries its **amendments** (`(agentId:u32 ‖ wCommitted:int16 ‖ wNow:int16)*`) and each proof starts from the amended state, `keccak256(leaf ‖ amends)`.
+A discrepancy proof shows that a committed row differs from the registry **now**. It never invalidates a certificate and never moves funds: it widens `eLow` and/or `eUp`. Proofs are permissionless, apply to the current certificate, and are paid by the prover. Each fact is billed once: a row carries its **amendments** (`(agentId:u32 ‖ wCommitted:int16 ‖ wNow:int16)*`) and each proof starts from the amended state, `keccak256(leaf ‖ amends)`. The first proof on an agent appends its entry at the end of the list; a later proof on the same agent replaces that entry in place. Any party can rebuild the list from the `EdgeProven` events of the current certificate.
 
 #### 6.1 `proveEdge`
 
-`proveEdge(setId, row, src, amends, agentJ)` opens the committed row of `u` (with its Merkle path, or the stored amended state), and for an alias row its committed source row. It re-reads **now** the pair weight `wNew` of the row's client on `agentJ` (§3.3; `0` if the client is a controller of `agentJ`, or if the Identity Registry reverts for `agentJ`; the proof reverts if the Reputation Registry cannot be read). It reverts if `wNew` equals the current weight `wOld` (amended, else committed, else 0), or if the row's source no longer holds (§5.7 reads; use `proveWallet`). This one proof covers:
+`proveEdge(setId, row, src, amends, agentJ)` opens the committed row of `u` (with its Merkle path, or the stored amended state), and for an alias row its committed source row. It re-reads **now** the pair weight `wNew` of the row's client on `agentJ` (§3.3; `0` if the client is a controller of `agentJ`, or if the Identity Registry reverts for `agentJ`; the proof reverts if the Reputation Registry cannot be read). It reverts if `wNew` equals the current weight `wOld` (amended, else committed, else 0), or if the row's source no longer holds (§5.7 reads; use `proveWallet`). A row without a source has no edge to prove: the call reverts. This one proof covers:
 
 - (i) **omission** of an edge, with or without dilution of the others;
 - (ii) a **stale** edge (a later feedback changed the weight);
@@ -487,7 +493,7 @@ If `eLowEff > eLowMax`, the certificate is `STALE` (§8), and the replacement ru
 
 The registries are typically upgradeable proxies, and a contract cannot read another contract's implementation slot.
 
-- `versionHash = keccak256(abi.encode(identityRegistry, keccak256(bytes(identity.getVersion())), reputationRegistry, keccak256(bytes(reputation.getVersion()))))`. If either `getVersion()` call fails or returns malformed data, the registry is unreadable: submission MUST revert.
+- `versionHash = keccak256(abi.encode(identityRegistry, keccak256(bytes(identity.getVersion())), reputationRegistry, keccak256(bytes(reputation.getVersion()))))`. If either `getVersion()` call fails or returns malformed data, the registry is unreadable: submission MUST revert. This version therefore cannot be used with registries that do not implement `getVersion()` (Backwards Compatibility, request 5).
 - Every certificate stores the `versionHash` read in its submitting transaction.
 - `checkRegistry(setId)` is callable by anyone. It recomputes the hash and, if it differs from the certificate's hash or cannot be read, marks the set's certificate `REGISTRY_CHANGED` and emits `RegistryChanged`. A new certificate clears the mark.
 - Certifiers MUST check the registry versions before each certification. Operators SHOULD monitor the registries' [ERC-1967](./eip-1967.md) `Upgraded` events off-chain and call `checkRegistry` for every set they rely on when one is emitted.
@@ -522,7 +528,7 @@ An anchor `a` vetoes agent `j` if **either**:
 - **live**: the feedback of index `getLastIndex(j, anchor_a)` is not revoked, has an endorsement tag of the set, is valid (§3.2), and has weight `≤ vetoMax`; **or**
 - **certified**: bit `a` of `j`'s certified veto mask is set (§5.6, §6.1).
 
-`vetoCount` is the number of anchors that veto. The live check reads one feedback per anchor, so a veto takes effect in the block after the anchor posts it, without recertification. `triggerTag` is the `keccak256(tag1)` of the most negative live veto, or zero if only certified bits apply.
+`vetoCount` is the number of anchors that veto. The live check reads one feedback per anchor, so a veto takes effect from the next transaction after the anchor posts it, without recertification. `triggerTag` is the `keccak256(tag1)` of the most negative live veto (between equal weights, the anchor with the smallest index), or zero if only certified bits apply.
 
 #### 8.3 Trust decision
 
@@ -534,11 +540,11 @@ trusted ⇔ withVeto ∧ status = OK ∧ trustLow ≥ theta ∧ rhoD · distrust
 
 **A payer MUST decide with `isTrusted`, or with `assess(…, true)` and its `trusted` field.** `status = OK` alone does not mean the agent may be paid: an unknown agent has status `OK` and trust zero.
 
-A payer MUST NOT authorize a transfer of value on a set whose `minAnchors` is below 2. A payer that caches a decision MUST bound the cache's lifetime in blocks and MUST NOT reuse a decision across certificates.
+A payer MUST NOT authorize a transfer of value on a set whose `minAnchors` is below 2: `isTrusted` does not enforce it. A payer that pays an address on behalf of an agent MUST check that the address is `getAgentWallet(agentId)` and is non-zero. A payer that caches a decision MUST bound the cache's lifetime in blocks and MUST key it by `certBlock`, `eEff` and `eLowEff`, so that a new certificate or a proof invalidates it. A payer MUST pin the aggregator address it trusts.
 
 #### 8.4 Robustness of reads
 
-`trustOf`, `assess` and `isTrusted` MUST NOT revert, whatever the registries return. Every external call they make MUST be gas-capped, and a failed call MUST resolve toward refusal (`REGISTRY_CHANGED`, `TRANSFERRED`, or `trusted = false`). `trustOf(agentId, setId)` returns `(status, trustRobust, distrust, e, certBlock)` from `assess(agentId, setId, true)`.
+`trustOf`, `assess` and `isTrusted` MUST NOT revert, whatever the registries return. Every external call they make MUST be capped at 120,000 gas, so that two implementations give the same answer on the same state, and a failed call MUST resolve toward refusal (`REGISTRY_CHANGED`, `TRANSFERRED`, or `trusted = false`). `trustOf(agentId, setId)` returns `(status, trustRobust, distrust, e, certBlock)` from `assess(agentId, setId, true)`.
 
 ⟦D21 et D33 (veto au dernier avis + bit certifié), D35, D39. Écarts avec R6 : plus de `UNKNOWN_SET` (fusionné dans `NO_CERT`), plus de `REGISTRY_ERROR` (un registre illisible donne `REGISTRY_CHANGED` au veto et `TRANSFERRED` sur `ownerOf`, AM-08.6) ; l'ordre veto avant transfert suit le code. Désaccord 2 du tour 5 (deux règles pour un même avis d'ancre : le veto en direct lit le dernier avis, D14 lit la dominance par tag) : ⟦OPEN⟧ ci-dessous.⟧
 
@@ -558,6 +564,21 @@ The live veto reads only an anchor's **last** feedback on an agent. Therefore:
 
 ```solidity
 interface IAnchoredReputation {
+    enum Status { OK, NO_CERT, STALE, TRANSFERRED, VETOED, REGISTRY_CHANGED }
+
+    struct TagSpec { string tag; int128 min; int128 neutral; int128 max; uint8 kind; }
+
+    struct Policy {
+        uint64 theta; uint32 rhoN; uint32 rhoD; uint8 minAnchors; uint8 vetoQuorum; int16 vetoMax;
+        uint64 maxAge; uint64 minRefresh; uint64 slackRefresh; uint64 eLowMax;
+        bool strictTransfer; bool registryVerified; bool ownerFallback; address[] submitters;
+    }
+
+    struct SetParams {
+        address[] anchors; uint64[] lambdas; uint32 alphaN; uint32 alphaD;
+        bytes32 tagSchemaHash; TagSpec[] tags; Policy policy;
+    }
+
     event AnchorSetRegistered(bytes32 indexed setId, address[] anchors, uint64[] lambdas, uint32 alphaN, uint32 alphaD);
     event NodesAdded(bytes32 indexed setId, uint256 fromIndex, uint256 count);
     event CertificateSubmitted(bytes32 indexed setId, uint64 indexed certBlock, uint256 eEff, bytes32 graphRoot,
@@ -588,6 +609,12 @@ interface IAnchoredReputation {
         bytes     row;      // committed row bytes
         bytes32[] path;     // Merkle siblings to graphRoot (may be empty once the row is amended)
     }
+
+    // registries and node table
+    function identity() external view returns (address);
+    function reputation() external view returns (address);
+    function nodeCount(bytes32 setId) external view returns (uint256);
+    function nodeKeyAt(bytes32 setId, uint256 i) external view returns (bytes32);
 
     // anchor sets
     function computeSetId(SetParams calldata p) external pure returns (bytes32);
@@ -622,7 +649,7 @@ Implementations MAY add functions (for example a dry run, capacity reservation, 
 
 ### 11. Extensions outside this version
 
-**Rotating anchors.** This version names anchors by address. An anchor that loses its key must be replaced in a new set. A future version MAY name anchors by a self-certifying identifier with key pre-rotation: `anchorId = keccak256(abi.encode(key0, nextKeyDigest1))`, where each rotation reveals the committed next key and commits the following one. Only feedback from the anchor's current key would count, and the veto would read the current key. Such a version changes the `setId` preimage and the anchor-row client.
+**Rotating anchors.** This version names anchors by address. An anchor address MAY be a smart contract account that posts its feedback itself, which lets the anchor rotate its signing keys without a new set; after a compromise, such an anchor revokes the feedback posted with the stolen key, since it is their author. An anchor that is a plain key and loses it must be replaced in a new set. A future version MAY name anchors by a self-certifying identifier with key pre-rotation: `anchorId = keccak256(abi.encode(key0, nextKeyDigest1))`, where each rotation reveals the committed next key and commits the following one. Only feedback from the anchor's current key would count, and the veto would read the current key. Such a version changes the `setId` preimage and the anchor-row client.
 
 **Edge filters.** See §3.8.
 
@@ -630,9 +657,9 @@ Implementations MAY add functions (for example a dry run, capacity reservation, 
 
 ## Rationale
 
-**Anchors instead of a global score.** Only asymmetric, seed-anchored reputation functions can resist Sybil attacks[^1]. With a walk that restarts at the anchors and absorbs lost mass, the mass that reaches a region `X` containing no anchor is bounded by the mass that crosses its attack edges: `π(X) ≤ ((1 − α)/α) · Σ_{u∉X, v∈X} π(u) · C_uv`. A farm of any size that no anchor-reachable node endorses receives exactly zero. Letting the reader choose the anchors also answers the objection to a single score.
+**Anchors instead of a global score.** No non-trivial symmetric reputation function is Sybil-proof[^1]; seed-anchored functions avoid that impossibility. With a walk that restarts at the anchors and absorbs lost mass, the mass that reaches a region `X` containing no anchor is bounded by the mass that crosses its attack edges: `π(X) ≤ ((1 − α)/α) · Σ_{u∉X, v∈X} π(u) · C_uv`. A farm of any size that no anchor-reachable node endorses receives exactly zero. Letting the reader choose the anchors also answers the objection to a single score.
 
-**Personalized PageRank.** EigenTrust with pre-trusted peers[^2] is personalized PageRank under another name. Among the classical schemes (EigenTrust, Advogato, SybilGuard[^5], SybilRank), it is the only one that has both a formal Sybil bound and a certificate checkable in **one pass** over the graph. Advogato's certificate is a binary max-flow, and SybilRank depends on an early-stopped iteration.
+**Personalized PageRank.** EigenTrust with pre-trusted peers[^2] is personalized PageRank under another name. Among the classical schemes (EigenTrust, Advogato, SybilGuard[^5], SybilRank), it combines a formal Sybil bound, a certificate checkable in one pass over the graph, and **linearity in the seed**, which makes per-anchor columns and leave-one-anchor-out possible. Advogato yields a binary max-flow, and SybilRank depends on an early-stopped iteration. Personalized PageRank is not Sybil-proof in the strong sense of Cheng and Friedman: the bound limits the mass a region receives through its attack edges, not the rank of a compromised node.
 
 **A share of mass, not a rescaled score.** An earlier draft exposed `t_i · N`, with `N` the number of nodes. `N` is chosen by the certifier and can be inflated for free by registering agents. A share of a unit mass has no free parameter, and each entry fits in 64 bits.
 
@@ -654,9 +681,9 @@ Dilution (an under-declared positive budget) and omitted negative edges therefor
 
 **Declared `sPlus`.** Without it, omitting a positive edge would shrink `B⁺` and raise every other edge of the row: omission would become dilution. Declaring the true sum keeps the remaining edges at their true weight. The omitted mass becomes an explicit margin of `eUp` and costs nothing on the trust side. A certifier can then drop expensive or excess edges safely. Nothing declares the negative sum, so negative edges are never omissible.
 
-**Two bounds.** `eUp` (L5) bounds `‖t* − t‖₁`. It is what makes `distrustUp = d + eEff` an upper bound on the true distrust, since distrust is linear in trust with coefficients at most `1 − α`. `eLow` (L6) bounds `‖(t − t*)⁺‖₁` after proofs of decreases. Each proof bills the exact change of the normalized row, multiplied by `(1 − α)·t_u / α`. Per-row caps bound the total, and successive amendments add up by the triangle inequality.
+**Two bounds.** `eUp` (L5) bounds `‖t* − t‖₁`. It is what makes `distrustUp = d + eEff` an upper bound on the distrust of the committed graph, since distrust is linear in trust with coefficients at most `1 − α`. An omitted negative edge breaks this until it is proven. `eLow` (L6) bounds `‖(t − t*)⁺‖₁` after proofs of decreases. Each proof bills the exact change of the normalized row, multiplied by `(1 − α)·t_u / α`. Per-row caps bound the total, and successive amendments add up by the triangle inequality.
 
-**Replacement by quality.** Two valid sub-solutions of the same graph satisfy `‖t* − t‖₁ = ‖t*‖₁ − ‖t‖₁` (L7). More mass is therefore more precision, and omitting endorsements (censorship) loses mass. An earlier rule compared error bounds. It blocked every honest update of a growing graph, since each new positive edge adds a rounding unit, and it rewarded censorship, since fewer edges give a smaller bound. `q`, the bound without its rounding floor, keeps truncation honest. The distrust mass `D` keeps negative edges. A zero vector has `q ≈ 1 WAD` and can never displace a live certificate.
+**Replacement by quality.** Two valid sub-solutions of the same graph satisfy `‖t* − t‖₁ = ‖t*‖₁ − ‖t‖₁` (L7). More mass is therefore more precision, and omitting endorsements from an otherwise identical graph (censorship) loses mass. On a graph that grows between two certificates, a certifier can omit one endorsement and still gain mass elsewhere: the rule compares aggregates, not agents. An earlier rule compared error bounds. It blocked every honest update of a growing graph, since each new positive edge adds a rounding unit, and it rewarded censorship, since fewer edges give a smaller bound. `q`, the bound without its rounding floor, keeps truncation honest. The distrust mass `D` keeps negative edges. A zero vector has `q ≈ 1 WAD` and can never displace a live certificate.
 
 **Growing bounds instead of slashing.** ERC-8004 does not record when feedback was given, so "this feedback existed before the certificate" cannot be proven. With slashing, anyone could post feedback just after an honest certificate, "prove" an omission and collect a bond. Widening a bound needs no dates, no bond and no challenge window. It also doubles as the recertification signal.
 
@@ -837,7 +864,7 @@ The certified integers are the floors of these values, reached in 4 iterations f
 - `D = 185185185185185186`, that is 5/27 rounded up;
 - `graphRoot` and `vectorRoot` as in the file.
 
-The slash makes agent 4's distrust positive although a later `+1` exists under another tag, and sets `A2`'s certified veto bit on agent 4.
+The slash makes agent 4's distrust positive although a later `+1` exists under another tag, and sets `A2`'s certified veto bit on agent 4. This real configuration does not follow the recommendation of §2.1: `A2` is the source of agent 18 (see Security Considerations, *Anchors*).
 
 ### TC-4 Other certificates: `certificates/`
 
@@ -935,7 +962,9 @@ The contract's runtime bytecode is 33,527 bytes. That is above the 24,576-byte l
 
 In every case, the lower bound is guaranteed for the registry's graph only once every existing discrepancy has been proven. No level makes a certificate unforgeable. A consumer relying on a set should know who watches it.
 
-**Open sets need a watcher.** On a set without listed submitters, anyone can submit. A diluted certificate that does not lower the mass, `q` or `D` passes the replacement rule and can displace an honest one before `maxAge`. A proof corrects it, and the honest certificate then replaces it at once. A slightly different variant can be resubmitted, though, and has to be proven again: each round costs the submitter about a full certificate and the watcher one proof. Nothing on-chain bounds the number of rounds. A set that cannot guarantee an active watcher should list its submitters.
+**Open sets need a watcher.** On a set without listed submitters, anyone can submit. A diluted certificate that does not lower the mass, `q` or `D` passes the replacement rule and can displace an honest one before `maxAge`. A proof corrects it, and the honest certificate then replaces it at once. The refusal of an unchanged resubmission is byte-exact, though: the same content with different bytes (one more empty row for a node without mass, or a wider index width) changes `graphRoot` and passes, and has to be proven again. Each round costs the submitter about a full certificate, and the watcher one proof plus, to restore the honest state, a full certificate. Nothing on-chain bounds the number of rounds. A set that cannot guarantee an active watcher should list its submitters, and should set `minRefresh = maxAge`: inside the refresh window, the replacement rule checks neither mass nor `D`, so a certificate that drops negative edges and certified veto bits passes.
+
+**Node-table inflation on open sets.** On an open set, anyone can append nodes, including agent identifiers that do not exist. Every later node gets a higher index, and every later certificate has to cover all of them, because `nCert` never decreases. The cost of every certificate grows with each junk node. Past a few thousand junk nodes (estimated), no certificate fits in one transaction, and the set is frozen for good. Appending costs the attacker the storage of each node. A set exposed to this should list its submitters.
 
 **Bounds are global over a set.** `eLowEff` and `eEff` aggregate over all agents. One proof on a high-trust row lowers `trustLow`, or raises `distrustUp`, for every agent of the set until recertification.
 - On the deployment of Motivation, proving one omitted negative edge on an anchor row raised `eEff` from 18 wei to 0.556 WAD. With `ρ = 1/2`, no agent passed `isTrusted` until the next certificate.
@@ -943,10 +972,12 @@ In every case, the lower bound is guaranteed for the registry's graph only once 
 - The owner of an endorsed agent can make its endorser an approved operator (`setApprovalForAll`), which turns the endorsement into a controller relation, and then prove the decrease.
 - `eLowMax` caps the widening of the lower bound: beyond it, the set is `STALE` and any certificate can replace the current one.
 
-**Cost asymmetries.** Re-reading a pair edge scans the pair's history from its latest index downward. The client of a row can stack feedback on a pair to make a `RegistryVerified` submission, or a proof, more expensive. On the deployment of Motivation, each stacked feedback costs its author about 20 times what it costs a reader to skip it. A certifier can also omit such a positive edge under a declared `sPlus`.
+**Cost asymmetries.** Re-reading a pair edge scans the pair's history from its latest index downward. The client of a row can stack feedback on a pair to make a `RegistryVerified` submission, or a proof, more expensive. On the deployment of Motivation, each stacked feedback costs its author about 20 times what it costs a reader to skip it. A certifier can omit such a positive edge under a declared `sPlus`. A negative edge cannot be omitted: if its pair has been poisoned beyond what one transaction can re-read, the row has to be truncated, and its margin widens `eUp` for the whole set. A fact on a row copied into `N` agents has to be proven `N` times.
 
 **Anchors.**
-- With `minAnchors ≥ 2` and `vetoQuorum = 1`, a stolen anchor key yields at most a denial of service: vetoes, distrust, and the loss of the endorsements it held. It never yields a payment to an agent that the other anchors do not endorse. With `minAnchors = 1`, one stolen key suffices to make a Sybil agent pass.
+- With `minAnchors ≥ 2` and `vetoQuorum = 1`, a stolen anchor key yields a denial of service (vetoes, distrust, loss of the endorsements it held), and no payment to an agent that the other anchors do not reach, **provided the anchor address is not the source of any agent** (§2.1). If it is, its row is copied into that agent, the agent carries mass from the other columns, and an endorsement posted with the stolen key reaches several columns: in the graph of TC-3, a Sybil endorsed with `A2`'s key obtains the same `trustRobust` as the honest agents 2 and 3. With `minAnchors = 1`, one stolen key suffices to make a Sybil agent pass.
+- Leave-one-out protects against one compromised anchor, not against one compromised node. A reputable agent reached from every anchor that turns malicious can endorse Sybils in every column: the mass it passes is bounded by `(1 − α)/α` times the mass of its outgoing edges, and two agents endorsing each other amplify their own trust by up to `1/(1 − (1 − α)²)` (1.8 for `α = 1/3`).
+- A region `X` can concentrate up to `(1 − α)·π(X)` of distrust on a single agent.
 - This version names anchors by address. A compromised anchor cannot rotate its key: it has to be replaced in a new set, and consumers have to migrate.
 - The live veto reads only an anchor's last feedback on an agent. Any later feedback from the anchor, even a measurement, lifts the live veto. Only the certified bit keeps it until the next certificate. Anchors therefore have to follow §9.
 - A slash followed by a positive feedback from the same anchor, both posted between two certificates, is seen neither live nor by the certificate.
@@ -957,17 +988,21 @@ In every case, the lower bound is guaranteed for the registry's graph only once 
 
 ⟦OPEN — désaccord 1 du tour 2 (dépendance de vivacité, AM-2.12) : E exige un mode dégradé ; A et D refusent tout mode qui paie sans certificat frais. Le texte ne définit aucun mode dégradé. Maintenu ouvert : D27 dit qui paie la recertification, pas ce qui arrive s'il ne paie plus.⟧
 
+**Silencing critics through approvals.** A controller of an agent cannot rate it (§3.3), and the ERC-8004 guard also refuses feedback from operators. The owner of an agent can therefore call `setApprovalForAll` for each of its critics, and each anchor of a set, to make them operators. Their existing negative edges are then rejected, and they can no longer post feedback on the agent, including vetoes. An anchor's live veto posted before the approval still counts (§8.2), but no new one can be posted. This costs a few approval transactions. Consumers should treat an agent whose owner has approved an anchor of the set as suspect. The rule of §3.3 and its interaction with the registry guard are open issues of this version.
+
 **Transfers and reputation purchase.**
 - ERC-8004 clears `agentWallet` on transfer.
 - A transferred agent reads as `TRANSFERRED`, live in strict mode, after `proveTransfer` in fast mode, until the next certificate.
 - Its **outgoing** edges stay in the certified vectors until someone submits `proveWallet` or a new certificate is accepted. Until then, a bought agent keeps propagating the mass it had.
 - Feedback is undated, so reputation received before the transfer cannot be separated from reputation received after it: buying a reputable agent costs a pause, not a reset.
+- A purchase that does not change `ownerOf` goes unseen: selling the owner's key, adding an operator, or an owner that is a contract account controlled by others. The pause on transfer only covers transfers of the token.
 - The committed owner is a 63-bit fingerprint. A transfer to an address that shares those 63 bits goes unnoticed. Finding one takes about 2⁶³ attempts.
 
-**Registry governance.** The registries of the deployment in Motivation are upgradeable proxies controlled by a single externally owned account, with no timelock *(verified 2026-09-27)*. Their owner can change any semantics this ERC relies on.
+**Registry governance.** The registries of the deployment in Motivation are upgradeable proxies controlled by a single externally owned account, with no timelock *(verified 2026-09-27)*. Their owner can change any semantics this ERC relies on, including making any certificate pass the `RegistryVerified` re-reads, without changing the version string.
 - The version hash detects an upgrade only if the version string changes, and only for the sets on which someone calls `checkRegistry`. An upgrade that keeps the version string is detectable only off-chain, through `Upgraded` events.
 - Consumers of high-value flows should monitor those events.
-- `getVersion` and the reference registry's `isAuthorizedOrOwner` are not part of the ERC-8004 interface. An aggregator on a registry without them refuses every submission. It can use the ERC-721 functions of §1 instead of `isAuthorizedOrOwner`.
+- A registry call that costs more than the 120,000-gas cap after an upgrade fails: reads then return `TRANSFERRED` or `REGISTRY_CHANGED` for every agent, and proofs that treat a failed call as an absent edge are accepted.
+- `getVersion` and the reference registry's `isAuthorizedOrOwner` are not part of the ERC-8004 interface. On a registry without `isAuthorizedOrOwner`, the reference implementation's `proveEdge` treats every edge as absent, so anyone can widen an honest certificate. An aggregator on a registry without them refuses every submission. It can use the ERC-721 functions of §1 instead of `isAuthorizedOrOwner`.
 
 **The registry guard and shared wallets.**
 - The ERC-8004 guard does not reject an agent's own `agentWallet`: one agent of the deployment in Motivation received 78 feedback entries from it. §3.3 rejects every current controller, `agentWallet` included.
@@ -986,7 +1021,11 @@ In every case, the lower bound is guaranteed for the registry's graph only once 
 
 **Rounding.** Every term of `y` and every contribution `c_a` is rounded down. Margins, bounds, proof amounts and distrust are rounded up. Rounding never helps an agent pass.
 
-**Gas.** Every external call made by a read is gas-capped, so a hostile registry cannot exhaust the caller's gas. A decision can still cost more than a micropayment. Payers may cache decisions per payee for a bounded number of blocks (§8.3), and should call reads with an explicit gas limit, treating out-of-gas as untrusted.
+**Data availability.** The committed rows exist only in the calldata of the submitting transaction. Proofs need them. If they cannot be recovered, for example because the submission went through a contract that hides its calldata from indexers, no proof is possible. Certifiers should submit from an account whose transactions are indexed, and publish the rows.
+
+**Gas.** Every external call made by a read is capped at 120,000 gas, so a hostile registry costs a caller at most about `(2k + 1)` such calls, roughly 4 million gas at `k = 16` (estimated). A decision can cost more than a micropayment. Payers may cache decisions per payee for a bounded number of blocks (§8.3), and should call reads with an explicit gas limit, treating out-of-gas as untrusted.
+
+Chains with a lower per-transaction gas cap (for example 2²⁴ under [EIP-7825](./eip-7825.md)) hold proportionally fewer `RegistryVerified` edges per certificate.
 
 **Same chain.** All registry reads are same-chain. Using a certificate on another chain would reintroduce trust in a bridge.
 

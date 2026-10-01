@@ -39,7 +39,7 @@ Discussion: https://ethereum-magicians.org/t/<slug>/<id>
 ERC-8004 records feedback about agents but leaves aggregation and Sybil filtering to readers (`getSummary` requires a caller-supplied list of clients). This ERC standardizes that layer for contracts:
 
 - **Reader-chosen anchors.** An anchor set (anchors, weights, tag schema, policy) is immutable and content-addressed by its `setId`. There is no global score and no default set.
-- **Sub-solution certificates.** Per anchor, a personalized-PageRank column over the ERC-8004 feedback graph. The aggregator accepts it only if `t ≤ F(t)` coordinate by coordinate, which makes every value an exact lower bound of the true trust as long as the committed graph is dominated by the registry. At the `RegistryVerified` level, every committed edge is re-read in the registry at submission.
+- **Sub-solution certificates.** Per anchor, a personalized-PageRank column over the ERC-8004 feedback graph. The aggregator accepts it only if `t ≤ F(t)` coordinate by coordinate, which makes every value a lower bound of the true trust, with no error term, as long as the committed graph is dominated by the registry. At the `RegistryVerified` level, every committed edge is re-read in the registry at submission.
 - **Discrepancy proofs.** Omitted, diluted or outdated edges can be proven by anyone. A proof widens the certificate's bounds and never moves funds.
 - **A non-reverting read for paying contracts.** `isTrusted(agentId, setId)` applies the committed policy: leave-one-anchor-out trust, distrust ratio, live anchor veto, freshness and transfer.
 
@@ -53,7 +53,7 @@ Prior art is cited in the Rationale: OpenRank's on-chain EigenTrust verification
 ```markdown
 **ERC-XXXX: Anchored Reputation for Trustless Agents**
 
-ERC-8004 delegates Sybil filtering and aggregation to readers. This draft proposes a standard aggregation layer that contracts can read before they pay: personalized PageRank relative to anchors chosen by the reader, certified on-chain as a sub-solution (an exact per-agent lower bound), with registry re-reads at submission and permissionless discrepancy proofs.
+ERC-8004 delegates Sybil filtering and aggregation to readers. This draft proposes a standard aggregation layer that contracts can read before they pay: personalized PageRank relative to anchors chosen by the reader, certified on-chain as a sub-solution (a per-agent lower bound under a stated domination condition), with registry re-reads at submission and permissionless discrepancy proofs.
 
 Draft: <link to the PR once opened>
 

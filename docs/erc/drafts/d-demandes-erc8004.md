@@ -20,6 +20,10 @@ Minimal change: one `uint64` per feedback in storage, returned by `readFeedback`
 The guard rejects `isAuthorizedOrOwner(msg.sender, agentId)` but not `getAgentWallet(agentId)`. On chain ID 143, one agent has received 78 feedback entries from its own `agentWallet` (measured 2026-10-01).
 Minimal change: also revert when `msg.sender == getAgentWallet(agentId)`.
 
+**2b. Do not let approvals silence raters.**
+Since the guard rejects operators, an owner can call `setApprovalForAll` for a critic and prevent it from rating the agent again, negative feedback included.
+Minimal change: apply the guard to the owner and `agentWallet` only, or only to positive values.
+
 **3. Make `agentWallet` unique and add a reverse lookup.**
 On chain ID 143, 178 wallets are the `agentWallet` of several agents (1,773 agents in total, up to 762 per wallet, measured 2026-09-27). Resolving which agent a client acts for, and checking that a list of an agent's outgoing feedback is complete, is impossible on-chain today.
 PR #80 implements this.

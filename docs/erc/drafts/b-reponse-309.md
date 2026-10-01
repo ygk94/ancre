@@ -18,7 +18,7 @@
 
 What we measured on one production deployment (chain ID 143):
 - 7,665 of 9,188 feedback entries (83 %) came from agents registered within about 48 hours, all rating one agent at the maximum; its naive mean was about 1.5 × 10³⁶ (2026-09-21).
-- With personalized PageRank relative to anchors chosen by the reader, that agent gets zero for every anchor set that does not endorse the farm, and one honest two-hop endorsement chain remains in the whole registry (2026-10-01).
+- With personalized PageRank relative to anchors chosen by the reader, that agent gets zero for every anchor set from which no endorsement path reaches the farm, and one honest two-hop endorsement chain remains in the whole registry (2026-10-01).
 - Two registry properties matter for any reader-anchored scheme: feedback carries no block number, so an omission cannot be dated, and `giveFeedback` does not reject the agent's own `agentWallet` (one agent received 78 entries from it, 2026-09-27).
 
 The draft certifies each anchor's column on-chain as a sub-solution (`t ≤ F(t)`), which gives a per-agent lower bound, and it defines no default anchor set.
