@@ -17,6 +17,11 @@ import { buildPaymentPayload, encodeB64Json, newAuthorization } from "../dist/li
 import { CHAIN_ID, DEV_D, DEV_F, DEV_P, NETWORK, USDC, dealUsdc, emulatedFacilitator, exactSettlementCall, forgeScript, oracleAbi, startAnvil, usdcAbi } from "./local.mjs";
 import { startX402Server } from "./x402-server.mjs";
 import { ancreGuard } from "../dist/lib/x402-guard.js";
+import { overrideFlow } from "../dist/lib/override.js";
+import { fileJournal, readJournal } from "../dist/lib/journal.js";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { wrapFetchWithPayment, x402Client } from "@x402/fetch";
 import { ExactEvmScheme } from "@x402/evm/exact/client";
 
@@ -146,6 +151,28 @@ async function main() {
       farm: farmOutcome, good: `HTTP ${gr.status}`, goodBody: gr.status === 200 ? undefined : (await gr.text()).slice(0, 400), goodReceived: (await bal(DEV_P)) - g0, decisions,
     });
 
+    // ---- D47: human override of the farm refusal, paid from the human's own wallet (a fresh key stands in for
+    // the human's MetaMask extension; in the real command the human signs on a local page in the browser)
+    const humanKey = privateKeyToAccount(bytesToHex(randomBytes(32)));
+    await dealUsdc(pub, humanKey.address, 50_000n);
+    const jpath = join(mkdtempSync(join(tmpdir(), "ancre-demo-")), "journal.jsonl");
+    const payerBefore = await bal(payer);
+    const farmBefore = await bal(DEV_F);
+    const ov = await overrideFlow({
+      readContract: (a) => pub.readContract(a), fetch: globalThis.fetch.bind(globalThis), nowSec: () => Math.floor(Date.now() / 1000),
+      random32: () => bytesToHex(randomBytes(32)), interactive: true, agentWallet: dev.address, journal: fileJournal(jpath),
+      confirm: async () => true,
+      humanSign: async (req) => {
+        const message = { ...req.typedData.message, from: humanKey.address };
+        const { EIP712Domain, ...types } = req.typedData.types;
+        return { address: humanKey.address, message, signature: await humanKey.signTypedData({ ...req.typedData, types, message }) };
+      },
+    }, cfg, `${server.url}/farm`, {});
+    scene("8. human override of the farm refusal (D47)", {
+      verdictOverridden: ov.verdict, outcome: ov.outcome, paidBy: ov.human, transaction: ov.transaction,
+      farmReceived: (await bal(DEV_F)) - farmBefore, payerSpent: payerBefore - (await bal(payer)), journal: readJournal(jpath).map((e) => e.kind),
+    });
+
     const ok = out.find((e) => e.scene === "2. pay /farm").signed === false
       && out.find((e) => e.scene === "3. pay /good").paid === true
       && out.find((e) => e.scene.startsWith("4.")).farmReceived === 0n
@@ -153,7 +180,9 @@ async function main() {
       && out.find((e) => e.scene.startsWith("6.")).paid === false
       && out.find((e) => e.scene.startsWith("6.")).providerReceived === 0n
       && out.find((e) => e.scene.startsWith("7.")).farm.startsWith("aborted")
-      && out.find((e) => e.scene.startsWith("7.")).goodReceived === 10000n;
+      && out.find((e) => e.scene.startsWith("7.")).goodReceived === 10000n
+      && out.find((e) => e.scene.startsWith("8.")).outcome === "OVERRIDE_PAID"
+      && out.find((e) => e.scene.startsWith("8.")).payerSpent === 0n;
     console.log(`\nDEMO ${ok ? "PASS" : "FAIL"}`);
     if (!ok) process.exitCode = 1;
   } finally {

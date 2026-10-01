@@ -113,6 +113,7 @@ trigger tag, who paid, transaction. `mm ancre journal --json` prints the latest 
 npm test                       # 40 tests on stubs: manifest (official schema), x402, blobs, verdicts, flows with a spy executor, client guard, human override
 node scripts/demo-local.mjs    # rehearsal of the demo on an anvil --network monad fork (no real transaction)
 node scripts/t1.mjs --local    # test T1 dry run: the facilitator emulated as x402-rs does it
+node scripts/setup-fork.mjs    # demo setup on a fork: register, setAgentWallet, payer (operator = Agent Wallet), funding
 ```
 
 What the stubs check: a non-`PAY` verdict never reaches the wallet; exactly one signature per payment; no
