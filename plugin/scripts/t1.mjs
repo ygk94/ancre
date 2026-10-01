@@ -10,79 +10,32 @@
 //                                                  after `forge script script/t1/T1.s.sol` (T1_STEP=deploy) by Hugo.
 //
 // Uses the plugin's own library (dist/lib): the same blob and typed data as `mm ancre pay`.
-import { spawn, execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
-import {
-  bytesToHex, createPublicClient, createWalletClient, encodeAbiParameters, encodeFunctionData, getAddress, hashTypedData,
-  http, keccak256, parseAbi, toHex,
-} from "viem";
+import { bytesToHex, createPublicClient, createWalletClient, encodeFunctionData, encodePacked, getAddress, hashTypedData, http, parseAbi, toHex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { ancrePaymentTypedData, encodeExactBlob, usdcAuthorizationDigest, REASONS } from "../dist/lib/payer.js";
 import { buildPaymentPayload } from "../dist/lib/x402.js";
 import { payerAbi } from "../dist/lib/payerAbi.js";
+import { CHAIN_ID, DEV_D, DEV_P, FAC, FOUNDRY, NETWORK, TESTNET, UPTO, USDC, dealUsdc, emulatedFacilitator, forgeScript, oracleAbi, startAnvil, usdcAbi } from "./local.mjs";
 
 const args = process.argv.slice(2);
 const flag = (n, d) => { const i = args.indexOf(`--${n}`); return i >= 0 ? args[i + 1] : d; };
 const has = (n) => args.includes(`--${n}`);
 const LIVE = has("live");
-const ROOT = new URL("../../contracts/", import.meta.url).pathname;
-const FOUNDRY = `${process.env.HOME}/.foundry/bin`;
-const TESTNET = "https://testnet-rpc.monad.xyz";
 const FACILITATOR = flag("facilitator", "https://x402-facilitator.molandak.org");
-const FAC = getAddress("0x7f6a2850669202519f0FE8aa912451238820Db86");
-const USDC = getAddress("0x534b2f3A21130d7a60830c2Df862319e593943A3");
-const PERMIT2 = getAddress("0x000000000022D473030F116dDEE9F6B43aC78BA3");
-const UPTO = getAddress("0x4020A4f3b7b90ccA423B9fabCc0CE57C6C240002");
-const CHAIN_ID = 10143;
-const NETWORK = "eip155:10143";
 const AGENT_ID = 1n; // inside T1Oracle
-// anvil's well-known dev accounts: only ever used against the local fork
-const DEV_D = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
-const DEV_P = getAddress("0x70997970C51812dc3A010C7d01b50e0d17dc79C8");
 
-const usdcAbi = parseAbi([
-  "function transferWithAuthorization(address,address,uint256,uint256,uint256,bytes32,bytes)",
-  "function balanceOf(address) view returns (uint256)",
-]);
 const uptoAbi = parseAbi([
   "struct TokenPermissions { address token; uint256 amount; }",
   "struct PermitTransferFrom { TokenPermissions permitted; uint256 nonce; uint256 deadline; }",
   "struct Witness { address to; address facilitator; uint256 validAfter; }",
   "function settle(PermitTransferFrom permit, uint256 amount, address owner, Witness witness, bytes signature)",
 ]);
-const oracleAbi = parseAbi(["function setBurn(uint256)", "function setAgent(uint256,address,bool,uint8)"]);
 
 const log = [];
 const note = (scene, data) => { const e = { scene, at: new Date().toISOString(), ...data }; log.push(e); console.log(JSON.stringify(e, (_, v) => (typeof v === "bigint" ? v.toString() : v))); };
-
-// ------------------------------------------------------------------ environment
-let anvil;
-async function startAnvil() {
-  const port = flag("port", "8546");
-  anvil = spawn(`${FOUNDRY}/anvil`, ["--network", "monad", "--fork-url", TESTNET, "--chain-id", String(CHAIN_ID),
-    "--port", port, "--timeout", "120000", "--retries", "10", "--silent"], { stdio: "ignore" });
-  const rpc = `http://127.0.0.1:${port}`;
-  for (let i = 0; i < 120; i++) {
-    try { await createPublicClient({ transport: http(rpc) }).getChainId(); return rpc; } catch { await new Promise((r) => setTimeout(r, 500)); }
-  }
-  throw new Error("anvil did not start");
-}
-
-function forgeScript(rpc, env, auth) {
-  const out = execFileSync(`${FOUNDRY}/forge`, ["script", "script/t1/T1.s.sol", "--rpc-url", rpc, ...auth, "--broadcast",
-    "--gas-estimate-multiplier", "110", "--slow"], { cwd: ROOT, env: { ...process.env, ...env, ETH_RPC_TIMEOUT: "900" }, encoding: "utf8" });
-  const grab = (k) => (out.match(new RegExp(`${k}=(0x[0-9a-fA-F]{40})`)) || [])[1];
-  return { oracle: grab("T1_ORACLE"), payer: grab("T1_PAYER"), out };
-}
-
-/** FiatToken v2.2 keeps balances in balanceAndBlacklistStates (slot 9): set D's test USDC on the fork only. */
-async function dealUsdc(rpc, pub, who, amount) {
-  const slot = keccak256(encodeAbiParameters([{ type: "address" }, { type: "uint256" }], [who, 9n]));
-  await pub.request({ method: "anvil_setStorageAt", params: [USDC, slot, toHex(amount, { size: 32 })] });
-  const b = await pub.readContract({ address: USDC, abi: usdcAbi, functionName: "balanceOf", args: [who] });
-  if (b !== amount) throw new Error(`USDC balance slot guess wrong (got ${b})`);
-}
 
 // ------------------------------------------------------------------ the facilitator (real, or x402-rs emulated)
 function exactCall(auth, blob) {
@@ -90,39 +43,14 @@ function exactCall(auth, blob) {
     args: [auth.from, auth.to, auth.value, auth.validAfter, auth.validBefore, auth.nonce, blob] });
 }
 
-async function emulated(pub, phase, to, data) {
-  // /verify = eth_call of the settlement; /settle = estimate_gas then send with that limit, no re-simulation (x402-rs)
-  if (phase === "verify") {
-    try {
-      await pub.call({ account: FAC, to, data });
-      return { ok: true, phase };
-    } catch (e) {
-      return { ok: false, phase, error: (e.shortMessage || e.message).slice(0, 300) };
-    }
-  }
-  let gas;
-  try {
-    gas = await pub.estimateGas({ account: FAC, to, data });
-  } catch (e) {
-    return { ok: false, phase: "estimate", error: (e.shortMessage || e.message).slice(0, 300), broadcast: false };
-  }
-  await pub.request({ method: "anvil_impersonateAccount", params: [FAC] });
-  await pub.request({ method: "anvil_setBalance", params: [FAC, toHex(10n ** 20n)] });
-  const w = createWalletClient({ account: FAC, transport: http(pub.transport.url) });
-  const hash = await w.sendTransaction({ to, data, gas, chain: null });
-  const r = await pub.waitForTransactionReceipt({ hash });
-  const tx = await pub.getTransaction({ hash });
-  return { ok: r.status === "success", phase, hash, gasLimit: tx.gas, gasUsed: r.gasUsed, status: r.status };
-}
-
 async function facilitator(pub, phase, kind, payload, requirements) {
   if (!LIVE) {
-    if (kind === "exact") return emulated(pub, phase, USDC, exactCall(payload._auth, payload.payload.signature));
+    if (kind === "exact") return emulatedFacilitator(pub, phase, USDC, exactCall(payload._auth, payload.payload.signature));
     const u = payload._upto;
     const data = encodeFunctionData({ abi: uptoAbi, functionName: "settle", args: [
       { permitted: { token: USDC, amount: u.cap }, nonce: u.nonce, deadline: u.deadline },
       phase === "verify" ? u.cap : BigInt(requirements.amount), u.from, { to: u.to, facilitator: FAC, validAfter: u.validAfter }, payload.payload.signature] });
-    return emulated(pub, phase, UPTO, data);
+    return emulatedFacilitator(pub, phase, UPTO, data);
   }
   const { _auth, _upto, ...wire } = payload;
   const body = JSON.stringify({ x402Version: 2, paymentPayload: wire, paymentRequirements: requirements });
@@ -210,7 +138,6 @@ async function payUpto(ctx, label, cap = 5000n, amount = 1000n) {
     message: { to: u.to, cap, nonce: u.nonce, deadline: u.deadline, facilitator: FAC, validAfter: 0n, agentId: AGENT_ID },
   };
   const sig = await signTyped(td, ctx.dev);
-  const { encodePacked } = await import("viem");
   const blob = encodePacked(["uint8", "uint256", "address", "uint256", "uint256", "uint256", "address", "uint256", "bytes"],
     [2, AGENT_ID, u.to, cap, u.nonce, u.deadline, FAC, 0n, sig]);
   const accepted = { scheme: "upto", network: NETWORK, amount: cap.toString(), asset: USDC, payTo: ctx.provider, maxTimeoutSeconds: 120, extra: { facilitatorAddress: FAC } };
@@ -230,7 +157,8 @@ async function main() {
     console.error("REFUSED: --live sends real testnet transactions and calls the real facilitator. Set T1_GO=hugo only with Hugo's explicit approval.");
     process.exit(2);
   }
-  const rpc = LIVE ? TESTNET : await startAnvil();
+  const local = LIVE ? undefined : await startAnvil(flag("port", "8546"));
+  const rpc = LIVE ? TESTNET : local.rpc;
   const pub = createPublicClient({ transport: http(rpc) });
   const dev = privateKeyToAccount(DEV_D);
   const wallet = createWalletClient({ account: dev, transport: http(rpc) });
@@ -239,7 +167,7 @@ async function main() {
     if (LIVE) {
       ctx = { pub, dev, payer: getAddress(flag("payer")), oracle: getAddress(flag("oracle")), provider: getAddress(flag("provider")) };
     } else {
-      await dealUsdc(rpc, pub, dev.address, 1_000_000n);
+      await dealUsdc(pub, dev.address, 1_000_000n);
       const d = forgeScript(rpc, { T1_STEP: "deploy", T1_PROVIDER: DEV_P, T1_FUND: "100000" }, ["--private-key", DEV_D]);
       ctx = { pub, dev, payer: getAddress(d.payer), oracle: getAddress(d.oracle), provider: DEV_P };
       note("T1-1..3 deploy (forge script, as live)", { payer: ctx.payer, oracle: ctx.oracle,
@@ -268,8 +196,8 @@ async function main() {
     const f = `t1-results/${LIVE ? "live" : "local"}-${Date.now()}.json`;
     writeFileSync(f, JSON.stringify(log, (_, v) => (typeof v === "bigint" ? v.toString() : v), 2));
     console.error(`results: ${f}`);
-    if (anvil) anvil.kill();
+    if (local) local.stop();
   }
 }
 
-main().catch((e) => { console.error(e); if (anvil) anvil.kill(); process.exit(1); });
+main().catch((e) => { console.error(e); process.exit(1); });

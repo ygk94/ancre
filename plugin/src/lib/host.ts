@@ -1,13 +1,17 @@
 import { CommandError, type CommandIO, type PluginCommandContext } from "@metamask/agent-wallet/plugin";
-import { type Address, bytesToHex, getAddress, type Hex, isAddress } from "viem";
+import { type Address, bytesToHex, createPublicClient, getAddress, type Hex, http, isAddress } from "viem";
 import { randomBytes } from "node:crypto";
 import { ConfigError, type Config } from "./config.js";
 import { type Deps, FlowError } from "./flows.js";
 import { X402Error } from "./x402.js";
 
-/** Builds the flow dependencies from the host context: reads via ctx.publicClient, writes via ctx.walletExecutor only. */
-export async function hostDeps(ctx: PluginCommandContext, io: CommandIO, cfg: Config, commandId: string | null): Promise<Deps> {
-  const client = ctx.publicClient(cfg.chainId);
+/**
+ * Builds the flow dependencies from the host context. Reads: ctx.publicClient (authenticated host gateway), or a
+ * plain RPC when --rpc-url / ANCRE_RPC_URL is given (read-only commands work without `mm login`, e.g. for a jury).
+ * Signatures and transactions: ctx.walletExecutor ONLY (MetaMask policy and MFA); the plugin never holds a key.
+ */
+export async function hostDeps(ctx: PluginCommandContext, io: CommandIO, cfg: Config, commandId: string | null, rpcUrl?: string): Promise<Deps> {
+  const client = rpcUrl ? createPublicClient({ transport: http(rpcUrl) }) : ctx.publicClient(cfg.chainId);
   const deps: Deps = {
     readContract: (a) => client.readContract(a as never),
     fetch: globalThis.fetch.bind(globalThis),

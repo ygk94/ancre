@@ -6,12 +6,15 @@ import { hostDeps, selectedAddress, toCommandError } from "../../../lib/host.js"
 const inputs = {
   payer: { type: InputFieldType.Text, flag: "payer", message: "TrustGatedPayer address (or ANCRE_PAYER)", required: false, prompt: false },
   chainId: { type: InputFieldType.Text, flag: "chain-id", message: "143 or 10143", required: false, prompt: false },
+  rpcUrl: { type: InputFieldType.Text, flag: "rpc-url", message: "Read through this RPC instead of the mm gateway (reads only; or ANCRE_RPC_URL)", required: false, prompt: false },
 } satisfies InputSchema;
 
 export default class AncrePayerStatus extends PluginCommand<StatusResult> {
   static override description = "Show the payer contract: balance, owner, treasury, operators (is your mm wallet one?), anchor set policy, Guard Mode checklist.";
   static override examples = ["<%= config.bin %> ancre payer status --json"];
   static override requiresInit = false;
+  // reads only: with --rpc-url it needs no session; without it, ctx.publicClient needs `mm login`
+  static override requiresAuth = false;
   static override flags = schemaToFlags(inputs);
   protected readonly pluginCommandId = "ancre:payer:status";
 
@@ -19,7 +22,7 @@ export default class AncrePayerStatus extends PluginCommand<StatusResult> {
     try {
       const inp = await io.resolveInputs(inputs);
       const cfg = resolveConfig({ chainId: inp.chainId, payer: inp.payer });
-      const d = await hostDeps(this.ctx, io, cfg, null);
+      const d = await hostDeps(this.ctx, io, cfg, null, inp.rpcUrl ?? process.env.ANCRE_RPC_URL);
       let wallet;
       try {
         wallet = selectedAddress(await this.ctx.walletStateManager.read());

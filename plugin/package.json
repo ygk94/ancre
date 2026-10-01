@@ -10,7 +10,6 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && oclif manifest",
     "prepack": "npm run build",
-    "relink": "node scripts/relink.cjs",
     "test": "tsc -p tsconfig.json && node --test \"test/*.test.mjs\""
   },
   "oclif": {
