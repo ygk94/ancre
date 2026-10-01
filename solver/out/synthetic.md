@@ -116,4 +116,4 @@ Commande : `cd solver && .venv/bin/python synthetic.py`. N_H = 1000, N_S = 1000,
 | 1/3 | 301 | 2264 | 2265 | 6795 | 6796 |
 | 1/2 | 301 | 2264 | 2265 | 4530 | 4531 |
 
-Durée : 16 s.
+Durée : 17 s.

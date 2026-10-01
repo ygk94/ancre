@@ -1,0 +1,235 @@
+[
+ {
+  "name": "V4-dilution",
+  "n": 3,
+  "k": 1,
+  "alpha": "1/3",
+  "trueRows": [
+   [
+    0,
+    [
+     [
+      1,
+      10000
+     ],
+     [
+      2,
+      10000
+     ]
+    ]
+   ]
+  ],
+  "committedRows": [
+   [
+    0,
+    [
+     [
+      1,
+      10000
+     ]
+    ]
+   ]
+  ],
+  "declaredBPlus": {},
+  "t": [
+   [
+    "333333333333333333",
+    "222222222222222222",
+    "0"
+   ]
+  ],
+  "violations": [
+   {
+    "column": 0,
+    "node": 1,
+    "t": "222222222222222222",
+    "tStarTrue": "111111111111111111"
+   }
+  ],
+  "distrustCommitted": [
+   "0",
+   "0",
+   "0"
+  ],
+  "distrustTrue": [
+   "0",
+   "0",
+   "0"
+  ],
+  "contractV1": "Accepted at both levels (completeness is not checkable). proveEdge(anchor row, agent of node 2) bills dec = 1/2 to eLow: trustLow(1) <= t*_true(1). With bPlus = 20000 declared, no violation."
+ },
+ {
+  "name": "V5-fabrication",
+  "n": 3,
+  "k": 1,
+  "alpha": "1/3",
+  "trueRows": [
+   [
+    0,
+    [
+     [
+      1,
+      10000
+     ]
+    ]
+   ]
+  ],
+  "committedRows": [
+   [
+    0,
+    [
+     [
+      1,
+      10000
+     ],
+     [
+      2,
+      10000
+     ]
+    ]
+   ]
+  ],
+  "declaredBPlus": {},
+  "t": [
+   [
+    "333333333333333333",
+    "111111111111111111",
+    "111111111111111111"
+   ]
+  ],
+  "violations": [
+   {
+    "column": 0,
+    "node": 2,
+    "t": "111111111111111111",
+    "tStarTrue": "0"
+   }
+  ],
+  "distrustCommitted": [
+   "0",
+   "0",
+   "0"
+  ],
+  "distrustTrue": [
+   "0",
+   "0",
+   "0"
+  ],
+  "contractV1": "Registry-verified: refused at submission (EdgeMismatch). Submitter-attested: accepted, then proveEdge (wNew = 0 < wOld) bills the decrease to eLow."
+ },
+ {
+  "name": "V6-inflation",
+  "n": 3,
+  "k": 1,
+  "alpha": "1/3",
+  "trueRows": [
+   [
+    0,
+    [
+     [
+      1,
+      2000
+     ],
+     [
+      2,
+      10000
+     ]
+    ]
+   ]
+  ],
+  "committedRows": [
+   [
+    0,
+    [
+     [
+      1,
+      10000
+     ],
+     [
+      2,
+      10000
+     ]
+    ]
+   ]
+  ],
+  "declaredBPlus": {},
+  "t": [
+   [
+    "333333333333333333",
+    "111111111111111111",
+    "111111111111111111"
+   ]
+  ],
+  "violations": [
+   {
+    "column": 0,
+    "node": 1,
+    "t": "111111111111111111",
+    "tStarTrue": "37037037037037037"
+   }
+  ],
+  "distrustCommitted": [
+   "0",
+   "0",
+   "0"
+  ],
+  "distrustTrue": [
+   "0",
+   "0",
+   "0"
+  ],
+  "contractV1": "Registry-verified: refused (EdgeMismatch). Submitter-attested: proveEdge bills the decrease."
+ },
+ {
+  "name": "V13-veto-omission",
+  "n": 3,
+  "k": 1,
+  "alpha": "1/3",
+  "trueRows": [
+   [
+    0,
+    [
+     [
+      1,
+      -10000
+     ],
+     [
+      2,
+      10000
+     ]
+    ]
+   ]
+  ],
+  "committedRows": [
+   [
+    0,
+    [
+     [
+      2,
+      10000
+     ]
+    ]
+   ]
+  ],
+  "declaredBPlus": {},
+  "t": [
+   [
+    "333333333333333333",
+    "0",
+    "222222222222222222"
+   ]
+  ],
+  "violations": [],
+  "distrustCommitted": [
+   "0",
+   "0",
+   "0"
+  ],
+  "distrustTrue": [
+   "0",
+   "222222222222222222",
+   "0"
+  ],
+  "contractV1": "Lower bound unaffected (negative edges are not in F); distrust of node 1 under-reported and the certified veto bit missing. The live veto (last anchor feedback) does not see it if the anchor's last feedback is positive (D33). proveEdge(anchor row, agent of node 1) bills inc- to eUp and sets the certified veto bit."
+ }
+]
