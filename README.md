@@ -250,7 +250,7 @@ CC0.
 | **W2 (Sep 29–Oct 5)** | Own 8004 registries on testnet · `TrustGatedRouter` + x402 `upto` via the Monad facilitator · omission challenge · Sybil-farm script |
 | **W3 (Oct 6–12)** | Live demo screen (`monadLogs`): naive vs ANCRE, circuit breaker · **mainnet (143)** deploy · video · project profile · **ERC draft published** (PR to `ethereum/ERCs` + reply to thread post #309) |
 
-**Stackable bounties:** Envio 1k$ (indexer) · MetaMask 2.5k$ (agent wallet plugin — ship the router as a snap) · Monad Foundation 2.5k$ (passkeys — anchors as P256 accounts via precompile `0x0100`).
+**Sponsor bounties (updated 2026-10-05):** Envio 1k$ (indexer, live on Envio Cloud). The MetaMask Agent Wallet bounty is restricted to track 01 and is **not** targeted; the `mm ancre` plugin stays in the repo as an optional client-side guard. Other bounties: to be decided.
 
 ---
 

@@ -1,5 +1,7 @@
 # MUSTDO — ce que Hugo doit faire lui-même
 
+> 🚨 **05/10 : bounty MetaMask abandonné** (réservé à la track 01). Plugin gardé tel quel, plus de travail dessus. Les points 14b (« plugin MetaMask »), 14h (`mm login`, override) deviennent **optionnels**. **Reste à choisir les autres bounties** (ouverts à la track 04 ?). Compte GitHub renommé **`ygk94`**. Voir l'en-tête de `CLAUDE.md`.
+
 > Mis à jour le 2026-09-27. Rien ici ne peut être fait par Claude : il faut un compte, une décision, un appareil, de l'argent, ou une publication externe.
 > Clôture de Metropolis : **13/10 à 23:59, heure de New York**, soit **14/10 à 05:59 à Paris** (fiches de bounty). **Objectif : soumettre le 12/10.**
 > Coche au fur et à mesure (`[x]`), et dis-le moi : je mets à jour le CR et les briefs.
