@@ -1,0 +1,10 @@
+.env
+.env.*
+node_modules/
+generated/
+.envio/
+*.log
+.claude/
+A-FAIRE-HUGO-ENVIO.txt
+types.d.ts
+!.env.example
