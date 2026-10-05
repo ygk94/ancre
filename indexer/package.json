@@ -8,7 +8,7 @@
     "start": "envio start",
     "test": "vitest run --test-timeout=20000",
     "test:parity": "PARITY=1 vitest run test/parity.test.ts test/audit.test.ts --test-timeout=900000",
-    "check": "node scripts/check.ts"
+    "check": "node --experimental-strip-types scripts/check.ts"
   },
   "devDependencies": {
     "@types/node": "24.12.2",
@@ -21,5 +21,7 @@
   },
   "engines": {
     "node": ">=22.0.0"
-  }
+  },
+  "description": "ERC-8004 trust-graph compiler and ANCRE certificate auditor (Envio HyperIndex, multichain)",
+  "license": "MIT"
 }

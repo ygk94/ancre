@@ -9,7 +9,8 @@ import { auditRows, type NodeInfo, type RegistryView } from "../src/lib/audit.js
 import { decodeRows, type CertRow } from "../src/lib/certificate.js";
 import { setSchema, storeView } from "../src/lib/view.js";
 
-const DIR = new URL("../../solver/vectors/", import.meta.url);
+const LOCAL = new URL("./vectors/", import.meta.url); // standalone repo; ../../solver/vectors in the monorepo
+const DIR = existsSync(LOCAL) ? LOCAL : new URL("../../solver/vectors/", import.meta.url);
 const BLOCK = 108_835_675;
 const load = (f: string) => JSON.parse(readFileSync(new URL(f, DIR), "utf8"));
 

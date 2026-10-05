@@ -18,9 +18,10 @@ layer. It does three things:
    ~40k blocks.
 2. **Audits certificates.** It decodes a certificate's calldata and compares every committed edge with the
    registry, as normalised shares `w / B`. Fabricated, inflated, diluted or omitted edges become typed
-   discrepancies, ready for an on-chain dispute. The decoder and the audit are done and tested on real data.
-   The event handler will be wired to the ANCRE contract once its ABI is final; a handler reading
-   `transaction.input` is proven to work on real Monad transactions.
+   discrepancies, ready for an on-chain dispute (`proveEdge` / `proveWallet` of the ANCRE contract). The
+   decoder (certificate format `ancre-cert-v1`) and the audit are done and tested on real data. The event handler
+   will be wired to the ANCRE contract once it is deployed; a handler reading `transaction.input` is proven to work
+   on real Monad transactions.
 3. **Measures the standard with HyperSync.** A multichain scan shows how few ERC-8004 feedbacks survive the
    rules (see below).
 
@@ -41,7 +42,7 @@ reorg rolls back its own chain only. Real volume measured on 2026-09-28: 55 138 
 |---|---|
 | 1 · append-only history (replays any past block) | `Feedback`, `WalletChange`, `OwnerChange`, `ApprovalChange`, `OperatorChange`, `RegistryEvent` |
 | 2 · current state | `Agent`, `WalletAgents` (reverse wallet → agents index, absent on-chain), `Operator` |
-| 3 · normative edges | `TripleLatest`, `RefEdge` (reference schema), with a typed rejection reason |
+| 3 · normative edges | `TripleLatest` (every tag), `SetEdge` per anchor set (`ref` = reference schema), with a typed rejection reason (`null` = retained) |
 | stats | `ChainStats` |
 
 ```graphql
@@ -62,13 +63,13 @@ pnpm dev            # Postgres + Hasura in Docker; GraphQL on http://localhost:8
 
 | Command | What it proves |
 |---|---|
-| `pnpm test` | Rule unit tests on real cases, simulated: the slash-then-review on agent #4, #8317 rating itself 78 times through its own `agentWallet`, a 1e38 value, a transfer, a revocation. Certificate calldata decoding against the normative test vectors |
-| `pnpm test:parity` | Replays the **real history** of each chain and checks that the edges are identical to the reference solver's: 11 edges on Monad at block 108 434 518, 28 on the testnet, 10 on Optimism. Then audits a real certificate against Monad's rebuilt state: honest → 0 discrepancy; a fabricated edge, dilution, a softened or omitted slash, a wrong wallet or a ghost agent → caught |
+| `pnpm test` | Rule unit tests on real cases, simulated: the slash-then-review on agent #4, #8317 rating itself 78 times through its own `agentWallet`, a 1e38 value, a transfer, a revocation, a tie between tags |
+| `pnpm test:parity` | Replays the **real history** of each chain and checks that the edges are identical to the reference solver's: 11 edges on Monad at block 108 434 518, 28 on the testnet, 10 on Optimism. Then audits real certificates against Monad's rebuilt state: 4 honest certificates → 0 discrepancy; the 4 normative violations (fabricated, inflated, omitted negative, dilution) and tampered variants (wrong source, ghost agent, opposite sign) → caught |
 | `pnpm check --chain 143 --full` | Live consistency with the registries, at the block the indexer has processed, through Multicall3: Σ `getLastIndex` = #feedbacks, `getClients`, owner and wallet of **every** agent, mint count, `getVersion` |
 
-## HyperSync survival scan (`analytics/`)
+## HyperSync survival scan
 
-MEASURED on 2026-09-28, under the ANCRE reference schema and filter:
+MEASURED on 2026-09-28/29 under the ANCRE reference schema and filter. The scan streams every ERC-8004 log of a chain through HyperSync (Monad's full history in ~17 s, Base's 531 500 feedbacks included), rebuilds identities from events and applies the reference edge rules. Its script lives in the ANCRE monorepo, next to the solver it calls; it will be published here with the solver.
 
 | Chain | Feedbacks | Top-client share | Edges kept | Survival |
 |---|---|---|---|---|
@@ -78,6 +79,7 @@ MEASURED on 2026-09-28, under the ANCRE reference schema and filter:
 | Optimism | 334 | 54 % | 10 | 3.0 % |
 | Polygon | 508 | 60 % | 10 | 2.0 % |
 | Ethereum | 17 682 | 80 % | 519 | 2.9 % |
+| Base | 531 500 | 9 % (70 % of all feedback targets one agent) | 9 857 | 1.9 % |
 
 The reference schema was built from Monad's tags, and an unknown tag never creates an edge. Outside Monad,
 survival is therefore a lower bound under this schema, not a verdict on those chains.
@@ -89,4 +91,4 @@ comes from a command in this repository.
 
 ## License
 
-TBD.
+MIT, see [LICENSE](LICENSE).

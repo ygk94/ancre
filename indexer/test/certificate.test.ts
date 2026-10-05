@@ -4,7 +4,9 @@ import { describe, it } from "vitest";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { decodeNewNodes, decodeRows, graphRoot, EncodingError } from "../src/lib/certificate.js";
 
-const DIR = new URL("../../solver/vectors/", import.meta.url);
+// normative vectors: test/vectors in the standalone repo, ../../solver/vectors in the ANCRE monorepo
+const LOCAL = new URL("./vectors/", import.meta.url);
+const DIR = existsSync(LOCAL) ? LOCAL : new URL("../../solver/vectors/", import.meta.url);
 const VECTORS = existsSync(DIR)
   ? [...readdirSync(DIR).filter((f) => f.endsWith(".json")),
      ...readdirSync(new URL("violations/", DIR)).filter((f) => f.endsWith(".json")).map((f) => `violations/${f}`)]
