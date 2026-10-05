@@ -1,0 +1,65 @@
+Tu es la session du CHANTIER 06 d'ANCRE : la ferme Sybil et les scénarios de démo (acte 2). Tu travailles en autonomie : les choix techniques de ton périmètre sont les tiens, et tu les justifies par écrit. Réponds en français (code, commentaires de code et docs techniques en anglais).
+
+⏰ ÉCHÉANCE DURE : tout doit être prêt et rejouable le MERCREDI 08/10 AU SOIR. Hugo remplit la soumission et tourne les vidéos le JEUDI 09/10 après-midi. Priorise : une démo qui tourne de bout en bout vaut mieux que six scènes parfaites.
+
+=== OÙ TU TRAVAILLES ===
+- Dossier : /Users/hugo/Projet/ancre-06, un worktree git sur une nouvelle branche chantier/06-ferme créée depuis origin/main (git fetch, puis git worktree add /Users/hugo/Projet/ancre-06 -b chantier/06-ferme origin/main). Travaille UNIQUEMENT ici, jamais dans /Users/hugo/Projet/ancre ni dans un autre worktree.
+- Outils : export PATH="$PATH:$HOME/.foundry/bin" (Foundry 1.8.3, network = "monad") ; Node et npm dans /usr/local/bin ; git : export PATH=/usr/bin:$PATH. Si le chemin /Users/hugo n'existe pas, tu es sur l'autre machine (/Users/famillethomas) : adapte les chemins et lis la mémoire machine.
+- RPC : testnet https://testnet-rpc.monad.xyz (50 rps), mainnet https://rpc.monad.xyz, historique complet https://rpc1.monad.xyz. Pour les forks : ETH_RPC_TIMEOUT=900 et anvil --timeout 120000 --retries 10.
+- Indexeur Envio en ligne (lecture seule, sans secret) : https://indexer.dev.hyperindex.xyz/433cc83/v1/graphql. Il indexe déjà le TESTNET 10143 : ce que ta ferme fera sur le vrai testnet y apparaîtra.
+
+=== À LIRE AVANT DE CODER (règle AM-3.13) ===
+1. CLAUDE.md, EN PARTICULIER le bandeau « DÉCISIONS DU 2026-10-05 » en tête : bounty MetaMask abandonné (D48), bounties restants, compte GitHub ygk94.
+2. docs/chantiers/README.md (règles communes et skills), docs/chantiers/ROADMAP.md (section « 06 » et dépendances)
+3. docs/chantiers/06-ferme-scenarios.md : ton brief, ses amendements (D33 scène 5, D28 démo figée, D45 la ferme qui se paie vraiment)
+4. docs/conseil/CR-conseil.md : journal D1 à D48, puis les sections « Intégration 02 + 04 », « Résultats du chantier 08 » (AM-08.A/B/C) et « Résultats du chantier 05 »
+5. docs/ressources/design-payeur-et-reseau.md (réseau H-B, budget) et docs/ressources/design-demo-et-soumission.md (§3 storyboard de la vidéo, §4 écran)
+6. contracts/ : src/AnchoredReputation.sol (isTrusted, assess, statuts), src/TrustGatedPayer.sol, ENCODING.md, GAS.md, PAYER.md, script/Deploy.s.sol ; plugin/scripts/setup-fork.mjs et demo-local.mjs (mise en place déjà écrite par le chantier 05 : register, setAgentWallet, payeur, dépôt d'USDC — RÉUTILISE-LA)
+7. solver/ : certifier.py (déclencheurs, plan addNodes / reserveCapacity / submitCertificate), FORMAT.md, from_indexer.py, simulate.py
+8. docs/chantiers/rapports/02.md, 04.md, 05.md, integration.md
+
+=== DÉCISIONS DE CADRAGE (prises par le pilote le 06/10, à suivre sauf preuve chiffrée) ===
+- Réseau : TOUT d'abord sur un fork local anvil du TESTNET 10143 (vrais registres ERC-8004 0x8004A818…BD9e / 0x8004B663…8713). Le passage au vrai testnet ne doit demander qu'un changement d'URL RPC et de comptes. Le mainnet ne fait pas partie de ce chantier (D40 : exécution minimale plus tard, sur accord de Hugo).
+- Niveau de certificat : Registry-verified. Soumetteur attesté (D27) = un compte « certifier » à nous. minRefresh = maxAge (MUSTDO 14g c).
+- Ancres de démo : 3 EOA à nous, étiquetées « demo », qui ne sont le wallet d'AUCUN agent (correctif d'usage d'AM-08.A), plus l'ancre qui dépose le slash si elle est distincte. m = 2.
+- Garde de paiement : la garde DURE on-chain (TrustGatedPayer, ERC-1271) est le cœur de la démo. Le plugin MetaMask n'est PAS requis (D48) ; ne travaille pas dessus.
+- Mera : HORS PÉRIMÈTRE (aucune scène Mera), sauf contrordre de Hugo.
+- Tout est étiqueté « demo » : tags, URI d'agents, métadonnées. Ferme visiblement petite (quelques dizaines d'agents au plus). Pas de valeurs 1e38 : une valeur maximale du schéma suffit à faire exploser la moyenne naïve.
+- Budget Envio : le plan gratuit d'Envio Cloud plafonne à 100 000 events, ~55 800 sont déjà consommés. Compte les events que ta ferme générera sur le vrai testnet (register, transferts, avis, setAgentWallet…) et reste sous ~25 000.
+
+=== TON TRAVAIL, DANS L'ORDRE ===
+E1. demo/BUDGET.md : coût de l'acte 2 sur le testnet, en deux enveloppes (frais ; capital immobilisé par la réserve de 10 MON par compte), mesuré en fork. Nombre de comptes minimal. Gas limits serrées (on paie la gas limit).
+E2. demo/ : scripts des scènes (TypeScript + viem recommandé, pour partager le code avec l'écran du chantier 07 ; sinon justifie Foundry), idempotents et rejouables, sur le fork :
+    0. mise en place : déploiement (Deploy.s.sol), ensemble d'ancres, fournisseurs honnêtes, payeur approvisionné, premier certificat via solver/certifier.py ;
+    1. fournisseurs honnêtes notés par ≥ 2 ancres → payés ;
+    2. ferme Sybil : N agents se notent et notent une cible au max ; moyenne naïve énorme, masse ANCRE 0, le payeur refuse (isValidSignature) ;
+    3. (D45, < 20 s) la ferme se paie vraiment entre elle en x402 : reçus vrais, masse toujours 0, refus maintenu ;
+    4. disjoncteur : une ancre dépose un slash sur un fournisseur honnête devenu défaillant → recertification → refus au bloc suivant. MESURE la latence (avis → certificat → refus) en blocs et en ms ;
+    5. anti-effacement (D33) : un +1 posté par UN AUTRE noteur sous un autre tag n'efface pas le veto ;
+    6. (si le temps le permet) un certificat fabriqué est rejeté à la soumission.
+    Si une scène échoue au milieu, le script doit pouvoir reprendre sans tout rejouer.
+E3. Journal d'événements pour l'écran (07) : un fichier JSON par exécution (demo/out/run-<horodatage>.json) avec, pour chaque étape : scène, tx hash, bloc, horodatage, agentId, setId, statut d'assess, décision du payeur, raison (explain), moyenne naïve, masse ANCRE. Documente le format dans demo/EVENTS.md, AVANT de remplir les scènes, car l'écran 07 se branche dessus en parallèle.
+E4. Démo figée (D28) : exporte l'état anvil après la mise en place (anvil --dump-state) pour rejouer la démo hors réseau.
+E5. demo/RUNBOOK.md : rejouer l'acte 2 en fork en moins de 15 minutes, puis la procédure EXACTE pour le vrai testnet (comptes, faucet https://faucet.monad.xyz et https://faucet.circle.com, commandes, coût). Écris aussi la section « Judge access and instructions » (anglais, ≤ 8 000 caractères) dans demo/JUDGES.md : comment un juge rejoue l'acte 1 (mainnet, lecture seule, solver/run_mainnet.py + cast) et l'acte 2 (fork).
+E6. 🧑 Exécution sur le VRAI testnet : prépare tout, chiffre, puis écris « 🧑 BLOQUÉ : feu vert + keystore + MON testnet » dans le journal. AUCUNE transaction réelle sans l'accord explicite de Hugo dans cette conversation.
+
+Skills : /run pour enchaîner les scènes, /code-review après E2 et E3, /simplify en fin de chantier.
+AM-INT.2 : chaque refus testé doit vraiment être lu (pas d'expectRevert suivi d'un appel bas niveau non vérifié).
+
+=== COMMUNICATION ===
+Tu n'attends de réponse de personne pour avancer. Le pilote suit sans intervenir.
+(1) JOURNAL, canal unique : à la fin de CHAQUE étape, ou dès qu'un blocage survient, ajoute une entrée en bas de docs/chantiers/journal/06.md et commite sur ta branche. L'entrée contient : date et heure ; étape ; ce qui est fait ; mesures (MESURÉ / ESTIMÉ, avec la commande) ; décisions techniques et leur raison ; écarts à la roadmap ; blocages ; prochaine étape.
+(2) INTERFACES : tu CONSOMMES le contrat v1, le payeur et le solveur. Ne modifie ni contracts/src/, ni ENCODING.md, ni solver/ (sauf un fichier de config à toi). Ton code va dans demo/. Besoin d'une évolution ? Écris-la dans le journal sous « INTERFACE ».
+(3) Un besoin qui ne relève que de Hugo (transaction réelle, compte, keystore, MON) : écris « 🧑 BLOQUÉ : … » dans le journal, dis-le à Hugo dans cette conversation, puis avance sur autre chose.
+
+=== RÈGLES ===
+- Sourcer et dater chaque chiffre (MESURÉ / DOC / ESTIMÉ / NON VÉRIFIÉ).
+- Les décisions D1 à D48 ne se rouvrent pas sans preuve chiffrée.
+- Commits sur ta branche uniquement, tests et scènes verts en fork avant chaque commit.
+- PAS de push, PAS de transaction réelle, sans l'accord de Hugo. Jamais de clé privée en clair dans le dépôt (keystore chiffré, .env ignoré).
+- Ne modifie ni docs/conseil/, ni ANCRE.md, ni CLAUDE.md, ni mustdo/, ni les briefs.
+
+=== FIN DE SESSION ===
+Écris docs/chantiers/rapports/06.md et commite-le : ce qui est livré ; les scènes qui passent en fork (avec les statuts) ; les latences mesurées ; le budget ; ce qui attend Hugo ; les décisions et leurs raisons ; les angles morts AM-06.n ; les écarts à la roadmap ; ce qu'il reste à faire.
+
+Commence par lire, puis écris la première entrée du journal (« démarrage : ce que j'ai compris, mon plan »), puis E3 (format des événements) et E1 en parallèle, puis E2.
