@@ -1411,3 +1411,32 @@ Ils sont fusionnés sur `main` depuis le 05/10. **`BACKEND-KIT.md` est remplacé
 | Surface 2, import cross-chain | L'indexeur couvre déjà 3 chaînes (D42). La lecture d'un certificat sur une autre chaîne n'est pas faite | non (suite) |
 | API de lecture + SDK agent | En partie couverts par le plugin `mm ancre` | non |
 | Script de démo de 5 min (domaine ACME, parrainage) | À fusionner avec D19, D40, D45 et le storyboard de 2:55 (`design-demo-et-soumission.md`) | **oui** |
+
+---
+
+# Veille du 05/10 — faits nouveaux
+
+Sources : `docs/ressources/veille-2026-10-05-hackathon.md`, `veille-2026-10-05-technique.md` et `veille-2026-10-05-concurrence.md`.
+
+**Hackathon**
+- **D'après la doc officielle (`/tracks`), le bounty MetaMask n'est probablement pas ouvert à la track 04** : seuls les bounties « All tracks » se combinent avec n'importe quelle track (AM-9.1).
+- On peut cumuler un prix de track et plusieurs bounties.
+- Échéance inchangée : le 14/10 à 05:59, heure de Paris. Aucune prolongation.
+- Jury de track et jury de bounties distincts.
+- Nouveaux prix : BlockVision (8 k$, à examiner), une remise PingBusiness.
+- Envio Cloud : 2 mois gratuits.
+
+**Technique**
+- Registres, proxys et owner inchangés ; la PR #80 est toujours ouverte. Monad passe en 0.16.4, sans changement de protocole. **La doc fixe le bloc à 300 ms.**
+- **7 nouveaux avis** sur le mainnet entre le 28/09 et le 04/10, dont 3 arêtes candidates : **le snapshot est périmé** (AM-9.2).
+- **Cas réel de « l'ancien owner »** : `0x4947…` transfère #10255, puis lui met 5 notes à 100 environ 4,6 minutes plus tard. C'est le prix de D20 (AM-9.3).
+- **Le registre Validation ERC-8004 est déployé sur Monad** depuis le 03/02 : `0x8004Cc84…AB58` sur le mainnet, `0x8004Cb1B…4272` sur le testnet, avec le même owner. **Une seule requête** à ce jour (AM-9.4).
+- L'issue n° 99 du dépôt ERC-8004 conclut que « le poids relève du lecteur » et qu'« un contrat ne peut pas parcourir un graphe pendant un règlement » : **c'est un appui direct pour ANCRE**.
+
+**Concurrence**
+- **trudransh/Assay**, créé le 29/09 : `gradeOf(model, host, trusted[])`. La confiance est choisie par le lecteur et lue par un contrat avant paiement, mais **sur un seul saut, sans propagation ni borne Sybil**. Il vise aussi Envio et Mera.
+- **norbert351/merit** : une réputation résistante aux Sybil en track 04, avec une démo de ferme proche de la nôtre.
+- **trustset utilise aussi `isTrusted`** (AM-9.5 : renommer avant de figer l'ERC).
+- monagent, un plugin MetaMask, calcule la moyenne naïve.
+- Kanmani passe à 12 agents. ColinkaMir est prêt à soumettre.
+- **Ce qui reste propre à ANCRE : la propagation au-delà d'un saut, avec une borne et un certificat vérifié on-chain.** D'où une scène de démo « 2ᵉ saut » (AM-9.6).

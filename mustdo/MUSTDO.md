@@ -6,6 +6,12 @@
 
 ## 🔴 Cette semaine, parce que ça bloque d'autres chantiers
 
+- [ ] **⏰ AUJOURD'HUI, 05/10 (veille du 05/10, `docs/ressources/veille-2026-10-05-hackathon.md`)** :
+  - **Connecte-toi à hackathon.monad.xyz**, crée l'équipe et le projet si ce n'est pas fait (la clôture des inscriptions serait le **06/10**, une seule source tierce), et **recopie-moi la modale « Rules & Guidelines »**. Le formulaire de soumission est ouvert depuis le 02/10 et reste modifiable.
+  - **Pose la question MetaMask sur le forum de support** (réponse en environ 90 min d'après un participant). D'après la doc officielle `/tracks`, seuls les bounties « All tracks » se combinent avec n'importe quelle track, et celui de MetaMask est en « Onchain Finance & Trading ». **Sans réponse positive, le plugin ne compte pas pour le bounty.** Il reste utile au produit et à la démo.
+  - Option, d'après le même participant : publier un **« progress update »** sur la plateforme, qui donnerait accès aux mentors.
+  - **Divulgation (D29)** : la date recommandée était le 05/10, c'est-à-dire aujourd'hui. Le brouillon (c) est dans `docs/erc/drafts/`.
+
 - [ ] **0. ⏰ S'inscrire AVANT LE 06/10.** Un concurrent qui cite les Rules v3.0 affirme que **les inscriptions ferment le 06/10** et que le formulaire de soumission ouvre le 02/10. C'est NON CONFIRMÉ, mais on ne prend pas le risque : inscris-toi et crée le projet dès maintenant (voir le point 2). Source : README de `precious-akpan/monad-metropolis-merchant-rails`, recopié dans `docs/ressources/design-demo-et-soumission.md` §1.
 
 - [ ] **1. Lire les règles officielles** sur hackathon.monad.xyz, modale « Rules & Guidelines », Rules v3.0.
