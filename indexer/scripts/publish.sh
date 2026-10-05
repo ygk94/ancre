@@ -8,7 +8,10 @@ set -euo pipefail
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
 DST="${1:?usage: scripts/publish.sh <clone-dir> [--deploy]}"
 DEPLOY="${2:-}"
-rsync -a --delete --exclude .git --exclude node_modules --exclude .envio --exclude .env --exclude .claude \
+# Safety: only ever sync into a git clone of hugothomas9/ancre-indexer (rsync --delete below)
+git -C "$DST" remote get-url origin 2>/dev/null | grep -q "hugothomas9/ancre-indexer" \
+  || { echo "refusing: $DST is not a clone of hugothomas9/ancre-indexer" >&2; exit 1; }
+rsync -a --delete --filter 'P .github/' --filter 'P test/vectors/'  --exclude .git --exclude node_modules --exclude .envio --exclude .env --exclude .claude \
   --exclude A-FAIRE-HUGO-ENVIO.txt --exclude analytics --exclude generated --exclude '*.log' --exclude scripts/publish.sh \
   "$SRC/" "$DST/"
 mkdir -p "$DST/test/vectors/violations"
@@ -30,6 +33,10 @@ pnpm codegen >/dev/null
 npx tsc --noEmit
 pnpm test
 git add -A
-git -c user.name="Hugo Thomas" commit -qm "${PUBLISH_MESSAGE:-Sync from the ANCRE monorepo}" || echo "nothing to commit"
+if git diff --cached --quiet; then
+  echo "nothing to commit"
+else
+  git commit -qm "${PUBLISH_MESSAGE:-Sync from the ANCRE monorepo}"   # fails loudly (set -e) before any push
+fi
 git push -u origin HEAD:main
 if [ "$DEPLOY" = "--deploy" ]; then git push origin HEAD:envio; fi
