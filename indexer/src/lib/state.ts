@@ -1,6 +1,6 @@
 // Shared state helpers used by the identity and reputation handlers.
 // Every helper reads before it writes (handlers run twice: preload, then processing).
-import type { EvmOnEventContext, Agent, ChainStats, RefEdge } from "envio";
+import type { EvmOnEventContext, Agent, ChainStats, SetEdge } from "envio";
 import { REF, ZERO } from "./rules.js";
 import { edgeDecision } from "./edges.js";
 import { storeView } from "./view.js";
@@ -60,24 +60,28 @@ export async function isOperator(context: Ctx, owner: string, client: string): P
   return (await context.Operator.get(`${owner}-${client}`))?.active ?? false;
 }
 
-/** D14 + D15 + bounds + D16/D20 for one (client, agent) pair, written to RefEdge (reference schema). */
+export const REF_SET = "ref";
+
+/** R2-R6 for one (client, agent) pair of the reference set, written to SetEdge. */
 export async function recomputeRefEdge(context: Ctx, client: string, agentId: string, block: number) {
-  const edgeId = `${client}-${agentId}`;
+  const edgeId = `${REF_SET}-${client}-${agentId}`;
   const [agent, prev, d] = await Promise.all([
     getAgent(context, agentId),
-    context.RefEdge.get(edgeId),
+    context.SetEdge.get(edgeId),
     edgeDecision(storeView(context as never), REF, client, agentId),
   ]);
   if (!d && !prev) return;
-  const next: RefEdge = d
-    ? { id: edgeId, client, agent_id: agentId, updatedAtBlock: BigInt(block), w: d.w, decidingTag: d.tag1,
-        feedbackIndex: d.feedbackIndex, rejected: d.rejected }
-    : { id: edgeId, client, agent_id: agentId, updatedAtBlock: BigInt(block), w: 0, decidingTag: undefined,
-        feedbackIndex: undefined, rejected: "NO_ACTIVE_FEEDBACK" }; // every reference feedback of the pair is revoked
+  const base = { id: edgeId, set_id: REF_SET, client, agent_id: agentId, updatedAtBlock: BigInt(block) };
+  const next: SetEdge = d
+    ? { ...base, w: d.w, decidingTag: d.tag1, feedbackIndex: d.feedbackIndex, rejected: d.rejected }
+    : { ...base, w: 0, decidingTag: undefined, feedbackIndex: undefined, rejected: "NO_ACTIVE_FEEDBACK" };
   if (prev && prev.w === next.w && prev.rejected === next.rejected && prev.decidingTag === next.decidingTag &&
       prev.feedbackIndex === next.feedbackIndex) return;
-  context.RefEdge.set(next);
-  if (!prev) context.Agent.set({ ...agent, refEdgeRows: agent.refEdgeRows + 1 }); // lets recomputeEdgesInto skip edge-less agents
+  if (!prev) {
+    context.Agent.set({ ...agent, refEdgeRows: agent.refEdgeRows + 1 }); // lets recomputeEdgesInto skip edge-less agents
+    if (!(await context.AnchorSet.get(REF_SET))) context.AnchorSet.set({ id: REF_SET, kind: "reference" });
+  }
+  context.SetEdge.set(next);
   const was = prev && prev.w !== 0 ? 1 : 0;
   const is = next.w !== 0 ? 1 : 0;
   if (was !== is) await bumpStats(context, block, { refEdges: is - was });
@@ -86,6 +90,6 @@ export async function recomputeRefEdge(context: Ctx, client: string, agentId: st
 /** Controllers of `agentId` changed: recompute every reference edge pointing to it. */
 export async function recomputeEdgesInto(context: Ctx, agentId: string, block: number) {
   if ((await getAgent(context, agentId)).refEdgeRows === 0) return; // fresh mints, farm agents: no query
-  const edges = await context.RefEdge.getWhere({ agent_id: { _eq: agentId } });
-  for (const e of edges) await recomputeRefEdge(context, e.client, agentId, block);
+  const edges = await context.SetEdge.getWhere({ agent_id: { _eq: agentId } });
+  for (const e of edges) if (e.set_id === REF_SET) await recomputeRefEdge(context, e.client, agentId, block);
 }

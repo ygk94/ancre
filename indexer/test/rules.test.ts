@@ -47,7 +47,7 @@ describe("schema copy", () => {
   });
 });
 
-describe("reference edges (RefEdge)", () => {
+describe("reference edges (SetEdge, set \"ref\")", () => {
   it("#4: slash -100 then review +1 from 0xea0b -> negative dominance keeps -10000 (D14)", async (t) => {
     const ix = createTestIndexer();
     await ix.process({ chains: { 143: { simulate: [
@@ -55,10 +55,10 @@ describe("reference edges (RefEdge)", () => {
       fb(4n, EA0B, 1n, -100n, "slash"),
       fb(4n, EA0B, 2n, 1n, "review"),
     ] } } });
-    const e = await ix.RefEdge.getOrThrow(`${EA0B}-4`);
+    const e = await ix.SetEdge.getOrThrow(`ref-${EA0B}-4`);
     t.expect(e.w).toBe(-10000);
     t.expect(e.decidingTag).toBe("slash");
-    t.expect(e.rejected).toBe("NONE");
+    t.expect(e.rejected).toBeUndefined();
   });
 
   it("#8317: feedback from its own agentWallet is a self-rating and never an edge (D16)", async (t) => {
@@ -68,7 +68,7 @@ describe("reference edges (RefEdge)", () => {
       setWallet(8317n, W8317),
       fb(8317n, W8317, 1n, 90n, "quality"),
     ] } } });
-    const e = await ix.RefEdge.getOrThrow(`${W8317}-8317`);
+    const e = await ix.SetEdge.getOrThrow(`ref-${W8317}-8317`);
     t.expect(e.w).toBe(0);
     t.expect(e.rejected).toBe("CONTROLLER_WALLET");
     const f = await ix.Feedback.getOrThrow(`8317-${W8317}-1`);
@@ -83,9 +83,9 @@ describe("reference edges (RefEdge)", () => {
       fb(182n, EA0B, 1n, 80n, "vouch"),
       fb(182n, EA0B, 2n, 10n ** 38n, "vouch"),
     ] } } });
-    const e = await ix.RefEdge.getOrThrow(`${EA0B}-182`);
+    const e = await ix.SetEdge.getOrThrow(`ref-${EA0B}-182`);
     t.expect(e.w).toBe(0);
-    t.expect(e.rejected).toBe("OUT_OF_BOUNDS_ONLY");
+    t.expect(e.rejected).toBe("OUT_OF_BOUNDS");
     t.expect((await ix.ChainStats.getOrThrow("stats")).outOfRange).toBe(1);
   });
 
@@ -96,7 +96,7 @@ describe("reference edges (RefEdge)", () => {
       fb(9n, EA0B, 1n, 1500n, "elo"),
       fb(9n, EA0B, 2n, 5n, "not-in-schema"),
     ] } } });
-    t.expect(await ix.RefEdge.get(`${EA0B}-9`)).toBeUndefined();
+    t.expect(await ix.SetEdge.get(`ref-${EA0B}-9`)).toBeUndefined();
     t.expect((await ix.ChainStats.getOrThrow("stats")).feedbacks).toBe(2);
   });
 
@@ -108,7 +108,7 @@ describe("reference edges (RefEdge)", () => {
       setWallet(22n, EA0B),
       fb(18n, X0730, 1n, 100n, "vouch"),
     ] } } });
-    t.expect((await ix.RefEdge.getOrThrow("0x0730536018541c5149a049d35528a76c2c8f1e6b-18")).w).toBe(10000);
+    t.expect((await ix.SetEdge.getOrThrow("ref-0x0730536018541c5149a049d35528a76c2c8f1e6b-18")).w).toBe(10000);
     let stats = await ix.ChainStats.getOrThrow("stats");
     t.expect([stats.sharedWallets, stats.agentsOnSharedWallets]).toEqual([1, 2]);
     await ix.process({ chains: { 143: { simulate: [
@@ -116,7 +116,7 @@ describe("reference edges (RefEdge)", () => {
       { contract: "IdentityRegistry" as const, event: "Transfer" as const,
         params: { from: OWNER4, to: X0730, tokenId: 18n } },
     ] } } });
-    const e = await ix.RefEdge.getOrThrow("0x0730536018541c5149a049d35528a76c2c8f1e6b-18");
+    const e = await ix.SetEdge.getOrThrow("ref-0x0730536018541c5149a049d35528a76c2c8f1e6b-18");
     t.expect(e.w).toBe(0);
     t.expect(e.rejected).toBe("CONTROLLER_OWNER");
     const a = await ix.Agent.getOrThrow("18");
@@ -134,12 +134,12 @@ describe("reference edges (RefEdge)", () => {
       { contract: "ReputationRegistry" as const, event: "FeedbackRevoked" as const,
         params: { agentId: 2n, clientAddress: EA0B, feedbackIndex: 2n } },
     ] } } });
-    const e = await ix.RefEdge.getOrThrow(`${EA0B}-2`);
+    const e = await ix.SetEdge.getOrThrow(`ref-${EA0B}-2`);
     t.expect([e.w, e.feedbackIndex]).toEqual([10000, 1n]);
     t.expect((await ix.ChainStats.getOrThrow("stats")).revoked).toBe(1);
   });
 
-  it("revoking every reference feedback of a pair gives NO_ACTIVE_FEEDBACK, not OUT_OF_BOUNDS_ONLY", async (t) => {
+  it("revoking every reference feedback of a pair gives NO_ACTIVE_FEEDBACK, not OUT_OF_BOUNDS", async (t) => {
     const ix = createTestIndexer();
     await ix.process({ chains: { 143: { simulate: [
       mint(2n, OWNER4),
@@ -147,8 +147,19 @@ describe("reference edges (RefEdge)", () => {
       { contract: "ReputationRegistry" as const, event: "FeedbackRevoked" as const,
         params: { agentId: 2n, clientAddress: EA0B, feedbackIndex: 1n } },
     ] } } });
-    const e = await ix.RefEdge.getOrThrow(`${EA0B}-2`);
+    const e = await ix.SetEdge.getOrThrow(`ref-${EA0B}-2`);
     t.expect([e.w, e.rejected]).toEqual([0, "NO_ACTIVE_FEEDBACK"]);
     t.expect((await ix.ChainStats.getOrThrow("stats")).refEdges).toBe(0);
+  });
+
+  it("R5 tie between tags of equal weight: the highest feedbackIndex decides (format v1), not the tag name", async (t) => {
+    const ix = createTestIndexer();
+    await ix.process({ chains: { 143: { simulate: [
+      mint(2n, OWNER4),
+      fb(2n, EA0B, 1n, 100n, "vouch"),   // +10000
+      fb(2n, EA0B, 2n, 1n, "review"),    // +10000, higher index
+    ] } } });
+    const e = await ix.SetEdge.getOrThrow(`ref-${EA0B}-2`);
+    t.expect([e.w, e.decidingTag, e.feedbackIndex]).toEqual([10000, "review", 2n]);
   });
 });

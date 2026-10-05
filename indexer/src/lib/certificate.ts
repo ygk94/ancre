@@ -1,9 +1,18 @@
-// Certificate calldata decoding (contracts/ENCODING.md, format ancre-cert-v0, aligned with solver/FORMAT.md).
+// Certificate calldata decoding (contracts/ENCODING.md §2-3, format ancre-cert-v1, unified 01/10).
 // Pure functions: no network, safe to run in both handler phases.
 import { bytesToHex, hexToBytes as viemHexToBytes, isHex, keccak256, type Hex } from "viem";
 
 export type CertEdge = { dst: number; w: number; feedbackIndex: number };
-export type CertRow = { u: number; wallet?: string; edges: CertEdge[]; leaf: Hex };
+/**
+ * One committed row. `src` = the source client of an agent row (SRC bit), `viaOwner` = VIA_OWNER bit (D44),
+ * `sPlus` = DECLARED true positive sum (SPLUS bit, D32), `aliasOf` = u of the copied row (ALIAS bit, D20).
+ * `edges` are expanded (an alias inherits its ref's edges); `sPlusEffective` = declared sPlus, else the committed Σw+
+ * (an alias inherits its ref's). B+ = max(10 000, sPlusEffective) (ENCODING §4).
+ */
+export type CertRow = {
+  u: number; src?: string; viaOwner: boolean; sPlus?: number; aliasOf?: number;
+  edges: CertEdge[]; sPlusEffective: number; leaf: Hex;
+};
 export type DecodedRows = { W: 2 | 4; rows: CertRow[] };
 export type NewNode = { kind: "agent"; agentId: bigint } | { kind: "address"; address: string };
 
@@ -21,30 +30,45 @@ const uint = (b: Uint8Array, o: number, n: number) => {
   return v;
 };
 
+const SRC = 0x8000;
+const SPLUS = 0x4000;
+const ALIAS = 0x2000;
+const VIA_OWNER = 0x1000;
+const NE_MASK = 0x0fff;
+
 /**
- * rows = W:u8 ‖ numRows:u32 ‖ row*;  row = u:W ‖ hdr:u16 ‖ [wallet:20] ‖ (dst:W ‖ w:int16 ‖ feedbackIndex:u32)*nE
- * hdr = nE | 0x8000 when a wallet is present. Leaf = the row bytes from u to its last edge.
- * Structural checks mirror the contract (strictly increasing u and dst, dst != u, w != 0, |w| <= 10 000, exact end).
+ * rows = W:u8 ‖ numRows:u32 ‖ row*;  row = u:W ‖ hdr:u16 ‖ [src:20] ‖ [sPlus:u32] ‖ [ref:W] ‖ (dst:W ‖ w:int16 ‖ feedbackIndex:u32)*nE
+ * Leaf = the row bytes from u to its last byte. Structural and shape checks mirror the contract (ENCODING §3.2);
+ * `k` (number of anchors) enables the anchor-specific checks.
  */
-export function decodeRows(hex: string, nCert?: number): DecodedRows {
+export function decodeRows(hex: string, nCert?: number, k?: number): DecodedRows {
   const b = hexToBytes(hex);
   const W = uint(b, 0, 1);
   if (W !== 2 && W !== 4) throw new EncodingError(`bad W ${W}`);
   if (W === 2 && nCert !== undefined && nCert > 0xffff) throw new EncodingError("W = 2 with nCert > 65 535"); // BadRows(1)
   const numRows = uint(b, 1, 4);
+  if (nCert !== undefined && numRows > nCert) throw new EncodingError("numRows > nCert");
   let o = 5;
   const rows: CertRow[] = [];
+  const byU = new Map<number, CertRow>();
   let prevU = -1;
   for (let r = 0; r < numRows; r++) {
     const start = o;
     const u = uint(b, o, W); o += W;
     const hdr = uint(b, o, 2); o += 2;
-    const nE = hdr & 0x7fff;
+    const nE = hdr & NE_MASK;
     if (nE > 256) throw new EncodingError(`row ${r}: nE ${nE} > ROW_MAX`);
     if (u <= prevU || (nCert !== undefined && u >= nCert)) throw new EncodingError(`row ${r}: bad u ${u}`);
     prevU = u;
-    let wallet: string | undefined;
-    if (hdr & 0x8000) { wallet = toHex(b.subarray(o, o + 20)).toLowerCase(); o += 20; }
+    let src: string | undefined;
+    if (hdr & SRC) { if (o + 20 > b.length) throw new EncodingError("truncated src"); src = toHex(b.subarray(o, o + 20)).toLowerCase(); o += 20; }
+    let sPlus: number | undefined;
+    if (hdr & SPLUS) { sPlus = uint(b, o, 4); o += 4; }
+    let aliasOf: number | undefined;
+    if (hdr & ALIAS) { aliasOf = uint(b, o, W); o += W; }
+    const viaOwner = (hdr & VIA_OWNER) !== 0;
+    if (viaOwner && !src) throw new EncodingError(`row ${r}: VIA_OWNER without SRC`);
+    if (k !== undefined && u < k && (src || viaOwner)) throw new EncodingError(`row ${r}: anchor row with SRC/VIA_OWNER`);
     const edges: CertEdge[] = [];
     let prevDst = -1;
     for (let e = 0; e < nE; e++) {
@@ -57,7 +81,21 @@ export function decodeRows(hex: string, nCert?: number): DecodedRows {
       prevDst = dst;
       edges.push({ dst, w, feedbackIndex });
     }
-    rows.push({ u, wallet, edges, leaf: keccak256(b.subarray(start, o)) });
+    const committedPlus = edges.reduce((s, e) => s + (e.w > 0 ? e.w : 0), 0);
+    if (sPlus !== undefined && sPlus < Math.max(1, committedPlus)) throw new EncodingError(`row ${r}: sPlus below committed Σw+`); // BadRows(7)
+    let row: CertRow;
+    if (aliasOf !== undefined) {
+      const ref = byU.get(aliasOf);
+      if (nE !== 0 || sPlus !== undefined) throw new EncodingError(`row ${r}: alias with edges or SPLUS`);          // BadRows(8)
+      if (!ref || ref.aliasOf !== undefined || aliasOf >= u || (k !== undefined && u < k)) throw new EncodingError(`row ${r}: bad alias ref`); // BadRows(9)
+      if (!src || ref.src !== src) throw new EncodingError(`row ${r}: alias source differs from ref`);              // BadRows(10)
+      row = { u, src, viaOwner, aliasOf, edges: ref.edges.map((e) => ({ ...e })), sPlusEffective: ref.sPlusEffective,
+        leaf: keccak256(b.subarray(start, o)) };
+    } else {
+      row = { u, src, viaOwner, sPlus, edges, sPlusEffective: sPlus ?? committedPlus, leaf: keccak256(b.subarray(start, o)) };
+    }
+    rows.push(row);
+    byU.set(u, row);
   }
   if (o !== b.length) throw new EncodingError(`trailing bytes: ${b.length - o}`);
   return { W: W as 2 | 4, rows };

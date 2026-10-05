@@ -18,8 +18,8 @@ describe.runIf(process.env.PARITY === "1")("parity with solver/graph.py", () => 
       const ix = createTestIndexer();
       await ix.process({ chains: { [REF.chainId]: { startBlock: START[REF.chainId]!, endBlock: REF.block } } });
 
-      const edges = (await ix.RefEdge.getAll())
-        .filter((e) => e.w !== 0)
+      const edges = (await ix.SetEdge.getAll())
+        .filter((e) => e.set_id === "ref" && e.rejected === undefined && e.w !== 0)
         .map((e) => ({ client: e.client, agent: e.agent_id, w: e.w, tag1: e.decidingTag, feedbackIndex: String(e.feedbackIndex) }))
         .sort((a, b) => (a.client < b.client ? -1 : a.client > b.client ? 1 : Number(a.agent) - Number(b.agent)));
       t.expect(edges).toEqual(REF.edges);

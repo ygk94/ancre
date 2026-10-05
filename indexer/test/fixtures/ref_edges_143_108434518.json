@@ -2,8 +2,8 @@
  "source": "solver/graph.py build_graph via indexer/analytics/survival_scan.py (HyperSync, events only), past_owners empty (D20)",
  "chainId": 143,
  "block": 108434518,
+ "measuredAt": "2026-10-05T17:29:21Z",
  "schema": "solver/schema_reference.json filter reference",
- "measuredAt": "2026-09-28T20:01:14Z",
  "counts": {
   "agentsMinted": 10261,
   "transfers": 72,

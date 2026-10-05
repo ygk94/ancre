@@ -4,7 +4,7 @@
 #
 # Layer 1  append-only history, dated by (block, logIndex): replays the registry state at any block.
 # Layer 2  current state, rebuilt from events only (Monad serves no historical state beyond ~40k blocks).
-# Layer 3  normative edges of the reference set: D14 (latest non-revoked per (client, agent, tag1),
+# Layer 3  normative edges per anchor set (pseudo-set "ref" = reference schema + filter): D14 (latest non-revoked per (client, agent, tag1),
 #          negative dominance across tags), D15 (endorsement tags only), out-of-bounds rejected
 #          (never capped), D16/D20 rejection of the target's CURRENT controllers.
 #          Port of solver/graph.py (the reference); parity is tested in test/parity.test.ts.
@@ -91,9 +91,9 @@ type Agent {                         # id = agentId (decimal)
   registeredTxFrom: String           # deployer EOA (registration bursts)
   transferCount: Int!
   lastTransferBlock: BigInt          # D10 / D35 (TRANSFERRED)
-  refEdgeRows: Int!                  # RefEdge rows pointing to this agent (0 = skip recomputation on controller changes)
+  refEdgeRows: Int!                  # SetEdge rows pointing to this agent (0 = skip recomputation on controller changes)
   feedbacks: [Feedback!]! @derivedFrom(field: "agent")
-  edgesIn: [RefEdge!]! @derivedFrom(field: "agent")
+  edgesIn: [SetEdge!]! @derivedFrom(field: "agent")
 }
 
 type WalletAgents {                  # reverse index wallet -> agents (absent on-chain; D16/D20/D44)
@@ -119,10 +119,9 @@ type TripleLatest {                  # D14: latest non-revoked feedback per (cli
   feedback: Feedback                 # null when every feedback of the triple is revoked
 }
 
-enum EdgeReject {
-  NONE
-  NO_ACTIVE_FEEDBACK                 # every reference feedback of the pair has been revoked
-  OUT_OF_BOUNDS_ONLY                 # every filter tag's latest feedback is out of bounds
+enum EdgeReject {                     # null = edge retained (solver/from_indexer.py parity semantics)
+  NO_ACTIVE_FEEDBACK                 # every filter feedback of the pair has been revoked
+  OUT_OF_BOUNDS                      # no tag of the filter yields a weight: every latest feedback is out of bounds (judged per tag, R3)
   ZERO_WEIGHT
   CONTROLLER_OWNER
   CONTROLLER_OPERATOR
@@ -130,14 +129,21 @@ enum EdgeReject {
   CONTROLLER_APPROVED
 }
 
-type RefEdge {                       # combined edge per (client, agent) under the reference schema + filter
-  id: ID!                            # client-agentId
+type AnchorSet {                     # "ref" = reference schema (src/lib/schema_reference.json, filter "reference")
+  id: ID!
+  kind: String!                      # reference | onchain
+  edges: [SetEdge!]! @derivedFrom(field: "set")
+}
+
+type SetEdge {                       # combined edge per (set, client, agent): R2-R6 of solver/FORMAT.md
+  id: ID!                            # setId-client-agentId
+  set: AnchorSet!
   client: String! @index
   agent: Agent!
   w: Int!                            # int16 on the 1e-4 grid (graph.quantize); 0 when rejected
   decidingTag: String
   feedbackIndex: BigInt
-  rejected: EdgeReject!
+  rejected: EdgeReject               # null = retained (w != 0)
   updatedAtBlock: BigInt! @index
 }
 
@@ -151,7 +157,7 @@ type ChainStats {
   revoked: Int!
   selfRatings: Int!                  # feedbacks given while the client controlled the target
   outOfRange: Int!                   # |value| >= 1e38
-  refEdges: Int!                     # RefEdge rows with w != 0
+  refEdges: Int!                     # SetEdge rows of the "ref" set with w != 0
   sharedWallets: Int!
   agentsOnSharedWallets: Int!
   lastBlock: BigInt!

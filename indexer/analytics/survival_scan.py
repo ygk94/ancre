@@ -188,7 +188,7 @@ def scan(chain_id: int, to_block: int | None, tok: str) -> dict:
 
     schema = graph.load_schema(HERE.parents[1] / "solver" / "schema_reference.json")
     filt = json.load(open(HERE.parents[1] / "solver" / "schema_reference.json"))["filters"]["reference"]
-    g = graph.build_graph(fbs, ident, schema, filt, anchors=[], keep_detail=False)
+    g = graph.build_graph(fbs, ident, schema, filt, anchors=[], keep_detail=False)   # R1-R8, owner fallback off (D44)
 
     w2a = ident.wallet_to_agents()
     shared = {w: a for w, a in w2a.items() if len(a) > 1}
@@ -196,8 +196,10 @@ def scan(chain_id: int, to_block: int | None, tok: str) -> dict:
     by_agent = Counter(f.agent_id for f in fbs)
     tags = Counter(f.tag1 for f in fbs)
     in_filter = [f for f in fbs if f.tag1 in set(filt)]
-    edges = [(u, e) for u, e in g.edges()]
-    emitter_kinds = Counter(g.nodes[u][0] for u, _ in edges)
+    pairs = list(g.pairs.values())                      # one combined edge per (client, agent): the parity unit
+    # emitters (R7): which node kinds carry a non-empty row; agent rows include D20 copies
+    emitter_kinds = Counter(g.row_src[u][1] for u, row in g.rows.items() if row)
+    agent_emitted = sum(1 for pe in pairs if pe.client in ident.wallet_to_agents())
     ctl_self = Counter()
     for f in fbs:
         ctl = ident.controllers(f.agent_id)
@@ -222,11 +224,12 @@ def scan(chain_id: int, to_block: int | None, tok: str) -> dict:
         "feedbacksInReferenceFilter": len(in_filter),
         "selfRatingsByController": dict(ctl_self),
         "graphLog": g.log,
-        "edges": len(edges), "edgesByEmitterKind": dict(emitter_kinds),
-        "negativeEdges": sum(e.q < 0 for _, e in edges),
-        "survivalFeedbackToEdge": round(len(edges) / len(fbs), 6) if fbs else 0,
-        "edgeList": [{"client": e.client, "agent": e.agent_id, "tag1": e.tag1, "q": e.q, "idx": e.feedback_index,
-                      "emitter": list(map(str, g.nodes[u]))} for u, e in edges],
+        "edges": len(pairs), "rowsByVia": dict(emitter_kinds), "edgesFromAgentClients": agent_emitted,
+        "rowEdgesWithD20Copies": g.n_edges(),
+        "negativeEdges": sum(pe.q < 0 for pe in pairs),
+        "survivalFeedbackToEdge": round(len(pairs) / len(fbs), 6) if fbs else 0,
+        "edgeList": [{"client": pe.client, "agent": pe.agent_id, "tag1": pe.tag1, "q": pe.q, "idx": pe.feedback_index}
+                     for pe in pairs],
     }
 
 

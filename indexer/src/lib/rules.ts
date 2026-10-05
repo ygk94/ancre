@@ -2,7 +2,8 @@
 // Any change here must keep test/parity.test.ts green against the solver.
 //
 //   D14  edge unit = latest non-revoked feedback per (client, agent, tag1); then, across the
-//        filter's tags, negative dominance (any weight < 0 -> the most negative, else the largest).
+//        filter's tags, negative dominance (any weight < 0 -> the most negative, else the largest);
+//        ties between tags: highest feedbackIndex (solver/FORMAT.md R5, format v1).
 //   D15  only `endorsement` tags create edges.
 //   D18  normative weight: int16 on the 1e-4 grid, truncation toward zero.
 //   CR   out-of-bounds value -> rejected, never capped; bounds compared on the exact value.
@@ -92,10 +93,13 @@ export function combine(latest: TagCandidate[], schema: EdgeSchema = REF): Combi
   if (!any) return undefined;
   if (scored.length === 0) return { kind: "none", reason: "OUT_OF_BOUNDS_ONLY" };
   const neg = scored.filter((x) => x.q < 0);
-  // Python: min(neg, key=(q, tag1)) / max(lst, key=(q, tag1)); ties broken on tag1 (code-point order).
-  const cmp = (a: { q: number; c: TagCandidate }, b: { q: number; c: TagCandidate }) =>
-    a.q !== b.q ? a.q - b.q : a.c.tag1 < b.c.tag1 ? -1 : a.c.tag1 > b.c.tag1 ? 1 : 0;
-  const pick = neg.length > 0 ? neg.reduce((m, x) => (cmp(x, m) < 0 ? x : m)) : scored.reduce((m, x) => (cmp(x, m) > 0 ? x : m));
+  // R5 (format v1, F-6): ties between tags of equal weight go to the HIGHEST feedbackIndex (the contract stores only
+  // tag hashes and keeps the first feedback met scanning from the last index down). Ties never change w.
+  const byIndex = (a: { q: number; c: TagCandidate }, b: { q: number; c: TagCandidate }) =>
+    a.c.feedbackIndex > b.c.feedbackIndex ? a : a.c.feedbackIndex < b.c.feedbackIndex ? b : a;
+  const pick = neg.length > 0
+    ? neg.reduce((m, x) => (x.q < m.q ? x : x.q > m.q ? m : byIndex(m, x)))
+    : scored.reduce((m, x) => (x.q > m.q ? x : x.q < m.q ? m : byIndex(m, x)));
   if (pick.q === 0) return { kind: "none", reason: "ZERO_WEIGHT" };
   return { kind: "edge", w: pick.q, tag1: pick.c.tag1, feedbackIndex: pick.c.feedbackIndex };
 }

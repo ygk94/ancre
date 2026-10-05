@@ -5,19 +5,26 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { decodeNewNodes, decodeRows, graphRoot, EncodingError } from "../src/lib/certificate.js";
 
 const DIR = new URL("../../solver/vectors/", import.meta.url);
-const VECTORS = existsSync(DIR) ? readdirSync(DIR).filter((f) => f.endsWith(".json")) : [];
+const VECTORS = existsSync(DIR)
+  ? [...readdirSync(DIR).filter((f) => f.endsWith(".json")),
+     ...readdirSync(new URL("violations/", DIR)).filter((f) => f.endsWith(".json")).map((f) => `violations/${f}`)]
+  : [];
 
-describe.runIf(VECTORS.length > 0)("certificate calldata (solver/vectors)", () => {
+describe.runIf(VECTORS.length > 0)("certificate calldata v1 (solver/vectors, violations included)", () => {
   for (const f of VECTORS) {
     it(`${f}: rows decode to the vector's rows and graphRoot matches`, (t) => {
       const v = JSON.parse(readFileSync(new URL(f, DIR), "utf8"));
-      const d = decodeRows(v.calldata.rows, v.nCert);
-      t.expect(d.rows.map((r) => ({ u: r.u, wallet: r.wallet ?? null, edges: r.edges }))).toEqual(
-        v.rows.map((r: any) => ({ u: r.u, wallet: r.wallet ?? null,
-          edges: r.edges.map((e: any) => ({ dst: e.dst, w: e.w, feedbackIndex: e.feedbackIndex })) })));
+      const k = v.set.anchors.length;
+      const d = decodeRows(v.calldata.rows, v.nCert, k);
+      t.expect(d.rows.map((r) => ({
+        u: r.u, source: r.src ?? null, via: r.u < k ? "anchor" : !r.src ? (v.nodes[r.u].kind === "address" ? "address" : "none") : r.viaOwner ? "owner" : "wallet",
+        aliasOf: r.aliasOf ?? null, bPlus: Math.max(10_000, r.sPlusEffective), edges: r.edges,
+      }))).toEqual(v.rows.map((r: any) => ({
+        u: r.u, source: r.source ?? null, via: r.via, aliasOf: r.aliasOf ?? null, bPlus: r.bPlus,
+        edges: r.edges.map((e: any) => ({ dst: e.dst, w: e.w, feedbackIndex: e.feedbackIndex })),
+      })));
       t.expect(graphRoot(d.rows.map((r) => r.leaf))).toBe(v.expected.graphRoot);
       const nodes = decodeNewNodes(v.calldata.newNodes);
-      const k = v.set.anchors.length;
       t.expect(nodes.map((n) => (n.kind === "agent" ? `a${n.agentId}` : `x${n.address}`))).toEqual(
         v.nodes.slice(k).map((n: any) => (n.kind === "agent" ? `a${n.agentId}` : `x${n.address.toLowerCase()}`)));
     });
