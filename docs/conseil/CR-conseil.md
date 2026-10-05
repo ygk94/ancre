@@ -1384,3 +1384,30 @@ Rapport : `docs/chantiers/rapports/05.md`. Fusionné dans `feat/conseil-solveur-
 - **Si l'owner est un compte délégué EIP-7702 sans `isValidSignature`**, il ne pourra pas signer l'override en EIP-3009. C'est à vérifier.
 
 **Ce qui attend Hugo** (MUSTDO, point 14h) : le test T1 réel, `mm login`, et l'adresse owner et trésorerie.
+
+---
+
+# Réconciliation avec ARCHITECTURE.md et BACKEND-KIT.md — 2026-10-05
+
+**Constat (AM-PIL.2, angle mort de méthode, troisième occurrence d'AM-3.13).** `main` contenait depuis le 24-26/09 deux documents qu'**aucune session n'avait lus**, puisque toutes travaillaient sur `feat/conseil-solveur-contrat` :
+- `ARCHITECTURE.md` : un moteur, quatre surfaces, des contrats produit, six flux, une échelle de périmètre, un script de démo de 5 minutes ;
+- `BACKEND-KIT.md` : trois chantiers numérotés 01 à 03, avec leurs prompts.
+
+Ils sont fusionnés sur `main` depuis le 05/10. **`BACKEND-KIT.md` est remplacé par `docs/chantiers/`.** `ARCHITECTURE.md` reste la vision produit, mais elle est **antérieure aux tours 1 à 6**.
+
+| Élément d'ARCHITECTURE.md | Statut au regard des décisions | À trancher au tour 7 ? |
+|---|---|---|
+| §0 « la confiance existe depuis quelqu'un », agent neuf = 0, revue inatteignable = 0, « le refus vient du contrat » | **Aligné** (D1, D13, D41) | non |
+| `trustOf → (score = t·N, errorBound, epoch, level)` ; `minScore` en 1e18 = moyenne uniforme | **Remplacé** par D1 (part de masse en WAD) et D39 (`isTrusted`, politique dans le `setId`) | non |
+| Niveaux Verified / Optimistic, caution, 3 contestations | **Remplacé** par D6 et D32 (Registry-verified / Submitter-attested, sans slashing) | non |
+| `TagSchemaRegistry` global, indexé par (registrant, tag) | **En conflit** avec D12 (schéma engagé par ensemble, pas de registre global) | à confirmer |
+| `TrustGatedRouter` x402 `upto` | **Fait** sous le nom `TrustGatedPayer` (`exact` + `upto`, D41) | non |
+| F6 : le disjoncteur passe par un certificat republié en ~0,6 s | **Mieux couvert** par le veto direct (D33) : refus au bloc suivant, sans recertification | non (mettre le script de démo à jour) |
+| « Registres absents du testnet » | **Faux** (vérifié le 27/09) | non |
+| **Surface 4 : afficher le poids effectif d'une revue** (« cette revue compte pour 0,00 dans votre domaine ») | **Nouveau, très démonstratif, peu coûteux** (affichage + `explain`) ; rejoint le panneau de diagnostics des ancres | **oui** : l'intégrer au chantier 07 ? |
+| **`TrustDomain`** (ancres + schémas + politique + **appartenance**) ; `PermissionedRegistry` | Le `setId` couvre déjà ancres, schéma et politique (D39). **L'appartenance et le registre permissionné sont nouveaux** (angle entreprise) | **oui** : périmètre |
+| **`VouchBond`, le parrainage cautionné** (tag `ancre:vouch`, poids plafonné, caution en USDC, slashing) | **Nouveau.** Il rejoint la piste du « vivier cautionné » (discussion du 30/09) et D27. Limite reconnue par le document : la responsabilité est économique, pas algorithmique | **oui** : hackathon ou ERC et slide ? |
+| `AgentFactory` | Couvert par le script de mise en place du 05 (`setup-fork.mjs`), pas par un contrat | probablement non |
+| Surface 2, import cross-chain | L'indexeur couvre déjà 3 chaînes (D42). La lecture d'un certificat sur une autre chaîne n'est pas faite | non (suite) |
+| API de lecture + SDK agent | En partie couverts par le plugin `mm ancre` | non |
+| Script de démo de 5 min (domaine ACME, parrainage) | À fusionner avec D19, D40, D45 et le storyboard de 2:55 (`design-demo-et-soumission.md`) | **oui** |

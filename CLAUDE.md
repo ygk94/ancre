@@ -1,7 +1,7 @@
 # CLAUDE.md — reprise de contexte ANCRE
 
 > Fichier de passation. Lis-le **avant** le README. Le README dit *ce qu'on construit* ; celui-ci dit *où on en est, ce qui est vérifié, et ce qu'il ne faut pas refaire*.
-> Dernière mise à jour : **2026-09-27** (faits vérifiés par 4 agents, tour 3 du conseil). **Décisions, angles morts et feuille de route à jour : `docs/conseil/CR-conseil.md`** — le lire juste après ce fichier.
+> Dernière mise à jour : **2026-10-05** (chantiers 02, 03, 04, 05 et 08 livrés et fusionnés sur `main`). **À lire juste après ce fichier, dans l'ordre :** `ANCRE.md` (le projet en entier), `docs/conseil/CR-conseil.md` (le journal des décisions D1 à D47 en tête), `docs/chantiers/ROADMAP.md`, `mustdo/MUSTDO.md` (ce qui attend Hugo).
 > Mise à jour précédente : **2026-09-23**. Auteur : session Claude Code avec Hugo (`hugo.thomas.perso@gmail.com`, GitHub `hugothomas9`).
 
 ## 1. Le contexte en 10 lignes
@@ -12,7 +12,13 @@
 - **Angle qui sauve du « ERC-8004 de plus »** : on ne fait pas un registre, on fait **la couche que la norme délègue explicitement au lecteur sans lui donner d'outil**.
 - **Ambition supplémentaire** : ANCRE est l'**implémentation de référence d'un ERC** à écrire (draft rédigé, dans le README §7).
 - **Équipe** : 3 devs à l'aise en Solidity/EVM, un profil finance/quant.
-- **État** : recherche et spec terminées, 3 tours de conseil (`docs/conseil/CR-conseil.md`, décisions D1-D37 : elles **remplacent** les conventions du draft d'ERC là où elles divergent, ex. `score = t·N` abandonné). **Zéro ligne de code écrite** au 2026-09-27.
+- **État au 05/10** : 6 tours de conseil (décisions D1 à D47, qui **remplacent** toute convention antérieure, y compris `ARCHITECTURE.md` et `BACKEND-KIT.md` là où ils divergent). **Code livré et testé sur `main`** :
+  - `contracts/` : `AnchoredReputation` v1 et `TrustGatedPayer`, 147 tests dont les forks ;
+  - `solver/` : solveur, certificateur et surveillant, 135 tests ;
+  - `indexer/` : Envio, 28 tests, parité avec le solveur sur 3 chaînes ;
+  - `plugin/` : `mm ancre`, 48 tests ;
+  - `docs/erc/` : draft d'ERC, lint eipw à 0 erreur, vérificateur indépendant.
+  **Restent ouverts** : 3 défauts de conception du contrat (AM-08.A, B, C), les chantiers 06, 07 et 09, et les actions de Hugo.
 
 ## 2. Comment travailler avec Hugo (important)
 
@@ -55,10 +61,12 @@
 | **Ancres choisies par le lecteur**, pas de score global | Les auteurs d'ERC-8004 jugent un score unique « dangerous » ; répond au #309 |
 | **Matrice en calldata**, pas en storage | Lire le storage du registre coûte ~20k gas/arête (MIP-8) |
 | **Norme chain-agnostic**, Monad non cité dedans | 8004 est sur 40+ chaînes ; une norme mono-chaîne meurt |
-| ~~Deux niveaux `Verified` / `Optimistic`~~ → **trois niveaux** `Residual-verified` / `Registry-contested` / `Optimistic` (CR tour 2, D6) | « Verified » prouvait le point fixe de la matrice soumise, pas du registre |
-| **Décisions D1-D19 du conseil** (`docs/conseil/CR-conseil.md`) | Elles priment sur l'ancien draft d'ERC ; draft réécrit dans `docs/erc/anchored-reputation.md` |
+| ~~Deux niveaux `Verified` / `Optimistic`~~ → **deux niveaux** `Registry-verified` (chaque arête relue dans le registre ; 14,97 M gas pour la démo, mesuré) et `Submitter-attested` (soumetteurs listés dans le `setId`, preuves d'écart) (D32) | Un certificat fabriqué remplaçait l'honnête (faille AM-5.9) |
+| **Décisions D1-D47 du conseil** (`docs/conseil/CR-conseil.md`) | Elles priment sur l'ancien draft d'ERC, sur `ARCHITECTURE.md` et sur `BACKEND-KIT.md` ; draft réécrit dans `docs/erc/anchored-reputation.md` |
+| **Score = part de masse en WAD**, lecture par `isTrusted(agentId, setId)` (politique engagée dans le `setId`) | `score = t·N` gonflable (D1) ; `assess` OK ≠ fiable (D39) |
+| **Override de paiement réservé à l'humain**, depuis son propre wallet (D47) | Un agent ne doit jamais pouvoir forcer un paiement |
 | **Valeur hors bornes → rejetée, pas plafonnée** | Sinon un 1e38 atterrit en haut de l'échelle |
-| **Dépôt privé** | ColinkaMir travaille sur le même jeu de données |
+| ~~Dépôt privé~~ → **à rendre public à la soumission** (règle OSI probable, bounty Envio) ; la divulgation aux auteurs d'ERC-8004 doit partir avant (D29) | Décision de Hugo, voir MUSTDO |
 | **README en anglais** | Jury international + dépôt `ethereum/ERCs` |
 
 ## 6. Ce qu'il ne faut PAS refaire
