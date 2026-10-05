@@ -1,0 +1,557 @@
+<title>ANCRE Backend Kit</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --ground:#EDEFF2; --surface:#FFFFFF; --surface-2:#F6F7F9;
+    --ink:#11151B; --ink-2:#39424E; --muted:#5E6875; --line:#D2D8E0; --line-strong:#B6BFCB;
+    --accent:#2E4A7D; --accent-soft:#E3E9F4; --signal:#B45F11; --signal-soft:#F7ECDF;
+    --ok:#1C6B50; --ok-soft:#E0EFE8; --danger:#8F2321; --danger-soft:#F6E4E2;
+    --shadow:0 1px 2px rgba(17,21,27,.06), 0 8px 24px -16px rgba(17,21,27,.28);
+    --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans:"IBM Plex Sans", system-ui, -apple-system, Segoe UI, sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0E1216; --surface:#151A20; --surface-2:#1A2029;
+      --ink:#E6EAF0; --ink-2:#C0C8D2; --muted:#8D98A6; --line:#252D37; --line-strong:#38424F;
+      --accent:#8DAEE8; --accent-soft:#1B2534; --signal:#E2A055; --signal-soft:#2B2113;
+      --ok:#6FCBA4; --ok-soft:#12251D; --danger:#E08E89; --danger-soft:#2A1614;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0E1216; --surface:#151A20; --surface-2:#1A2029;
+    --ink:#E6EAF0; --ink-2:#C0C8D2; --muted:#8D98A6; --line:#252D37; --line-strong:#38424F;
+    --accent:#8DAEE8; --accent-soft:#1B2534; --signal:#E2A055; --signal-soft:#2B2113;
+    --ok:#6FCBA4; --ok-soft:#12251D; --danger:#E08E89; --danger-soft:#2A1614;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+  }
+  *{box-sizing:border-box}
+  body{background:var(--ground); color:var(--ink); font-family:var(--sans); font-size:15px; line-height:1.55; margin:0; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1060px; margin:0 auto; padding-inline:16px; padding-block:0}
+  a{color:var(--accent)}
+  h1,h2,h3,h4{text-wrap:balance; margin:0}
+  code,kbd{font-family:var(--mono); font-size:.88em}
+  .tnum{font-variant-numeric:tabular-nums}
+
+  header.bar{position:sticky; top:env(safe-area-inset-top,0px); z-index:20; background:color-mix(in srgb, var(--ground) 92%, transparent); backdrop-filter:blur(8px); border-bottom:1px solid var(--line)}
+  .bar-in{max-width:1060px; margin:0 auto; padding:10px 16px; display:flex; align-items:center; gap:14px; flex-wrap:wrap}
+  .mark{font-family:var(--mono); font-weight:600; letter-spacing:.08em; text-transform:uppercase; font-size:12px; color:var(--ink)}
+  .mark span{color:var(--signal)}
+  nav.jump{display:flex; gap:4px; flex-wrap:wrap; margin-left:auto}
+  nav.jump a{font-family:var(--mono); font-size:11.5px; text-decoration:none; color:var(--muted); padding:4px 8px; border:1px solid transparent; border-radius:4px}
+  nav.jump a:hover{color:var(--ink); border-color:var(--line); background:var(--surface)}
+
+  .hero{padding-block:44px 30px; border-bottom:1px solid var(--line)}
+  .eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--signal); margin-bottom:14px}
+  h1{font-size:clamp(30px,5.2vw,46px); line-height:1.08; letter-spacing:-.02em; font-weight:700; max-width:19ch}
+  .lede{margin-top:16px; max-width:62ch; color:var(--ink-2); font-size:17px}
+  .facts{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1px; margin-top:28px; background:var(--line); border:1px solid var(--line)}
+  .fact{background:var(--surface); padding:12px 14px}
+  .fact dt{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+  .fact dd{margin:4px 0 0; font-size:19px; font-weight:600; font-variant-numeric:tabular-nums}
+  .fact dd small{display:block; font-size:11.5px; font-weight:400; color:var(--muted); letter-spacing:0}
+
+  section{padding-block:38px; border-bottom:1px solid var(--line)}
+  h2{font-size:24px; letter-spacing:-.01em; font-weight:600}
+  h3{font-size:17px; font-weight:600; margin-top:26px}
+  h4{font-family:var(--mono); font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:8px}
+  p{margin:10px 0}
+  .sub{color:var(--muted); max-width:66ch}
+
+  .pipeline{display:grid; grid-template-columns:1fr auto 1fr auto 1fr; gap:10px; align-items:stretch; margin-top:20px}
+  @media (max-width:760px){ .pipeline{grid-template-columns:1fr; } .pipeline .arrow{transform:rotate(90deg); justify-self:center} }
+  .stage{background:var(--surface); border:1px solid var(--line); padding:14px; box-shadow:var(--shadow)}
+  .stage .n{font-family:var(--mono); font-size:11px; color:var(--signal); letter-spacing:.1em}
+  .stage b{display:block; margin:6px 0 6px; font-size:15px}
+  .stage p{margin:0; font-size:13px; color:var(--muted)}
+  .stage .io{margin-top:10px; font-family:var(--mono); font-size:11px; color:var(--ink-2); border-top:1px dashed var(--line); padding-top:8px}
+  .arrow{align-self:center; font-family:var(--mono); color:var(--line-strong); font-size:18px}
+
+  table{width:100%; border-collapse:collapse; font-size:13.5px}
+  .scroll{overflow-x:auto; margin-top:14px; border:1px solid var(--line); background:var(--surface)}
+  th,td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top}
+  th{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); background:var(--surface-2); white-space:nowrap}
+  tbody tr:last-child td{border-bottom:none}
+  td code{background:var(--surface-2); padding:1px 4px; border-radius:3px}
+
+  .part{padding-block:44px; border-bottom:1px solid var(--line)}
+  .part-head{display:flex; gap:16px; align-items:flex-start}
+  .part-num{font-family:var(--mono); font-size:42px; font-weight:600; line-height:.9; color:var(--line-strong); font-variant-numeric:tabular-nums}
+  .part-head h2{font-size:26px}
+  .part-head .dir{font-family:var(--mono); font-size:12px; color:var(--signal); margin-top:6px}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:20px}
+  @media (max-width:720px){ .grid2{grid-template-columns:1fr} }
+  .box{background:var(--surface); border:1px solid var(--line); padding:14px 16px}
+  .box.owns{border-left:3px solid var(--ok)}
+  .box.forbid{border-left:3px solid var(--danger)}
+  .box ul{margin:8px 0 0; padding-left:18px}
+  .box li{margin:5px 0; font-size:13.5px}
+
+  .chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px}
+  .chip{font-family:var(--mono); font-size:11.5px; padding:3px 8px; border:1px solid var(--line-strong); border-radius:99px; color:var(--ink-2); background:var(--surface)}
+  .chip.first{border-color:var(--accent); color:var(--accent); background:var(--accent-soft)}
+
+  .promptcard{margin-top:18px; border:1px solid var(--line-strong); background:var(--surface); box-shadow:var(--shadow)}
+  .promptcard > header{display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--line); background:var(--surface-2); flex-wrap:wrap}
+  .promptcard header .tag{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--signal)}
+  .promptcard header b{font-size:14px; font-weight:600}
+  .copy{margin-left:auto; font-family:var(--mono); font-size:11.5px; padding:5px 10px; border:1px solid var(--line-strong); background:var(--surface); color:var(--ink-2); border-radius:4px; cursor:pointer}
+  .copy:hover{border-color:var(--accent); color:var(--accent)}
+  .copy:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  pre.prompt{margin:0; padding:16px; font-family:var(--mono); font-size:12.5px; line-height:1.62; white-space:pre-wrap; overflow-wrap:anywhere; color:var(--ink)}
+  pre.code{margin:14px 0 0; padding:14px; font-family:var(--mono); font-size:12.5px; line-height:1.55; background:var(--surface); border:1px solid var(--line); overflow-x:auto}
+
+  .check{list-style:none; padding:0; margin:10px 0 0}
+  .check li{position:relative; padding-left:24px; margin:7px 0; font-size:13.5px}
+  .check li::before{content:"□"; position:absolute; left:4px; color:var(--accent); font-family:var(--mono)}
+
+  .note{border-left:3px solid var(--signal); background:var(--signal-soft); padding:12px 14px; margin-top:18px; font-size:13.5px}
+  .note b{color:var(--ink)}
+
+  footer{padding-block:34px 44px; color:var(--muted); font-size:13px}
+  @media (prefers-reduced-motion:reduce){ *{transition:none!important; animation:none!important} }
+</style>
+
+<header class="bar">
+  <div class="bar-in">
+    <span class="mark">ANCRE <span>/</span> backend kit</span>
+    <nav class="jump">
+      <a href="#regles">Règles</a>
+      <a href="#contrat">Contrat</a>
+      <a href="#p1">01 Ingestion</a>
+      <a href="#p2">02 Solveur</a>
+      <a href="#p3">03 Contrats</a>
+      <a href="#skills">Skills</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<div class="hero">
+  <div class="eyebrow">Monad Metropolis · track 04 · clôture 13 oct. 2026</div>
+  <h1>Trois chantiers back, trois prompts, zéro collision</h1>
+  <p class="lede">ANCRE certifie on-chain une réputation d'agents ERC-8004 résistante aux Sybil, relative aux ancres choisies par le lecteur. Le back se découpe en trois chantiers qui peuvent avancer en parallèle, reliés par deux artefacts figés. Chaque chantier a son prompt de construction, son prompt de clôture, ses skills et ses interdits.</p>
+  <dl class="facts">
+    <div class="fact"><dt>Bloc Monad</dt><dd>0,3 s<small>finalité ~0,6 s</small></dd></div>
+    <div class="fact"><dt>Gas par bloc</dt><dd>150 M<small>30 M par tx</small></dd></div>
+    <div class="fact"><dt>Graphe réel</dt><dd>9 188<small>feedbacks, mainnet 143</small></dd></div>
+    <div class="fact"><dt>Dont une ferme</dt><dd>83 %<small>7 665 faux agents</small></dd></div>
+    <div class="fact"><dt>Budget de vérif.</dt><dd>~3,7 M<small>gas, tout le graphe</small></dd></div>
+  </dl>
+</div>
+
+<section id="regles">
+  <h2>Règles communes, à appliquer avant le premier prompt</h2>
+  <p class="sub">Ces quatre règles sont ce qui empêche les trois chantiers de se marcher dessus. Elles se posent une fois, dans le dépôt, avant de lancer quoi que ce soit.</p>
+
+  <div class="grid2">
+    <div class="box owns">
+      <h4>Isolation</h4>
+      <ul>
+        <li>Un <b>worktree git par chantier</b> (skill <code>superpowers:using-git-worktrees</code>), donc trois sessions qui ne partagent aucun fichier de travail.</li>
+        <li>Propriété exclusive des dossiers : <code>indexer/</code> à 01, <code>solver/</code> à 02, <code>contracts/</code> et <code>router/</code> à 03.</li>
+        <li>Une session ne modifie <b>jamais</b> le dossier d'une autre. Elle ouvre une note dans <code>HANDOFF.md</code>.</li>
+      </ul>
+    </div>
+    <div class="box forbid">
+      <h4>Le dossier partagé <code>spec/</code></h4>
+      <ul>
+        <li><code>spec/snapshot.schema.json</code> — écrit par <b>01</b>, lu par 02.</li>
+        <li><code>spec/certificate.md</code> et <code>spec/encoding.md</code> — écrits par <b>03</b>, lus par 02.</li>
+        <li><code>spec/vectors/*.json</code> — écrits par <b>02</b>, lus par 03 comme fixtures de test.</li>
+        <li>Toute modification d'un fichier de <code>spec/</code> déjà publié est un <b>changement de contrat</b> : commit isolé, message préfixé <code>spec!:</code>, et mention dans <code>HANDOFF.md</code>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>Ordre de démarrage.</b> 01 et 03 peuvent partir en même temps : 01 n'a besoin de rien, 03 écrit d'abord la structure <code>Certificate</code> et l'encodage calldata, qui ne dépendent d'aucune donnée. 02 démarre dès que ces deux fichiers de <code>spec/</code> existent — comptez une demi-journée de décalage, pas plus.
+  </div>
+
+  <h3>Le contrat entre chantiers</h3>
+  <div class="pipeline" id="contrat">
+    <div class="stage">
+      <div class="n">01</div>
+      <b>Ingestion &amp; graphe</b>
+      <p>Les events du registre deviennent un graphe déterministe, normalisé, engagé par des racines de Merkle.</p>
+      <div class="io">out → <code>GraphSnapshot</code> + roots</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage">
+      <div class="n">02</div>
+      <b>Solveur &amp; certificat</b>
+      <p>Le point fixe PPR, en arithmétique entière identique à celle de l'EVM, plus le résidu et la calldata.</p>
+      <div class="io">in ← snapshot · out → <code>Certificate</code> + calldata + vecteurs</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage">
+      <div class="n">03</div>
+      <b>Contrats</b>
+      <p>La vérification on-chain, les contestations, et le routeur de paiement qui lit le score avant de payer.</p>
+      <div class="io">in ← calldata + vecteurs · out → <code>trustOf()</code></div>
+    </div>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Question</th><th>Chantier 01</th><th>Chantier 02</th><th>Chantier 03</th></tr></thead>
+      <tbody>
+        <tr><td>Qui lit la chaîne ?</td><td><b>Oui</b> — logs, owner ERC-721, <code>agentWallet</code></td><td>Non — lit le snapshot</td><td>Lecture uniquement dans les tests de fork</td></tr>
+        <tr><td>Qui fait les maths PPR ?</td><td>Non</td><td><b>Oui</b> — et lui seul</td><td>Vérifie un résidu, ne calcule pas de point fixe</td></tr>
+        <tr><td>Qui écrit du Solidity ?</td><td>Non</td><td>Non</td><td><b>Oui</b> — et lui seul</td></tr>
+        <tr><td>Qui définit la structure du certificat ?</td><td>Non</td><td>Non — il la consomme</td><td><b>Oui</b>, dans <code>spec/certificate.md</code></td></tr>
+        <tr><td>Qui définit le format du snapshot ?</td><td><b>Oui</b>, dans <code>spec/snapshot.schema.json</code></td><td>Non — il le consomme</td><td>Non</td></tr>
+        <tr><td>Qui envoie des transactions ?</td><td>Non</td><td><b>Oui</b> — le publieur</td><td>Scripts de déploiement seulement</td></tr>
+        <tr><td>Qui surveille et conteste ?</td><td>Non</td><td><b>Oui</b> — le watcher off-chain</td><td>Il écrit la logique de contestation on-chain</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ PART 1 ============ -->
+<section class="part" id="p1">
+  <div class="part-head">
+    <div class="part-num">01</div>
+    <div>
+      <h2>Ingestion &amp; construction du graphe</h2>
+      <div class="dir">indexer/ · spec/snapshot.schema.json</div>
+      <p class="sub" style="margin-top:8px">Transformer 9 188 events dispersés sur 107 millions de blocs en un objet déterministe : mêmes entrées, mêmes octets en sortie. C'est la fondation ; si elle n'est pas reproductible, aucun certificat ne veut rien dire.</p>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="box owns">
+      <h4>Il possède</h4>
+      <ul>
+        <li>La lecture des events <code>NewFeedback</code>, <code>FeedbackRevoked</code>, <code>Registered</code>, <code>MetadataSet</code>.</li>
+        <li>La résolution des contrôleurs : owner ERC-721 et <code>agentWallet</code>, <b>à l'époque</b> considérée.</li>
+        <li>La normalisation par tag et le rejet des valeurs hors bornes.</li>
+        <li>Les filtres d'arêtes, dont la provenance de financement.</li>
+        <li>Les racines de Merkle <code>feedbackRoot</code>, <code>lastIndexRoot</code>, <code>schemaRoot</code>.</li>
+      </ul>
+    </div>
+    <div class="box forbid">
+      <h4>Il ne touche pas</h4>
+      <ul>
+        <li>Au PPR, au résidu, à α, aux vecteurs de score.</li>
+        <li>À la moindre ligne de Solidity.</li>
+        <li>À l'encodage calldata du certificat.</li>
+        <li>À l'envoi de transactions.</li>
+        <li>Au front, aux graphiques, à la démo.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h4 style="margin-top:22px">Skills à invoquer, dans cet ordre</h4>
+  <div class="chips">
+    <span class="chip first">superpowers:brainstorming</span>
+    <span class="chip">superpowers:writing-plans</span>
+    <span class="chip">superpowers:test-driven-development</span>
+    <span class="chip">superpowers:using-git-worktrees</span>
+    <span class="chip">superpowers:verification-before-completion</span>
+    <span class="chip">MCP context7 (viem, HyperSync)</span>
+  </div>
+
+  <div class="promptcard">
+    <header><span class="tag">Prompt 1.A</span><b>Construction</b><button class="copy" type="button">Copier</button></header>
+<pre class="prompt">Tu prends le chantier 01 du projet ANCRE : l'ingestion ERC-8004 et la construction du graphe de confiance. Lis d'abord CLAUDE.md et README.md à la racine du dépôt : ils contiennent les adresses vérifiées, les chiffres mesurés et les pièges Monad. Ne re-vérifie pas ce qui y est marqué comme vérifié.
+
+Commence par `superpowers:using-git-worktrees` pour travailler dans un worktree isolé nommé `indexer`, puis `superpowers:brainstorming` pour cadrer le modèle de données AVANT toute ligne de code. Poursuis avec `superpowers:writing-plans`, et implémente en `superpowers:test-driven-development`.
+
+PÉRIMÈTRE STRICT — tu possèdes `indexer/` et le seul fichier `spec/snapshot.schema.json`. Tu ne touches à aucun autre dossier. Tu n'écris ni Solidity, ni algorithme de réputation, ni encodage calldata : ce sont les chantiers 02 et 03. Si tu as besoin d'un champ qui n'existe pas dans leur périmètre, écris la demande dans HANDOFF.md, ne l'implémente pas.
+
+CE QUE TU CONSTRUIS
+1. Un lecteur d'events du ReputationRegistry (0x8004BAa17C55a88189AE136b182e5fdA19dE9b63) et de l'IdentityRegistry (0x8004A169FB4a3325136EB29fA0ceB6D2e539a432) sur Monad mainnet, chainId 143. Le RPC public plafonne eth_getLogs à 100 blocs et la chaîne produit ~288 000 blocs par jour : un rattrapage complet par RPC est hors de question. Utilise Envio HyperSync (clé gratuite) pour l'historique, et le flux `monadLogs` pour la queue temps réel. Documente le choix et le coût de chaque option dans le README du dossier.
+2. La résolution des contrôleurs : pour chaque agent, son owner ERC-721 et son `agentWallet` s'il est défini. Un feedback signé par une adresse contrôlant l'agent A crée une arête A → B. Une adresse qui ne contrôle aucun agent et n'est pas une ancre ne crée aucune arête : c'est la propriété anti-Sybil centrale, teste-la explicitement.
+3. La normalisation par tag, selon les schémas de `spec/certificate.md` s'il existe déjà, sinon selon ta propre proposition écrite dans `spec/snapshot.schema.json` : valeur hors bornes = feedback REJETÉ, jamais plafonné. Le jeu réel contient des notes sur 100, des Elo autour de 1 600, des ±1 et 117 valeurs à 1e38 : ton test de non-régression doit montrer que les 1e38 disparaissent.
+4. Les filtres d'arêtes en option activable, dont un filtre de provenance de financement (une arête ne compte pas si le noteur a été financé par le propriétaire de l'agent noté).
+5. La sortie : un objet `GraphSnapshot` versionné, déterministe au bit près, avec ses racines de Merkle `feedbackRoot`, `lastIndexRoot`, `schemaRoot`, et le numéro de bloc d'époque. Le schéma JSON est le contrat que le chantier 02 consomme : documente chaque champ, y compris l'ordre de tri des feuilles.
+
+CONTRAINTES MONAD À TRAITER EXPLICITEMENT
+- Les blocs `latest` sont spéculatifs et ne sont jamais annulés, mais les logs websocket standards les exposent : n'utilise que des blocs finalisés pour un snapshot, et dédoublonne via `monadLogs`.
+- Les époques se comptent en `block.number`, jamais en `block.timestamp` : 3 à 4 blocs partagent la même seconde.
+- Les registres sont absents du testnet 10143. Le développement se fait contre le mainnet en lecture seule et contre des fixtures locales.
+
+TESTS EXIGÉS
+- Deux exécutions sur la même époque produisent des octets identiques.
+- Les fixtures du snapshot du 21/09 sont rejouables hors ligne, sans réseau.
+- L'agent #182 (« Eve-8004 ») reçoit bien 7 665 arêtes entrantes, toutes depuis des agents « Spawn-8004 ».
+- Une révocation retire l'arête correspondante.
+- Un feedback dont le tag n'a pas de schéma est ignoré.
+
+Termine par `superpowers:verification-before-completion` : ne déclare rien de terminé sans la sortie des commandes de test. Écris dans HANDOFF.md les chiffres réels que tu as obtenus (nombre d'arêtes, de nœuds, d'agents contrôlés, temps de rattrapage complet) : ils remplacent des estimations dans le README.</pre>
+  </div>
+
+  <div class="promptcard">
+    <header><span class="tag">Prompt 1.B</span><b>Clôture</b><button class="copy" type="button">Copier</button></header>
+<pre class="prompt">Le chantier 01 d'ANCRE se déclare terminé. Fais la revue avant de le figer, puisque le chantier 02 va construire dessus.
+
+Invoque `superpowers:requesting-code-review`, puis lance `/code-review high` sur le diff du worktree `indexer`. Traite les retours avec `superpowers:receiving-code-review` : vérifie techniquement chaque point avant d'y toucher, et conteste ce qui est faux.
+
+Trois questions doivent recevoir une réponse chiffrée, pas une opinion :
+1. Le déterminisme tient-il quand les events arrivent dans un ordre différent ? Prouve-le en rejouant les fixtures dans un ordre mélangé.
+2. Que se passe-t-il si un agent change d'owner entre deux époques ? Le comportement attendu est documenté dans `spec/snapshot.schema.json`, et testé.
+3. Combien de temps et combien de requêtes coûte un rattrapage complet depuis le bloc de déploiement du registre ? Donne la mesure, pas l'ordre de grandeur.
+
+Finis par `superpowers:verification-before-completion`, puis marque `spec/snapshot.schema.json` comme figé dans HANDOFF.md : à partir de là, toute modification est un `spec!:` qui doit prévenir le chantier 02.</pre>
+  </div>
+
+  <ul class="check">
+    <li>Deux exécutions identiques au bit près, testé et non supposé.</li>
+    <li>Les 117 valeurs à 1e38 sont rejetées, pas plafonnées.</li>
+    <li>Les 7 665 arêtes de la ferme sont reconstruites à l'identique.</li>
+    <li><code>spec/snapshot.schema.json</code> figé et annoncé dans <code>HANDOFF.md</code>.</li>
+  </ul>
+</section>
+
+<!-- ============ PART 2 ============ -->
+<section class="part" id="p2">
+  <div class="part-head">
+    <div class="part-num">02</div>
+    <div>
+      <h2>Solveur PPR &amp; certificat</h2>
+      <div class="dir">solver/ · spec/vectors/</div>
+      <p class="sub" style="margin-top:8px">Le cœur mathématique, et le seul endroit du projet où l'arithmétique compte au bit près : ce que le solveur calcule hors chaîne doit être exactement ce que le contrat recalcule, sinon la vérification échoue pour de mauvaises raisons.</p>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="box owns">
+      <h4>Il possède</h4>
+      <ul>
+        <li>Le point fixe <code>t = (1−α)·Cᵀt + α·p</code> en entiers virgule fixe 1e18.</li>
+        <li>Le résidu L1 et le terme d'arrondi <code>nnz(C)</code>.</li>
+        <li>Une colonne par ancre, et la combinaison linéaire qui sert n'importe quel ensemble d'ancres.</li>
+        <li>L'assemblage du certificat et l'encodage calldata, selon la spec de 03.</li>
+        <li>Le publieur : réaction à un nouveau feedback, gestion du nonce, de la caution.</li>
+        <li>Le watcher qui détecte une omission et déclenche une contestation.</li>
+        <li>Les vecteurs de test dorés livrés au chantier 03.</li>
+      </ul>
+    </div>
+    <div class="box forbid">
+      <h4>Il ne touche pas</h4>
+      <ul>
+        <li>Au Solidity — même pour « juste vérifier ».</li>
+        <li>À la structure <code>Certificate</code>, qui appartient à 03.</li>
+        <li>À l'indexation et à la lecture d'events, qui appartiennent à 01.</li>
+        <li>À la définition des schémas de tags.</li>
+        <li>Au front et à la démo.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h4 style="margin-top:22px">Skills à invoquer, dans cet ordre</h4>
+  <div class="chips">
+    <span class="chip first">superpowers:brainstorming</span>
+    <span class="chip">llm-council</span>
+    <span class="chip">superpowers:test-driven-development</span>
+    <span class="chip">superpowers:systematic-debugging</span>
+    <span class="chip">superpowers:verification-before-completion</span>
+  </div>
+
+  <div class="promptcard">
+    <header><span class="tag">Prompt 2.A</span><b>Décision d'abord</b><button class="copy" type="button">Copier</button></header>
+<pre class="prompt">Avant d'écrire le solveur d'ANCRE, trois conventions doivent être tranchées, parce qu'elles sont gravées ensuite dans le contrat ET dans le draft d'ERC. Elles ont été choisies à l'intuition et n'ont jamais été pressurisées.
+
+Utilise `llm-council` pour les passer au crible, avec ce contexte : la réputation est un PageRank personnalisé sur un graphe d'agents ERC-8004, calculé hors chaîne et vérifié on-chain par le résidu ‖t − F(t)‖₁ ≤ ε, avec la borne ‖t − t*‖₁ ≤ r/α. Le lecteur choisit ses ancres. Le graphe réel mesuré sur Monad compte 9 188 feedbacks dont 83 % viennent d'une ferme de 7 665 faux agents, et seulement 36 arêtes où le noteur est lui-même noté.
+
+Les trois questions :
+1. `score = t_i · N` (où N est le nombre de nœuds, donc 1e18 = la moyenne uniforme) est-il la bonne exposition ? Le score d'un agent baisse mécaniquement quand le graphe grandit ; un seuil écrit dans un contrat tiers vieillit-il mal ? Alternatives à peser : un rang percentile, un score relatif à la masse des ancres, une normalisation par le maximum.
+2. Quelle valeur d'α, sachant que α gouverne à la fois la résistance Sybil (borne en (1−α)/α) et la précision certifiée (r/α) ? Ces deux effets tirent-ils dans le même sens ou en sens contraire ?
+3. Le poids d'une arête : valeur normalisée seule, ou multipliée par le montant payé (x402) ? Le fait mesuré à intégrer : la ferme payait, et le propriétaire de l'agent noté finançait les noteurs. Le paiement est-il un poids légitime, ou un faux signal qui coûte cher en complexité ?
+
+Rends une décision par question, avec l'argument qui l'emporte et ce qu'on perd. Écris le résultat dans `solver/DECISIONS.md` et signale dans HANDOFF.md tout point qui oblige à modifier le draft d'ERC (README §7).</pre>
+  </div>
+
+  <div class="promptcard">
+    <header><span class="tag">Prompt 2.B</span><b>Construction</b><button class="copy" type="button">Copier</button></header>
+<pre class="prompt">Tu prends le chantier 02 d'ANCRE : le solveur PageRank personnalisé, le certificat et le publieur. Lis CLAUDE.md, README.md, `solver/DECISIONS.md`, `spec/snapshot.schema.json` (contrat d'entrée, figé par le chantier 01) et `spec/certificate.md` + `spec/encoding.md` (contrat de sortie, figés par le chantier 03).
+
+Travaille dans un worktree isolé nommé `solver` (`superpowers:using-git-worktrees`). Cadre l'architecture avec `superpowers:brainstorming`, puis implémente en `superpowers:test-driven-development`. Si un résultat diverge de ce que tu attends, passe par `superpowers:systematic-debugging` au lieu de bricoler des tolérances.
+
+PÉRIMÈTRE STRICT — tu possèdes `solver/` et `spec/vectors/`. Tu n'écris pas une ligne de Solidity, tu ne modifies ni le schéma de snapshot ni la structure du certificat. Si l'encodage calldata te gêne, ouvre le débat dans HANDOFF.md ; le chantier 03 tranche.
+
+CE QUE TU CONSTRUIS
+1. Le solveur : t = (1−α)·Cᵀt + α·p, C normalisée par ligne, masse des nœuds sans arête sortante renvoyée vers p. Arithmétique ENTIÈRE en virgule fixe 1e18, produits intermédiaires en 128 bits, arrondi défini une fois et documenté. La règle d'or : chaque opération doit correspondre exactement à ce que fera le contrat. Le moindre écart d'arrondi fait exploser la vérification on-chain.
+2. Le résidu r = ‖t − F(t)‖₁, plus le terme d'arrondi nnz(C), et la borne exposée r/α. Un test doit vérifier empiriquement que ‖t − t*‖₁ ≤ r/α sur un graphe jouet dont on connaît la solution exacte.
+3. Une colonne par ancre, et la combinaison linéaire qui sert un ensemble d'ancres arbitraire sans recalcul. Teste la linéarité : PPR(p1+p2) = PPR(p1) + PPR(p2) au bruit d'arrondi près.
+4. L'assembleur de certificat et l'encodeur calldata (arêtes en (uint32 i, uint32 j, uint64 w), triées, plus le vecteur t), conformes à `spec/encoding.md`. Il DOIT rejeter un lot dont la taille dépasserait la limite de 30 M de gas par transaction, et proposer le découpage.
+5. Le publieur : il écoute les nouveaux feedbacks et republie un certificat. Objectif mesuré à afficher : le délai entre l'event et le certificat publié. La cible est l'ordre du bloc Monad, soit 0,3 s, avec une finalité à 0,6 s. Points d'attention : pas de mempool globale sur Monad, donc `pending` = `latest` et gestion locale du nonce ; `eth_sendRawTransactionSync` renvoie tx et reçu en une requête ; on paie la gas limit et non le gas consommé, donc la limite doit être serrée et calculée à partir du nombre d'arêtes.
+6. Le watcher de contestation : il recalcule, détecte une omission ou un résidu faux, et construit la preuve à soumettre. La fenêtre de contestation se compte en secondes sur Monad, pas en jours : le watcher doit tenir ce rythme.
+7. `spec/vectors/` : au moins six cas dorés livrés au chantier 03 — graphe jouet à solution connue, graphe réel du 21/09, ferme Sybil isolée, ensemble d'ancres vide, ancre unique, arête révoquée. Chaque vecteur contient entrées, calldata, t attendu et résidu attendu.
+
+CE QUE LA DÉMO DOIT POUVOIR MONTRER, ET QUE TU DOIS DONC MESURER
+- Le score d'Eve-8004 (agent #182, 7 665 avis de sa propre ferme) doit être nul ou négligeable pour toute ancre honnête. Sors le chiffre.
+- Deux ensembles d'ancres différents donnent deux classements différents du même registre. Sors les deux classements.
+
+Termine par `superpowers:verification-before-completion`, avec la sortie brute des tests et les latences mesurées. Reporte dans HANDOFF.md ce que le chantier 03 doit savoir : taille de calldata par arête, gas attendu, et tout écart d'arrondi que le contrat devra reproduire.</pre>
+  </div>
+
+  <ul class="check">
+    <li>Le solveur et le contrat produisent le même résultat au bit près, prouvé par les vecteurs dorés.</li>
+    <li>Délai event → certificat publié, mesuré en millisecondes, pas estimé.</li>
+    <li>Score de la ferme d'Eve-8004 mesuré et publié.</li>
+    <li>Six vecteurs dorés livrés dans <code>spec/vectors/</code>.</li>
+  </ul>
+</section>
+
+<!-- ============ PART 3 ============ -->
+<section class="part" id="p3">
+  <div class="part-head">
+    <div class="part-num">03</div>
+    <div>
+      <h2>Contrats : vérification &amp; consommation</h2>
+      <div class="dir">contracts/ · router/ · spec/certificate.md · spec/encoding.md</div>
+      <p class="sub" style="margin-top:8px">C'est ici que la vitesse de Monad devient un argument plutôt qu'un slogan : vérifier un point fixe sur tout le graphe coûte environ 3,7 M de gas, ce qui tient dans un bloc de 150 M et se refait à chaque nouvel avis. C'est aussi ici que le refus de payer devient une règle du contrat, pas une politesse de l'application.</p>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="box owns">
+      <h4>Il possède</h4>
+      <ul>
+        <li><code>AnchoredReputation.sol</code> : niveau <b>Verified</b> (recalcul de la racine et du résidu dans la transaction) et niveau <b>Optimistic</b> (caution, fenêtre, trois contestations).</li>
+        <li><code>TagSchemaRegistry.sol</code> et l'interface <code>trustOf()</code>.</li>
+        <li><code>TrustGatedRouter.sol</code> : paiement x402 <code>upto</code> conditionné au score.</li>
+        <li>La structure <code>Certificate</code> et l'encodage calldata, donc <code>spec/certificate.md</code> et <code>spec/encoding.md</code>.</li>
+        <li>Le rapport de gas réel, les scripts de déploiement, la vérification des contrats.</li>
+      </ul>
+    </div>
+    <div class="box forbid">
+      <h4>Il ne touche pas</h4>
+      <ul>
+        <li>Au calcul du point fixe hors chaîne — il le vérifie, il ne le refait pas.</li>
+        <li>À l'indexation et à la construction du graphe.</li>
+        <li>Au publieur et au watcher.</li>
+        <li>Au front et à la démo.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h4 style="margin-top:22px">Skills à invoquer, dans cet ordre</h4>
+  <div class="chips">
+    <span class="chip first">superpowers:brainstorming</span>
+    <span class="chip">superpowers:writing-plans</span>
+    <span class="chip">superpowers:test-driven-development</span>
+    <span class="chip">security-review</span>
+    <span class="chip">code-review</span>
+    <span class="chip">simplify</span>
+    <span class="chip">superpowers:verification-before-completion</span>
+  </div>
+
+  <div class="promptcard">
+    <header><span class="tag">Prompt 3.A</span><b>Construction</b><button class="copy" type="button">Copier</button></header>
+<pre class="prompt">Tu prends le chantier 03 d'ANCRE : les contrats de vérification et de consommation. Lis CLAUDE.md et README.md : le README §7 contient le draft d'ERC, qui est la spec normative de ce que tu écris. Les estimations de gas du §4 sont justement ce que ton travail doit remplacer par des mesures.
+
+Travaille dans un worktree isolé nommé `contracts` (`superpowers:using-git-worktrees`). Cadre avec `superpowers:brainstorming`, planifie avec `superpowers:writing-plans`, implémente en `superpowers:test-driven-development` avec Foundry (version ≥ 1.8, `network = "monad"`).
+
+PÉRIMÈTRE STRICT — tu possèdes `contracts/`, `router/`, et les deux fichiers `spec/certificate.md` et `spec/encoding.md`. Tu ne réimplémentes pas le solveur, tu ne lis pas d'events hors des tests de fork. Ta toute première tâche est d'écrire ces deux fichiers de spec, car le chantier 02 est bloqué tant qu'ils n'existent pas : fais-les avant le reste, et annonce-les dans HANDOFF.md.
+
+CE QUE TU CONSTRUIS
+1. `AnchoredReputation.sol`.
+   - Niveau Verified : la liste d'arêtes et le vecteur t arrivent en calldata, le contrat recalcule keccak(arêtes), vérifie le résidu ‖t − F(t)‖₁ ≤ ε et stocke le résultat, le tout dans une transaction.
+   - Niveau Optimistic : publication avec caution, fenêtre de contestation en blocs, et trois contestations — omission (un feedback non révoqué d'index ≤ lastIndex engagé, absent de feedbackRoot), fabrication (une arête que le registre ne supporte pas), résidu (une ligne de F(t) qui diverge au-delà du résidu annoncé). Une contestation réussie slashe la caution et invalide le certificat.
+   - `trustOf(agentId, anchorSetId)` renvoie score, borne d'erreur, époque et niveau. Il revert sans certificat valide, et ne sert pas un certificat encore sous fenêtre sauf s'il est Verified.
+2. `TagSchemaRegistry.sol`, avec des schémas indexés par (registrant, tag) pour empêcher le squat de tag.
+3. `TrustGatedRouter.sol` : il paie un agent fournisseur en x402 `upto` (USDC natif Monad 0x754704Bc059F8C67012fEd69BC8A327a5aafb603, facilitator https://x402-facilitator.molandak.org) uniquement si `trustOf` dépasse un seuil, avec une fraîcheur maximale exprimée en blocs. Le refus vient du contrat. En option : un prix inversement proportionnel au score.
+
+CONTRAINTES MONAD, À TRAITER COMME DES EXIGENCES ET NON DES REMARQUES
+- On paie la gas limit, pas le gas consommé. Toute fonction publique doit avoir une limite calculable à l'avance à partir de la taille du lot, et tu dois la documenter. C'est une exigence d'API, pas une optimisation.
+- 30 M de gas par transaction. Au-delà, la vérification se découpe en plusieurs transactions avec un accumulateur persistant : conçois-le dès le départ, ne le rajoute pas après.
+- Le stockage est facturé par pages de 128 slots depuis MIP-8 : 8 100 de gas à la première lecture d'une page, 100 ensuite. Range les données chaudes de façon contiguë, jamais en mappings imbriqués pour un parcours.
+- Époques en `block.number`. Jamais `block.timestamp` : 3 à 4 blocs partagent la même seconde.
+- Jamais `prevrandao` pour tirer une ancre, un auditeur ou un échantillon : le leader le connaît à l'avance.
+- `ecrecover` coûte 6 000 de gas, soit le double d'Ethereum ; la précompile P256 `0x0100` en coûte 6 900 et rend les ancres en passkey réalistes.
+
+TESTS EXIGÉS
+- Les six vecteurs dorés de `spec/vectors/` passent, y compris le graphe réel du 21/09.
+- Un vecteur t falsifié est rejeté ; une arête retirée du lot est rejetée.
+- Les trois contestations sont testées, y compris le slashing.
+- Test de fuzz sur l'arithmétique virgule fixe : aucun dépassement, aucun revert inattendu.
+- Un rapport de gas complet : par arête, par lot de 1 000, et pour le graphe réel entier. Ce tableau remplace les estimations du README §4, et c'est le livrable le plus important de ce chantier.
+
+Termine par `superpowers:verification-before-completion` avec la sortie brute du rapport de gas. Mets à jour README §4 avec les vrais chiffres, et signale dans HANDOFF.md tout écart avec les estimations.</pre>
+  </div>
+
+  <div class="promptcard">
+    <header><span class="tag">Prompt 3.B</span><b>Durcissement</b><button class="copy" type="button">Copier</button></header>
+<pre class="prompt">Les contrats d'ANCRE passent leurs tests. Avant tout déploiement sur le mainnet Monad (chainId 143), fais-les tomber toi-même.
+
+Lance d'abord `/security-review` sur le diff du worktree `contracts`, puis `/code-review high`. Traite les retours avec `superpowers:receiving-code-review` : vérifie chaque point avant d'y toucher.
+
+Attaque ensuite ces scénarios, un test par scénario, en te servant de `superpowers:systematic-debugging` sur tout comportement inattendu :
+1. Un publieur soumet un certificat correct mais dont le graphe omet exactement les arêtes qui le desservent. La contestation par omission le rattrape-t-elle ? Quel est son coût en gas pour le contestataire — est-il inférieur à la caution qu'il récupère ?
+2. Un attaquant publie un certificat volontairement invalide juste avant la fin de la fenêtre pour saturer les contestataires. La fenêtre en secondes est-elle une force ou une faiblesse ici ?
+3. Un consommateur lit `trustOf` avec une fraîcheur maximale trop permissive. Documente le comportement et le garde-fou.
+4. Un registre de tags squatté : un tiers enregistre un schéma aux bornes absurdes pour un tag populaire. Le keying par (registrant, tag) tient-il ?
+5. Grief économique : combien coûte à un attaquant le fait de forcer des republications permanentes ? Chiffre-le en MON par heure.
+
+Finis par `/simplify` sur le code des contrats seulement, puis `superpowers:verification-before-completion`. Écris dans HANDOFF.md la liste de ce que tu n'as pas pu défendre : c'est la section « faiblesses assumées » du pitch, et il vaut mieux la dire au jury que se la faire dire.</pre>
+  </div>
+
+  <ul class="check">
+    <li>Rapport de gas réel publié, README §4 mis à jour.</li>
+    <li>Les six vecteurs dorés passent, faux vecteurs rejetés.</li>
+    <li>Les trois contestations testées, slashing compris.</li>
+    <li><code>/security-review</code> passé, faiblesses restantes écrites noir sur blanc.</li>
+  </ul>
+</section>
+
+<section id="skills">
+  <h2>Index des skills, et qui s'en sert</h2>
+  <p class="sub">Un même skill peut servir dans plusieurs chantiers ; ce qui ne doit pas se recouper, ce sont les fichiers, pas les méthodes. La colonne de droite dit ce que le skill apporte ici précisément.</p>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Skill</th><th>01</th><th>02</th><th>03</th><th>Ce qu'il apporte sur ce projet</th></tr></thead>
+      <tbody>
+        <tr><td><code>superpowers:using-git-worktrees</code></td><td>●</td><td>●</td><td>●</td><td>La condition de l'isolation : trois espaces de travail, aucun fichier partagé sauf <code>spec/</code>.</td></tr>
+        <tr><td><code>superpowers:brainstorming</code></td><td>●</td><td>●</td><td>●</td><td>Obligatoire avant chaque chantier : modèle de données, architecture du solveur, découpe des contrats.</td></tr>
+        <tr><td><code>superpowers:writing-plans</code></td><td>●</td><td>—</td><td>●</td><td>Pour les deux chantiers à multiples livrables. Le solveur est assez linéaire pour s'en passer.</td></tr>
+        <tr><td><code>superpowers:test-driven-development</code></td><td>●</td><td>●</td><td>●</td><td>Non négociable : le déterminisme, l'arithmétique et les contestations ne se vérifient pas à l'œil.</td></tr>
+        <tr><td><code>superpowers:systematic-debugging</code></td><td>—</td><td>●</td><td>●</td><td>Pour les écarts d'arrondi entre solveur et contrat, la classe de bug la plus coûteuse du projet.</td></tr>
+        <tr><td><code>llm-council</code></td><td>—</td><td>●</td><td>—</td><td>Une seule fois, sur les trois conventions de score, α et poids d'arête, avant qu'elles soient gravées dans l'ERC.</td></tr>
+        <tr><td><code>security-review</code></td><td>—</td><td>—</td><td>●</td><td>Avant le déploiement mainnet, sur les contrats uniquement.</td></tr>
+        <tr><td><code>code-review</code></td><td>●</td><td>—</td><td>●</td><td>À la clôture des chantiers dont un autre dépend.</td></tr>
+        <tr><td><code>simplify</code></td><td>—</td><td>—</td><td>●</td><td>Après le durcissement : moins de code Solidity, moins de surface d'attaque.</td></tr>
+        <tr><td><code>superpowers:verification-before-completion</code></td><td>●</td><td>●</td><td>●</td><td>Aucun « c'est fait » sans la sortie de commande qui le prouve. C'est aussi la règle de veille du projet.</td></tr>
+        <tr><td><code>superpowers:requesting-code-review</code> · <code>receiving-code-review</code></td><td>●</td><td>—</td><td>●</td><td>Demander la revue, et surtout contester ce qui est techniquement faux au lieu d'obéir.</td></tr>
+        <tr><td>MCP <code>context7</code></td><td>●</td><td>●</td><td>●</td><td>Doc à jour de viem, Foundry, HyperSync et x402 plutôt que la mémoire du modèle.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Skills volontairement écartés</h3>
+  <p class="sub"><code>dataviz</code> et <code>artifact-design</code> relèvent du front, hors périmètre ici. <code>claude-api</code> ne sert pas : ANCRE ne contient aucun LLM, et c'est un argument de pitch — le calcul de réputation est de l'arithmétique vérifiable, pas un jugement de modèle. <code>superpowers:subagent-driven-development</code> et <code>dispatching-parallel-agents</code> feraient doublon avec la découpe en trois worktrees, qui est déjà la parallélisation du projet.</p>
+
+  <div class="note">
+    <b>Le fil rouge à garder dans chaque chantier.</b> Monad n'est pas un détail d'hébergement. 01 doit ingérer 288 000 blocs par jour avec un <code>getLogs</code> plafonné à 100 blocs. 02 doit publier un certificat dans l'ordre de grandeur du bloc, soit 0,3 s, sans mempool globale. 03 doit faire tenir une vérification de point fixe dans 30 M de gas, facturée sur la limite et non sur la consommation. Les trois contraintes viennent de la même propriété : la chaîne va vite, donc la confiance peut être recalculée avant le prochain paiement plutôt qu'une fois par nuit.
+  </div>
+</section>
+
+<footer class="wrap" style="border:0">
+  <p>Kit de construction back d'ANCRE — chiffres mesurés le 21/09/2026 sur le mainnet Monad, chainId 143. Les estimations de gas sont marquées comme telles et attendent le chantier 03. Front exclu de ce document.</p>
+</footer>
+
+</div>
+
+<script>
+  document.querySelectorAll('.copy').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var pre = btn.closest('.promptcard').querySelector('pre.prompt');
+      var text = pre.innerText;
+      var done = function(){ var o = btn.textContent; btn.textContent = 'Copié'; setTimeout(function(){ btn.textContent = o; }, 1400); };
+      try {
+        navigator.clipboard.writeText(text).then(done, function(){ select(pre); });
+      } catch (e) { select(pre); }
+      function select(node){
+        var r = document.createRange(); r.selectNodeContents(node);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        btn.textContent = 'Sélectionné';
+        setTimeout(function(){ btn.textContent = 'Copier'; }, 1800);
+      }
+    });
+  });
+</script>

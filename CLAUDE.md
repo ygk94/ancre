@@ -102,7 +102,7 @@ RPC mainnet : `https://rpc.monad.xyz` (25 rps) · testnet : `https://testnet-rpc
 
 ## 9. Prochaines actions, dans l'ordre
 
-> **Obsolète depuis le 2026-09-27** : la feuille de route à jour (R1 à R11, avec R6b découpage en chantiers) est dans `docs/conseil/CR-conseil.md`. Liste d'origine conservée ci-dessous pour mémoire.
+> **Obsolète depuis le 2026-09-27** : la feuille de route à jour est `docs/chantiers/ROADMAP.md`, les décisions sont dans `docs/conseil/CR-conseil.md`. `BACKEND-KIT.md` (24/09, 3 chantiers numérotés 01-03 autrement) est **remplacé** par `docs/chantiers/` (9 chantiers) ; `ARCHITECTURE.md` (26/09) décrit la couche produit, à réconcilier (voir le CR, tour 7). Liste d'origine conservée ci-dessous pour mémoire.
 
 1. **`AnchoredReputation.sol`** (niveau `Verified`) + `forge test --gas-report` → remplacer les estimations du README §4. **C'est le point qui peut tuer le projet : à faire en premier.**
 2. **Indexeur** des events `NewFeedback` / `FeedbackRevoked` (HyperSync) + reconstruction du graphe via `getAgentWallet` / owner ERC-721.
