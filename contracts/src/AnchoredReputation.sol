@@ -3,32 +3,43 @@ pragma solidity ^0.8.28;
 
 import {IIdentityRegistry8004, IReputationRegistry8004} from "./interfaces/IERC8004.sol";
 
-/// @title AnchoredReputation — ANCRE verifier, level "Residual-verified"
-/// @notice Reader-anchored personalised PageRank over ERC-8004 feedback, certified in one pass.
-///         The contract never solves the fixed point: it receives k columns t^(a) (one per anchor),
-///         recomputes F(t^(a)) = alpha·e_a + (1-alpha)·C^T t^(a) over the submitted graph with
-///         rounding that can only increase the residual, and stores
-///           r[a] >= || t^(a) - F_true(t^(a)) ||_1   (for the committed graph),  e[a] = ceil(r[a]/alpha).
-///         See ENCODING.md for the calldata layout and the exact integer arithmetic (normative
-///         interface with the off-chain solver).
-/// @dev    Decisions implemented (docs/conseil/CR-conseil.md): D1 WAD mass shares, D2 alpha committed,
-///         D4 one-hop distrust + direct anchor veto, D5 absorbing convention, D6 growing-bound
-///         certificate (omission proofs widen r, no slashing), D7 separate budgets B+ / B-, D8 veto q=1
-///         + leave-one-out (minAnchors), D10 pause on transfer, D11-reversed stored vectors + append-only
-///         node table, D12 tag schema committed per set, D14 last non-revoked per (client, agent, tag1)
-///         + negative dominance, D15 only `endorsement` tags create edges, D17 registry version
-///         committed + checkRegistry(), D18 int16 weights on a 1e-4 grid, truncation toward zero.
+/// @title AnchoredReputation — ANCRE verifier (certificate by sub-solution, D26 + D32)
+/// @notice Reader-anchored personalised PageRank over ERC-8004 feedback. The contract never solves the
+///         fixed point: it receives k columns t^(a) (one per anchor), recomputes y = F(t) over the submitted
+///         graph with every term rounded DOWN, and requires t <= y node by node. By monotonicity of F,
+///         t is then a lower bound of the fixed point of the committed graph, coordinate by coordinate,
+///         and of the true registry graph as long as the committed graph is dominated by it
+///         (C_committed <= C_true entry by entry, D32). Two certification levels (D32):
+///           - Registry-verified: every committed edge is re-read in the registry at submission, so a
+///             fabricated or inflated edge cannot be committed; open submission is allowed only here;
+///           - Submitter-attested: the submitters are committed in the setId; discrepancy proofs are
+///             the only guard against fabrication.
+///         Domination can still break after submission (revocation, newer feedback, wallet change) or, at
+///         both levels, through an under-declared row budget B+ (the registry has no per-client index, so
+///         a row's completeness is never checkable on-chain). Each such fact is provable (`proveEdge`,
+///         `proveWallet`) and widens eLow (lower bound, trust) or eUp (upper bound, distrust) by an exact,
+///         per-row capped amount.
+///         ENCODING.md gives the calldata layout and the exact integer arithmetic (normative interface
+///         with the off-chain solver).
+/// @dev    Decisions (docs/conseil/CR-conseil.md): D1/D39 policy committed in the setId, D2/D24 alpha per
+///         set, D4 one-hop distrust, D5 absorbing convention, D7 separate budgets B+/B-, D8 leave-one-out m
+///         and veto quorum q, D11-reversed stored vectors + append-only node table, D12 tag schema per set,
+///         D14 last non-revoked per (client, agent, tag1) + negative dominance, D15 endorsement tags only,
+///         D16/D20 current controllers of the target rejected, shared wallets by row copy (alias rows),
+///         D44 owner fallback as a committed policy option (VIA_OWNER rows, off unless the set says so),
+///         D17 registry version committed, D18 int16 weights, D21/D33 veto = last anchor feedback read
+///         live + certified bit as a complement, D22 per-row widening caps, D26 sub-solution, D32 levels,
+///         declared B+, fabrication proof, D35 strict transfer mode, D36 eLow budget.
 ///         Monad: only block.number is used, never block.timestamp.
 contract AnchoredReputation {
     // ------------------------------------------------------------------ constants
     uint256 public constant K_MAX = 16;
-    uint256 public constant TAGS_MAX = 8;
+    uint256 public constant TAGS_MAX = 16; // D24
+    uint256 public constant SUBMITTERS_MAX = 8; // D32, Submitter-attested level
     uint256 public constant ROW_MAX = 256;
     uint256 public constant WAD = 1e18;
     /// weight grid: w in [-GRID, GRID] \ {0} represents w / GRID in [-1, 1] (1e-4 steps)
     int256 public constant GRID = 10_000;
-    /// max feedback entries scanned per (client, agent) when reading the registry on-chain
-    uint256 public constant MAX_SCAN = 32;
     /// gas forwarded to each registry call made from a view: a broken or hostile registry cannot
     /// burn the caller's whole gas limit (on Monad the limit is what is paid)
     uint256 public constant VIEW_CALL_GAS = 120_000;
@@ -38,11 +49,23 @@ contract AnchoredReputation {
     uint256 internal constant KIND_AGENT = 1;
     uint256 internal constant KIND_ADDRESS = 2;
     uint256 internal constant KIND_ANCHOR = 3;
+    uint256 internal constant ID_MASK = (1 << 248) - 1;
     uint8 internal constant TAG_ENDORSEMENT = 0;
     uint8 internal constant TAG_MEASUREMENT = 1;
 
+    /// row header flags (ENCODING.md §3.2, unified v1 format of 2026-10-01)
+    uint256 internal constant H_SRC = 0x8000; // source client present (agent rows)
+    uint256 internal constant H_SPLUS = 0x4000; // declared true positive sum present (D32)
+    uint256 internal constant H_ALIAS = 0x2000; // copy of an earlier agent row (D20)
+    uint256 internal constant H_VIA_OWNER = 0x1000; // source = ownerOf(u), agentWallet(u) = 0 (D44)
+    uint256 internal constant H_NE = 0x0fff;
+    /// flags lane of a node: bits 0..15 certified veto mask (bit a = anchor a), bit 16 transferred (proof)
+    uint256 internal constant F_TRANSFERRED = 1 << 16;
+
     bytes32 internal constant SET_DOMAIN = keccak256("ANCRE.set.v1");
+    bytes32 internal constant COL_DOMAIN = keccak256("ANCRE.col.v1");
     bytes32 internal constant VEC_DOMAIN = keccak256("ANCRE.vec.v1");
+    bytes32 internal constant KEY_DOMAIN = keccak256("ANCRE.key.v1");
 
     // ------------------------------------------------------------------ types
     enum Status {
@@ -55,18 +78,30 @@ contract AnchoredReputation {
     }
 
     struct TagSpec {
-        string tag; // ERC-8004 tag1, <= 32 bytes
+        string tag; // ERC-8004 tag1, any non-empty length (only keccak256(tag) is stored, AM-04.2)
         int128 min; // bounds in WAD (value * 10^(18 - valueDecimals)), compared exactly, before rounding
         int128 neutral;
         int128 max;
         uint8 kind; // 0 = endorsement (creates edges), 1 = measurement (never creates edges, D15)
     }
 
+    /// Everything a payer needs to decide is committed here, hence in the setId (D1, D39): a status OK
+    /// only says the certificate is usable, `isTrusted` says whether the agent may be paid.
     struct Policy {
-        uint8 minAnchors; // leave-one-out m (D8), recommended 2
-        uint64 maxAge; // blocks
-        uint64 minRefresh; // blocks
+        uint64 theta; // WAD, > 0: trustLow >= theta (an unknown agent has trust 0)
+        uint32 rhoN; // distrust ratio: rhoD * distrustUp <= rhoN * trustLow
+        uint32 rhoD; // > 0
+        uint8 minAnchors; // leave-one-out m (D8), 1 <= m <= k, recommended 2
+        uint8 vetoQuorum; // q (D8): VETOED iff at least q anchors veto, 1 <= q <= k, recommended 1
+        int16 vetoMax; // an anchor feedback of grid weight <= vetoMax is a veto, in [-GRID, -1] (D21, D33)
+        uint64 maxAge; // blocks > 0
+        uint64 minRefresh; // blocks, see replacement rule
         uint64 slackRefresh; // WAD, see replacement rule
+        uint64 eLowMax; // WAD: widening budget of the lower bound, beyond it the set is STALE (D36)
+        bool strictTransfer; // D35: live ownerOf in assess (recommended) instead of a proof-set flag
+        bool registryVerified; // D32: every committed edge is re-read in the registry at submission
+        bool ownerFallback; // D44: an agent with agentWallet = 0 emits its owner's row (VIA_OWNER rows)
+        address[] submitters; // D32: strictly increasing, <= SUBMITTERS_MAX; empty = open (requires registryVerified)
     }
 
     struct SetParams {
@@ -80,8 +115,7 @@ contract AnchoredReputation {
     }
 
     struct TagStored {
-        bytes32 name; // short string (left-aligned)
-        bytes32 hash; // keccak256(bytes(tag))
+        bytes32 hash; // keccak256(bytes(tag)): the registry is matched by hash, so any tag length works
         int128 min;
         int128 neutral;
         int128 max;
@@ -89,7 +123,7 @@ contract AnchoredReputation {
     }
 
     /// Per-set state, placed at a page-aligned storage base so that every field lives in ONE
-    /// MIP-8 page (8 100 gas cold for the whole struct instead of one page per field).
+    /// MIP-8 page (8 100 gas cold for the whole struct instead of one page per field): 84 slots.
     struct SetState {
         // slot 0
         bool registered;
@@ -103,6 +137,10 @@ contract AnchoredReputation {
         uint32 nodeCount;
         uint32 nCert;
         uint32 numRows;
+        uint8 vetoQuorum;
+        bool strictTransfer;
+        bool registryVerified;
+        bool ownerFallback; // D44
         // slot 1
         uint64 certBlock;
         uint64 maxAge;
@@ -111,26 +149,65 @@ contract AnchoredReputation {
         // slot 2
         uint64 slackRefresh;
         uint32 reservedChunks; // vector chunks known to be non-zero (written or reserved)
-        // slots 3..
-        uint256 eEff; // sum_a ceil(lambda_a * e[a] / WAD)
+        uint64 theta;
+        uint32 rhoN;
+        uint32 rhoD;
+        int16 vetoMax;
+        // slot 3
+        uint64 eLowMax;
+        uint8 numSubmitters;
+        uint16 endoMask; // bit i = tag i is an endorsement tag (cached at registration)
+        // slots 4..
+        uint256 eEff; // eUp aggregated: sum_a ceil(lambda_a * eUp[a] / WAD)   (distrust, replacement rule)
+        uint256 eLowEff; // eLow aggregated: sum_a ceil(lambda_a * eLow[a] / WAD) (trust lower bound)
         bytes32 graphRoot;
         bytes32 vectorRoot;
         bytes32 tagSchemaHash;
         bytes32 versionHash; // keccak(identity, keccak(getVersion()), reputation, keccak(getVersion()))
+        // replacement rule (AM-04.1, AM-5.16): quality of the incumbent, see submitCertificate
+        uint256 mass; // sum_a floor(lambda_a * sum_v t_v^(a) / WAD): total certified lower-bound mass
+        uint256 eFloor; // rounding-floor part of eEff at submission: q = eEff - eFloor (widened by proofs)
+        uint256 distrustMass; // sum_v d_v: the distrust side of the quality (negative edges, certified vetoes)
+        uint256 eSubmitted; // eEff at submission: eEff > eSubmitted or eLowEff > 0 <=> the incumbent was proven wrong
         uint256[16] anchors; // address | lambda << 160
-        uint256[16] r; // residual per column, WAD
-        TagStored[8] tags;
+        TagStored[16] tags;
+        address[8] submitters; // D32 (inline: same page, no extra cold page at submission)
+    }
+
+    /// Per-column bounds (second page: read by submissions and proofs only, never by assess).
+    struct ColState {
+        uint256[16] eUp; // WAD, t-space: || t*^(a) - t^(a) ||_1 <= eUp[a]
+        uint256[16] eLow; // WAD, t-space: || (t^(a) - t*^(a))^+ ||_1 <= eLow[a]
+    }
+
+    /// State of a committed row after discrepancy proofs (D22 caps, all WAD, rounded up).
+    struct RowState {
+        bytes32 h; // keccak(leaf, amends); 0 = never amended
+        uint64 dim; // cumulated positive-side decrease of the normalised row (billed to eLow)
+        uint64 incP; // cumulated positive-side increase (billed to eUp)
+        uint64 incN; // cumulated negative-side increase (billed to eUp)
+        bool voided; // the row's client changed (proveWallet): nothing more to prove on it
     }
 
     struct Assessment {
         Status status;
-        uint256 trust; // sum_a lambda_a t^(a)_i            (WAD)
+        uint256 trust; // sum_a floor(lambda_a t^(a)_i / WAD)        (WAD)
         uint256 trustRobust; // trust minus the (m-1) largest anchor contributions (D8)
-        uint256 distrust; // one-hop distrust d_i         (WAD, rounded up)
-        uint256 e; // eEff, L1 error bound                 (WAD, rounded up)
+        uint256 distrust; // one-hop distrust d_i                  (WAD, rounded up)
+        uint256 e; // eUp aggregated (upper-bound error)            (WAD, rounded up)
         uint64 certBlock;
-        uint8 vetoCount;
-        bytes32 triggerTag; // tag of the most negative anchor feedback (VETOED) — E's request, tour 3
+        uint8 vetoCount; // anchors whose veto holds (live last feedback or certified bit); VETOED iff >= q
+        bytes32 triggerTag; // keccak256(tag1) of the most negative live veto (0 if only certified bits), AM-04.2
+        uint256 trustLow; // trustRobust - eLow: lower bound used by the policy (WAD)
+        uint256 distrustUp; // distrust + e: upper bound used by the policy (WAD)
+        uint256 eLow; // eLow aggregated (widening by discrepancy proofs, D22/D36)
+        bool trusted; // D39: status OK, veto checked, and the committed policy (theta, rho) holds
+    }
+
+    struct RowRef {
+        uint256 pos; // rank of the row in the certificate (Merkle leaf index)
+        bytes row; // committed row bytes
+        bytes32[] path; // Merkle siblings to graphRoot (may be empty once the row is amended)
     }
 
     // ------------------------------------------------------------------ storage
@@ -139,8 +216,8 @@ contract AnchoredReputation {
 
     /// (setId, nodeKey) -> index + 1. Written once per node (append-only table, D11 reversed).
     mapping(bytes32 => mapping(bytes32 => uint256)) public nodeIndexPlus1;
-    /// keccak(setId, certNonce, u) -> keccak(leaf, added edges) after omission proofs.
-    mapping(bytes32 => bytes32) public rowState;
+    /// keccak(setId, certNonce, u) -> state of the committed row of u after proofs.
+    mapping(bytes32 => RowState) internal _rows;
 
     // ------------------------------------------------------------------ events / errors
     event AnchorSetRegistered(bytes32 indexed setId, address[] anchors, uint64[] lambdas, uint32 alphaN, uint32 alphaD);
@@ -153,9 +230,14 @@ contract AnchoredReputation {
         bytes32 vectorRoot,
         bytes32 versionHash,
         uint32 nCert,
-        uint32 numRows
+        uint32 numRows,
+        bool registryVerified
     );
-    event OmissionProven(bytes32 indexed setId, uint256 indexed node, uint256 indexed agentId, int256 weight, uint256 eEff);
+    event EdgeProven(
+        bytes32 indexed setId, uint256 indexed node, uint256 indexed agentId, int256 wOld, int256 wNew, uint256 eLowEff, uint256 eEff
+    );
+    event RowVoided(bytes32 indexed setId, uint256 indexed node, uint256 eLowEff, uint256 eEff);
+    event TransferFlagged(bytes32 indexed setId, uint256 indexed agentId);
     event RegistryChanged(bytes32 indexed setId, bytes32 certifiedVersionHash, bytes32 currentVersionHash);
 
     error BadParams(uint256 code);
@@ -167,12 +249,16 @@ contract AnchoredReputation {
     error BadVectors();
     error BadRows(uint256 code);
     error BadEdge(uint256 row);
+    error NotSubSolution(uint256 column, uint256 node); // t > y: D26
+    error EdgeMismatch(uint256 row, uint256 edge); // Registry-verified: committed != registry (D32)
     error ValueTooLarge();
     error RegistryUnreadable();
     error ResidualTooLarge(uint256 eEff, uint256 eMax);
-    error NotBetter(uint256 eNew, uint256 eCur);
+    error NotBetter(uint256 qNew, uint256 qCur, uint256 massNew, uint256 massCur);
     error NoCert();
     error BadProof(uint256 code);
+    error NothingToProve();
+    error NotSubmitter();
 
     constructor(IIdentityRegistry8004 identity_, IReputationRegistry8004 reputation_) {
         identity = identity_;
@@ -190,13 +276,14 @@ contract AnchoredReputation {
         if (k == 0 || k > K_MAX || p.lambdas.length != k) revert BadParams(1);
         if (p.alphaN == 0 || p.alphaN >= p.alphaD) revert BadParams(2);
         if (p.tags.length == 0 || p.tags.length > TAGS_MAX) revert BadParams(3);
-        if (p.policy.minAnchors == 0 || p.policy.maxAge == 0) revert BadParams(4);
+        _checkPolicy(p.policy, k);
         setId = computeSetId(p);
         SetState storage s = _set(setId);
         if (s.registered) revert AlreadyRegistered();
 
         uint256 sum;
         address prev;
+        uint256 kb = _keyBase(setId);
         for (uint256 a; a < k; ++a) {
             address an = p.anchors[a];
             if (an <= prev) revert BadParams(5); // strictly increasing, non-zero
@@ -207,47 +294,118 @@ contract AnchoredReputation {
             s.anchors[a] = uint256(uint160(an)) | (l << 160);
             bytes32 key = _anchorKey(an);
             nodeIndexPlus1[setId][key] = a + 1;
+            assembly ("memory-safe") {
+                sstore(add(kb, a), key)
+            }
         }
         if (sum != WAD) revert BadParams(7);
 
         bytes32 prevHash;
         for (uint256 i; i < p.tags.length; ++i) {
             TagSpec calldata t = p.tags[i];
-            bytes memory tb = bytes(t.tag);
-            if (tb.length == 0 || tb.length > 32) revert BadParams(8);
+            bytes calldata tb = bytes(t.tag);
+            if (tb.length == 0) revert BadParams(8); // no upper bound: only the hash is stored (AM-04.2)
             bytes32 h = keccak256(tb);
             if (i > 0 && h <= prevHash) revert BadParams(9);
             prevHash = h;
             if (!(t.min <= t.neutral && t.neutral <= t.max && t.min < t.max)) revert BadParams(10);
             if (t.kind > TAG_MEASUREMENT) revert BadParams(11);
             TagStored storage ts = s.tags[i];
-            ts.name = bytes32(tb);
             ts.hash = h;
             ts.min = t.min;
             ts.neutral = t.neutral;
             ts.max = t.max;
             ts.kind = t.kind;
+            if (t.kind == TAG_ENDORSEMENT) s.endoMask |= uint16(1 << i);
         }
 
         s.registered = true;
         s.k = uint8(k);
-        s.minAnchors = p.policy.minAnchors;
+        _storePolicy(s, p.policy);
         s.numTags = uint8(p.tags.length);
         s.alphaN = p.alphaN;
         s.alphaD = p.alphaD;
         s.nodeCount = uint32(k);
-        s.maxAge = p.policy.maxAge;
-        s.minRefresh = p.policy.minRefresh;
-        s.slackRefresh = p.policy.slackRefresh;
         s.tagSchemaHash = p.tagSchemaHash;
         emit AnchorSetRegistered(setId, p.anchors, p.lambdas, p.alphaN, p.alphaD);
     }
 
+    function _checkPolicy(Policy calldata q, uint256 k) internal pure {
+        // theta = 0 would trust unknown agents (D39); rhoN = 0 would trust nobody
+        if (q.theta == 0 || q.rhoN == 0 || q.rhoD == 0) revert BadParams(4);
+        if (q.minAnchors == 0 || q.minAnchors > k || q.vetoQuorum == 0 || q.vetoQuorum > k) revert BadParams(12);
+        if (q.vetoMax > -1 || q.vetoMax < -GRID) revert BadParams(13);
+        if (q.maxAge == 0) revert BadParams(14);
+        uint256 ns = q.submitters.length;
+        if (ns > SUBMITTERS_MAX || (ns == 0 && !q.registryVerified)) revert BadParams(15); // open => verified (D32)
+        for (uint256 i = 1; i < ns; ++i) {
+            if (q.submitters[i] <= q.submitters[i - 1]) revert BadParams(16);
+        }
+        if (ns != 0 && q.submitters[0] == address(0)) revert BadParams(16);
+    }
+
+    function _storePolicy(SetState storage s, Policy calldata q) internal {
+        s.minAnchors = q.minAnchors;
+        s.vetoQuorum = q.vetoQuorum;
+        s.strictTransfer = q.strictTransfer;
+        s.registryVerified = q.registryVerified;
+        s.ownerFallback = q.ownerFallback;
+        s.maxAge = q.maxAge;
+        s.minRefresh = q.minRefresh;
+        s.slackRefresh = q.slackRefresh;
+        s.theta = q.theta;
+        s.rhoN = q.rhoN;
+        s.rhoD = q.rhoD;
+        s.vetoMax = q.vetoMax;
+        s.eLowMax = q.eLowMax;
+        s.numSubmitters = uint8(q.submitters.length);
+        for (uint256 i; i < q.submitters.length; ++i) {
+            s.submitters[i] = q.submitters[i];
+        }
+    }
+
+    /// Committed policy of a set (D39), for payers and screens.
+    function policyOf(bytes32 setId) external view returns (Policy memory q) {
+        SetState storage s = _set(setId);
+        q.theta = s.theta;
+        q.rhoN = s.rhoN;
+        q.rhoD = s.rhoD;
+        q.minAnchors = s.minAnchors;
+        q.vetoQuorum = s.vetoQuorum;
+        q.vetoMax = s.vetoMax;
+        q.maxAge = s.maxAge;
+        q.minRefresh = s.minRefresh;
+        q.slackRefresh = s.slackRefresh;
+        q.eLowMax = s.eLowMax;
+        q.strictTransfer = s.strictTransfer;
+        q.registryVerified = s.registryVerified;
+        q.ownerFallback = s.ownerFallback;
+        q.submitters = new address[](s.numSubmitters);
+        for (uint256 i; i < q.submitters.length; ++i) {
+            q.submitters[i] = s.submitters[i];
+        }
+    }
+
+    function _isSubmitter(SetState storage s, address who) internal view returns (bool) {
+        uint256 ns = s.numSubmitters;
+        for (uint256 i; i < ns; ++i) {
+            if (s.submitters[i] == who) return true;
+        }
+        return false;
+    }
+
+    /// Submitter-attested sets: only listed submitters touch the table (closes AM-R5.7 at this level).
+    function _gate(SetState storage s) internal view {
+        if (!s.registered) revert UnknownSet();
+        if (s.numSubmitters != 0 && !_isSubmitter(s, msg.sender)) revert NotSubmitter();
+    }
+
     // ================================================================== node table
-    /// Permissionless append. Entry = kind u8 (1 agent | 2 address) + u32 agentId | 20-byte address.
+    /// Append. Entry = kind u8 (1 agent | 2 address) + u32 agentId | 20-byte address.
+    /// Open sets: permissionless (AM-R5.7 stays open there, D23 staging zone not implemented).
     function addNodes(bytes32 setId, bytes calldata entries) external {
         SetState storage s = _set(setId);
-        if (!s.registered) revert UnknownSet();
+        _gate(s);
         _appendNodes(s, setId, entries);
     }
 
@@ -255,8 +413,8 @@ contract AnchoredReputation {
     /// instead of 0->x (17 100). Lets a large first certificate be split across transactions.
     function reserveCapacity(bytes32 setId, uint32 uptoNodes) external {
         SetState storage s = _set(setId);
-        if (!s.registered) revert UnknownSet();
-        uint256 stride = uint256(s.k) + 2;
+        _gate(s);
+        uint256 stride = uint256(s.k) + 3;
         uint256 from = s.reservedChunks;
         uint256 to = (uint256(uptoNodes) + 3) / 4;
         if (to <= from) return;
@@ -272,6 +430,14 @@ contract AnchoredReputation {
 
     function nodeCount(bytes32 setId) external view returns (uint256) {
         return _set(setId).nodeCount;
+    }
+
+    /// key of node i (0 if i >= nodeCount)
+    function nodeKeyAt(bytes32 setId, uint256 i) external view returns (bytes32 key) {
+        uint256 kb = _keyBase(setId);
+        assembly ("memory-safe") {
+            key := sload(add(kb, i))
+        }
     }
 
     function agentKey(uint256 agentId) public pure returns (bytes32) {
@@ -291,6 +457,8 @@ contract AnchoredReputation {
         uint256 from = n;
         uint256 off;
         uint256 len = entries.length;
+        uint256 kb = _keyBase(setId);
+        mapping(bytes32 => uint256) storage m = nodeIndexPlus1[setId];
         while (off < len) {
             uint256 kind = uint8(entries[off]);
             bytes32 key;
@@ -305,8 +473,10 @@ contract AnchoredReputation {
             } else {
                 revert BadNodes();
             }
-            mapping(bytes32 => uint256) storage m = nodeIndexPlus1[setId];
             if (m[key] != 0) revert NodeExists(key);
+            assembly ("memory-safe") {
+                sstore(add(kb, n), key)
+            }
             m[key] = ++n;
         }
         if (n > type(uint32).max) revert BadNodes();
@@ -329,7 +499,7 @@ contract AnchoredReputation {
         bytes calldata rows
     ) external {
         SetState storage s = _set(setId);
-        if (!s.registered) revert UnknownSet();
+        _gate(s);
         if (newNodes.length != 0) _appendNodes(s, setId, newNodes);
         uint256 k = s.k;
         uint256 n = nCert;
@@ -339,60 +509,116 @@ contract AnchoredReputation {
         (bool vok, bytes32 vh) = _versionHash();
         if (!vok) revert RegistryUnreadable();
 
-        (uint256[] memory r, uint256[] memory d, bytes32 root, uint256 numRows, uint256 W) =
-            _verifyPass(s, n, vectors, rows);
+        Pass memory P = _verifyPass(s, n, vectors, rows);
+        _verifyRows(s, setId, n, vectors, rows, P.W, s.registryVerified);
 
-        uint256 eNew = _eEff(s, r, k);
+        uint256 eNew = _aggregate(s, P.eUp, k);
         if (eNew > eMax) revert ResidualTooLarge(eNew, eMax);
+        _replacementRule(s, eNew, P, keccak256(vectors));
 
-        // replacement rule (AM-2.3): absent | stale | registry changed | at least as precise |
-        // refresh window with slack (honest densification, relecture A sur D)
-        if (s.certBlock != 0 && !s.registryChanged) {
-            uint256 age = block.number - s.certBlock;
-            uint256 eCur = s.eEff;
-            bool ok = age > s.maxAge || eNew <= eCur || (age > s.minRefresh && eNew <= eCur + s.slackRefresh);
-            if (!ok) revert NotBetter(eNew, eCur);
-        }
+        _storeVectors(s, setId, n, k, vectors, P.d, P.veto);
 
-        _storeVectors(s, setId, n, k, vectors, d);
-
+        ColState storage cs = _cols(setId);
         for (uint256 a; a < k; ++a) {
-            s.r[a] = r[a];
+            cs.eUp[a] = P.eUp[a];
+            cs.eLow[a] = 0;
         }
         s.eEff = eNew;
-        s.graphRoot = root;
+        s.eLowEff = 0;
+        s.graphRoot = P.root;
         s.vectorRoot = keccak256(vectors);
         s.versionHash = vh;
         s.certBlock = uint64(block.number);
         s.certNonce += 1;
         s.nCert = uint32(n);
-        s.numRows = uint32(numRows);
-        s.idxWidth = uint8(W);
+        s.numRows = uint32(P.numRows);
+        s.idxWidth = uint8(P.W);
         s.registryChanged = false;
-        emit CertificateSubmitted(setId, uint64(block.number), eNew, root, s.vectorRoot, vh, uint32(n), uint32(numRows));
+        emit CertificateSubmitted(
+            setId, uint64(block.number), eNew, P.root, s.vectorRoot, vh, uint32(n), uint32(P.numRows), s.registryVerified
+        );
     }
 
-    /// Dry run for certifiers (no state change): the residuals, eEff and graphRoot a submission would
-    /// produce, so that a certifier knows e before paying the gas limit of a submission.
+    /// Checks the replacement rule against the incumbent, then records the newcomer's quality.
+    function _replacementRule(SetState storage s, uint256 eNew, Pass memory P, bytes32 vRoot) internal {
+        uint256 qNew = _aggregate(s, P.q, s.k);
+        uint256 mNew = _massOf(s, P.mass, s.k);
+        uint256 dNew;
+        uint256[] memory d = P.d;
+        assembly ("memory-safe") {
+            // d values are < 2^256 / n (each is a sum of ceil terms bounded by T_u <= 2^64 per row): no overflow
+            for { let p := add(d, 32) let e := add(p, shl(5, mload(d))) } lt(p, e) { p := add(p, 32) } {
+                dNew := add(dNew, mload(p))
+            }
+        }
+
+        // Replacement rule (AM-04.1, AM-5.16, AM-02.2). Submitter-attested: the listed submitters always
+        // replace (D27: the set owner pays and decides). Open (Registry-verified) sets compare two qualities:
+        //   q    = eUp without its rounding floor E+ + 1 (an honest certificate at its integer fixed point
+        //          has q = 0 whatever the graph size: comparing eUp itself blocked every honest update of a
+        //          growing graph, and rewarded the omission of edges, since fewer edges = smaller E+);
+        //   mass = total certified lower-bound mass. Two valid sub-solutions of the same graph satisfy
+        //          ||t* - t||_1 = ||t*||_1 - ||t||_1: more mass is more precise on the trust side, and a
+        //          certificate that omits (censors) endorsements loses mass. eLowEff of the incumbent (its
+        //          proven overstatement) is credited to the newcomer.
+        // Accepted iff: absent | registry changed | stale | widening budget exhausted
+        //   | (mass_new + eLow_cur >= mass_cur  and  q_new <= q_cur)      (at least as good on both sides)
+        //   | (age > minRefresh  and  q_new <= q_cur + slackRefresh)      (refresh window: decreases w/o proof)
+        // with q_cur = eEff - eFloor + eLowEff (the incumbent widened by its proofs). A zero vector (AM-5.16)
+        // has q ~ 1 WAD: it never replaces a live certificate, and any honest certificate replaces it at once.
+        // Distrust side (review 01/10): an omitted negative edge changes neither mass nor q, so the fast path
+        // also requires the newcomer's distrust mass sum_v d_v not to drop (a forgiven slash waits for the window).
+        // A certificate already proven wrong (widened) cannot be resubmitted as is: that would erase its proofs.
+        if (s.certBlock != 0 && !s.registryChanged && s.numSubmitters == 0) {
+            uint256 age = block.number - s.certBlock;
+            uint256 qCur = s.eEff - s.eFloor + s.eLowEff;
+            bool proven = s.eLowEff != 0 || s.eEff > s.eSubmitted;
+            if (proven && vRoot == s.vectorRoot && P.root == s.graphRoot) revert NotBetter(qNew, qCur, mNew, s.mass);
+            bool ok = age > s.maxAge || s.eLowEff > s.eLowMax
+                || (mNew + s.eLowEff >= s.mass && qNew <= qCur && dNew >= s.distrustMass)
+                || (age > s.minRefresh && qNew <= qCur + s.slackRefresh);
+            if (!ok) revert NotBetter(qNew, qCur, mNew, s.mass);
+        }
+        s.mass = mNew;
+        s.eFloor = eNew - qNew;
+        s.distrustMass = dNew;
+        s.eSubmitted = eNew;
+    }
+
+    /// Dry run for certifiers (no state change, no registry read): the per-column upper bounds, eEff and
+    /// graphRoot a submission would produce. The registry checks of a Registry-verified set are exercised
+    /// by an eth_call of submitCertificate itself (EdgeMismatch names the failing row and edge).
     function dryRun(bytes32 setId, uint32 nCert, bytes calldata vectors, bytes calldata rows)
         external
         view
-        returns (uint256[] memory r, uint256 eEff, bytes32 graphRoot)
+        returns (uint256[] memory eUp, uint256 eEff, bytes32 graphRoot)
     {
         SetState storage s = _set(setId);
         if (!s.registered) revert UnknownSet();
         uint256 k = s.k;
         if (nCert < s.nCert || nCert > s.nodeCount || nCert < k) revert BadNCert();
         if (vectors.length != uint256(nCert) * (k + 1) * 8) revert BadVectors();
-        (r,, graphRoot,,) = _verifyPass(s, nCert, vectors, rows);
-        eEff = _eEff(s, r, k);
+        Pass memory P = _verifyPass(s, nCert, vectors, rows);
+        return (P.eUp, _aggregate(s, P.eUp, k), P.root);
     }
 
-    /// One pass over the rows. Returns residuals r[a], distrust d[j], graphRoot.
+    struct Pass {
+        uint256[] eUp; // per column, WAD
+        uint256[] q; // per column: eUp without the rounding floor E+ + 1 (replacement rule)
+        uint256[] mass; // per column: sum_v t_v^(a)
+        uint256[] d; // distrust per node
+        uint256[] veto; // certified veto mask per node
+        bytes32 root;
+        uint256 numRows;
+        uint256 W;
+    }
+
+    /// One pass over the rows (D26): y = F(t) rounded down, t <= y required for every node and column;
+    /// eUp[a] = ceil(r[a] / alpha) with r[a] = sum (y - t) + E+ + 1 + truncation and declared-budget margins.
     function _verifyPass(SetState storage s, uint256 n, bytes calldata vectors, bytes calldata rows)
         internal
         view
-        returns (uint256[] memory r, uint256[] memory d, bytes32 root, uint256 numRows, uint256 W)
+        returns (Pass memory P)
     {
         uint256 k = s.k;
         uint256 aD = s.alphaD;
@@ -408,51 +634,62 @@ contract AnchoredReputation {
         }
 
         if (rows.length < 5) revert BadRows(0);
-        W = uint8(rows[0]);
-        if (!(W == 2 || W == 4) || (W == 2 && n > 0xffff)) revert BadRows(1);
-        numRows = uint32(bytes4(rows[1:5]));
-        if (numRows > n) revert BadRows(2);
+        P.W = uint8(rows[0]);
+        if (!(P.W == 2 || P.W == 4) || (P.W == 2 && n > 0xffff)) revert BadRows(1);
+        P.numRows = uint32(bytes4(rows[1:5]));
+        if (P.numRows > n) revert BadRows(2);
 
         uint256[] memory y = new uint256[](n * k); // y[a*n + j]
-        d = new uint256[](n);
+        P.d = new uint256[](n);
+        P.veto = new uint256[](n);
         bytes memory hasRow = new bytes(n);
         uint256[] memory num = new uint256[](k);
-        bytes32[] memory leaves = new bytes32[](numRows);
-        bytes memory scratch = new bytes(4 + 2 + 20 + ROW_MAX * 10);
+        uint256[] memory marg = new uint256[](k);
+        bytes32[] memory leaves = new bytes32[](P.numRows);
+        uint256[] memory info = new uint256[](n);
+        bytes memory scratch = new bytes(4 + 2 + 20 + 4 + ROW_MAX * 10);
 
         uint256 ePos = _rowLoop(
             RowCtx({
                 n: n,
                 k: k,
-                W: W,
+                W: P.W,
                 aD: aD,
                 om: om,
                 rec: rec,
                 vecOff: vecOff,
-                off: 0,
-                end: 0,
-                numRows: numRows,
+                vetoMax: uint256(int256(s.vetoMax)),
+                numRows: P.numRows,
                 ptrY: _dataPtr(y),
-                ptrD: _dataPtr(d),
+                ptrD: _dataPtr(P.d),
                 ptrH: _bytesPtr(hasRow),
                 ptrNum: _dataPtr(num),
                 ptrLam: _dataPtr(lam),
                 ptrLeaves: _dataPtr32(leaves),
-                ptrScratch: _bytesPtr(scratch)
+                ptrScratch: _bytesPtr(scratch),
+                ptrMarg: _dataPtr(marg),
+                ptrVeto: _dataPtr(P.veto),
+                ptrInfo: _dataPtr(info)
             }),
             rows
         );
 
-        // residual per column: r[a] = sum_j |t_j - y_j| + E+ + 1 + sum_{j without row} ceil((1-alpha) t_j)
-        r = new uint256[](k);
-        uint256 alphaW = (uint256(s.alphaN) * WAD) / aD;
+        // sub-solution check and upper bound, per column
+        P.eUp = new uint256[](k);
+        P.q = new uint256[](k);
+        P.mass = new uint256[](k);
+        uint256 aN = s.alphaN;
+        uint256 alphaW = (aN * WAD) / aD;
         for (uint256 a; a < k; ++a) {
             y[a * n + a] += alphaW;
-            uint256 sum = ePos + 1; // floor slack: < 1 per positive edge, < 1 for the alpha term
+            uint256 sum = ePos + 1 + marg[a]; // floor slack: < 1 per positive edge, < 1 for the alpha term
+            uint256 badNode;
             bool tooBig;
+            uint256 msum;
             assembly ("memory-safe") {
                 let yp := add(add(y, 32), mul(mul(a, n), 32))
-                let hp := add(hasRow, 32)
+                let hp0 := add(hasRow, 32)
+                let hp := hp0
                 let he := add(hp, n)
                 let cp := add(vecOff, mul(a, 8))
                 let orAll := 0
@@ -463,9 +700,12 @@ contract AnchoredReputation {
                 } {
                     let t := shr(192, calldataload(cp))
                     let yv := mload(yp)
-                    switch gt(t, yv)
-                    case 1 { sum := add(sum, sub(t, yv)) }
-                    default { sum := add(sum, sub(yv, t)) }
+                    if gt(t, yv) {
+                        badNode := add(sub(hp, hp0), 1)
+                        break
+                    }
+                    sum := add(sum, sub(yv, t))
+                    msum := add(msum, t)
                     orAll := or(orAll, t)
                     // truncated node (no row): margin (1 - alpha) t_u, rounded up
                     if t {
@@ -477,38 +717,43 @@ contract AnchoredReputation {
                 }
                 tooBig := gt(orAll, LANE_MASK)
             }
+            if (badNode != 0) revert NotSubSolution(a, badNode - 1);
             if (tooBig) revert ValueTooLarge();
-            r[a] = sum;
+            P.eUp[a] = (sum * aD + aN - 1) / aN; // eUp = ceil(r / alpha)
+            P.q[a] = ((sum - ePos - 1) * aD + aN - 1) / aN; // same, without the rounding floor
+            P.mass[a] = msum;
         }
 
-        root = _merkleRoot(leaves, numRows);
+        P.root = _merkleRoot(leaves, P.numRows);
     }
 
     struct RowCtx {
-        uint256 n;
-        uint256 k;
-        uint256 W;
-        uint256 aD;
-        uint256 om;
-        uint256 rec;
-        uint256 vecOff;
-        uint256 off;
-        uint256 end;
-        uint256 numRows;
-        uint256 ptrY;
-        uint256 ptrD;
-        uint256 ptrH;
-        uint256 ptrNum;
-        uint256 ptrLam;
-        uint256 ptrLeaves;
-        uint256 ptrScratch;
+        uint256 n; // 0x00
+        uint256 k; // 0x20
+        uint256 W; // 0x40
+        uint256 aD; // 0x60
+        uint256 om; // 0x80
+        uint256 rec; // 0xa0
+        uint256 vecOff; // 0xc0
+        uint256 vetoMax; // 0xe0 (int16 as two's complement)
+        uint256 numRows; // 0x100
+        uint256 ptrY; // 0x120
+        uint256 ptrD; // 0x140
+        uint256 ptrH; // 0x160
+        uint256 ptrNum; // 0x180
+        uint256 ptrLam; // 0x1a0
+        uint256 ptrLeaves; // 0x1c0
+        uint256 ptrScratch; // 0x1e0
+        uint256 ptrMarg; // 0x200
+        uint256 ptrVeto; // 0x220
+        uint256 ptrInfo; // 0x240
     }
 
-    /// The hot loop. Per row: (A) validation + budgets B+ / B-, (B) per-column factors,
-    /// (C) scatter y[a][dst] += floor(t_u (1-a) w / B+) and d[dst] += ceil(T_u (1-a) |w| / B-),
-    /// (D) leaf hash. Edge = [dst: W bytes][w: int16][feedbackIndex: u32]. Returns E+ (positive edges).
-    /// Written as small Yul functions specialised for W = 2 / 4 and k = 1: the first version (one big block,
-    /// Solidity-level per-row code) cost ~1.6x more (GAS.md, AM-R5.4).
+    /// The hot loop. Per row: (A) header (wallet, declared B+, alias), validation + budgets B+ / B-,
+    /// (B) per-column factors, (C) scatter y[a][dst] += floor(t_u (1-a) w / B+) and
+    /// d[dst] += ceil(T_u (1-a) |w| / B-), declared-budget margin, certified veto bits of anchor rows,
+    /// (D) leaf hash. Edge = [dst: W bytes][w: int16][feedbackIndex: u32]. Returns E+ (positive edges,
+    /// alias copies included). Small Yul functions specialised for W = 2 / 4 and k = 1 (AM-R5.4).
     function _rowLoop(RowCtx memory c, bytes calldata rows) internal pure returns (uint256 ePos) {
         assembly ("memory-safe") {
             function failRows(code) {
@@ -575,6 +820,16 @@ contract AnchoredReputation {
                     }
                 }
             }
+            function vetoMark2(eo, e, ptrV, vmax, bit) {
+                for { let p := eo } lt(p, e) { p := add(p, 8) } {
+                    let wd := calldataload(p)
+                    let w := signextend(1, and(shr(224, wd), 0xffff))
+                    if iszero(sgt(w, vmax)) {
+                        let cv := add(ptrV, shl(5, shr(240, wd)))
+                        mstore(cv, or(mload(cv), bit))
+                    }
+                }
+            }
 
             // ---- W = 4: dst = 32-bit index, edge = 10 bytes
             function validate4(eo, e, n, u) -> sP, sN, bad, cnt {
@@ -583,7 +838,6 @@ contract AnchoredReputation {
                     let wd := calldataload(p)
                     let dst := shr(224, wd)
                     let w := signextend(1, and(shr(208, wd), 0xffff))
-                    // dst < n, dst != u, dst strictly increasing, w != 0, |w| <= GRID
                     bad := or(bad, or(or(iszero(lt(dst, n)), eq(dst, u)),
                         or(or(iszero(w), gt(add(w, 10000), 20000)), iszero(gt(add(dst, 1), pp)))))
                     pp := add(dst, 1)
@@ -630,6 +884,16 @@ contract AnchoredReputation {
                     }
                 }
             }
+            function vetoMark4(eo, e, ptrV, vmax, bit) {
+                for { let p := eo } lt(p, e) { p := add(p, 10) } {
+                    let wd := calldataload(p)
+                    let w := signextend(1, and(shr(208, wd), 0xffff))
+                    if iszero(sgt(w, vmax)) {
+                        let cv := add(ptrV, shl(5, shr(224, wd)))
+                        mstore(cv, or(mload(cv), bit))
+                    }
+                }
+            }
 
             // per-row factors: num[a] = t_u^(a) om ; returns any = OR of t, numC = ceil(sum lambda t / WAD) om
             function factors(rp, k, om, ptrNum, lp) -> any, numC {
@@ -642,7 +906,18 @@ contract AnchoredReputation {
                 }
                 numC := mul(add(div(tsum, 1000000000000000000), gt(mod(tsum, 1000000000000000000), 0)), om)
             }
-            function processRow(c_, ri, eo, e, u) -> cnt {
+            // declared budget: positive mass (B - S+) / B of the row may be omitted -> margin in every column
+            function margins(k, ptrNum, ptrMarg, gap, denB) {
+                for { let a := 0 } lt(a, k) { a := add(a, 1) } {
+                    let nm := mload(add(ptrNum, shl(5, a)))
+                    if nm {
+                        let q := mul(nm, gap)
+                        let cm := add(ptrMarg, shl(5, a))
+                        mstore(cm, add(mload(cm), add(div(q, denB), gt(mod(q, denB), 0))))
+                    }
+                }
+            }
+            function processRow(c_, ri, eo, e, u, sDecl) -> cnt {
                 let W := mload(add(c_, 0x40))
                 let n := mload(c_)
                 let sP, sN, bad
@@ -651,18 +926,24 @@ contract AnchoredReputation {
                 default { sP, sN, bad, cnt := validate4(eo, e, n, u) }
                 if bad { failEdge(ri) }
                 let hasNeg := gt(sN, 0)
-                if lt(sP, 10000) { sP := 10000 }
+                // B+ = max(GRID, sPlus): sPlus = declared true positive sum (>= committed one), else committed
+                let bP := sP
+                if sDecl {
+                    if lt(sDecl, sP) { failRows(7) }
+                    bP := sDecl
+                }
+                if lt(bP, 10000) { bP := 10000 }
                 if lt(sN, 10000) { sN := 10000 }
                 let k := mload(add(c_, 0x20))
-                let ptrNum := mload(add(c_, 0x1a0))
+                let ptrNum := mload(add(c_, 0x180))
                 let any, numC := factors(
                     add(mload(add(c_, 0xc0)), mul(u, mload(add(c_, 0xa0)))), k, mload(add(c_, 0x80)), ptrNum,
-                    mload(add(c_, 0x1c0))
+                    mload(add(c_, 0x1a0))
                 )
                 let aD := mload(add(c_, 0x60))
                 if any {
-                    let denP := mul(aD, sP)
-                    let cell0 := mload(add(c_, 0x140))
+                    let denP := mul(aD, bP)
+                    let cell0 := mload(add(c_, 0x120))
                     switch k
                     case 1 {
                         switch W
@@ -676,39 +957,86 @@ contract AnchoredReputation {
                     }
                     if and(hasNeg, gt(numC, 0)) {
                         switch W
-                        case 2 { scatterNeg2(eo, e, mload(add(c_, 0x160)), numC, mul(aD, sN)) }
-                        default { scatterNeg4(eo, e, mload(add(c_, 0x160)), numC, mul(aD, sN)) }
+                        case 2 { scatterNeg2(eo, e, mload(add(c_, 0x140)), numC, mul(aD, sN)) }
+                        default { scatterNeg4(eo, e, mload(add(c_, 0x140)), numC, mul(aD, sN)) }
                     }
+                    // declared omission: (sPlus - S+) / B+ of the row's positive mass is not committed
+                    if gt(sDecl, sP) { margins(k, ptrNum, mload(add(c_, 0x200)), sub(sDecl, sP), denP) }
+                }
+                // certified veto bit (D21/D33 complement): anchor rows, combined weight <= vetoMax
+                if and(hasNeg, lt(u, k)) {
+                    switch W
+                    case 2 { vetoMark2(eo, e, mload(add(c_, 0x220)), mload(add(c_, 0xe0)), shl(u, 1)) }
+                    default { vetoMark4(eo, e, mload(add(c_, 0x220)), mload(add(c_, 0xe0)), shl(u, 1)) }
+                }
+            }
+            // header of the row at `off`: returns the edge range [eo, e), the declared sPlus (0 = none) and
+            // the offset after the row. Alias rows (D20) take the edges and sPlus of an earlier source row.
+            function header(c_, ri, off, prevU) -> u, eo, e, sDecl, next {
+                let W := mload(add(c_, 0x40))
+                let shU := sub(256, shl(3, W))
+                let wd := calldataload(off)
+                u := shr(shU, wd)
+                let hdr := and(shr(sub(shU, 16), wd), 0xffff)
+                if or(iszero(lt(u, mload(c_))), and(gt(ri, 0), iszero(gt(u, prevU)))) { failRows(3) }
+                let nE := and(hdr, 0x0fff)
+                if gt(nE, 256) { failRows(4) }
+                next := add(off, add(W, 2))
+                let wal := 0
+                let hasW := iszero(iszero(and(hdr, 0x8000)))
+                if hasW {
+                    wal := shr(96, calldataload(next))
+                    next := add(next, 20)
+                }
+                if and(hdr, 0x4000) {
+                    sDecl := shr(224, calldataload(next)) // declared sPlus
+                    next := add(next, 4)
+                    if iszero(sDecl) { failRows(7) }
+                }
+                let infoP := mload(add(c_, 0x240))
+                switch and(hdr, 0x2000)
+                case 0 {
+                    eo := next
+                    next := add(next, mul(nE, add(W, 6)))
+                    e := next
+                    // eo (32) | nE (16) | sDecl (32) | hasWallet (1, bit 80) | wallet (160, bits 96..255)
+                    mstore(add(infoP, shl(5, u)),
+                        or(or(eo, shl(32, nE)), or(shl(48, sDecl), or(shl(80, hasW), shl(96, wal)))))
+                }
+                default {
+                    // alias: no own edge, no own budget; same client (wallet) as the source row
+                    if or(nE, sDecl) { failRows(8) }
+                    let src := shr(shU, calldataload(next))
+                    next := add(next, W)
+                    if or(iszero(lt(src, u)), lt(u, mload(add(c_, 0x20)))) { failRows(9) }
+                    let inf := mload(add(infoP, shl(5, src)))
+                    if iszero(inf) { failRows(9) } // the source is an earlier, non-alias row
+                    if or(iszero(hasW), or(iszero(and(shr(80, inf), 1)), iszero(eq(shr(96, inf), wal)))) {
+                        failRows(10)
+                    }
+                    eo := and(inf, 0xffffffff)
+                    e := add(eo, mul(and(shr(32, inf), 0xffff), add(W, 6)))
+                    sDecl := and(shr(48, inf), 0xffffffff)
                 }
             }
 
-            let W := mload(add(c, 0x40))
-            let shU := sub(256, shl(3, W))
             let off := add(rows.offset, 5)
             let end := add(rows.offset, rows.length)
-            let numRows := mload(add(c, 0x120))
+            let numRows := mload(add(c, 0x100))
             let prevU := 0
             for { let ri := 0 } lt(ri, numRows) { ri := add(ri, 1) } {
                 let rowStart := off
-                let wd := calldataload(off)
-                let u := shr(shU, wd)
-                let hdr := and(shr(sub(shU, 16), wd), 0xffff)
-                if or(iszero(lt(u, mload(c))), and(gt(ri, 0), iszero(gt(u, prevU)))) { failRows(3) }
+                let u, eo, e, sDecl, next := header(c, ri, off, prevU)
+                if gt(next, end) { failRows(5) }
                 prevU := u
-                let nE := and(hdr, 0x7fff)
-                if gt(nE, 256) { failRows(4) }
-                off := add(off, add(W, 2))
-                if and(hdr, 0x8000) { off := add(off, 20) }
-                let eo := off
-                off := add(off, mul(nE, add(W, 6)))
-                if gt(off, end) { failRows(5) }
-                mstore8(add(mload(add(c, 0x180)), u), 1)
-                ePos := add(ePos, processRow(c, ri, eo, off, u))
+                off := next
+                mstore8(add(mload(add(c, 0x160)), u), 1)
+                ePos := add(ePos, processRow(c, ri, eo, e, u, sDecl))
                 // (D) leaf = keccak256(row bytes)
                 let len := sub(off, rowStart)
-                let sp := mload(add(c, 0x200))
+                let sp := mload(add(c, 0x1e0))
                 calldatacopy(sp, rowStart, len)
-                mstore(add(mload(add(c, 0x1e0)), shl(5, ri)), keccak256(sp, len))
+                mstore(add(mload(add(c, 0x1c0)), shl(5, ri)), keccak256(sp, len))
             }
             if iszero(eq(off, end)) { failRows(6) }
         }
@@ -750,65 +1078,196 @@ contract AnchoredReputation {
         }
     }
 
-    /// Chunk c holds nodes 4c..4c+3; slot(c, v) = base + c*(k+2) + v; v < k: t^(v), v = k: d, v = k+1: ownerFp.
+    // ================================================================== Registry-verified (D32)
+    /// Re-reads every committed edge in the registry. For each row, the client is the anchor / address
+    /// of the node, or the committed wallet of an agent node, which must be its current agentWallet.
+    /// For each edge (non-alias rows; alias rows copy an already verified source, D20): the target is an
+    /// agent, the client is not one of its current controllers (isAuthorizedOrOwner, agentWallet; D16/D20),
+    /// and (w, feedbackIndex) equals the D14 combination recomputed from the registry. Every agent node
+    /// with mass carries the fingerprint of its current owner; other nodes carry 0.
+    /// Not checkable (no per-client index): that a row is complete, and that a declared B+ is the true sum.
+    /// At both levels (`reads` = false: Submitter-attested) the SHAPE is enforced, so that every committed
+    /// row and edge stays provable: an agent row carries a wallet, other rows do not, every edge targets
+    /// an agent node. `reads` = true (Registry-verified) adds every registry re-read.
+    function _verifyRows(
+        SetState storage s,
+        bytes32 setId,
+        uint256 n,
+        bytes calldata vectors,
+        bytes calldata rows,
+        uint256 W,
+        bool reads
+    ) internal view {
+        uint256 kb = _keyBase(setId);
+        uint256 numRows = uint32(bytes4(rows[1:5]));
+        uint256 off = 5;
+        for (uint256 ri; ri < numRows; ++ri) {
+            uint256 u = _be(rows, off, W);
+            uint256 hdr = _be(rows, off + W, 2);
+            off += W + 2;
+            address wallet;
+            if (hdr & H_SRC != 0) {
+                wallet = address(bytes20(rows[off:off + 20]));
+                off += 20;
+            }
+            if (hdr & H_SPLUS != 0) off += 4;
+            address client = _clientOf(s, kb, u, wallet, hdr, ri, reads);
+            if (hdr & H_ALIAS != 0) {
+                off += W;
+                continue;
+            }
+            uint256 nE = hdr & H_NE;
+            if (client == address(0)) continue; // source-less agent row: empty (checked in _clientOf)
+            for (uint256 e; e < nE; ++e) {
+                uint256 dst = _be(rows, off, W);
+                int256 w = int16(uint16(bytes2(rows[off + W:off + W + 2])));
+                uint256 fIdx = uint32(bytes4(rows[off + W + 2:off + W + 6]));
+                off += W + 6;
+                uint256 dk = _keyAtBase(kb, dst);
+                if (dk >> 248 != KIND_AGENT) revert EdgeMismatch(ri, e);
+                if (!reads) continue;
+                uint256 j = dk & ID_MASK;
+                if (identity.isAuthorizedOrOwner(client, j) || identity.getAgentWallet(j) == client) {
+                    revert EdgeMismatch(ri, e);
+                }
+                (bool ok, int256 wt, uint256 idx,) = _pairEdge(s, client, j);
+                if (!ok) revert RegistryUnreadable();
+                if (wt != w || idx != fIdx) revert EdgeMismatch(ri, e);
+            }
+        }
+        if (reads) _verifyOwners(s, kb, n, vectors);
+    }
+
+    /// Client of a row (ENCODING.md §3.2, R7 of FORMAT.md). Agent row: SRC = agentWallet(u) (VIA_OWNER clear),
+    /// or ownerOf(u) with agentWallet(u) = 0 (VIA_OWNER set, sets with ownerFallback only, D44). An agent row
+    /// without SRC means src(u) = none (agentWallet = 0, no fallback): it must be empty and returns client 0;
+    /// it stays challengeable by proveWallet once a wallet appears. Anchor and address rows carry no SRC.
+    /// Fast path (agent row with a wallet SRC) kept separate: it runs once per row of every certificate.
+    function _clientOf(SetState storage s, uint256 kb, uint256 u, address wallet, uint256 hdr, uint256 ri, bool reads)
+        internal
+        view
+        returns (address client)
+    {
+        uint256 key = _keyAtBase(kb, u);
+        if (wallet != address(0) && hdr & H_VIA_OWNER == 0 && key >> 248 == KIND_AGENT) {
+            if (reads && identity.getAgentWallet(key & ID_MASK) != wallet) revert EdgeMismatch(ri, ROW_MAX);
+            return wallet;
+        }
+        return _clientRare(s, key, u, wallet, hdr, ri, reads);
+    }
+
+    function _clientRare(SetState storage s, uint256 key, uint256 u, address wallet, uint256 hdr, uint256 ri, bool reads)
+        internal
+        view
+        returns (address client)
+    {
+        bool via = hdr & H_VIA_OWNER != 0;
+        if (key >> 248 == KIND_AGENT) {
+            uint256 j = key & ID_MASK;
+            if (wallet == address(0)) {
+                if (via || s.ownerFallback || hdr & (H_ALIAS | H_SPLUS | H_NE) != 0) revert EdgeMismatch(ri, ROW_MAX);
+                if (reads && identity.getAgentWallet(j) != address(0)) revert EdgeMismatch(ri, ROW_MAX);
+                return address(0);
+            }
+            // VIA_OWNER (D44)
+            if (!s.ownerFallback) revert EdgeMismatch(ri, ROW_MAX);
+            if (reads && (identity.getAgentWallet(j) != address(0) || identity.ownerOf(j) != wallet)) {
+                revert EdgeMismatch(ri, ROW_MAX);
+            }
+            return wallet;
+        }
+        if (wallet != address(0) || via) revert EdgeMismatch(ri, ROW_MAX);
+        client = address(uint160(key));
+        if (u < s.k && client != address(uint160(s.anchors[u]))) revert EdgeMismatch(ri, ROW_MAX); // invariant
+    }
+
+    function _verifyOwners(SetState storage s, uint256 kb, uint256 n, bytes calldata vectors) internal view {
+        uint256 k = s.k;
+        uint256 rec = (k + 1) * 8;
+        for (uint256 i = k; i < n; ++i) {
+            uint256 o = i * rec;
+            uint256 fp = uint64(bytes8(vectors[o + k * 8:o + k * 8 + 8]));
+            uint256 key = _keyAtBase(kb, i);
+            if (key >> 248 != KIND_AGENT) {
+                if (fp != 0) revert EdgeMismatch(type(uint256).max, i);
+                continue;
+            }
+            bool mass;
+            for (uint256 a; a < k; ++a) {
+                if (bytes8(vectors[o + a * 8:o + a * 8 + 8]) != 0) {
+                    mass = true;
+                    break;
+                }
+            }
+            if (mass && fp != uint160(identity.ownerOf(key & ID_MASK)) & LANE_MASK) {
+                revert EdgeMismatch(type(uint256).max, i);
+            }
+        }
+    }
+
+    /// big-endian unsigned read of `len` (<= 32) bytes of `b` at `off`
+    function _be(bytes calldata b, uint256 off, uint256 len) internal pure returns (uint256 v) {
+        assembly ("memory-safe") {
+            v := shr(sub(256, shl(3, len)), calldataload(add(b.offset, off)))
+        }
+    }
+
+    /// Chunk c holds nodes 4c..4c+3; slot(c, v) = base + c*(k+3) + v; v < k: t^(v), v = k: d,
+    /// v = k+1: ownerFp, v = k+2: flags (certified veto mask; transferred bit set by proveTransfer).
     function _storeVectors(
         SetState storage s,
         bytes32 setId,
         uint256 n,
         uint256 k,
         bytes calldata vectors,
-        uint256[] memory d
+        uint256[] memory d,
+        uint256[] memory veto
     ) internal {
         uint256 base = _vecBase(setId);
         uint256 rec = (k + 1) * 8;
         uint256 chunks = (n + 3) / 4;
-        uint256 stride = k + 2;
+        uint256 stride = k + 3;
         bool tooBig;
         assembly ("memory-safe") {
+            // 4 lanes of column o (byte offset in a record) for the records at p0, p0 + rec, ...
+            function pack4(p0, rl, o) -> v {
+                let p := add(p0, o)
+                let hi := shl(192, 0xffffffffffffffff)
+                v := or(or(shr(192, calldataload(p)), shr(128, and(calldataload(add(p, rl)), hi))),
+                    or(shr(64, and(calldataload(add(p, mul(2, rl))), hi)), and(calldataload(add(p, mul(3, rl))), hi)))
+            }
+            function capLane(x) -> y {
+                y := x
+                if gt(x, 0x7fffffffffffffff) { y := 0x7fffffffffffffff } // LANE_MASK
+            }
             let vo := vectors.offset
             let dp := add(d, 32)
+            let fl := add(veto, 32)
             let full := shr(2, n) // chunks with 4 certified nodes
-            let orAll := 0
+            let orAll := 0 // OR of every written lane: bit 63 of a lane set => value >= 2^63
             let sl := base
             let rp := vo // record of node 4c
             for { let c := 0 } lt(c, full) { c := add(c, 1) } {
-                let r1 := add(rp, rec)
-                let r2 := add(r1, rec)
-                let r3 := add(r2, rec)
                 // t columns, then ownerFp (column k of the record)
-                for { let v := 0 } lt(v, k) { v := add(v, 1) } {
-                    let o := shl(3, v)
-                    let x0 := shr(192, calldataload(add(rp, o)))
-                    let x1 := shr(192, calldataload(add(r1, o)))
-                    let x2 := shr(192, calldataload(add(r2, o)))
-                    let x3 := shr(192, calldataload(add(r3, o)))
-                    orAll := or(orAll, or(or(x0, x1), or(x2, x3)))
-                    sstore(add(sl, v), or(or(SENTINEL, or(x0, shl(64, x1))), or(shl(128, x2), shl(192, x3))))
-                }
-                {
-                    let o := shl(3, k)
-                    let x0 := shr(192, calldataload(add(rp, o)))
-                    let x1 := shr(192, calldataload(add(r1, o)))
-                    let x2 := shr(192, calldataload(add(r2, o)))
-                    let x3 := shr(192, calldataload(add(r3, o)))
-                    orAll := or(orAll, or(or(x0, x1), or(x2, x3)))
-                    sstore(add(sl, add(k, 1)), or(or(SENTINEL, or(x0, shl(64, x1))), or(shl(128, x2), shl(192, x3))))
+                for { let v := 0 } lt(v, add(k, 1)) { v := add(v, 1) } {
+                    let x := pack4(rp, rec, shl(3, v))
+                    orAll := or(orAll, x)
+                    sstore(add(sl, add(v, eq(v, k))), or(SENTINEL, x))
                 }
                 // distrust lanes (computed on-chain, capped)
                 {
                     let q := add(dp, shl(7, c))
-                    let d0 := mload(q)
-                    let d1 := mload(add(q, 32))
-                    let d2 := mload(add(q, 64))
-                    let d3 := mload(add(q, 96))
-                    if gt(d0, LANE_MASK) { d0 := LANE_MASK }
-                    if gt(d1, LANE_MASK) { d1 := LANE_MASK }
-                    if gt(d2, LANE_MASK) { d2 := LANE_MASK }
-                    if gt(d3, LANE_MASK) { d3 := LANE_MASK }
-                    sstore(add(sl, k), or(or(SENTINEL, or(d0, shl(64, d1))), or(shl(128, d2), shl(192, d3))))
+                    sstore(add(sl, k), or(or(SENTINEL, or(capLane(mload(q)), shl(64, capLane(mload(add(q, 32)))))),
+                        or(shl(128, capLane(mload(add(q, 64)))), shl(192, capLane(mload(add(q, 96)))))))
+                }
+                // flags lanes (certified veto masks, < 2^16)
+                {
+                    let q := add(fl, shl(7, c))
+                    sstore(add(sl, add(k, 2)), or(or(SENTINEL, or(mload(q), shl(64, mload(add(q, 32))))),
+                        or(shl(128, mload(add(q, 64))), shl(192, mload(add(q, 96))))))
                 }
                 sl := add(sl, stride)
-                rp := add(r3, rec)
+                rp := add(rp, shl(2, rec))
             }
             // last partial chunk: lanes beyond n stay 0 (never read calldata past `vectors`)
             if lt(full, chunks) {
@@ -821,12 +1280,10 @@ contract AnchoredReputation {
                             switch lt(v, k)
                             case 1 { x := shr(192, calldataload(add(vo, add(mul(i, rec), shl(3, v))))) }
                             default {
-                                switch eq(v, k)
-                                case 1 {
-                                    x := mload(add(dp, shl(5, i)))
-                                    if gt(x, LANE_MASK) { x := LANE_MASK }
-                                }
-                                default { x := shr(192, calldataload(add(vo, add(mul(i, rec), shl(3, k))))) }
+                                switch sub(v, k)
+                                case 0 { x := capLane(mload(add(dp, shl(5, i)))) }
+                                case 1 { x := shr(192, calldataload(add(vo, add(mul(i, rec), shl(3, k))))) }
+                                default { x := mload(add(fl, shl(5, i))) }
                             }
                             orAll := or(orAll, x)
                             val := or(val, shl(shl(6, l), x))
@@ -835,19 +1292,25 @@ contract AnchoredReputation {
                     sstore(add(sl, v), val)
                 }
             }
-            tooBig := gt(orAll, LANE_MASK)
+            // a lane value >= 2^63 would set the bit of the next lane (or the sentinel): refuse it
+            tooBig := iszero(iszero(and(orAll, or(or(shl(63, 1), shl(127, 1)), or(shl(191, 1), shl(255, 1))))))
         }
         if (tooBig) revert ValueTooLarge();
         if (chunks > s.reservedChunks) s.reservedChunks = uint32(chunks);
     }
 
-    function _eEff(SetState storage s, uint256[] memory r, uint256 k) internal view returns (uint256 e) {
-        uint256 aN = s.alphaN;
-        uint256 aD = s.alphaD;
+    /// sum_a ceil(lambda_a * e[a] / WAD)
+    function _aggregate(SetState storage s, uint256[] memory e, uint256 k) internal view returns (uint256 agg) {
         for (uint256 a; a < k; ++a) {
-            uint256 ea = (r[a] * aD + aN - 1) / aN; // e[a] = ceil(r[a] / alpha)
             uint256 l = s.anchors[a] >> 160;
-            e += (l * ea + WAD - 1) / WAD;
+            agg += (l * e[a] + WAD - 1) / WAD;
+        }
+    }
+
+    /// sum_a floor(lambda_a * m[a] / WAD) (a lower bound: rounded down)
+    function _massOf(SetState storage s, uint256[] memory m, uint256 k) internal view returns (uint256 agg) {
+        for (uint256 a; a < k; ++a) {
+            agg += ((s.anchors[a] >> 160) * m[a]) / WAD;
         }
     }
 
@@ -861,19 +1324,19 @@ contract AnchoredReputation {
         return (x.status, x.trustRobust, x.distrust, x.e, x.certBlock);
     }
 
-    /// isTrusted <=> OK and trustRobust >= theta + e and rhoD (distrust + e) <= rhoN (trustRobust - e)
-    function isTrusted(uint256 agentId, bytes32 setId, uint256 theta, uint256 rhoN, uint256 rhoD)
-        external
-        view
-        returns (bool)
-    {
-        Assessment memory x = assess(agentId, setId, true);
-        if (x.status != Status.OK) return false;
-        if (x.trustRobust < theta + x.e) return false;
-        return rhoD * (x.distrust + x.e) <= rhoN * (x.trustRobust - x.e);
+    /// D39: the only answer a payer may act on. Applies the policy committed in the setId
+    /// (theta, rho, m, q, maxAge, eLowMax, veto, transfer mode); status OK alone is not enough (an unknown
+    /// agent is OK with trust 0). Cheap refusal: when the bounds already fail, no registry is read.
+    function isTrusted(uint256 agentId, bytes32 setId) external view returns (bool) {
+        return _assess(agentId, setId, true, true).trusted;
     }
 
     function assess(uint256 agentId, bytes32 setId, bool withVeto) public view returns (Assessment memory x) {
+        return _assess(agentId, setId, withVeto, false);
+    }
+
+    /// @param lazy stop before any registry read when the policy bounds already fail (isTrusted)
+    function _assess(uint256 agentId, bytes32 setId, bool withVeto, bool lazy) internal view returns (Assessment memory x) {
         SetState storage s = _set(setId);
         if (!s.registered || s.certBlock == 0) {
             x.status = Status.NO_CERT;
@@ -881,13 +1344,17 @@ contract AnchoredReputation {
         }
         uint256 k = s.k;
         x.e = s.eEff;
+        x.eLow = s.eLowEff;
         x.certBlock = s.certBlock;
         uint256 ownerFp;
-        if (agentId < (1 << 248)) {
+        uint256 flags;
+        bool known;
+        if (agentId <= ID_MASK) {
             uint256 ip1 = nodeIndexPlus1[setId][agentKey(agentId)];
             if (ip1 != 0 && ip1 <= s.nCert) {
+                known = true;
                 uint256 i = ip1 - 1;
-                uint256 sb = _vecBase(setId) + (i >> 2) * (k + 2);
+                uint256 sb = _vecBase(setId) + (i >> 2) * (k + 3);
                 uint256 sh = (i & 3) * 64;
                 uint256[] memory c = new uint256[](k);
                 for (uint256 a; a < k; ++a) {
@@ -899,47 +1366,69 @@ contract AnchoredReputation {
                     x.trust += c[a];
                 }
                 x.trustRobust = _leaveOut(c, s.minAnchors, x.trust);
+                uint256 dv;
                 assembly ("memory-safe") {
-                    let dv := and(shr(sh, sload(add(sb, k))), LANE_MASK)
-                    mstore(add(x, 96), dv)
+                    dv := and(shr(sh, sload(add(sb, k))), LANE_MASK)
                     ownerFp := and(shr(sh, sload(add(sb, add(k, 1)))), LANE_MASK)
+                    flags := and(shr(sh, sload(add(sb, add(k, 2)))), LANE_MASK)
                 }
+                x.distrust = dv;
             }
         }
+        x.trustLow = x.trustRobust > x.eLow ? x.trustRobust - x.eLow : 0;
+        x.distrustUp = x.distrust + x.e;
+        bool bounds = x.trustLow >= s.theta && uint256(s.rhoD) * x.distrustUp <= uint256(s.rhoN) * x.trustLow;
 
         if (s.registryChanged) {
             x.status = Status.REGISTRY_CHANGED;
             return x;
         }
-        if (block.number - s.certBlock > s.maxAge) {
-            x.status = Status.STALE;
+        if (block.number - s.certBlock > s.maxAge || x.eLow > s.eLowMax) {
+            x.status = Status.STALE; // D36: widening budget exhausted
             return x;
         }
+        if (lazy && !bounds) return x; // status OK, trusted false: no registry read wasted on a refusal
         if (withVeto) {
+            uint256 mask = flags & 0xffff; // certified bits (complement, D33)
+            int256 worst;
             for (uint256 a; a < k; ++a) {
-                (bool ok, int256 w, bytes32 tag) = _registryEdge(s, address(uint160(s.anchors[a])), agentId);
+                (bool ok, int256 w, bytes32 tag) = _lastFeedback(s, address(uint160(s.anchors[a])), agentId);
                 if (!ok) {
                     x.status = Status.REGISTRY_CHANGED; // unreadable registry: fail closed, never revert
                     return x;
                 }
-                if (w < 0) {
-                    if (x.vetoCount == 0) x.triggerTag = tag;
-                    x.vetoCount += 1;
+                if (w <= s.vetoMax) {
+                    mask |= 1 << a;
+                    if (w < worst) {
+                        worst = w;
+                        x.triggerTag = tag;
+                    }
                 }
             }
-            if (x.vetoCount > 0) {
+            uint256 cnt;
+            for (; mask != 0; mask &= mask - 1) {
+                ++cnt;
+            }
+            x.vetoCount = uint8(cnt);
+            if (cnt >= s.vetoQuorum) {
                 x.status = Status.VETOED;
                 return x;
             }
         }
-        if (ownerFp != 0) {
-            (bool ok, uint256 o) = _staticWord(address(identity), abi.encodeCall(IIdentityRegistry8004.ownerOf, (agentId)));
-            if (!ok || (o & LANE_MASK) != ownerFp) {
+        if (known) {
+            bool moved = flags & F_TRANSFERRED != 0;
+            // strict mode (D35): live ownerOf, only when it can matter (a node without mass is never trusted)
+            if (!moved && s.strictTransfer && x.trust != 0) {
+                (bool ok, uint256 o) = _staticWord(address(identity), abi.encodeCall(IIdentityRegistry8004.ownerOf, (agentId)));
+                moved = !ok || (o & LANE_MASK) != ownerFp;
+            }
+            if (moved) {
                 x.status = Status.TRANSFERRED;
                 return x;
             }
         }
         x.status = Status.OK;
+        x.trusted = withVeto && bounds;
     }
 
     /// trust minus the (m - 1) largest contributions; k <= 16 so a selection loop is fine.
@@ -1003,33 +1492,35 @@ contract AnchoredReputation {
         ok = true;
     }
 
-    // ================================================================== registry edge (D14/D15)
-    /// Combined weight of the (client -> agentId) edge read from the registry:
-    /// last non-revoked feedback per tag1 of the filter (endorsement tags only), values out of bounds
-    /// rejected, then negative dominance: the most negative weight if any, else the largest.
-    /// ok = false only if the registry could not be read (callers fail closed).
-    function _registryEdge(SetState storage s, address client, uint256 agentId)
+    // ================================================================== registry edge (D14/D15/D33)
+    /// Combined weight of the (client -> agentId) edge read from the registry, over the WHOLE history of
+    /// the pair (no scan window): per endorsement tag of the filter, the last non-revoked feedback; out of
+    /// bounds -> that tag gives nothing (no fallback to an older one); then negative dominance: the most
+    /// negative weight if any, else the largest. idx = index of the feedback that gives w (ties: highest
+    /// index), 0 if w = 0. The scan stops once every endorsement tag has been seen; it is unbounded
+    /// otherwise, at the caller's expense (submitters and provers, never assess).
+    /// ok = false only if the registry could not be read.
+    function _pairEdge(SetState storage s, address client, uint256 agentId)
         internal
         view
-        returns (bool ok, int256 w, bytes32 tag)
+        returns (bool ok, int256 w, uint256 idx, bytes32 tag)
     {
         uint256 last;
         (ok, last) = _staticWord(address(reputation), abi.encodeCall(IReputationRegistry8004.getLastIndex, (agentId, client)));
-        if (!ok || last == 0) return (ok, 0, 0);
+        if (!ok || last == 0) return (ok, 0, 0, 0);
         uint256 nt = s.numTags;
-        uint256 allMask;
-        for (uint256 i; i < nt; ++i) {
-            if (s.tags[i].kind == TAG_ENDORSEMENT) allMask |= 1 << i;
-        }
+        uint256 allMask = s.endoMask;
+        if (allMask == 0) return (true, 0, 0, 0);
         uint256 seen;
         int256 minW;
         int256 maxW;
+        uint256 minIdx;
+        uint256 maxIdx;
         bytes32 minTag;
         bytes32 maxTag;
-        uint256 lo = last > MAX_SCAN ? last - MAX_SCAN + 1 : 1;
-        for (uint256 idx = last; idx >= lo; --idx) {
-            (bool rok, int256 value, uint256 dec, bytes32 th, bool revoked) = _readFb(agentId, client, uint64(idx));
-            if (!rok) return (false, 0, 0);
+        for (uint256 j = last; j >= 1; --j) {
+            (bool rok, int256 value, uint256 dec, bytes32 th, bool revoked) = _readFb(agentId, client, uint64(j));
+            if (!rok) return (false, 0, 0, 0);
             if (!revoked) {
                 for (uint256 i; i < nt; ++i) {
                     uint256 bit = 1 << i;
@@ -1039,23 +1530,42 @@ contract AnchoredReputation {
                     seen |= bit;
                     (bool valid, int256 wt) = _normalize(value, dec, ts);
                     if (valid) {
-                        if (wt < minW) {
-                            minW = wt;
-                            minTag = ts.name;
-                        }
-                        if (wt > maxW) {
-                            maxW = wt;
-                            maxTag = ts.name;
-                        }
+                        if (wt < minW) (minW, minIdx, minTag) = (wt, j, ts.hash);
+                        if (wt > maxW) (maxW, maxIdx, maxTag) = (wt, j, ts.hash);
                     }
                     break;
                 }
                 if (seen == allMask) break;
             }
-            if (idx == 1) break;
+            if (j == 1) break;
         }
-        if (minW < 0) return (true, minW, minTag);
-        return (true, maxW, maxTag);
+        if (minW < 0) return (true, minW, minIdx, minTag);
+        if (maxW > 0) return (true, maxW, maxIdx, maxTag);
+        return (true, 0, 0, 0);
+    }
+
+    /// D33 live veto: weight of the LAST feedback of `client` on `agentId` only (one getLastIndex and one
+    /// readFeedback), 0 if it is revoked, of a measurement tag, out of the filter or out of bounds.
+    function _lastFeedback(SetState storage s, address client, uint256 agentId)
+        internal
+        view
+        returns (bool ok, int256 w, bytes32 tag)
+    {
+        uint256 last;
+        (ok, last) = _staticWord(address(reputation), abi.encodeCall(IReputationRegistry8004.getLastIndex, (agentId, client)));
+        if (!ok || last == 0) return (ok, 0, 0);
+        (bool rok, int256 value, uint256 dec, bytes32 th, bool revoked) = _readFb(agentId, client, uint64(last));
+        if (!rok) return (false, 0, 0);
+        if (revoked) return (true, 0, 0);
+        uint256 nt = s.numTags;
+        for (uint256 i; i < nt; ++i) {
+            TagStored storage ts = s.tags[i];
+            if (ts.hash != th) continue;
+            if (ts.kind != TAG_ENDORSEMENT) return (true, 0, 0);
+            (bool valid, int256 wt) = _normalize(value, dec, ts);
+            return (true, valid ? wt : int256(0), ts.hash);
+        }
+        return (true, 0, 0);
     }
 
     /// value / 10^dec -> grid weight in [-GRID, GRID], exact bound comparison, truncation toward zero.
@@ -1109,150 +1619,329 @@ contract AnchoredReputation {
         }
     }
 
-    // ================================================================== discrepancy proofs (D6)
-    /// Type (i) OMISSION: the committed row of node u lacks the edge (client_u -> agentJ) that the
-    /// registry supports. Widens r[a] by ceil(t_u^(a) (1-alpha) Delta_u) where Delta_u is the exact L1
-    /// distance between the committed row (B+/B- normalised) and the row with the edge added.
-    /// @param rowPos     position of the row among the certificate's rows (Merkle leaf index)
-    /// @param row        the committed row bytes (as in the certificate)
-    /// @param proof      Merkle siblings to graphRoot (ignored if the row was already amended)
-    /// @param added      edges added by previous proofs in this certificate: (u32 agentId, int16 w)*
-    /// @param nodeKeyU   key of node u (its client address comes from the key, or from the row's
-    ///                   wallet for an agent node)
-    /// TODO(R5+): types (ii) STALE, (iii) REVOKED, (iv) WALLET; D16 former-owner rule (needs
-    ///            Transfer history, not readable on-chain); rows of nodes absent from the table.
-    struct OmissionCtx {
+    // ================================================================== discrepancy proofs (D6, D22, D32)
+    /// One proof for every edge-level discrepancy: the contract recomputes, from the registry NOW, the D14
+    /// combined weight wNew of (client_u -> agentJ) (0 if the client is a current controller of agentJ,
+    /// D16/D20) and compares it with the weight wOld that the row of u currently carries (committed edge,
+    /// or previous amendment, or 0 if absent). Every discrepancy type of the CR is a special case:
+    ///   (i)   OMISSION           wOld = 0,  wNew != 0   (with dilution of B+ if the row sum overflows B+)
+    ///   (ii)  STALE, (iii) REVOKED, controller change   wNew != wOld after the certificate
+    ///   (v)   FABRICATION / INFLATION                   wNew < wOld at any time (Submitter-attested)
+    /// The exact change of the normalised row (B+ and B- recomputed on the amended row) is billed per
+    /// column: positive-side decreases to eLow, positive- and negative-side increases to eUp, each
+    /// ceil(t_u^(a) (1 - alpha) Delta / alpha), with per-row caps (D22). Proofs on a row accumulate in
+    /// its RowState; each fact is billed once.
+    /// @param r      the committed row of u (Merkle path to graphRoot while the row is not amended)
+    /// @param src    for an alias row: the committed source row (Merkle path required); ignored otherwise
+    /// @param amends the row's amendments so far: (agentId:u32, wCommitted:int16, wNow:int16)*
+    function proveEdge(bytes32 setId, RowRef calldata r, RowRef calldata src, bytes calldata amends, uint256 agentJ)
+        external
+    {
+        SetState storage s = _set(setId);
+        if (!s.registered || s.certBlock == 0) revert NoCert();
+        if (agentJ > type(uint32).max) revert BadProof(20);
+        (RowView memory v, bytes32 sk) = _openRow(s, setId, r, amends);
+        RowView memory e = v;
+        if (v.isAlias) e = _openSource(s, src, v.srcU);
+        address client = _rowClient(s, setId, v);
+
+        // current effective row: committed edges of e, overridden by the amendments
+        EdgeSums memory m = _sums(s, setId, e, v.isAlias ? src.row : r.row, amends, agentJ);
+        // an agent that does not exist (or was burnt) cannot hold an edge: registry reverts mean wNew = 0
+        int256 wNew;
+        (bool okA, uint256 auth) = _staticWord(address(identity), abi.encodeCall(IIdentityRegistry8004.isAuthorizedOrOwner, (client, agentJ)));
+        (bool okW, uint256 wal) = _staticWord(address(identity), abi.encodeCall(IIdentityRegistry8004.getAgentWallet, (agentJ)));
+        if (okA && okW && auth == 0 && address(uint160(wal)) != client) {
+            bool ok;
+            (ok, wNew,,) = _pairEdge(s, client, agentJ);
+            if (!ok) revert RegistryUnreadable();
+        }
+        if (wNew == m.wOld) revert NothingToProve();
+
+        RowState storage st = _rows[sk];
+        uint256 gP = e.sDecl > uint256(GRID) ? e.sDecl : uint256(GRID); // B+ floor: max(GRID, sPlus)
+        (uint256 decP, uint256 incP) = _side(m.sP, _pos(m.wOld), _pos(wNew), gP);
+        (, uint256 incN) = _side(m.sN, _pos(-m.wOld), _pos(-wNew), uint256(GRID));
+        // caps (D22): the positive side of the committed row cannot lose more than its normalised mass
+        // S0/B0; each side cannot gain more than 1
+        uint256 capDim = (m.s0 * WAD + m.b0 - 1) / m.b0;
+        uint256 dim = _capAdd(st.dim, decP, capDim);
+        uint256 addP = _capAdd(st.incP, incP, WAD);
+        uint256 addN = _capAdd(st.incN, incN, WAD);
+        // a declared sPlus already put the omitted positive mass (sPlus - S0)/B+ into eUp's margin at
+        // submission: only the positive increase beyond that prepaid part is billed again
+        uint256 prepaid = e.sDecl != 0 ? ((e.sDecl - m.s0) * WAD) / m.b0 : 0;
+        uint256 billP = _sat(st.incP + addP, prepaid) - _sat(st.incP, prepaid);
+        st.dim += uint64(dim);
+        st.incP += uint64(addP);
+        st.incN += uint64(addN);
+        st.h = keccak256(abi.encodePacked(v.leaf, _amend(amends, agentJ, m.wCommitted, wNew)));
+        _widen(s, setId, v.u, dim, billP + addN);
+        // V13: an anchor row now holding a veto on a certified agent sets its certified bit (never cleared
+        // before recertification, D21)
+        if (v.u < s.k && wNew <= s.vetoMax && m.jp1 != 0 && m.jp1 <= s.nCert) _setFlag(setId, s, m.jp1 - 1, 1 << v.u);
+        emit EdgeProven(setId, v.u, agentJ, m.wOld, wNew, s.eLowEff, s.eEff);
+    }
+
+    /// (iv) SOURCE: the committed source of an agent row is no longer src(u) (R7): the agentWallet changed
+    /// (it is cleared on every transfer, so this also freezes the OUTGOING edges of a transferred agent,
+    /// D44), the owner of a VIA_OWNER row changed or the agent got a wallet (D44 (iv-a)), or a source-less
+    /// row's agent got a wallet. The row's client changed: worst case, all its committed positive mass is
+    /// lost (eLow, capped at S0/B0 for a full row, at 1 for an alias) and the new client's row is unknown
+    /// (eUp, both sides, capped). The row is then void.
+    /// @param src for an alias row: the committed source row (Merkle path required); ignored otherwise
+    function proveWallet(bytes32 setId, RowRef calldata r, RowRef calldata src, bytes calldata amends) external {
+        SetState storage s = _set(setId);
+        if (!s.registered || s.certBlock == 0) revert NoCert();
+        (RowView memory v, bytes32 sk) = _openRow(s, setId, r, amends);
+        uint256 key = _keyAtBase(_keyBase(setId), v.u);
+        if (key >> 248 != KIND_AGENT) revert BadProof(21);
+        if (_sourceHolds(key & ID_MASK, v)) revert NothingToProve(); // a registry revert (burnt agent) = changed
+        RowState storage st = _rows[sk];
+        RowView memory e = v;
+        if (v.isAlias) e = _openSource(s, src, v.srcU);
+        EdgeSums memory m = _sums(s, setId, e, v.isAlias ? src.row : r.row, amends, 0);
+        uint256 capDim = (m.s0 * WAD + m.b0 - 1) / m.b0; // the committed positive mass S0/B0 (D22 cap)
+        uint256 dim = _sat(capDim, st.dim); // what proveEdge has not billed yet of the committed mass
+        // positive increase: the part prepaid by a declared sPlus at submission is not billed twice (as in proveEdge)
+        uint256 prepaid = e.sDecl != 0 ? ((e.sDecl - m.s0) * WAD) / m.b0 : 0;
+        uint256 inc = (_sat(WAD, prepaid) - _sat(st.incP, prepaid)) + (WAD - st.incN);
+        st.dim = uint64(WAD);
+        st.incP = uint64(WAD);
+        st.incN = uint64(WAD);
+        st.voided = true;
+        _widen(s, setId, v.u, dim, inc);
+        emit RowVoided(setId, v.u, s.eLowEff, s.eEff);
+    }
+
+    /// Fast transfer mode (D25/D35 option): flags a certified agent whose current owner differs from the
+    /// committed fingerprint; assess then returns TRANSFERRED in both modes.
+    function proveTransfer(bytes32 setId, uint256 agentId) external {
+        SetState storage s = _set(setId);
+        if (!s.registered || s.certBlock == 0) revert NoCert();
+        uint256 ip1 = agentId <= ID_MASK ? nodeIndexPlus1[setId][agentKey(agentId)] : 0;
+        if (ip1 == 0 || ip1 > s.nCert) revert BadProof(22);
+        uint256 i = ip1 - 1;
+        uint256 sb = _vecBase(setId) + (i >> 2) * (uint256(s.k) + 3);
+        uint256 sh = (i & 3) * 64;
+        uint256 fp;
+        uint256 fl;
+        uint256 k = s.k;
+        assembly ("memory-safe") {
+            fp := and(shr(sh, sload(add(sb, add(k, 1)))), LANE_MASK)
+            fl := and(shr(sh, sload(add(sb, add(k, 2)))), LANE_MASK)
+        }
+        if (fl & F_TRANSFERRED != 0) revert NothingToProve();
+        (bool okO, uint256 o) = _staticWord(address(identity), abi.encodeCall(IIdentityRegistry8004.ownerOf, (agentId)));
+        if (okO && (o & LANE_MASK) == fp) revert NothingToProve(); // a revert (burnt agent) = moved
+        _setFlag(setId, s, i, F_TRANSFERRED);
+        emit TransferFlagged(setId, agentId);
+    }
+
+    struct RowView {
         uint256 u;
-        address client;
-        uint256 sumP;
-        uint256 sumN;
-        bytes32 sk;
+        uint256 hdr;
+        address wallet;
+        uint256 sDecl;
+        bool isAlias;
+        uint256 srcU;
+        uint256 edgesOff; // offset of the first edge in the row bytes
+        uint256 nE;
         bytes32 leaf;
     }
 
-    function proveOmission(
-        bytes32 setId,
-        uint256 rowPos,
-        bytes calldata row,
-        bytes32[] calldata proof,
-        bytes calldata added,
-        bytes32 nodeKeyU,
-        uint256 agentJ
-    ) external {
-        SetState storage s = _set(setId);
-        if (!s.registered || s.certBlock == 0) revert NoCert();
-        OmissionCtx memory c = _omissionRow(s, setId, rowPos, row, proof, added, nodeKeyU, agentJ);
-
-        // D16 rejection rules readable on-chain: controllers and agentWallet of j cannot create edges
-        if (identity.isAuthorizedOrOwner(c.client, agentJ)) revert BadProof(10);
-        if (identity.getAgentWallet(agentJ) == c.client) revert BadProof(11);
-
-        (bool ok, int256 w,) = _registryEdge(s, c.client, agentJ);
-        if (!ok) revert RegistryUnreadable();
-        if (w == 0) revert BadProof(12);
-
-        uint256 eNew = _widen(s, setId, c, w);
-        rowState[c.sk] = keccak256(abi.encodePacked(c.leaf, added, uint32(agentJ), int16(w)));
-        emit OmissionProven(setId, c.u, agentJ, w, eNew);
+    struct EdgeSums {
+        uint256 sP; // current positive sum (committed + amendments)
+        uint256 sN; // current negative sum (absolute)
+        int256 wOld; // current weight of the edge to agentJ
+        int256 wCommitted; // committed weight of the edge to agentJ (0 if absent)
+        uint256 s0; // committed positive sum
+        uint256 b0; // committed B+
+        uint256 jp1; // node index + 1 of agentJ (0 if not in the table)
     }
 
-    function _omissionRow(
-        SetState storage s,
-        bytes32 setId,
-        uint256 rowPos,
-        bytes calldata row,
-        bytes32[] calldata proof,
-        bytes calldata added,
-        bytes32 nodeKeyU,
-        uint256 agentJ
-    ) internal view returns (OmissionCtx memory c) {
-        uint256 W = s.idxWidth;
+    function _parseRow(uint256 W, bytes calldata row) internal pure returns (RowView memory v) {
         if (row.length < W + 2) revert BadProof(0);
-        uint256 u;
-        uint256 hdr;
-        assembly ("memory-safe") {
-            let wd := calldataload(row.offset)
-            u := shr(sub(256, mul(W, 8)), wd)
-            hdr := and(shr(sub(256, mul(add(W, 2), 8)), wd), 0xffff)
+        v.u = _be(row, 0, W);
+        v.hdr = _be(row, W, 2);
+        v.nE = v.hdr & H_NE;
+        uint256 o = W + 2;
+        if (v.hdr & H_SRC != 0) {
+            v.wallet = address(bytes20(row[o:o + 20]));
+            o += 20;
         }
-        c.u = u;
-        uint256 nE = hdr & 0x7fff;
-        bool hasWallet = hdr & 0x8000 != 0;
-        uint256 edgesOff = W + 2 + (hasWallet ? 20 : 0);
-        if (row.length != edgesOff + nE * (W + 6)) revert BadProof(1);
-        if (nodeIndexPlus1[setId][nodeKeyU] != u + 1) revert BadProof(2);
+        if (v.hdr & H_SPLUS != 0) {
+            v.sDecl = uint32(bytes4(row[o:o + 4]));
+            o += 4;
+        }
+        if (v.hdr & H_ALIAS != 0) {
+            v.isAlias = true;
+            v.srcU = _be(row, o, W);
+            o += W;
+        }
+        v.edgesOff = o;
+        if (row.length != o + v.nE * (W + 6)) revert BadProof(1);
+        v.leaf = keccak256(row);
+    }
 
-        // row authenticity: graphRoot, or the amended state of this row in this certificate
-        c.leaf = keccak256(row);
-        c.sk = keccak256(abi.encode(setId, s.certNonce, u));
-        bytes32 cur = rowState[c.sk];
-        if (cur == 0) {
-            if (added.length != 0) revert BadProof(3);
-            if (!_verifyMerkle(c.leaf, rowPos, s.numRows, proof, s.graphRoot)) revert BadProof(4);
-        } else if (keccak256(abi.encodePacked(c.leaf, added)) != cur) {
+    /// authenticates the row of u: Merkle path to graphRoot, or the amended state of this certificate
+    function _openRow(SetState storage s, bytes32 setId, RowRef calldata r, bytes calldata amends)
+        internal
+        view
+        returns (RowView memory v, bytes32 sk)
+    {
+        v = _parseRow(s.idxWidth, r.row);
+        if (amends.length % 8 != 0) revert BadProof(6);
+        sk = keccak256(abi.encode(setId, s.certNonce, v.u));
+        RowState storage st = _rows[sk];
+        if (st.voided) revert BadProof(23);
+        if (st.h == 0) {
+            if (amends.length != 0) revert BadProof(3);
+            if (!_verifyMerkle(v.leaf, r.pos, s.numRows, r.path, s.graphRoot)) revert BadProof(4);
+        } else if (keccak256(abi.encodePacked(v.leaf, amends)) != st.h) {
             revert BadProof(5);
         }
-        if (added.length % 6 != 0) revert BadProof(6);
+    }
 
-        // client address of node u
-        if (uint256(nodeKeyU) >> 248 == KIND_AGENT) {
-            if (!hasWallet) revert BadProof(7);
-            c.client = address(bytes20(row[W + 2:W + 22]));
-        } else {
-            c.client = address(uint160(uint256(nodeKeyU)));
+    function _openSource(SetState storage s, RowRef calldata src, uint256 srcU) internal view returns (RowView memory e) {
+        e = _parseRow(s.idxWidth, src.row);
+        if (e.u != srcU || e.isAlias) revert BadProof(24);
+        if (!_verifyMerkle(e.leaf, src.pos, s.numRows, src.path, s.graphRoot)) revert BadProof(4);
+    }
+
+    /// client address of the row's node: anchor / address node key, or the committed source of an agent,
+    /// which must still be src(u) (otherwise proveWallet applies). A source-less agent row has no client.
+    function _rowClient(SetState storage s, bytes32 setId, RowView memory v) internal view returns (address) {
+        uint256 key = _keyAtBase(_keyBase(setId), v.u);
+        if (key >> 248 == KIND_AGENT) {
+            if (v.wallet == address(0)) revert BadProof(7); // nothing to prove edge-wise: see proveWallet
+            if (!_sourceHolds(key & ID_MASK, v)) revert BadProof(25); // -> proveWallet
+            return v.wallet;
         }
+        if (key == 0 || v.u >= s.nCert) revert BadProof(2);
+        return address(uint160(key)); // anchors and address nodes: the key holds the address
+    }
 
-        // the edge must be absent from the committed row and from previous amendments
-        uint256 jp1 = agentJ < (1 << 248) ? nodeIndexPlus1[setId][agentKey(agentJ)] : 0;
-        (c.sumP, c.sumN) = _rowSums(row, edgesOff, nE, W, jp1);
-        for (uint256 o; o < added.length; o += 6) {
-            if (uint32(bytes4(added[o:o + 4])) == agentJ) revert BadProof(9);
-            int256 aw = int16(uint16(bytes2(added[o + 4:o + 6])));
-            if (aw > 0) c.sumP += uint256(aw);
-            else c.sumN += uint256(-aw);
+    /// true iff the committed source of agent row v still resolves from the registry (R7): agentWallet = SRC;
+    /// VIA_OWNER: agentWallet = 0 and ownerOf = SRC; no SRC: agentWallet = 0. A registry revert = changed.
+    function _sourceHolds(uint256 j, RowView memory v) internal view returns (bool) {
+        (bool okW, uint256 wal) = _staticWord(address(identity), abi.encodeCall(IIdentityRegistry8004.getAgentWallet, (j)));
+        // a burnt agent: a committed source no longer holds; a source-less row stays source-less (no new client)
+        if (!okW) return v.wallet == address(0);
+        if (v.wallet == address(0) || v.hdr & H_VIA_OWNER != 0) {
+            if (wal != 0) return false; // the wallet always wins (D44)
+            if (v.wallet == address(0)) return true;
+            (bool okO, uint256 o) = _staticWord(address(identity), abi.encodeCall(IIdentityRegistry8004.ownerOf, (j)));
+            return okO && address(uint160(o)) == v.wallet;
+        }
+        return address(uint160(wal)) == v.wallet;
+    }
+
+    /// @param eb the bytes of the row that holds the edges (the row itself, or the source of an alias)
+    function _sums(SetState storage s, bytes32 setId, RowView memory e, bytes calldata eb, bytes calldata amends, uint256 agentJ)
+        internal
+        view
+        returns (EdgeSums memory m)
+    {
+        uint256 W = s.idxWidth;
+        uint256 jp1 = nodeIndexPlus1[setId][agentKey(agentJ)];
+        m.jp1 = jp1;
+        for (uint256 i; i < e.nE; ++i) {
+            uint256 o = e.edgesOff + i * (W + 6);
+            int256 w = int16(uint16(bytes2(eb[o + W:o + W + 2])));
+            if (jp1 != 0 && _be(eb, o, W) == jp1 - 1) m.wCommitted = w;
+            if (w > 0) m.sP += uint256(w);
+            else m.sN += uint256(-w);
+        }
+        m.s0 = m.sP;
+        uint256 sp = e.sDecl != 0 ? e.sDecl : m.s0; // B+ = max(GRID, declared sPlus or committed S+)
+        m.b0 = sp > uint256(GRID) ? sp : uint256(GRID);
+        m.wOld = m.wCommitted;
+        for (uint256 o; o < amends.length; o += 8) {
+            int256 wc = int16(uint16(bytes2(amends[o + 4:o + 6])));
+            int256 wn = int16(uint16(bytes2(amends[o + 6:o + 8])));
+            // replace the committed contribution wc of this edge by its current value wn
+            m.sP = m.sP + _pos(wn) - _pos(wc);
+            m.sN = m.sN + _pos(-wn) - _pos(-wc);
+            if (uint32(bytes4(amends[o:o + 4])) == agentJ) {
+                m.wOld = wn;
+                m.wCommitted = wc;
+            }
         }
     }
 
-    /// Delta = |w|/B' + S (B' - B) / (B B') on the side (+ or -) that changes;
-    /// r[a] += ceil(t_u^(a) (1 - alpha) Delta).
-    function _widen(SetState storage s, bytes32 setId, OmissionCtx memory c, int256 w) internal returns (uint256 eNew) {
-        uint256 aw = uint256(w > 0 ? w : -w);
-        uint256 S = w > 0 ? c.sumP : c.sumN;
-        uint256 B = S > uint256(GRID) ? S : uint256(GRID);
-        uint256 B2 = S + aw > uint256(GRID) ? S + aw : uint256(GRID);
-        uint256 dNum = aw * B + S * (B2 - B);
-        uint256 den = uint256(s.alphaD) * B * B2;
+    /// new amendment list: the entry of agentJ replaced (or appended)
+    function _amend(bytes calldata amends, uint256 agentJ, int256 wc, int256 wn) internal pure returns (bytes memory out) {
+        bytes memory entry = abi.encodePacked(uint32(agentJ), int16(wc), int16(wn));
+        for (uint256 o; o < amends.length; o += 8) {
+            if (uint32(bytes4(amends[o:o + 4])) == agentJ) {
+                return bytes.concat(amends[:o], entry, amends[o + 8:]);
+            }
+        }
+        return bytes.concat(amends, entry);
+    }
+
+    /// One side (+ or -) of a normalised row whose sum goes from S to S - wo + wn, with budget
+    /// B = max(G, sum): returns (decrease, increase) of the side's normalised L1 mass, WAD, rounded up.
+    ///   dec = [ S_rest (B' - B)^+ + (wo B' - wn B)^+ ] / (B B')
+    ///   inc = [ S_rest (B - B')^+ + (wn B - wo B')^+ ] / (B B')      with S_rest = S - wo
+    function _side(uint256 S, uint256 wo, uint256 wn, uint256 G) internal pure returns (uint256 dec, uint256 inc) {
+        uint256 B = S > G ? S : G;
+        uint256 S2 = S - wo + wn;
+        uint256 B2 = S2 > G ? S2 : G;
+        uint256 rest = S - wo;
+        uint256 den = B * B2;
+        uint256 dn = (B2 > B ? rest * (B2 - B) : 0) + (wo * B2 > wn * B ? wo * B2 - wn * B : 0);
+        uint256 up = (B > B2 ? rest * (B - B2) : 0) + (wn * B > wo * B2 ? wn * B - wo * B2 : 0);
+        dec = (dn * WAD + den - 1) / den;
+        inc = (up * WAD + den - 1) / den;
+    }
+
+    function _sat(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a > b ? a - b : 0;
+    }
+
+    function _setFlag(bytes32 setId, SetState storage s, uint256 i, uint256 bit) internal {
+        uint256 slot = _vecBase(setId) + (i >> 2) * (uint256(s.k) + 3) + s.k + 2;
+        uint256 sh = (i & 3) * 64;
+        assembly ("memory-safe") {
+            sstore(slot, or(sload(slot), shl(sh, bit)))
+        }
+    }
+
+    function _pos(int256 w) internal pure returns (uint256) {
+        return w > 0 ? uint256(w) : 0;
+    }
+
+    /// part of `add` that still fits under `cap` given `cur` already billed
+    function _capAdd(uint256 cur, uint256 add, uint256 cap) internal pure returns (uint256) {
+        if (cur >= cap) return 0;
+        return add < cap - cur ? add : cap - cur;
+    }
+
+    /// eLow[a] += ceil(t_u^(a) om dim / (aN WAD)) and eUp[a] += ceil(t_u^(a) om inc / (aN WAD)), then the
+    /// aggregates. (1 - alpha) t_u Delta is the L1 change of F(t); dividing by alpha bounds the fixed point.
+    function _widen(SetState storage s, bytes32 setId, uint256 u, uint256 dim, uint256 inc) internal {
         uint256 k = s.k;
         uint256 om = uint256(s.alphaD) - s.alphaN;
-        uint256 sb = _vecBase(setId) + (c.u >> 2) * (k + 2);
-        uint256 sh = (c.u & 3) * 64;
-        uint256[] memory r = new uint256[](k);
+        uint256 den = uint256(s.alphaN) * WAD;
+        uint256 sb = _vecBase(setId) + (u >> 2) * (k + 3);
+        uint256 sh = (u & 3) * 64;
+        ColState storage cs = _cols(setId);
+        uint256[] memory lo = new uint256[](k);
+        uint256[] memory up = new uint256[](k);
         for (uint256 a; a < k; ++a) {
             uint256 t;
             assembly ("memory-safe") {
                 t := and(shr(sh, sload(add(sb, a))), LANE_MASK)
             }
-            r[a] = s.r[a] + (t * om * dNum + den - 1) / den;
-            s.r[a] = r[a];
+            lo[a] = cs.eLow[a] + (t * om * dim + den - 1) / den;
+            up[a] = cs.eUp[a] + (t * om * inc + den - 1) / den;
+            cs.eLow[a] = lo[a];
+            cs.eUp[a] = up[a];
         }
-        eNew = _eEff(s, r, k);
-        s.eEff = eNew;
-    }
-
-    function _rowSums(bytes calldata row, uint256 edgesOff, uint256 nE, uint256 W, uint256 jp1)
-        internal
-        pure
-        returns (uint256 sumP, uint256 sumN)
-    {
-        uint256 esz = W + 6;
-        for (uint256 e; e < nE; ++e) {
-            uint256 o = edgesOff + e * esz;
-            uint256 dst = W == 2 ? uint16(bytes2(row[o:o + 2])) : uint32(bytes4(row[o:o + 4]));
-            if (jp1 != 0 && dst == jp1 - 1) revert BadProof(8);
-            int256 w = int16(uint16(bytes2(row[o + W:o + W + 2])));
-            if (w > 0) sumP += uint256(w);
-            else sumN += uint256(-w);
-        }
+        s.eLowEff = _aggregate(s, lo, k);
+        s.eEff = _aggregate(s, up, k);
     }
 
     function _verifyMerkle(bytes32 leaf, uint256 pos, uint256 cnt, bytes32[] calldata proof, bytes32 root)
@@ -1284,6 +1973,7 @@ contract AnchoredReputation {
         returns (
             uint64 certBlock,
             uint256 eEff,
+            uint256 eLowEff,
             bytes32 graphRoot,
             bytes32 vectorRoot,
             bytes32 versionHash,
@@ -1293,17 +1983,35 @@ contract AnchoredReputation {
         )
     {
         SetState storage s = _set(setId);
-        return (s.certBlock, s.eEff, s.graphRoot, s.vectorRoot, s.versionHash, s.nCert, s.numRows, s.registryChanged);
+        return (s.certBlock, s.eEff, s.eLowEff, s.graphRoot, s.vectorRoot, s.versionHash, s.nCert, s.numRows, s.registryChanged);
     }
 
-    function residual(bytes32 setId, uint256 a) external view returns (uint256) {
-        return _set(setId).r[a];
+    /// Quality of the current certificate for the replacement rule (ENCODING.md §5): its mass, its
+    /// q_cur = eEff - eFloor + eLowEff (widened by proofs), its distrust mass sum_v d_v, and whether a proof widened it. A certifier compares its own (qEff, mass) before paying.
+    function quality(bytes32 setId)
+        external
+        view
+        returns (uint256 mass, uint256 qCur, uint256 distrustMass, bool proven)
+    {
+        SetState storage s = _set(setId);
+        if (s.certBlock == 0) return (0, 0, 0, false);
+        return (s.mass, s.eEff - s.eFloor + s.eLowEff, s.distrustMass, s.eLowEff != 0 || s.eEff > s.eSubmitted);
     }
 
-    /// raw lane read: v < k -> t^(v), v = k -> distrust, v = k+1 -> owner fingerprint
+    /// per-column bounds (t-space, WAD)
+    function columnBounds(bytes32 setId, uint256 a) external view returns (uint256 eUp, uint256 eLow) {
+        ColState storage cs = _cols(setId);
+        return (cs.eUp[a], cs.eLow[a]);
+    }
+
+    function rowStateOf(bytes32 setId, uint256 u) external view returns (RowState memory) {
+        return _rows[keccak256(abi.encode(setId, _set(setId).certNonce, u))];
+    }
+
+    /// raw lane read: v < k -> t^(v), v = k -> distrust, v = k+1 -> owner fingerprint, v = k+2 -> flags
     function vectorAt(bytes32 setId, uint256 i, uint256 v) external view returns (uint256 x) {
         SetState storage s = _set(setId);
-        uint256 sl = _vecBase(setId) + (i >> 2) * (uint256(s.k) + 2) + v;
+        uint256 sl = _vecBase(setId) + (i >> 2) * (uint256(s.k) + 3) + v;
         uint256 sh = (i & 3) * 64;
         assembly ("memory-safe") {
             x := and(shr(sh, sload(sl)), LANE_MASK)
@@ -1317,8 +2025,26 @@ contract AnchoredReputation {
         }
     }
 
+    function _cols(bytes32 setId) internal pure returns (ColState storage c) {
+        uint256 base = uint256(keccak256(abi.encode(COL_DOMAIN, setId))) & ~uint256(127);
+        assembly ("memory-safe") {
+            c.slot := base
+        }
+    }
+
     function _vecBase(bytes32 setId) internal pure returns (uint256) {
         return uint256(keccak256(abi.encode(VEC_DOMAIN, setId))) & ~uint256(127);
+    }
+
+    /// node keys, contiguous (128 per MIP-8 page): slot keyBase + i = key of node i
+    function _keyBase(bytes32 setId) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encode(KEY_DOMAIN, setId))) & ~uint256(127);
+    }
+
+    function _keyAtBase(uint256 kb, uint256 i) internal view returns (uint256 key) {
+        assembly ("memory-safe") {
+            key := sload(add(kb, i))
+        }
     }
 
     /// owner fingerprint committed in the vector (63 low bits of the owner address, D10)

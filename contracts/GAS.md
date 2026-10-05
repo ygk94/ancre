@@ -1,7 +1,108 @@
-# GAS — mesures réelles d'`AnchoredReputation.sol` (chantier R5, 2026-09-27)
+# GAS — mesures réelles d'`AnchoredReputation.sol`
 
-Légende : **MESURÉ** = sorti de `forge test` (commande donnée) · **CALCULÉ** = formule appliquée aux mesures · **ESTIMÉ (CR)** = chiffre du CR du conseil, pour comparaison.
-Environnement : Foundry 1.8.3, solc 0.8.28 via-IR, optimizer 200, `network = "monad"`. Fork mainnet 143 au bloc 108 445 171 pour les lectures. Contrat déployé : **21 815 octets** (sous 24 Ko, donc portable sur Ethereum).
+Légende : **MESURÉ** = sorti de `forge test` (commande donnée) · **CALCULÉ** = formule appliquée aux mesures · **DOC** = documentation Monad · **ESTIMÉ (CR)** = chiffre du CR du conseil, pour comparaison.
+Environnement : Foundry 1.8.3, solc 0.8.28 via-IR, optimizer 200, `network = "monad"`. Limite par transaction : **30 M gas** (DOC, `developer-essentials`, tableau « Transaction gas limit ») ; prix du gas **102 gwei** (MESURÉ, `cast gas-price --rpc-url https://rpc.monad.xyz`, 28/09 ; base fee 100 gwei).
+
+## Intégration 02 + 04 (2026-10-01) : contrat v1 unifié
+
+Changements qui touchent le gas : règle de remplacement par qualité (accumulation de la masse par colonne, somme de la méfiance, quatre slots de plus : `mass`, `eFloor`, `distrustMass`, `eSubmitted` ; les deux derniers ajoutés après la revue de code), contrôle de la source des lignes (`_clientOf` : chemin rapide et chemin rare pour VIA_OWNER et les lignes sans source), tags stockés par leur seul hash (un slot de moins par tag).
+Méthode : mêmes bancs sur une copie du contrat v1 d'avant l'intégration (HEAD `ae4c153`, extraite dans le scratchpad) et sur le contrat intégré.
+Commande : `forge test --match-contract "GasTest|RegistryBenchTest|UpgradeTest" -vv`, plus `forge test --mc AnchoredReputationTest --gas-report` pour `registerAnchorSet`.
+
+| Cas | v1 du 02 | v1 intégré | Écart |
+|---|---|---|---|
+| `registerAnchorSet` (4 tags, médiane du gas report) | 492 634 | **423 614** | −14 % |
+| Démo P1, 300 arêtes, k = 3, mise à jour, Submitter-attested | 1 321 852 | 1 351 917 | +2,3 % |
+| Démo P1, 300 arêtes, k = 3, mise à jour, **Registry-verified** | 14 970 695 | **14 974 802** | 0 % |
+| Mainnet réel, 3 arêtes de 0xea0b…, premier certificat | 645 080 | 719 202 | +11 % (4 slots neufs) |
+| Recertification après l'upgrade PR #80 (D28) | 367 312 | 373 440 | +1,7 % |
+| GasTest, mise à jour E = 300, n = 100, k = 3 | 1 352 488 | 1 382 551 | +2,2 % |
+| GasTest, mise à jour E = 3 000, n = 1 000, k = 3 | 12 342 166 | 12 578 055 | +1,9 % |
+| GasTest, mise à jour E = 3 000, n = 1 000, k = 8 | 17 300 964 | 17 668 493 | +2,1 % |
+| GasTest, premier certificat E = 10, n = 5, k = 1 | 397 715 | 434 979 | +9,4 % (2 slots neufs) |
+| `isTrusted`, agent inconnu (refus bon marché) | 29 210 | 29 231 | 0 % |
+
+(MESURÉ, 01/10 ; les lignes k = 8 et E = 10 datent d'avant la revue, + environ 0,5 % depuis.) Le surcoût des mises à jour (+0,1 % à +3 %) se répartit à peu près ainsi (MESURÉ par variantes du contrat) : 15 gas par nœud et par colonne pour la masse, 70 gas par ligne pour le contrôle de la source. La variante d'origine de `_storeVectors` ne compile plus en via-IR (pile trop profonde d'un slot) : la variante retenue enlève trois variables. Taille : **33 527 octets** (30 847 avant ; limite Monad 128 Ko).
+
+### Vecteurs du solveur sur un fork du mainnet (anvil `--network monad`, bloc 108 835 675)
+
+Commande : `cd solver && .venv/bin/python simulate.py` → `solver/out/simulation.json`. Gas facturé = gas consommé (MESURÉ ; sur un fork, l'estimation et la consommation sont identiques).
+
+| Vecteur | Niveau | `submitCertificate` | `registerAnchorSet` |
+|---|---|---|---|
+| mainnet_honest_d20 (6 nœuds, 5 arêtes) | Registry-verified | 1 028 760 | 413 966 |
+| mainnet_slash_anchor (6 nœuds, 7 arêtes) | Registry-verified | 1 039 953 | 413 966 |
+| mainnet_scanner_preD15 (35 nœuds, 58 arêtes) | Registry-verified | 6 101 533 | 572 462 |
+| mainnet_em_d44 (13 nœuds, 48 arêtes, VIA_OWNER, tag de 33 octets) | Registry-verified | 3 722 033 | 619 611 |
+| toy_alpha_1_x, toy_truncated (5 nœuds) | Submitter-attested | 670 306 à 676 008 | 432 555 |
+| toy_alias_owner_rowmax (264 nœuds, 268 arêtes) | Submitter-attested | 19 789 596 | 432 567 |
+
+Ces chiffres comprennent les nouveaux nœuds du premier certificat (`newNodes` : ≈ 46 k par nœud en v1, deux slots par nœud, mapping et clé contiguë ; le v0 du 04 mesurait 28,8 k). Le v0 du 04 donnait 487-522 k sur les petits vecteurs : la v1 coûte environ deux fois plus, à cause de la relecture du registre, de la 4ᵉ lane et des contrôles de forme.
+
+### Preuves (même fork, vrai registre)
+
+| Preuve | Gas |
+|---|---|
+| `proveEdge`, dilution (#18 → #3 omis) | 304 293 |
+| `proveEdge`, omission du slash (ligne d'ancre, puis copie de #18) | 275 451 et 283 920 |
+| `proveEdge`, deux omissions sur la même ligne (la seconde avec amendements) | 278 551 puis 258 685 |
+| `proveEdge` (v), fabrication au niveau Submitter-attested | 281 585 |
+| `proveEdge` (v), gonflement au niveau Submitter-attested | 285 182 |
+| `proveEdge`, dilution par un tiers dans le cycle du service (avant la revue ; depuis, refusée à la soumission par D) | 294 388 |
+
+### Découpage d'un premier certificat (1 237 nœuds, ≈ 3 700 arêtes, k = 2, Submitter-attested)
+
+`addNodes` : 22,96 M pour 500 nœuds (≈ 45,9 k par nœud) ; `reserveCapacity` : 10,38 M pour 480 nœuds (≈ 17,3 k par slot, stride k + 3) ; certificat : 14,25 M (le v0 mesurait 7,94 M). MESURÉ, `simulate.py`, scénario D.
+
+---
+
+## Porte P1 (chantier 02, 2026-09-28) : coût du niveau Registry-verified — contrat v1
+
+Banc : `test/RegistryBench.t.sol`, **fork du testnet 10143 au bloc 66 494 673, vrais registres ERC-8004 v2.0.0** (même bytecode que le mainnet). Les agents (`register`) et les avis (`giveFeedback`) du graphe sont écrits dans le fork ; le même certificat est soumis à trois ensembles. Chaque soumission est une transaction isolée (21 000 + calldata + plancher EIP-7623 compris, pages MIP-8 froides à chaque transaction).
+Commande : `forge test --match-contract RegistryBenchTest -vv | grep 'P1|'` (≈ 100 s, RPC du testnet).
+
+| Cas (k = 3) | Submitter-attested | Registry-verified | Surcoût | Par arête |
+|---|---|---|---|---|
+| **Démo acte 2 : 300 arêtes, 100 nœuds, 1 avis par couple** — mise à jour | 1 321 852 | **14 970 695** | 13,65 M | **45,5 k** |
+| idem, premier certificat (après `addNodes` + `reserveCapacity`) | 1 449 082 | 15 097 925 | 13,65 M | 45,5 k |
+| 30 arêtes, 10 nœuds, 1 avis par couple — mise à jour | 266 928 | 1 561 536 | 1,29 M | 43,2 k |
+| 30 arêtes, 10 nœuds, **5 avis par couple** (même tag) — mise à jour | 266 693 | 3 131 181 | 2,86 M | 95,5 k |
+| Mainnet réel (fork 108 445 171) : 3 arêtes de 0xea0b… sur #2/#3/#4, premier certificat | — | 645 080 | — | — |
+| Recertification après l'upgrade vers la PR #80 (D28), même graphe | — | 367 312 | — | — |
+
+(MESURÉ, `forge test --match-contract "RegistryBenchTest|UpgradeTest" -vv | grep 'P1\|D28'`, 28/09. « verified-open » coûte la même chose à 500 gas près.)
+Submitter-attested coûte maintenant 1,32 M au lieu de 0,87 M (v0) : **les contrôles de forme** (cible = agent, wallet sur les lignes d'agents), exigés aux deux niveaux pour que toute arête reste contestable, coûtent ≈ 1,5 k par arête (boucle Solidity sur le calldata, à passer en Yul si besoin).
+
+**Décomposition CALCULÉE du coût par arête** (≈ 45 k, avis unique) : `getLastIndex` à travers le proxy (page du couple, froide) + un `readFeedback` (page de l'avis) + `isAuthorizedOrOwner(client, j)` (pages owner, opérateurs, approbation) + `getAgentWallet(j)` ; plus, par ligne d'agent, `getAgentWallet(u)`, et par agent de masse, `ownerOf`. **Chaque avis supplémentaire du couple à relire coûte ≈ 13 k** (CALCULÉ : (95,5 − 43,2) / 4). La relecture « dernier index du tag » n'est donc pas bornée : un couple à 100 avis sous un seul tag coûte ≈ 1,3 M à relire (CALCULÉ).
+
+**Taille maximale en une transaction** (CALCULÉ, pente mesurée, avis unique) : (30 M − 1,3 M) / 45,5 k ≈ **630 arêtes à k = 3**. En MON au prix mesuré : certificat de la démo ≈ 15,0 M × 102 gwei ≈ **1,53 MON**, 1,64 MON avec 7,5 % de marge de gas limit (sur Monad on paie la limite). Submitter-attested : 0,13 MON.
+
+### Verdict P1
+
+**Registry-verified passe pour la démo, et c'est le niveau que je recommande pour la démo** :
+- le certificat de l'acte 2 tient dans une transaction avec une marge de ×2 (15,0 M sur 30 M) ;
+- sur le testnet (D40 : ferme et répétitions), le coût est nul en vrai MON ;
+- sur le mainnet, les graphes réels sont minuscules (3 arêtes utiles de 0xea0b… : 0,65 M MESURÉ, ≈ 0,07 MON).
+
+**Limites franches** :
+1. ×11 par rapport à Submitter-attested sur le graphe de la démo ; au-delà d'environ 630 arêtes (k = 3), un seul certificat ne passe plus en une transaction, et la vérification répartie n'est pas implémentée.
+2. Un couple avec beaucoup d'avis coûte ≈ 13 k par avis relu : le certificateur doit **omettre** ces arêtes et déclarer B⁺ (sûr pour la borne basse, D32), ou passer au niveau Submitter-attested.
+3. **Registry-verified ne ferme pas la dilution** (B⁺ sous-déclaré) : c'est invérifiable faute d'index par client, et seul `proveEdge` la corrige. Voir `PROOFS.md`, « Garanties ».
+
+### Lectures (même banc, vrais registres, via `Consumer`, AM-R5.1)
+
+| Lecture (k = 3, mode strict) | Gas marginal |
+|---|---|
+| `assess` avec veto, agent de masse, ancres avec avis sur lui | 139 055 à 165 888 |
+| `assess` sans veto, strict (`ownerOf` en direct) | 80 609 |
+| `isTrusted`, **refus bon marché** (bornes déjà fausses : aucune lecture du registre) | **41 904** |
+| `isTrusted`, agent inconnu | **29 211** |
+
+(MESURÉ, `forge test --match-contract RegistryBenchTest -vv`.) Le refus d'un inconnu (une ferme) ne coûte plus que 29 k au payeur, au lieu de 115 à 190 k en R5. Un agent qui passe les bornes paie le chemin complet (≈ `assess` avec veto).
+
+---
+
+## Historique R5 (contrat v0, 27/09) — conservé pour comparaison
 
 ## Verdict
 

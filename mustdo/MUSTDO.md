@@ -76,6 +76,20 @@
   - La scène « **la ferme qui se paie vraiment** » (D45) : accepter le surcoût en paiements x402 entre les agents de la ferme, sur le testnet.
   - Kanmani, Sentinel et Assay (`0xDB6c…7777`) : faut-il **les contacter**, et les citer dans le pitch ? Concourent-ils en track 04 ?
 
+- [ ] **14e. Décisions issues des chantiers 02 et 04 (01/10)** :
+  - **Déployer sur le testnet** : il faut un keystore chiffré (jamais de clé en clair) et **au moins 12 MON de testnet** (faucet). La commande est dans `contracts/script/Deploy.s.sol`.
+  - **Activer D44 (repli owner) ?** C'est prêt des deux côtés, et sans effet mesuré sur la démo.
+  - **Niveau de la démo** : Registry-verified est recommandé. Faut-il **en plus une liste de soumetteurs** (D27) contre AM-02.2 pendant le jugement ? Le coût en gas est le même.
+  - **Compte et budget** pour les transactions sur le testnet (latence et dérive réelles) et pour les preuves du surveillant pendant le jugement.
+  - **Langue des docs techniques** : les sessions ont écrit en anglais (FORMAT.md, ENCODING.md), alors que CLAUDE.md dit « le reste en français ». Lequel retient-on ?
+  - **Taille du contrat (30,8 Ko)** : l'implémentation de référence de l'ERC doit-elle aussi tenir sur Ethereum (24 Ko) ?
+
+- [ ] **14f. Décisions issues de l'intégration (01/10)** :
+  - **`minRefresh`** : court (on prend les révocations en compte vite, mais une censure reste possible une fois par fenêtre), ou égal à `maxAge` ?
+  - **Démo ouverte à tous en Registry-verified, ou avec un soumetteur attesté ?** Une dilution passe encore la règle de remplacement (AM-INT.1) : sur un ensemble ouvert, il faut un surveillant actif pendant le jugement. Si tu gardes un soumetteur attesté, qui paie les preuves ?
+  - Faut-il émettre les **noms des tags** (pas seulement leur hash) dans l'event d'enregistrement d'un ensemble, pour la lisibilité ?
+  - **Relayer au chantier 03** le fichier `docs/chantiers/relais/vers-03.md` : il faut pousser la branche, ou que tu le transmettes depuis l'autre machine.
+
 ## 🟡 Avant le 12/10
 
 - [ ] **15. Déclarer le niveau de certification de la démo** après la mesure du chantier 02 : Registry-verified, chaque arête relue (~13,6 M gas estimés), ou Submitter-attested (D32).

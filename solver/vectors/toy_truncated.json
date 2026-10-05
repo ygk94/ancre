@@ -1,9 +1,9 @@
 {
- "format": "ancre-cert-v0",
+ "format": "ancre-cert-v1",
  "label": "toy_truncated",
  "notes": "Jouet, troncature des lignes de t <= 0,1 WAD : marge (1−α)·t_u ajoutée à r.",
- "alignedWith": "contracts/src/AnchoredReputation.sol (R5), état lu le 2026-09-27 ~12:55 ; ENCODING.md non publié",
- "identityBlock": null,
+ "alignedWith": "contracts/ENCODING.md unified v1 (2026-10-01), AnchoredReputation v1 (integration 02+04)",
+ "identityBlock": 0,
  "set": {
   "anchors": [
    "0x1111111111111111111111111111111111111111",
@@ -16,6 +16,7 @@
   "alphaN": 1,
   "alphaD": 3,
   "minAnchors": 2,
+  "tagSchemaHash": "0x398cef5a41faccef105582b3535a06fe4032a67af322e46c84e4109d15ca868e",
   "tags": [
    {
     "tag": "vouch",
@@ -38,7 +39,26 @@
     "max": "0",
     "kind": 0
    }
-  ]
+  ],
+  "policy": {
+   "theta": "1000000000000000",
+   "rhoN": 1,
+   "rhoD": 2,
+   "minAnchors": 2,
+   "vetoQuorum": 1,
+   "vetoMax": -1,
+   "maxAge": 288000,
+   "minRefresh": 600,
+   "slackRefresh": "0",
+   "eLowMax": "10000000000000000",
+   "strictTransfer": true,
+   "registryVerified": false,
+   "ownerFallback": false,
+   "submitters": [
+    "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+   ]
+  },
+  "setId": "0xc60421e9612ccc629ed83fca3d43144fd5e1c40c29383942449fe8c6a66c75aa"
  },
  "nCert": 5,
  "nodes": [
@@ -58,25 +78,34 @@
    "i": 2,
    "kind": "agent",
    "agentId": 1,
+   "owner": "0x000000000000000000000000000000000000a001",
+   "agentWallet": "0x000000000000000000000000000000000000a001",
    "hasRow": true
   },
   {
    "i": 3,
    "kind": "agent",
    "agentId": 2,
+   "owner": "0x000000000000000000000000000000000000a002",
+   "agentWallet": "0x000000000000000000000000000000000000a002",
    "hasRow": true
   },
   {
    "i": 4,
    "kind": "agent",
    "agentId": 3,
+   "owner": "0x000000000000000000000000000000000000a003",
+   "agentWallet": "0x000000000000000000000000000000000000a003",
    "hasRow": false
   }
  ],
  "rows": [
   {
    "u": 0,
-   "wallet": null,
+   "source": null,
+   "via": "anchor",
+   "aliasOf": null,
+   "sPlus": 15000,
    "bPlus": 15000,
    "bMinus": 10000,
    "edges": [
@@ -100,14 +129,20 @@
   },
   {
    "u": 1,
-   "wallet": null,
+   "source": null,
+   "via": "anchor",
+   "aliasOf": null,
+   "sPlus": 0,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": []
   },
   {
    "u": 2,
-   "wallet": null,
+   "source": "0x000000000000000000000000000000000000a001",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 3333,
    "bPlus": 10000,
    "bMinus": 10000,
    "edges": [
@@ -115,7 +150,7 @@
      "dst": 3,
      "w": 3333,
      "feedbackIndex": 2,
-     "client": "1",
+     "client": "0x000000000000000000000000000000000000a001",
      "agentId": 2,
      "tag1": "vouch"
     },
@@ -123,7 +158,7 @@
      "dst": 4,
      "w": -10000,
      "feedbackIndex": 1,
-     "client": "1",
+     "client": "0x000000000000000000000000000000000000a001",
      "agentId": 3,
      "tag1": "slash"
     }
@@ -131,7 +166,10 @@
   },
   {
    "u": 3,
-   "wallet": null,
+   "source": "0x000000000000000000000000000000000000a002",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10277,
    "bPlus": 10277,
    "bMinus": 10000,
    "edges": [
@@ -139,7 +177,7 @@
      "dst": 2,
      "w": 7777,
      "feedbackIndex": 1,
-     "client": "2",
+     "client": "0x000000000000000000000000000000000000a002",
      "agentId": 1,
      "tag1": "vouch"
     },
@@ -147,7 +185,7 @@
      "dst": 4,
      "w": 2500,
      "feedbackIndex": 4,
-     "client": "2",
+     "client": "0x000000000000000000000000000000000000a002",
      "agentId": 3,
      "tag1": "vouch"
     }
@@ -174,13 +212,15 @@
   "ownerFp": [
    "0",
    "0",
-   "0",
-   "0",
-   "0"
+   "40961",
+   "40962",
+   "40963"
   ]
  },
  "expected": {
   "residualMode": "contract",
+  "subSolution": true,
+  "iterationsFromZero": 41,
   "r": [
    "13028064382882308",
    "6"
@@ -190,6 +230,9 @@
    "18"
   ],
   "eEff": "19542096574323471",
+  "qEff": "19542096574323453",
+  "mass": "507824470654568465",
+  "distrustMass": "69646567390517848",
   "d": [
    "0",
    "0",
@@ -197,8 +240,8 @@
    "0",
    "69646567390517848"
   ],
-  "graphRoot": "0x59004a1643040498da1ffcebcdae0bae02add8c76d7b3c76312baded17291c1e",
-  "vectorRoot": "0xed2574cf09004c4c4cb52d1f3ebe355e0ace87a67e4935a70a0029d67cfee893",
+  "graphRoot": "0x99ba6035e4b7fd23f810c9bfaebe5918114c57d639e1450d683e0dd2608e57ef",
+  "vectorRoot": "0x44d6010f80ba04ed7393de73dd30a5784186e87d90f363b7aaccb019901282bc",
   "tight": {
    "r": [
     "13028064382882306",
@@ -213,7 +256,7 @@
  "calldata": {
   "W": 2,
   "newNodes": "0x010000000101000000020100000003",
-  "vectors": "0x04a03ce68d21555500000000000000000000000000000000000000000000000004a03ce68d215555000000000000000002e64d8d57694f070000000000000000000000000000000001ac1a8b5d14fb770000000000000000000000000000000000456d6eec7a9afc00000000000000000000000000000000",
-  "rows": "0x02000000040000000200022710000000010003138800000001000100000002000200030d05000000020004d8f0000000010003000200021e6100000001000409c400000004"
+  "vectors": "0x04a03ce68d21555500000000000000000000000000000000000000000000000004a03ce68d215555000000000000000002e64d8d57694f070000000000000000000000000000a00101ac1a8b5d14fb770000000000000000000000000000a00200456d6eec7a9afc0000000000000000000000000000a003",
+  "rows": "0x020000000400000002000227100000000100031388000000010001000000028002000000000000000000000000000000000000a00100030d05000000020004d8f00000000100038002000000000000000000000000000000000000a00200021e6100000001000409c400000004"
  }
 }

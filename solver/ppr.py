@@ -1,20 +1,23 @@
-"""ANCRE R4 — PPR (EigenTrust personnalisé) signé, certificat à résidu vérifié en entiers.
+"""ANCRE — signed personalised PageRank (EigenTrust), integer sub-solution certificate (D26, D32).
 
-Conventions (CR) :
-  D5   absorbante : une ligne sans arête positive ne redistribue rien (Σt <= 1, linéarité exacte en p).
-  D7   budgets séparés : C_uv = q⁺_uv / B⁺_u, D_uv = |q⁻_uv| / B⁻_u, B± = max(GRID, Σ|q±|) (i.e. max(1, Σw±)).
-       t = (1-α) Cᵀ t + α p ;  d = (1-α) Dᵀ t (un seul saut).
-  D8   une colonne par ancre ; leave-one-out : on retire les m-1 plus grosses contributions λ_a·t^(a).
-  D2   α = αN/αD rationnel, engagé dans le certificat.
+Conventions (CR):
+  D5   absorbing: a row without positive edge redistributes nothing (Σt <= 1, exact linearity in p).
+  D7   separate budgets: C_uv = q⁺_uv / B⁺_u, D_uv = |q⁻_uv| / B⁻_u.
+       B⁺_u = max(GRID, sPlus_u) with sPlus_u the DECLARED true positive sum of the row (D32);
+       B⁻_u = max(GRID, Σ|q⁻| committed).   t = (1-α) Cᵀ t + α p ;  d = (1-α) Dᵀ t (one hop).
+  D8   one column per anchor; leave-one-out removes the m-1 largest contributions λ_a·t^(a).
+  D2/D24  α = αN/αD rational, per set.
+  D26  the certificate is a SUB-SOLUTION: t ≤ y = F_down(t) componentwise (floor rounding). F_down is monotone,
+       so t ≤ t* for the true graph as long as the committed graph is dominated by it (D32). The solver gets
+       such a t by integer power iteration from 0 (AM-5.12).
 
-Vérification (ce que le contrat refait, en entiers, t en uint64 WAD ; détail normatif dans FORMAT.md) :
-  pour chaque colonne a, chaque nœud listé v :
-    y_v = [v == a]·⌊αN·WAD/αD⌋ + Σ_{u avec ligne, q_uv>0} ⌊ t_u·(αD−αN)·q_uv / (αD·B⁺_u) ⌋
-  mode "contract" (R5) : r_a = Σ_v |t_v − y_v| + E⁺ + 1 + Σ_{u listé sans ligne} ⌈ t_u·(αD−αN)/αD ⌉
-                         (E⁺ = nombre d'arêtes positives fournies : chaque plancher perd < 1 wei)
-  mode "tight"   (R4) : r_a = Σ_v max(y_v + n_v − t_v, t_v − y_v) + marge, n_v = planchers inexacts vers v
-  e_a = ⌈ r_a·αD/αN ⌉      => ‖t^(a) − t*^(a)‖₁ <= e_a (en wei), car F est (1−α)-contractante en L1.
-  d_v = Σ_{u avec ligne, q_uv<0} ⌈ ⌈Σ_a λ_a t_u^(a) / WAD⌉·(αD−αN)·|q_uv| / (αD·B⁻_u) ⌉   (méfiance combinée, majorée)
+Verification (what the contract recomputes, integers, t as uint64 WAD; normative detail in FORMAT.md):
+    y_v = [v == a]·⌊αN·WAD/αD⌋ + Σ_{u with row, q_uv>0} ⌊ t_u·(αD−αN)·q_uv / (αD·B⁺_u) ⌋
+    require t_v ≤ y_v for every listed v and column
+    r_a = Σ_v (y_v − t_v) + E⁺ + 1 + Σ_{u listed without row} ⌈ t_u·(αD−αN)/αD ⌉
+          + Σ_{rows with sPlus > Σw⁺} ⌈ t_u·(αD−αN)·(sPlus − Σw⁺) / (αD·B⁺_u) ⌉
+    e_a = ⌈ r_a·αD/αN ⌉   => ‖t^(a) − t*^(a)‖₁ <= e_a (wei): upper side, used for the distrust bound only.
+    d_v = Σ_{u with row, q_uv<0} ⌈ ⌈Σ_a λ_a t_u^(a) / WAD⌉·(αD−αN)·|q_uv| / (αD·B⁻_u) ⌉   (combined, rounded up)
 """
 from __future__ import annotations
 
@@ -101,45 +104,61 @@ def solve_exact(g: Graph, alpha: Fraction, anchor: int) -> list[Fraction]:
     return [b[i] / A[i][i] for i in range(n)]
 
 
-# ----------------------------------------------------------------------------- certificat entier
+# ----------------------------------------------------------------------------- integer certificate
 
 MODES = ("contract", "tight")
-# "contract" = arithmétique de contracts/src/AnchoredReputation.sol (R5, état du 27/09 12:55, _verifyPass) :
-#     r_a = Σ_v |t_v − y_v| + (#arêtes positives des lignes fournies) + 1 + Σ_{u listé sans ligne, t_u≠0} ⌈t_u(αD−αN)/αD⌉
-# "tight"    = variante R4 plus serrée : r_a = Σ_v max(y_v + n_v − t_v, t_v − y_v) + marge, n_v = divisions inexactes.
-# Les deux sont sûres (majorent ‖F(t) − t‖₁) ; seule "contract" reproduit la valeur stockée on-chain.
+# "contract" = arithmetic of the contract (R5 _verifyPass, amended by D26/D32):
+#     r_a = Σ_v |t_v − y_v| + E⁺ + 1 + Σ_{u listed without row, t_u≠0} ⌈t_u·om/αD⌉
+#           + Σ_{rows with sPlus > Σ committed w⁺} ⌈t_u·om·(sPlus − Σw⁺)/(αD·B⁺)⌉          (declared omissions)
+# "tight"    = tighter R4 variant: Σ_v max(y_v + n_v − t_v, t_v − y_v) instead of Σ|t − y| (information only).
+# Under D26 the contract requires t ≤ y, so Σ|t − y| = Σ(y − t); r only bounds the distrust side (eUp).
 
 
 @dataclass
 class Certificate:
     n: int
-    anchors: list[int]                       # nœuds 0..k-1 (convention R5 : l'ancre a est le nœud a)
+    anchors: list[int]                       # nodes 0..k-1 (contract convention: anchor a is node a)
     alphaN: int
     alphaD: int
     lambdas: list[int]                       # WAD, Σ = WAD
-    rows: dict[int, list[tuple[int, int, int]]]   # u -> [(dst, q, feedbackIndex)] ; u sans ligne = tronqué
-    bplus: dict[int, int]
-    bminus: dict[int, int]
-    t: list[list[int]]                       # [k][n] uint64 WAD
-    node_map: list[int] = field(default_factory=list)   # index certificat -> index du graphe
+    rows: dict[int, list[tuple[int, int, int]]]   # committed rows u -> [(dst, q, feedbackIndex)]; u absent = truncated
+    splus: dict[int, int]                    # D32: DECLARED positive sum of the full row (>= committed Σw⁺)
+    t: list[list[int]]                       # [k][n] uint64 WAD, a sub-solution: t ≤ F_down(t) (D26)
+    node_map: list[int] = field(default_factory=list)   # certificate index -> graph index
     mode: str = "contract"
     r: list[int] = field(default_factory=list)
     e: list[int] = field(default_factory=list)
-    d: list[int] = field(default_factory=list)          # méfiance combinée (λ), arrondie vers le haut
+    d: list[int] = field(default_factory=list)          # combined distrust (λ), rounded up
+    row_src: dict[int, tuple[str, str]] = field(default_factory=dict)  # u -> (source client, via), for encoding
+    iterations: int = 0                      # integer power iterations from 0 (last pass)
 
     @property
     def k(self) -> int:
         return len(self.anchors)
 
     @property
+    def bplus(self) -> dict[int, int]:
+        return budgets(self.rows, self.splus)[0]
+
+    @property
+    def bminus(self) -> dict[int, int]:
+        return budgets(self.rows, self.splus)[1]
+
+    @property
     def truncated(self) -> set[int]:
-        """T : nœuds listés, de masse non nulle, sans ligne fournie."""
+        """T: listed nodes with non-zero mass and no row."""
         return {v for v in range(self.n) if v not in self.rows and any(self.t[a][v] for a in range(self.k))}
 
 
+def budgets(rows, splus) -> tuple[dict[int, int], dict[int, int]]:
+    """D7/D32: B⁺_u = max(GRID, declared sPlus_u), B⁻_u = max(GRID, Σ|q⁻| committed)."""
+    return ({u: max(GRID, splus[u]) for u in rows},
+            {u: max(GRID, sum(-q for _, q, _ in r if q < 0)) for u, r in rows.items()})
+
+
 def _int_pass(n, anchors, aN, aD, rows, bplus, bminus, t, lambdas):
-    """Une passe entière (identique au contrat) : y (plancher) par colonne, n_v (divisions inexactes),
-    nombre d'arêtes positives, et méfiance combinée d (plafond)."""
+    """One integer pass (identical to the contract): y (floor) per column, n_v (inexact divisions),
+    number of positive edges, and combined distrust d (ceil)."""
     k = len(anchors)
     y = [[0] * n for _ in range(k)]
     inexact = [[0] * n for _ in range(k)]
@@ -171,9 +190,16 @@ def _int_pass(n, anchors, aN, aD, rows, bplus, bminus, t, lambdas):
     return y, inexact, e_pos, d
 
 
-def _residual(mode, n, k, aN, aD, rows, t, y, inexact, e_pos):
+def _residual(mode, n, k, aN, aD, rows, t, y, inexact, e_pos, splus=None):
     r = []
     om = aD - aN
+    omitted = {}                                              # u -> (sPlus − committed Σw⁺, B⁺) when > 0
+    for u, row in rows.items():
+        s = (splus or {}).get(u)
+        if s is not None:
+            c = sum(q for _, q, _ in row if q > 0)
+            if s > c:
+                omitted[u] = (s - c, max(GRID, s))
     for a in range(k):
         ra = 0
         for v in range(n):
@@ -182,107 +208,135 @@ def _residual(mode, n, k, aN, aD, rows, t, y, inexact, e_pos):
                 ra += abs(tv - yv)
             else:
                 ra += max(yv + inexact[a][v] - tv, tv - yv)
-            if tv and v not in rows:                      # tronqué : marge (1−α)·t_u arrondie au-dessus
+            if tv and v not in rows:                      # truncated: margin (1−α)·t_u rounded up
                 ra += ceil_div(tv * om, aD)
+        for u, (miss, bp) in omitted.items():             # declared omission inside a row (D32)
+            if t[a][u]:
+                ra += ceil_div(t[a][u] * om * miss, aD * bp)
         if mode == "contract":
             ra += e_pos + 1
         r.append(ra)
     return r
 
 
-def verify(cert: Certificate) -> tuple[list[int], list[int], list[int], list[str]]:
-    """Recalcule r, e, d exactement comme le contrat. Renvoie (r, e, d, erreurs de format)."""
+def verify(cert: Certificate, *, require_subsolution: bool = True) -> tuple[list[int], list[int], list[int], list[str]]:
+    """Recompute r, e, d exactly as the contract. Returns (r, e, d, errors). Errors include every format
+    error and, if require_subsolution, every component with t > y (D26: the contract reverts)."""
     errs = []
     n, aN, aD, k = cert.n, cert.alphaN, cert.alphaD, cert.k
     if not (0 < aN < aD):
-        errs.append("alpha hors ]0,1[")
+        errs.append("alpha outside ]0,1[")
     if sum(cert.lambdas) != WAD or len(cert.lambdas) != k or any(l == 0 for l in cert.lambdas):
-        errs.append("lambdas : Σ != WAD ou λ nul")
+        errs.append("lambdas: Σ != WAD or zero λ")
     if cert.anchors != list(range(k)):
-        errs.append("les ancres doivent être les nœuds 0..k-1")
+        errs.append("anchors must be nodes 0..k-1")
     for a in range(k):
         for v in range(n):
             if not 0 <= cert.t[a][v] < 2**63:
-                errs.append(f"t[{a}][{v}] hors lane 63 bits")
+                errs.append(f"t[{a}][{v}] outside the 63-bit lane")
+    if set(cert.splus) != set(cert.rows):
+        errs.append("sPlus must be declared for exactly the provided rows")
     for u, row in cert.rows.items():
         if not 0 <= u < n:
-            errs.append(f"ligne {u} hors table")
+            errs.append(f"row {u} outside the table")
         if len(row) > ROW_MAX:
-            errs.append(f"ligne {u} > ROW_MAX")
+            errs.append(f"row {u} > ROW_MAX")
         prev = -1
         for dst, q, _ in row:
             if not (-GRID <= q <= GRID) or q == 0:
-                errs.append(f"poids hors grille {u}->{dst}: {q}")
+                errs.append(f"weight off grid {u}->{dst}: {q}")
             if not 0 <= dst < n or dst == u:
-                errs.append(f"dst invalide {u}->{dst}")
+                errs.append(f"bad dst {u}->{dst}")
             if dst <= prev:
-                errs.append(f"ligne {u} non triée strictement par dst")
+                errs.append(f"row {u} not strictly sorted by dst")
             prev = dst
-        if cert.bplus[u] != max(GRID, sum(q for _, q, _ in row if q > 0)):
-            errs.append(f"B+ faux ligne {u}")
-        if cert.bminus[u] != max(GRID, sum(-q for _, q, _ in row if q < 0)):
-            errs.append(f"B- faux ligne {u}")
+        if cert.splus.get(u, 0) < sum(q for _, q, _ in row if q > 0):
+            errs.append(f"row {u}: declared sPlus < committed Σw⁺")
     y, inexact, e_pos, d = _int_pass(n, cert.anchors, aN, aD, cert.rows, cert.bplus, cert.bminus, cert.t, cert.lambdas)
-    r = _residual(cert.mode, n, k, aN, aD, cert.rows, cert.t, y, inexact, e_pos)
+    if require_subsolution:
+        bad = [(a, v) for a in range(k) for v in range(n) if cert.t[a][v] > y[a][v]]
+        if bad:
+            errs.append(f"not a sub-solution (t > y) at {len(bad)} components, first {bad[:3]}")
+    r = _residual(cert.mode, n, k, aN, aD, cert.rows, cert.t, y, inexact, e_pos, cert.splus)
     e = [ceil_div(ra * aD, aN) for ra in r]
     return r, e, d, errs
 
 
-def certify(g: Graph, alpha: Fraction, *, lambdas: list[int] | None = None, truncate_below: int = 0,
-            refine_iters: int = 200, t_float: np.ndarray | None = None, mode: str = "contract") -> Certificate:
-    """Calcule un certificat : t flottant -> arrondi uint64 WAD -> raffinage par l'application entière.
+def power_from_zero(n, anchors, aN, aD, rows, splus, lambdas, max_iter: int = 1_000_000):
+    """D26/AM-5.12: t⁰ = 0, t^{i+1} = F_down(t^i) until the integer fixed point. F_down is monotone, so the
+    sequence is non-decreasing and every iterate is a sub-solution (t ≤ F_down(t)). Returns (t, iterations).
+    y-only pass: same floors as _int_pass (y part), without the inexact counts and the distrust that the
+    iteration never uses (~3.4× faster, measured on 1 300 / 5 000 agents)."""
+    k = len(anchors)
+    om = aD - aN
+    bplus = budgets(rows, splus)[0]
+    pos = [(u, [(dst, om * q) for dst, q, _ in r if q > 0], aD * bplus[u]) for u, r in rows.items()]
+    pos = [p for p in pos if p[1]]
+    pa = aN * WAD // aD
+    t = [[0] * n for _ in range(k)]
+    for it in range(1, max_iter + 1):
+        y = [[0] * n for _ in range(k)]
+        for a, s in enumerate(anchors):
+            y[a][s] += pa
+        for u, edges, den in pos:
+            for a in range(k):
+                tu = t[a][u]
+                if tu:
+                    ya = y[a]
+                    for dst, num in edges:
+                        ya[dst] += tu * num // den
+        if y == t:
+            return t, it
+        t = y
+    return t, max_iter
 
-    Lignes omises (T) : t_u == 0 dans toutes les colonnes (gratuit, et évite de payer leurs arêtes dans la
-    marge « contract »), lignes > ROW_MAX (obligatoire), t_u <= truncate_below partout (optionnel, coûte la marge).
-    Les ancres doivent être les nœuds 0..k-1 du graphe (build_graph les place en tête).
+
+def cap_row(row: list[tuple[int, int, int]], *, is_anchor: bool) -> list[tuple[int, int, int]]:
+    """ROW_MAX cap. With sPlus declared (D32), omitting POSITIVE edges keeps t a lower bound. Negative edges are
+    never omitted: nothing declares the negative sum, so an omitted negative would make distrustUp unsound (it is
+    a provable fault, not an honest option). Anchor rows MUST NOT be truncated (D21, AM-4.8)."""
+    if len(row) <= ROW_MAX:
+        return row
+    if is_anchor:
+        raise ValueError(f"anchor row of {len(row)} edges > ROW_MAX={ROW_MAX}: anchor rows must not be truncated (D21)")
+    neg = [e for e in row if e[1] < 0]
+    if len(neg) > ROW_MAX:
+        raise ValueError(f"row with {len(neg)} negative edges > ROW_MAX={ROW_MAX}: cannot be certified honestly")
+    pos = sorted((e for e in row if e[1] > 0), key=lambda e: (-e[1], e[0]))[:ROW_MAX - len(neg)]
+    return sorted(neg + pos)
+
+
+def certify(g: Graph, alpha: Fraction, *, lambdas: list[int] | None = None, truncate_below: int = 0,
+            mode: str = "contract", max_iter: int = 1_000_000) -> Certificate:
+    """Sub-solution certificate (D26, D32), by integer power iteration from 0 on the committed graph.
+
+    1. Committed rows: the full row of every node (ROW_MAX-capped, cap_row), with sPlus = TRUE positive sum.
+       An absorbing node gets an empty row (FORMAT: otherwise it pays the truncation margin).
+    2. Iterate from 0 on the committed graph -> t (exact integer fixed point, a sub-solution).
+    3. Optional truncation: rows of nodes whose mass stays <= truncate_below everywhere are dropped (anchors
+       never), and the iteration is redone from 0 on that smaller graph (F only decreases, t stays a lower bound).
+    4. Rows of zero-mass nodes are not provided (they do not change y, but would add their edges to E⁺).
+    5. Compaction: anchors, massive nodes, destinations of provided rows.
+    The anchors must be nodes 0..k-1 of the graph (build_graph puts them first).
     """
     assert mode in MODES
     alpha = Fraction(alpha)
     aN, aD = alpha.numerator, alpha.denominator
     k = len(g.anchors)
-    assert g.anchors == list(range(k)), "ancres attendues en tête de la table"
+    assert g.anchors == list(range(k)), "anchors expected first in the node table"
     if lambdas is None:
         lambdas = [WAD // k] * k
         lambdas[0] += WAD - sum(lambdas)
-    P = np.zeros((g.n, k))
-    for a, s in enumerate(g.anchors):
-        P[s, a] = 1.0
-    arr = _arrays(g)
-    tf = t_float if t_float is not None else solve_float(g, alpha, P, arrays=arr)
-    t = [[min(WAD, max(0, int(round(tf[v, a] * WAD)))) for v in range(g.n)] for a in range(k)]
-    rows_all = {u: [(e.dst, e.q, e.feedback_index) for e in row] for u, row in g.rows.items()}
-    bplus = {u: g.bplus(u) for u in g.rows}
-    bminus = {u: g.bminus(u) for u in g.rows}
-
-    def provided(t):
-        # un nœud absorbant (aucune arête) de masse > 0 DOIT être fourni avec une ligne vide (nE = 0),
-        # sinon le contrat le traite comme tronqué et ajoute la marge (1−α)·t_u (cf. FORMAT.md)
-        out = {}
-        for u in range(g.n):
-            if not any(t[a][u] > truncate_below for a in range(k)):
-                continue
-            r = rows_all.get(u, [])
-            if len(r) <= ROW_MAX:
-                out[u] = r
-        return out
-
-    best = None
-    for _ in range(refine_iters):
-        rows = provided(t)
-        y, inexact, e_pos, _ = _int_pass(g.n, g.anchors, aN, aD, rows, bplus, bminus, t, lambdas)
-        r = _residual(mode, g.n, k, aN, aD, rows, t, y, inexact, e_pos)
-        if best is None or sum(r) < best[0]:
-            best = (sum(r), [col[:] for col in t])
-        if mode == "contract":
-            nt = [[min(WAD, y[a][v]) for v in range(g.n)] for a in range(k)]
-        else:
-            nt = [[min(WAD, y[a][v] + inexact[a][v] // 2) for v in range(g.n)] for a in range(k)]
-        if nt == t:
-            break
-        t = nt
-    t = best[1]
-    rows = provided(t)
-    # compaction : ancres, nœuds de masse > 0, destinations des lignes fournies
+    anchors = set(g.anchors)
+    committed = {u: cap_row([(e.dst, e.q, e.feedback_index) for e in g.rows.get(u, [])], is_anchor=u in anchors)
+                 for u in range(g.n)}
+    splus = {u: g.splus(u) for u in range(g.n)}
+    t, iters = power_from_zero(g.n, g.anchors, aN, aD, committed, splus, lambdas, max_iter)
+    if truncate_below > 0:
+        keep = {u for u in range(g.n) if u in anchors or any(t[a][u] > truncate_below for a in range(k))}
+        committed = {u: r for u, r in committed.items() if u in keep}
+        t, iters = power_from_zero(g.n, g.anchors, aN, aD, committed, splus, lambdas, max_iter)
+    rows = {u: r for u, r in committed.items() if any(t[a][u] for a in range(k))}
     keep = set(g.anchors) | {v for v in range(g.n) if any(t[a][v] > 0 for a in range(k))}
     for u, row in rows.items():
         keep.add(u)
@@ -291,8 +345,9 @@ def certify(g: Graph, alpha: Fraction, *, lambdas: list[int] | None = None, trun
     new = {v: i for i, v in enumerate(order)}
     cert = Certificate(n=len(order), anchors=[new[s] for s in g.anchors], alphaN=aN, alphaD=aD, lambdas=lambdas,
                        rows={new[u]: [(new[d], q, fi) for d, q, fi in r] for u, r in rows.items()},
-                       bplus={new[u]: bplus.get(u, GRID) for u in rows}, bminus={new[u]: bminus.get(u, GRID) for u in rows},
-                       t=[[t[a][v] for v in order] for a in range(k)], node_map=order, mode=mode)
+                       splus={new[u]: splus[u] for u in rows},
+                       t=[[t[a][v] for v in order] for a in range(k)], node_map=order, mode=mode,
+                       row_src={new[u]: g.row_src[u] for u in rows if u in g.row_src}, iterations=iters)
     cert.r, cert.e, cert.d, errs = verify(cert)
     if errs:
         raise AssertionError(errs[:5])
@@ -336,9 +391,10 @@ def e_eff(cert: Certificate) -> int:
     return sum(ceil_div(cert.lambdas[a] * cert.e[a], WAD) for a in range(cert.k))
 
 
-def is_trusted(cert: Certificate, v: int, *, theta: int, m: int = 2, rhoN: int = 1, rhoD: int = 2) -> bool:
-    """isTrusted de la spec Q1 (tour 2), hors statuts (veto, transfert, fraîcheur) qui relèvent du contrat."""
-    tr = trust_robust(contributions(cert, v), m)
-    e = e_eff(cert)
-    di = distrust(cert, v)
-    return tr >= theta + e and rhoD * (di + e) <= rhoN * (tr - e)
+def is_trusted(cert: Certificate, v: int, *, theta: int, m: int = 2, rhoN: int = 1, rhoD: int = 2,
+               e_low: int = 0) -> bool:
+    """D26 reading (tour 4 spec), without the statuses (veto, transfer, freshness) that belong to the contract:
+    trustLow = trustRobust − eLow (t is already a lower bound; eLow only from proven decreases),
+    distrustUp = d + eEff ; OK ⇔ trustLow ≥ θ ∧ ρD·distrustUp ≤ ρN·trustLow."""
+    tr = trust_robust(contributions(cert, v), m) - e_low
+    return tr >= theta and rhoD * (distrust(cert, v) + e_eff(cert)) <= rhoN * tr

@@ -176,7 +176,7 @@ def integer_check():
             rows[u].sort(key=lambda e: e.dst)
         g = Graph(nodes=nodes, index={x: i for i, x in enumerate(nodes)}, rows=rows, anchors=[0, 1, 2], log={}, rejected=[])
         t0 = time.time()
-        c = certify(g, alpha, refine_iters=60)
+        c = certify(g, alpha)
         lines.append(f"| {alpha} | {c.n} | {sum(len(r) for r in c.rows.values())} | {max(c.r)} | {max(c.e)} | {e_eff(c)} |")
     return "\n".join(lines)
 
