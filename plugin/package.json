@@ -25,7 +25,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && oclif manifest",
     "prepack": "npm run build",
-    "test": "tsc -p tsconfig.json && node --test \"test/*.test.mjs\""
+    "test": "npm run build && node --test \"test/*.test.mjs\""
   },
   "oclif": {
     "bin": "mm",
