@@ -7,20 +7,15 @@
 // is the real HTTP facilitator.
 import { randomBytes } from "node:crypto";
 import {
-  type Address, type Hash, type Hex, bytesToHex, encodeFunctionData, encodePacked, hexToBytes, size, toHex,
-  decodeEventLog, getAddress,
+  type Address, type Hash, type Hex, bytesToHex, encodeFunctionData, encodePacked, getAddress, hexToBytes, parseEventLogs,
+  size, toHex,
 } from "viem";
-import type { PrivateKeyAccount } from "viem/accounts";
 import { usdcAbi } from "./abi.ts";
 import type { Chain } from "./chain.ts";
 import { TESTNET } from "./config.ts";
 
 export type Authorization = { from: Address; to: Address; value: bigint; validAfter: bigint; validBefore: bigint; nonce: Hex };
 
-const DOMAIN_T = [
-  { name: "name", type: "string" }, { name: "version", type: "string" },
-  { name: "chainId", type: "uint256" }, { name: "verifyingContract", type: "address" },
-] as const;
 const TWA_T = [
   { name: "from", type: "address" }, { name: "to", type: "address" }, { name: "value", type: "uint256" },
   { name: "validAfter", type: "uint256" }, { name: "validBefore", type: "uint256" }, { name: "nonce", type: "bytes32" },
@@ -28,8 +23,7 @@ const TWA_T = [
 
 export function ancrePaymentTypedData(chainId: number, auth: Authorization, agentId: bigint) {
   return {
-    types: {
-      EIP712Domain: DOMAIN_T,
+    types: { // viem derives EIP712Domain itself (the plugin lists it for eth_signTypedData_v4 JSON)
       AncrePayment: [
         { name: "to", type: "address" }, { name: "value", type: "uint256" }, { name: "validAfter", type: "uint256" },
         { name: "validBefore", type: "uint256" }, { name: "nonce", type: "bytes32" }, { name: "agentId", type: "uint256" },
@@ -187,22 +181,10 @@ export class HttpFacilitator implements Facilitator {
 /** The USDC Transfer(from, to, value) of a settlement receipt, read on-chain: the "true receipt" of scene 3. */
 export async function transferInReceipt(chain: Chain, hash: Hash, usdc: Address) {
   const r = await chain.pub.getTransactionReceipt({ hash });
-  for (const l of r.logs) {
-    if (getAddress(l.address) !== usdc) continue;
-    try {
-      const ev = decodeEventLog({ abi: usdcAbi, data: l.data, topics: l.topics });
-      if (ev.eventName === "Transfer") return ev.args as { from: Address; to: Address; value: bigint };
-    } catch { /* other event */ }
-  }
-  return undefined;
+  return parseEventLogs({ abi: usdcAbi, logs: r.logs, eventName: "Transfer" }).find((l) => getAddress(l.address) === usdc)?.args;
 }
 
 export function shortError(e: unknown): string {
   const x = e as { shortMessage?: string; message?: string };
   return (x.shortMessage || x.message || String(e)).slice(0, 300);
-}
-
-export async function signTyped(account: PrivateKeyAccount, td: { domain: object; types: object; primaryType: string; message: object }) {
-  const { EIP712Domain: _drop, ...types } = td.types as Record<string, unknown>;
-  return account.signTypedData({ ...td, types } as never);
 }

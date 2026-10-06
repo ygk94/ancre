@@ -2,13 +2,14 @@
  "header": {
   "type": "header",
   "format": "ancre-demo-events-v1",
-  "runId": "run-20261006T081947Z",
+  "runId": "run-20261006T083258Z",
   "network": {
    "chainId": 10143,
    "mode": "fork",
-   "forkBlock": 68636521,
+   "forkBlock": 68639110,
    "rpc": "local"
   },
+  "startedAt": "2026-10-06T08:32:58.863Z",
   "contracts": {
    "identity": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
    "reputation": "0x8004B663056A597Dffe9eCcC1965A193B7388713",
@@ -16,7 +17,6 @@
    "payer": "0xdF33ADd2cc4a3F10154B66e44f1E695E637b8B09",
    "usdc": "0x534b2f3A21130d7a60830c2Df862319e593943A3"
   },
-  "startedAt": "2026-10-06T08:19:47.237Z",
   "set": {
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "anchors": [
@@ -201,7 +201,7 @@
   {
    "type": "event",
    "seq": 1,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.start",
@@ -212,10 +212,10 @@
    "agentId": null,
    "setId": null,
    "tx": null,
-   "block": 68636521,
-   "blockTimestamp": 1791274786,
-   "wallTime": "2026-10-06T08:19:47.239Z",
-   "wallMs": 1791274787239,
+   "block": 68639110,
+   "blockTimestamp": 1791275576,
+   "wallTime": "2026-10-06T08:32:58.867Z",
+   "wallMs": 1791275578867,
    "data": null,
    "agent": null,
    "payer": null,
@@ -225,28 +225,28 @@
   {
    "type": "event",
    "seq": 2,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.fund-mon:anchor-A (demo)",
    "attempt": 1,
    "kind": "fund",
    "label": "fund anchor-A (demo) with MON for gas",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": null,
    "tx": {
     "hash": "0xfd29f359b55f64701f1238469dd400fa4a125114d3fce4945df54af4c2d9fc2b",
     "fn": "transfer",
-    "block": 68636522,
+    "block": 68639111,
     "status": "success",
     "gasLimit": "28100",
     "gasUsed": "21000"
    },
-   "block": 68636522,
-   "blockTimestamp": 1791274787,
-   "wallTime": "2026-10-06T08:19:48.504Z",
-   "wallMs": 1791274788504,
+   "block": 68639111,
+   "blockTimestamp": 1791275577,
+   "wallTime": "2026-10-06T08:32:59.215Z",
+   "wallMs": 1791275579215,
    "data": {
     "token": "MON",
     "to": "0xA21c6CaBa03065EE83f90eFBBB4D2fb17E3A9a8b",
@@ -260,28 +260,28 @@
   {
    "type": "event",
    "seq": 3,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.fund-mon:anchor-B (demo)",
    "attempt": 1,
    "kind": "fund",
    "label": "fund anchor-B (demo) with MON for gas",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": null,
    "tx": {
-    "hash": "0xa303a817c0b9dc879945294c49e1ebaec9f7b00c2d255476099eb53fe2f02a66",
+    "hash": "0xd7902ee2a73c42f3b4cb69a1cf21948a7a0a1dff9119d6e416a0facf012b77e7",
     "fn": "transfer",
-    "block": 68636523,
+    "block": 68639112,
     "status": "success",
     "gasLimit": "28100",
     "gasUsed": "21000"
    },
-   "block": 68636523,
-   "blockTimestamp": 1791274787,
-   "wallTime": "2026-10-06T08:19:48.646Z",
-   "wallMs": 1791274788646,
+   "block": 68639112,
+   "blockTimestamp": 1791275577,
+   "wallTime": "2026-10-06T08:32:59.357Z",
+   "wallMs": 1791275579357,
    "data": {
     "token": "MON",
     "to": "0x7B10023a69FA1cd4Be6C2b5dB094F81789Bc33d3",
@@ -295,28 +295,28 @@
   {
    "type": "event",
    "seq": 4,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.fund-mon:anchor-C (demo)",
    "attempt": 1,
    "kind": "fund",
    "label": "fund anchor-C (demo) with MON for gas",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": null,
    "tx": {
-    "hash": "0x5753f07e7bc2922fb1dc6ef14c9fa70e527a83e365fa17e8a007c2c9c611866b",
+    "hash": "0xc18d792c97340e48a25636fd73f2719c5e6ed3e147c77f421741ed891e023a2b",
     "fn": "transfer",
-    "block": 68636524,
+    "block": 68639113,
     "status": "success",
     "gasLimit": "28100",
     "gasUsed": "21000"
    },
-   "block": 68636524,
-   "blockTimestamp": 1791274787,
-   "wallTime": "2026-10-06T08:19:48.807Z",
-   "wallMs": 1791274788807,
+   "block": 68639113,
+   "blockTimestamp": 1791275577,
+   "wallTime": "2026-10-06T08:32:59.497Z",
+   "wallMs": 1791275579497,
    "data": {
     "token": "MON",
     "to": "0x730184Ca0b0088C0be0b01DF7Cb8f0f69947D786",
@@ -330,28 +330,28 @@
   {
    "type": "event",
    "seq": 5,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.fund-mon:farm owner (demo)",
    "attempt": 1,
    "kind": "fund",
    "label": "fund farm owner (demo) with MON for gas",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": null,
    "tx": {
-    "hash": "0x29a39f2590e224537b1e6610427f471572d056858d033d43d8a1c407399c93a0",
+    "hash": "0x57722aa47f658e06b03b6704bc4cef766da9457a55523b017bd01a9ae53b081d",
     "fn": "transfer",
-    "block": 68636525,
+    "block": 68639114,
     "status": "success",
     "gasLimit": "28100",
     "gasUsed": "21000"
    },
-   "block": 68636525,
-   "blockTimestamp": 1791274787,
-   "wallTime": "2026-10-06T08:19:49.024Z",
-   "wallMs": 1791274789024,
+   "block": 68639114,
+   "blockTimestamp": 1791275577,
+   "wallTime": "2026-10-06T08:32:59.712Z",
+   "wallMs": 1791275579712,
    "data": {
     "token": "MON",
     "to": "0x7256FFD0357aBf1227ccC3b30A5AE83189DC4d23",
@@ -365,28 +365,28 @@
   {
    "type": "event",
    "seq": 6,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.fund-mon:farm-01 wallet (demo)",
    "attempt": 1,
    "kind": "fund",
    "label": "fund farm-01 wallet (demo) with MON for gas",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": null,
    "tx": {
-    "hash": "0x56ab0184c3b924cad7a16dca2805779d06106ab78751bcb1db119580a19e52b9",
+    "hash": "0x81f1f4c27f6b0922b239af0f179dce944c7e5f8ee9513fcc16d964cee6d4623e",
     "fn": "transfer",
-    "block": 68636526,
+    "block": 68639115,
     "status": "success",
     "gasLimit": "28100",
     "gasUsed": "21000"
    },
-   "block": 68636526,
-   "blockTimestamp": 1791274788,
-   "wallTime": "2026-10-06T08:19:49.157Z",
-   "wallMs": 1791274789157,
+   "block": 68639115,
+   "blockTimestamp": 1791275577,
+   "wallTime": "2026-10-06T08:32:59.843Z",
+   "wallMs": 1791275579843,
    "data": {
     "token": "MON",
     "to": "0xA52183fF5cb424AB332fF73D5e1aEAEfa54845f7",
@@ -400,28 +400,28 @@
   {
    "type": "event",
    "seq": 7,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.fund-mon:farm-02 wallet (demo)",
    "attempt": 1,
    "kind": "fund",
    "label": "fund farm-02 wallet (demo) with MON for gas",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": null,
    "tx": {
-    "hash": "0x6c17b0745e6d57276aa28ee42838e4eb1d1546a5453ca9fc4ca99031b6271912",
+    "hash": "0x2b420e969a688e0010edd5de1e8cedf32664545db94fb02125b1cd61f69033bb",
     "fn": "transfer",
-    "block": 68636527,
+    "block": 68639116,
     "status": "success",
     "gasLimit": "28100",
     "gasUsed": "21000"
    },
-   "block": 68636527,
-   "blockTimestamp": 1791274788,
-   "wallTime": "2026-10-06T08:19:49.287Z",
-   "wallMs": 1791274789287,
+   "block": 68639116,
+   "blockTimestamp": 1791275577,
+   "wallTime": "2026-10-06T08:32:59.984Z",
+   "wallMs": 1791275579984,
    "data": {
     "token": "MON",
     "to": "0xbfe1CcB61f33A48d5Ed6d0F6779a0d596d741c3E",
@@ -435,28 +435,28 @@
   {
    "type": "event",
    "seq": 8,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.fund-mon:farm-03 wallet (demo)",
    "attempt": 1,
    "kind": "fund",
    "label": "fund farm-03 wallet (demo) with MON for gas",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": null,
    "tx": {
-    "hash": "0x085a5717c86968c3c606f727439ca042f13ebde57ee9c920b4a4ba05b6fa61ee",
+    "hash": "0x8ea210a3f29c3bf00189371871584e87cf27c964288e20edde4fce94c94d6d51",
     "fn": "transfer",
-    "block": 68636528,
+    "block": 68639117,
     "status": "success",
     "gasLimit": "28100",
     "gasUsed": "21000"
    },
-   "block": 68636528,
-   "blockTimestamp": 1791274788,
-   "wallTime": "2026-10-06T08:19:49.409Z",
-   "wallMs": 1791274789409,
+   "block": 68639117,
+   "blockTimestamp": 1791275578,
+   "wallTime": "2026-10-06T08:33:00.125Z",
+   "wallMs": 1791275580125,
    "data": {
     "token": "MON",
     "to": "0x14B4A3F910d9719ef5133858237f43371766B601",
@@ -470,28 +470,28 @@
   {
    "type": "event",
    "seq": 9,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.fund-mon:farm-04 wallet (demo)",
    "attempt": 1,
    "kind": "fund",
    "label": "fund farm-04 wallet (demo) with MON for gas",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": null,
    "tx": {
-    "hash": "0x6cd7c5d16e764d13d700d13a317f32afb660e8f70cfa865755d70d568593365c",
+    "hash": "0x4c43d8609bac28d3dbc374ef0621ce0063e2583a7f0ee41aaf00d570823dc16f",
     "fn": "transfer",
-    "block": 68636529,
+    "block": 68639118,
     "status": "success",
     "gasLimit": "28100",
     "gasUsed": "21000"
    },
-   "block": 68636529,
-   "blockTimestamp": 1791274788,
-   "wallTime": "2026-10-06T08:19:49.548Z",
-   "wallMs": 1791274789548,
+   "block": 68639118,
+   "blockTimestamp": 1791275578,
+   "wallTime": "2026-10-06T08:33:00.248Z",
+   "wallMs": 1791275580248,
    "data": {
     "token": "MON",
     "to": "0x399b7FBC7290Bd8cD4E382924AAEdC991B953a75",
@@ -505,28 +505,28 @@
   {
    "type": "event",
    "seq": 10,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.fund-mon:farm-05 wallet (demo)",
    "attempt": 1,
    "kind": "fund",
    "label": "fund farm-05 wallet (demo) with MON for gas",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": null,
    "tx": {
-    "hash": "0x05e6a8186edf3d6e20340d61ca7972a4e72177d86df7757162b83d516a44d196",
+    "hash": "0xc5fd6488f59d356225354d26e57d731689ee7efc0a75324e7a37ef7a53ccda79",
     "fn": "transfer",
-    "block": 68636530,
+    "block": 68639119,
     "status": "success",
     "gasLimit": "28100",
     "gasUsed": "21000"
    },
-   "block": 68636530,
-   "blockTimestamp": 1791274788,
-   "wallTime": "2026-10-06T08:19:49.680Z",
-   "wallMs": 1791274789680,
+   "block": 68639119,
+   "blockTimestamp": 1791275578,
+   "wallTime": "2026-10-06T08:33:00.405Z",
+   "wallMs": 1791275580405,
    "data": {
     "token": "MON",
     "to": "0x831e67B2F89e912BCA1D00a96c66AdA14538A870",
@@ -540,28 +540,28 @@
   {
    "type": "event",
    "seq": 11,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.fund-mon:farm-06 wallet (demo)",
    "attempt": 1,
    "kind": "fund",
    "label": "fund farm-06 wallet (demo) with MON for gas",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": null,
    "tx": {
-    "hash": "0x0cd84a2e118a94ca651786909fa2d7def6971bcda447edab1b1e9c90a83977c0",
+    "hash": "0x56cfadb601639684bb25cbaed8d461f93c1efce2895e5a8f2884f417580c13eb",
     "fn": "transfer",
-    "block": 68636531,
+    "block": 68639120,
     "status": "success",
     "gasLimit": "28100",
     "gasUsed": "21000"
    },
-   "block": 68636531,
-   "blockTimestamp": 1791274788,
-   "wallTime": "2026-10-06T08:19:49.816Z",
-   "wallMs": 1791274789816,
+   "block": 68639120,
+   "blockTimestamp": 1791275578,
+   "wallTime": "2026-10-06T08:33:00.545Z",
+   "wallMs": 1791275580545,
    "data": {
     "token": "MON",
     "to": "0xF30896Be52f5e1b1Df41C7E17Bf8ED3034F33727",
@@ -575,28 +575,28 @@
   {
    "type": "event",
    "seq": 12,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.fund-mon:farm-07 wallet (demo)",
    "attempt": 1,
    "kind": "fund",
    "label": "fund farm-07 wallet (demo) with MON for gas",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": null,
    "tx": {
-    "hash": "0xb04f2712ad33d7e2f01c97b6e17de0b7be3725dd0abc5d159d0e305848368cf8",
+    "hash": "0x2e8b7223e10c16c849d2a6d3c921f6ed0bad3d4abe80757b40842c8c4ce323be",
     "fn": "transfer",
-    "block": 68636532,
+    "block": 68639121,
     "status": "success",
     "gasLimit": "28100",
     "gasUsed": "21000"
    },
-   "block": 68636532,
-   "blockTimestamp": 1791274788,
-   "wallTime": "2026-10-06T08:19:49.951Z",
-   "wallMs": 1791274789951,
+   "block": 68639121,
+   "blockTimestamp": 1791275578,
+   "wallTime": "2026-10-06T08:33:00.759Z",
+   "wallMs": 1791275580759,
    "data": {
     "token": "MON",
     "to": "0xaE82c6d52192BbA2A84294Dd52dbEb7f2dA63f46",
@@ -610,28 +610,28 @@
   {
    "type": "event",
    "seq": 13,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.fund-mon:farm-08 wallet (demo)",
    "attempt": 1,
    "kind": "fund",
    "label": "fund farm-08 wallet (demo) with MON for gas",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": null,
    "tx": {
-    "hash": "0xc0a95ea6fd213b353c0090fe52ce78af78b720a2f302dae7c30e84b8a5b1f5db",
+    "hash": "0x551659e5753af20d81ef64e3c8264909d5225aaf2b88f8cb374b22a2985d3343",
     "fn": "transfer",
-    "block": 68636533,
+    "block": 68639122,
     "status": "success",
     "gasLimit": "28100",
     "gasUsed": "21000"
    },
-   "block": 68636533,
-   "blockTimestamp": 1791274789,
-   "wallTime": "2026-10-06T08:19:50.181Z",
-   "wallMs": 1791274790181,
+   "block": 68639122,
+   "blockTimestamp": 1791275578,
+   "wallTime": "2026-10-06T08:33:00.897Z",
+   "wallMs": 1791275580897,
    "data": {
     "token": "MON",
     "to": "0x0846B2BBc0205Cd90915552D3CCe503a7bbffc3C",
@@ -645,28 +645,28 @@
   {
    "type": "event",
    "seq": 14,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.fund-mon:farm-09 wallet (demo)",
    "attempt": 1,
    "kind": "fund",
    "label": "fund farm-09 wallet (demo) with MON for gas",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": null,
    "tx": {
-    "hash": "0x8e211b695ba8b36d5e0c00fbaa59e667c504af6315fb85f5879935d71288a5ef",
+    "hash": "0x4c738fc025c306670fdf6431bc2b49747087d17146c533aa38fa5e967bb3e0e6",
     "fn": "transfer",
-    "block": 68636534,
+    "block": 68639123,
     "status": "success",
     "gasLimit": "28100",
     "gasUsed": "21000"
    },
-   "block": 68636534,
-   "blockTimestamp": 1791274789,
-   "wallTime": "2026-10-06T08:19:50.329Z",
-   "wallMs": 1791274790329,
+   "block": 68639123,
+   "blockTimestamp": 1791275578,
+   "wallTime": "2026-10-06T08:33:01.040Z",
+   "wallMs": 1791275581040,
    "data": {
     "token": "MON",
     "to": "0x3844D36F64031d920FD52f45b449D9e4A12580ff",
@@ -680,28 +680,28 @@
   {
    "type": "event",
    "seq": 15,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.fund-mon:farm-10 wallet (demo)",
    "attempt": 1,
    "kind": "fund",
    "label": "fund farm-10 wallet (demo) with MON for gas",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": null,
    "tx": {
-    "hash": "0x9f60c26eee37572a649a1c37225151b4becc3d964ec21d51435bb741aeb43559",
+    "hash": "0x3910125bebd3f526898dddba6d0fd5d1ab5016e7a2bbeda6d0d98b06225ca03e",
     "fn": "transfer",
-    "block": 68636535,
+    "block": 68639124,
     "status": "success",
     "gasLimit": "28100",
     "gasUsed": "21000"
    },
-   "block": 68636535,
-   "blockTimestamp": 1791274789,
-   "wallTime": "2026-10-06T08:19:50.485Z",
-   "wallMs": 1791274790485,
+   "block": 68639124,
+   "blockTimestamp": 1791275579,
+   "wallTime": "2026-10-06T08:33:01.175Z",
+   "wallMs": 1791275581175,
    "data": {
     "token": "MON",
     "to": "0x893775948539AF544AbcBb1445CACfC31cA60FFa",
@@ -715,28 +715,28 @@
   {
    "type": "event",
    "seq": 16,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.fund-mon:third-party rater (demo)",
    "attempt": 1,
    "kind": "fund",
    "label": "fund third-party rater (demo) with MON for gas",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": null,
    "tx": {
-    "hash": "0xfdf2b26f3d76007bb780cbc3d062e7b0d01ef2c27a797e7b295ea62f79f8b8f9",
+    "hash": "0x0d93a43005a95d2216d1c1ba38d86645fd6dbbb0d74af63dbf5a5d451775f3c8",
     "fn": "transfer",
-    "block": 68636536,
+    "block": 68639125,
     "status": "success",
     "gasLimit": "28100",
     "gasUsed": "21000"
    },
-   "block": 68636536,
-   "blockTimestamp": 1791274789,
-   "wallTime": "2026-10-06T08:19:50.700Z",
-   "wallMs": 1791274790700,
+   "block": 68639125,
+   "blockTimestamp": 1791275579,
+   "wallTime": "2026-10-06T08:33:01.300Z",
+   "wallMs": 1791275581300,
    "data": {
     "token": "MON",
     "to": "0xD85dF36Bb1c9aC5458d001771f81bE4D29b8e6Dc",
@@ -750,28 +750,28 @@
   {
    "type": "event",
    "seq": 17,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.deploy-ancre",
    "attempt": 1,
    "kind": "deploy",
    "label": "deploy AnchoredReputation",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": null,
    "tx": {
-    "hash": "0xb5f02b7bedb2a854a2808e28cd2867c15b9e62925e8191533771ab40e898a0d4",
+    "hash": "0x1f4e3ee37052cd403f56c474a26c2451723d679d8e38948d4ab674ab094b5a9b",
     "fn": "deploy",
-    "block": 68636537,
+    "block": 68639126,
     "status": "success",
     "gasLimit": "8015569",
     "gasUsed": "7282335"
    },
-   "block": 68636537,
-   "blockTimestamp": 1791274789,
-   "wallTime": "2026-10-06T08:19:50.997Z",
-   "wallMs": 1791274790997,
+   "block": 68639126,
+   "blockTimestamp": 1791275579,
+   "wallTime": "2026-10-06T08:33:01.555Z",
+   "wallMs": 1791275581555,
    "data": {
     "contract": "ancre",
     "address": "0x6A0C23666D3449FccFD35A44a343A9EC0C6A6c1f"
@@ -784,28 +784,28 @@
   {
    "type": "event",
    "seq": 18,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.anchor-set",
    "attempt": 1,
    "kind": "anchor-set",
    "label": "register the demo anchor set (3 anchors, m = 2)",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": null,
    "tx": {
-    "hash": "0x30953d730a21bc07bf3fc086dec705021f0546179c00b89fde0b2fbe97c2018b",
+    "hash": "0xb7e1858228f8f825396607401bff53af4c55aabcc6f7baefbb747cba30e02469",
     "fn": "registerAnchorSet",
-    "block": 68636538,
+    "block": 68639127,
     "status": "success",
     "gasLimit": "552467",
     "gasUsed": "497697"
    },
-   "block": 68636538,
-   "blockTimestamp": 1791274790,
-   "wallTime": "2026-10-06T08:19:51.282Z",
-   "wallMs": 1791274791282,
+   "block": 68639127,
+   "blockTimestamp": 1791275579,
+   "wallTime": "2026-10-06T08:33:01.888Z",
+   "wallMs": 1791275581888,
    "data": {
     "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129"
    },
@@ -817,28 +817,28 @@
   {
    "type": "event",
    "seq": 19,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.register:provider-1 (demo)",
    "attempt": 1,
    "kind": "register",
    "label": "ANCRE operator (deployer, certifier, payer owner) registers provider-1 (demo) as agent #2017",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": "2017",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x809bb8634edabd1c425af3b38101c7ba79204c223846bc2327e9d170a3bc8350",
+    "hash": "0xbc3fb7e82ed4f09a1acdab9dfeb4c6c8c829ce2aae4eeb8d95889d2a63b7af83",
     "fn": "register",
-    "block": 68636539,
+    "block": 68639128,
     "status": "success",
     "gasLimit": "392919",
     "gasUsed": "347866"
    },
-   "block": 68636539,
-   "blockTimestamp": 1791274790,
-   "wallTime": "2026-10-06T08:19:51.760Z",
-   "wallMs": 1791274791760,
+   "block": 68639128,
+   "blockTimestamp": 1791275580,
+   "wallTime": "2026-10-06T08:33:02.401Z",
+   "wallMs": 1791275582401,
    "data": {
     "uri": "data:application/json (demo)",
     "role": "provider"
@@ -877,28 +877,28 @@
   {
    "type": "event",
    "seq": 20,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.wallet:provider-1 (demo)",
    "attempt": 1,
    "kind": "wallet",
    "label": "provider-1 (demo) wallet set",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": "2017",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0xf27f66718499776074458574685f17b5438eed506eeb232482d4573f5b7c90af",
+    "hash": "0x4b5ec70a380342872c15e029afd492fd4681eb1ebfc22f2711f6650d195a9d4a",
     "fn": "setAgentWallet",
-    "block": 68636540,
+    "block": 68639129,
     "status": "success",
     "gasLimit": "96784",
     "gasUsed": "82815"
    },
-   "block": 68636540,
-   "blockTimestamp": 1791274790,
-   "wallTime": "2026-10-06T08:19:51.958Z",
-   "wallMs": 1791274791958,
+   "block": 68639129,
+   "blockTimestamp": 1791275580,
+   "wallTime": "2026-10-06T08:33:02.603Z",
+   "wallMs": 1791275582603,
    "data": {
     "wallet": "0x06b8FaFf5E9D268060cFcA3b18AC0A41b9a53783"
    },
@@ -936,28 +936,28 @@
   {
    "type": "event",
    "seq": 21,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.register:provider-2 (demo)",
    "attempt": 1,
    "kind": "register",
    "label": "ANCRE operator (deployer, certifier, payer owner) registers provider-2 (demo) as agent #2018",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": "2018",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x72ac697f84f7b79a938a18a5f4e663508e7dc9e890fddecf793d5aae075e0d3a",
+    "hash": "0xcd4b2128e700b193d6b79b82de5ee8c61dd4db61d0987656f2ec249430508a85",
     "fn": "register",
-    "block": 68636541,
+    "block": 68639130,
     "status": "success",
     "gasLimit": "373922",
     "gasUsed": "330866"
    },
-   "block": 68636541,
-   "blockTimestamp": 1791274791,
-   "wallTime": "2026-10-06T08:19:52.410Z",
-   "wallMs": 1791274792410,
+   "block": 68639130,
+   "blockTimestamp": 1791275580,
+   "wallTime": "2026-10-06T08:33:03.060Z",
+   "wallMs": 1791275583060,
    "data": {
     "uri": "data:application/json (demo)",
     "role": "provider"
@@ -996,28 +996,28 @@
   {
    "type": "event",
    "seq": 22,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.wallet:provider-2 (demo)",
    "attempt": 1,
    "kind": "wallet",
    "label": "provider-2 (demo) wallet set",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": "2018",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0xce6e2890f7332fdf845c1dda3dc6cb68dda149d99329338c27d23a9e5eb0ff49",
+    "hash": "0x3952a706c8c46d1419e5ef755d236b7ec6af027eeb8343e2ae6984228b2457f1",
     "fn": "setAgentWallet",
-    "block": 68636542,
+    "block": 68639131,
     "status": "success",
     "gasLimit": "96784",
     "gasUsed": "82815"
    },
-   "block": 68636542,
-   "blockTimestamp": 1791274791,
-   "wallTime": "2026-10-06T08:19:52.545Z",
-   "wallMs": 1791274792545,
+   "block": 68639131,
+   "blockTimestamp": 1791275581,
+   "wallTime": "2026-10-06T08:33:03.183Z",
+   "wallMs": 1791275583183,
    "data": {
     "wallet": "0xe4eb8f7f3cb89a93Af6fd4cd07BeE263Fb8828fd"
    },
@@ -1055,28 +1055,28 @@
   {
    "type": "event",
    "seq": 23,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.deploy-payer",
    "attempt": 1,
    "kind": "deploy",
    "label": "deploy TrustGatedPayer (owner = treasury = operator; exact only)",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x4c8a8220d763937661a8241373e683773bb442315993688c8832660e9c391100",
+    "hash": "0x9959d8b99ad772d27040ea3babfc1c665140c97517e3a21d9bb06f60e1ecb1e3",
     "fn": "deploy",
-    "block": 68636543,
+    "block": 68639132,
     "status": "success",
     "gasLimit": "2385083",
     "gasUsed": "2163711"
    },
-   "block": 68636543,
-   "blockTimestamp": 1791274791,
-   "wallTime": "2026-10-06T08:19:52.784Z",
-   "wallMs": 1791274792784,
+   "block": 68639132,
+   "blockTimestamp": 1791275581,
+   "wallTime": "2026-10-06T08:33:03.402Z",
+   "wallMs": 1791275583402,
    "data": {
     "contract": "payer",
     "address": "0xdF33ADd2cc4a3F10154B66e44f1E695E637b8B09"
@@ -1089,28 +1089,28 @@
   {
    "type": "event",
    "seq": 24,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.fund-payer",
    "attempt": 1,
    "kind": "fund",
    "label": "deposit 0.1 USDC in the payer",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x8a853039c70e33b4ec10a6739e2350b659cfdb396f938eb237d79e82de718e84",
+    "hash": "0xd9c25b975bd93fa3e87370babcbe9e4fc33be8267e16e08c01fc4ba375fadece",
     "fn": "transfer",
-    "block": 68636544,
+    "block": 68639133,
     "status": "success",
     "gasLimit": "115341",
     "gasUsed": "99538"
    },
-   "block": 68636544,
-   "blockTimestamp": 1791274791,
-   "wallTime": "2026-10-06T08:19:53.033Z",
-   "wallMs": 1791274793033,
+   "block": 68639133,
+   "blockTimestamp": 1791275581,
+   "wallTime": "2026-10-06T08:33:03.538Z",
+   "wallMs": 1791275583538,
    "data": {
     "token": "USDC",
     "to": "0xdF33ADd2cc4a3F10154B66e44f1E695E637b8B09",
@@ -1124,7 +1124,7 @@
   {
    "type": "event",
    "seq": 25,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.cert",
@@ -1135,10 +1135,10 @@
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636545,
-   "blockTimestamp": 1791274792,
-   "wallTime": "2026-10-06T08:19:53.447Z",
-   "wallMs": 1791274793447,
+   "block": 68639134,
+   "blockTimestamp": 1791275581,
+   "wallTime": "2026-10-06T08:33:03.924Z",
+   "wallMs": 1791275583924,
    "data": {
     "trigger": "first certificate"
    },
@@ -1146,7 +1146,7 @@
    "payer": null,
    "certificate": {
     "action": "certified",
-    "certBlock": 68636545,
+    "certBlock": 68639134,
     "nCert": 3,
     "rows": 3,
     "eEff": "4",
@@ -1155,20 +1155,20 @@
     "txs": [
      {
       "fn": "submitCertificate",
-      "hash": "0xf7aabde923ded8958be21dea1fd02336cae03d03db5c9589c44e681e75e7c6c1",
+      "hash": "0x8558631ce60de36d8799f719187d972a09b20e3814147e98c7d0e5f4b8226ac2",
       "gasLimit": "488139",
       "gasUsed": "449431",
-      "block": 68636545
+      "block": 68639134
      }
     ],
-    "computeMs": 125.1
+    "computeMs": 109.7
    },
    "latency": null
   },
   {
    "type": "event",
    "seq": 26,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 0,
    "sceneName": "setup",
    "step": "0.end",
@@ -1179,10 +1179,10 @@
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636545,
-   "blockTimestamp": 1791274792,
-   "wallTime": "2026-10-06T08:19:53.501Z",
-   "wallMs": 1791274793501,
+   "block": 68639134,
+   "blockTimestamp": 1791275581,
+   "wallTime": "2026-10-06T08:33:03.978Z",
+   "wallMs": 1791275583978,
    "data": {
     "ok": true,
     "checks": [
@@ -1193,7 +1193,7 @@
       "actual": false
      }
     ],
-    "durationMs": 6262
+    "durationMs": 5114
    },
    "agent": null,
    "payer": null,
@@ -1203,7 +1203,7 @@
   {
    "type": "event",
    "seq": 27,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 1,
    "sceneName": "honest",
    "step": "1.start",
@@ -1214,10 +1214,10 @@
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636545,
-   "blockTimestamp": 1791274792,
-   "wallTime": "2026-10-06T08:19:53.504Z",
-   "wallMs": 1791274793504,
+   "block": 68639134,
+   "blockTimestamp": 1791275581,
+   "wallTime": "2026-10-06T08:33:03.998Z",
+   "wallMs": 1791275583998,
    "data": null,
    "agent": null,
    "payer": null,
@@ -1227,28 +1227,28 @@
   {
    "type": "event",
    "seq": 28,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 1,
    "sceneName": "honest",
    "step": "1.vouch:A->p1",
    "attempt": 1,
    "kind": "feedback",
    "label": "anchor-A (demo) gives vouch 80 to provider-1 (demo)",
-   "actor": "0xA21c6CaBa03065EE83f90eFBBB4D2fb17E3A9a8b",
+   "actor": "0xa21c6caba03065ee83f90efbbb4d2fb17e3a9a8b",
    "agentId": "2017",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0xf21abda4622bcd3399f2d2fed93a77d24bc6e88ade6af595cf4a06163025989b",
+    "hash": "0x358d97378231402e51abf7c3e9d8efaaf1c3d67c3bbc6797ccc342937eaffce2",
     "fn": "giveFeedback",
-    "block": 68636546,
+    "block": 68639135,
     "status": "success",
     "gasLimit": "326950",
     "gasUsed": "288786"
    },
-   "block": 68636546,
-   "blockTimestamp": 1791274792,
-   "wallTime": "2026-10-06T08:19:53.845Z",
-   "wallMs": 1791274793845,
+   "block": 68639135,
+   "blockTimestamp": 1791275582,
+   "wallTime": "2026-10-06T08:33:04.328Z",
+   "wallMs": 1791275584328,
    "data": {
     "client": "0xA21c6CaBa03065EE83f90eFBBB4D2fb17E3A9a8b",
     "tag1": "vouch",
@@ -1281,7 +1281,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636545
+     "certBlock": 68639134
     }
    },
    "payer": null,
@@ -1291,28 +1291,28 @@
   {
    "type": "event",
    "seq": 29,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 1,
    "sceneName": "honest",
    "step": "1.vouch:B->p1",
    "attempt": 1,
    "kind": "feedback",
    "label": "anchor-B (demo) gives vouch 70 to provider-1 (demo)",
-   "actor": "0x7B10023a69FA1cd4Be6C2b5dB094F81789Bc33d3",
+   "actor": "0x7b10023a69fa1cd4be6c2b5db094f81789bc33d3",
    "agentId": "2017",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x7b0153bb541e57c32f4aaac4d6adf937b86fa8a337ede72adcab1ef358ccccb6",
+    "hash": "0x23df7d52439e2d636373f7496938b5ac8529ff9bb230631f09d2fdac9971919a",
     "fn": "giveFeedback",
-    "block": 68636547,
+    "block": 68639136,
     "status": "success",
     "gasLimit": "307954",
     "gasUsed": "271786"
    },
-   "block": 68636547,
-   "blockTimestamp": 1791274792,
-   "wallTime": "2026-10-06T08:19:54.074Z",
-   "wallMs": 1791274794074,
+   "block": 68639136,
+   "blockTimestamp": 1791275582,
+   "wallTime": "2026-10-06T08:33:04.576Z",
+   "wallMs": 1791275584576,
    "data": {
     "client": "0x7B10023a69FA1cd4Be6C2b5dB094F81789Bc33d3",
     "tag1": "vouch",
@@ -1345,7 +1345,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636545
+     "certBlock": 68639134
     }
    },
    "payer": null,
@@ -1355,28 +1355,28 @@
   {
    "type": "event",
    "seq": 30,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 1,
    "sceneName": "honest",
    "step": "1.vouch:B->p2",
    "attempt": 1,
    "kind": "feedback",
    "label": "anchor-B (demo) gives vouch 80 to provider-2 (demo)",
-   "actor": "0x7B10023a69FA1cd4Be6C2b5dB094F81789Bc33d3",
+   "actor": "0x7b10023a69fa1cd4be6c2b5db094f81789bc33d3",
    "agentId": "2018",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0xc832a3540180de5926bdd859d4895fc66f1d40d4a439160c6c0026303614cefb",
+    "hash": "0x17bb4fa1d73b4d22347c6f17231d74cfb431de377b0715c819ce2b740af80170",
     "fn": "giveFeedback",
-    "block": 68636548,
+    "block": 68639137,
     "status": "success",
     "gasLimit": "326950",
     "gasUsed": "288786"
    },
-   "block": 68636548,
-   "blockTimestamp": 1791274793,
-   "wallTime": "2026-10-06T08:19:54.442Z",
-   "wallMs": 1791274794442,
+   "block": 68639137,
+   "blockTimestamp": 1791275582,
+   "wallTime": "2026-10-06T08:33:04.884Z",
+   "wallMs": 1791275584884,
    "data": {
     "client": "0x7B10023a69FA1cd4Be6C2b5dB094F81789Bc33d3",
     "tag1": "vouch",
@@ -1409,7 +1409,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636545
+     "certBlock": 68639134
     }
    },
    "payer": null,
@@ -1419,28 +1419,28 @@
   {
    "type": "event",
    "seq": 31,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 1,
    "sceneName": "honest",
    "step": "1.vouch:C->p2",
    "attempt": 1,
    "kind": "feedback",
    "label": "anchor-C (demo) gives vouch 70 to provider-2 (demo)",
-   "actor": "0x730184Ca0b0088C0be0b01DF7Cb8f0f69947D786",
+   "actor": "0x730184ca0b0088c0be0b01df7cb8f0f69947d786",
    "agentId": "2018",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0xa86dac9d947eb8a2c27ef1af6b304504692a8600757a3c7d30f36dc2eb62c6ca",
+    "hash": "0x2fc6d13df543203c1950a0e1ac488336eeea564bce5164e5c4761558ad886f80",
     "fn": "giveFeedback",
-    "block": 68636549,
+    "block": 68639138,
     "status": "success",
     "gasLimit": "307954",
     "gasUsed": "271786"
    },
-   "block": 68636549,
-   "blockTimestamp": 1791274793,
-   "wallTime": "2026-10-06T08:19:54.777Z",
-   "wallMs": 1791274794777,
+   "block": 68639138,
+   "blockTimestamp": 1791275583,
+   "wallTime": "2026-10-06T08:33:05.111Z",
+   "wallMs": 1791275585111,
    "data": {
     "client": "0x730184Ca0b0088C0be0b01DF7Cb8f0f69947D786",
     "tag1": "vouch",
@@ -1473,7 +1473,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636545
+     "certBlock": 68639134
     }
    },
    "payer": null,
@@ -1483,7 +1483,7 @@
   {
    "type": "event",
    "seq": 32,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 1,
    "sceneName": "honest",
    "step": "1.cert",
@@ -1494,10 +1494,10 @@
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636550,
-   "blockTimestamp": 1791274794,
-   "wallTime": "2026-10-06T08:19:55.165Z",
-   "wallMs": 1791274795165,
+   "block": 68639139,
+   "blockTimestamp": 1791275583,
+   "wallTime": "2026-10-06T08:33:05.473Z",
+   "wallMs": 1791275585473,
    "data": {
     "trigger": "anchors vouched for the providers"
    },
@@ -1505,7 +1505,7 @@
    "payer": null,
    "certificate": {
     "action": "certified",
-    "certBlock": 68636550,
+    "certBlock": 68639139,
     "nCert": 5,
     "rows": 5,
     "eEff": "16",
@@ -1514,20 +1514,20 @@
     "txs": [
      {
       "fn": "submitCertificate",
-      "hash": "0xccf5c3d6b280285c409c56a9eb64fec01329969a46719bd957d8ff5ae6eb1869",
+      "hash": "0x196f32bb405638723ebfd0eba95ae28aa8dc030f6cb8771c8d4679e75bdfcbe4",
       "gasLimit": "640050",
       "gasUsed": "590744",
-      "block": 68636550
+      "block": 68639139
      }
     ],
-    "computeMs": 108.7
+    "computeMs": 56.6
    },
    "latency": null
   },
   {
    "type": "event",
    "seq": 33,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 1,
    "sceneName": "honest",
    "step": "1.pay:p1",
@@ -1538,10 +1538,10 @@
    "agentId": "2017",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636551,
-   "blockTimestamp": 1791274794,
-   "wallTime": "2026-10-06T08:19:55.475Z",
-   "wallMs": 1791274795475,
+   "block": 68639140,
+   "blockTimestamp": 1791275583,
+   "wallTime": "2026-10-06T08:33:05.677Z",
+   "wallMs": 1791275585677,
    "data": null,
    "agent": {
     "explorer": {
@@ -1567,7 +1567,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": {
@@ -1590,7 +1590,7 @@
      "verify": "ok",
      "settle": "ok"
     },
-    "settlementTx": "0x5c234c6a58ef0c7e645b0b5c4d66495f2e1e7bfff325f3a0b9b0876c34efd670",
+    "settlementTx": "0x71f1639e3a71c60d6747775b69be055ee6517161cc3e2b1b4db1cbd161c4a36e",
     "providerReceived": "10000",
     "payerBalanceAfter": "90000"
    },
@@ -1600,7 +1600,7 @@
   {
    "type": "event",
    "seq": 34,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 1,
    "sceneName": "honest",
    "step": "1.pay:p2",
@@ -1611,10 +1611,10 @@
    "agentId": "2018",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636552,
-   "blockTimestamp": 1791274794,
-   "wallTime": "2026-10-06T08:19:55.636Z",
-   "wallMs": 1791274795636,
+   "block": 68639141,
+   "blockTimestamp": 1791275583,
+   "wallTime": "2026-10-06T08:33:05.917Z",
+   "wallMs": 1791275585917,
    "data": null,
    "agent": {
     "explorer": {
@@ -1640,7 +1640,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": {
@@ -1663,7 +1663,7 @@
      "verify": "ok",
      "settle": "ok"
     },
-    "settlementTx": "0x44688caaa16475fb9235779664d14e3e38fb8725ad4265e368359f18eb28226f",
+    "settlementTx": "0x1db0d2579ef6fddcbbaa1a190789b80985606c835ca405b9dbd729d9057e2080",
     "providerReceived": "10000",
     "payerBalanceAfter": "80000"
    },
@@ -1673,7 +1673,7 @@
   {
    "type": "event",
    "seq": 35,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 1,
    "sceneName": "honest",
    "step": "1.end",
@@ -1684,10 +1684,10 @@
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636552,
-   "blockTimestamp": 1791274794,
-   "wallTime": "2026-10-06T08:19:55.642Z",
-   "wallMs": 1791274795642,
+   "block": 68639141,
+   "blockTimestamp": 1791275583,
+   "wallTime": "2026-10-06T08:33:05.924Z",
+   "wallMs": 1791275585924,
    "data": {
     "ok": true,
     "checks": [
@@ -1716,7 +1716,7 @@
       "actual": "PAID"
      }
     ],
-    "durationMs": 2138
+    "durationMs": 1926
    },
    "agent": null,
    "payer": null,
@@ -1726,7 +1726,7 @@
   {
    "type": "event",
    "seq": 36,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.start",
@@ -1737,10 +1737,10 @@
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636552,
-   "blockTimestamp": 1791274794,
-   "wallTime": "2026-10-06T08:19:55.646Z",
-   "wallMs": 1791274795646,
+   "block": 68639141,
+   "blockTimestamp": 1791275583,
+   "wallTime": "2026-10-06T08:33:05.949Z",
+   "wallMs": 1791275585949,
    "data": null,
    "agent": null,
    "payer": null,
@@ -1750,28 +1750,28 @@
   {
    "type": "event",
    "seq": 37,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.register:farm target (demo)",
    "attempt": 1,
    "kind": "register",
    "label": "farm owner (demo) registers farm target (demo) as agent #2019",
-   "actor": "0x7256FFD0357aBf1227ccC3b30A5AE83189DC4d23",
+   "actor": "0x7256ffd0357abf1227ccc3b30a5ae83189dc4d23",
    "agentId": "2019",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x73fe5a2f60176ba294083dcd5908b19e3e1c965c756e12ddae4127d0d078508a",
+    "hash": "0x5d80d3bc2adf1069b7736c22ce0ebf7f032b981c78f2b13353c363a195bb5265",
     "fn": "register",
-    "block": 68636553,
+    "block": 68639142,
     "status": "success",
     "gasLimit": "392919",
     "gasUsed": "347866"
    },
-   "block": 68636553,
-   "blockTimestamp": 1791274794,
-   "wallTime": "2026-10-06T08:19:56.170Z",
-   "wallMs": 1791274796170,
+   "block": 68639142,
+   "blockTimestamp": 1791275584,
+   "wallTime": "2026-10-06T08:33:06.453Z",
+   "wallMs": 1791275586453,
    "data": {
     "uri": "data:application/json (demo)",
     "role": "farm-target"
@@ -1800,7 +1800,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -1810,28 +1810,28 @@
   {
    "type": "event",
    "seq": 38,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.wallet:farm target (demo)",
    "attempt": 1,
    "kind": "wallet",
    "label": "farm target (demo) wallet set",
-   "actor": "0x7256FFD0357aBf1227ccC3b30A5AE83189DC4d23",
+   "actor": "0x7256ffd0357abf1227ccc3b30a5ae83189dc4d23",
    "agentId": "2019",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x92de3d3b8c567ff6741a643f8116b4f801bc4e8f233601d67c133f255e32d00b",
+    "hash": "0x9a7fc5fe79d80cbc59ef4f37354250b269d98c9a6c04a3392ba085dc7af09141",
     "fn": "setAgentWallet",
-    "block": 68636554,
+    "block": 68639143,
     "status": "success",
-    "gasLimit": "96784",
-    "gasUsed": "82815"
+    "gasLimit": "96758",
+    "gasUsed": "82791"
    },
-   "block": 68636554,
-   "blockTimestamp": 1791274795,
-   "wallTime": "2026-10-06T08:19:56.363Z",
-   "wallMs": 1791274796363,
+   "block": 68639143,
+   "blockTimestamp": 1791275584,
+   "wallTime": "2026-10-06T08:33:06.586Z",
+   "wallMs": 1791275586586,
    "data": {
     "wallet": "0x562Bb1036Bb9aacFD035beCabA4737d32415A1fd"
    },
@@ -1859,7 +1859,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -1869,28 +1869,28 @@
   {
    "type": "event",
    "seq": 39,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.register:farm-01 (demo)",
    "attempt": 1,
    "kind": "register",
    "label": "farm owner (demo) registers farm-01 (demo) as agent #2020",
-   "actor": "0x7256FFD0357aBf1227ccC3b30A5AE83189DC4d23",
+   "actor": "0x7256ffd0357abf1227ccc3b30a5ae83189dc4d23",
    "agentId": "2020",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0xe936faded50fdbd81b009b7358641123955f5688cfe6d50dd4d52863c9945cfd",
+    "hash": "0xe1a9652a9d11abbddab88e880573b37fe542d89e79092e71347cbc6c27b605be",
     "fn": "register",
-    "block": 68636555,
+    "block": 68639144,
     "status": "success",
     "gasLimit": "373869",
     "gasUsed": "330818"
    },
-   "block": 68636555,
-   "blockTimestamp": 1791274795,
-   "wallTime": "2026-10-06T08:19:56.766Z",
-   "wallMs": 1791274796766,
+   "block": 68639144,
+   "blockTimestamp": 1791275584,
+   "wallTime": "2026-10-06T08:33:07.022Z",
+   "wallMs": 1791275587022,
    "data": {
     "uri": "data:application/json (demo)",
     "role": "farm"
@@ -1919,7 +1919,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -1929,28 +1929,28 @@
   {
    "type": "event",
    "seq": 40,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.wallet:farm-01 (demo)",
    "attempt": 1,
    "kind": "wallet",
    "label": "farm-01 (demo) wallet set",
-   "actor": "0x7256FFD0357aBf1227ccC3b30A5AE83189DC4d23",
+   "actor": "0x7256ffd0357abf1227ccc3b30a5ae83189dc4d23",
    "agentId": "2020",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0xe0eadbc6aa5ebe07065271f12122d47cb595eaf515f4c65a615c3e09d66f4d5e",
+    "hash": "0xf22f0cab2973e4fb9168f3fa2a5154267aa48d84991e956577eb238ed79a6e04",
     "fn": "setAgentWallet",
-    "block": 68636556,
+    "block": 68639145,
     "status": "success",
     "gasLimit": "96771",
     "gasUsed": "82803"
    },
-   "block": 68636556,
-   "blockTimestamp": 1791274795,
-   "wallTime": "2026-10-06T08:19:56.987Z",
-   "wallMs": 1791274796987,
+   "block": 68639145,
+   "blockTimestamp": 1791275585,
+   "wallTime": "2026-10-06T08:33:07.134Z",
+   "wallMs": 1791275587134,
    "data": {
     "wallet": "0xA52183fF5cb424AB332fF73D5e1aEAEfa54845f7"
    },
@@ -1978,7 +1978,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -1988,28 +1988,28 @@
   {
    "type": "event",
    "seq": 41,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.register:farm-02 (demo)",
    "attempt": 1,
    "kind": "register",
    "label": "farm owner (demo) registers farm-02 (demo) as agent #2021",
-   "actor": "0x7256FFD0357aBf1227ccC3b30A5AE83189DC4d23",
+   "actor": "0x7256ffd0357abf1227ccc3b30a5ae83189dc4d23",
    "agentId": "2021",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0xb8287e28579370247213501d07ba88c4f7b4ede3c4937c8566634f809f41b96b",
+    "hash": "0xcab214188ae442de63131452d68a3cd392761fad58cf8eeaf23fa388daa13fb0",
     "fn": "register",
-    "block": 68636557,
+    "block": 68639146,
     "status": "success",
     "gasLimit": "373869",
     "gasUsed": "330818"
    },
-   "block": 68636557,
-   "blockTimestamp": 1791274796,
-   "wallTime": "2026-10-06T08:19:57.496Z",
-   "wallMs": 1791274797496,
+   "block": 68639146,
+   "blockTimestamp": 1791275585,
+   "wallTime": "2026-10-06T08:33:07.673Z",
+   "wallMs": 1791275587673,
    "data": {
     "uri": "data:application/json (demo)",
     "role": "farm"
@@ -2038,7 +2038,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -2048,28 +2048,28 @@
   {
    "type": "event",
    "seq": 42,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.wallet:farm-02 (demo)",
    "attempt": 1,
    "kind": "wallet",
    "label": "farm-02 (demo) wallet set",
-   "actor": "0x7256FFD0357aBf1227ccC3b30A5AE83189DC4d23",
+   "actor": "0x7256ffd0357abf1227ccc3b30a5ae83189dc4d23",
    "agentId": "2021",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x60931b41a9f34a567da0504bf435eea05c368a902793dd45a1552f95207b4c97",
+    "hash": "0x59e9a8190a9f8f73bb39c5052bdbf219756f94b4bc885b408ff1733d91643624",
     "fn": "setAgentWallet",
-    "block": 68636558,
+    "block": 68639147,
     "status": "success",
     "gasLimit": "96771",
     "gasUsed": "82803"
    },
-   "block": 68636558,
-   "blockTimestamp": 1791274796,
-   "wallTime": "2026-10-06T08:19:57.642Z",
-   "wallMs": 1791274797642,
+   "block": 68639147,
+   "blockTimestamp": 1791275585,
+   "wallTime": "2026-10-06T08:33:07.797Z",
+   "wallMs": 1791275587797,
    "data": {
     "wallet": "0xbfe1CcB61f33A48d5Ed6d0F6779a0d596d741c3E"
    },
@@ -2097,7 +2097,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -2107,28 +2107,28 @@
   {
    "type": "event",
    "seq": 43,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.register:farm-03 (demo)",
    "attempt": 1,
    "kind": "register",
    "label": "farm owner (demo) registers farm-03 (demo) as agent #2022",
-   "actor": "0x7256FFD0357aBf1227ccC3b30A5AE83189DC4d23",
+   "actor": "0x7256ffd0357abf1227ccc3b30a5ae83189dc4d23",
    "agentId": "2022",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x8dc7576e7080362eb33b019c8531f6207495c52a74a94ef3e591d23d1b8b4770",
+    "hash": "0x295a3200e47891e1532d2b4d3c0a347a746479071fc2be8814b57658047e086a",
     "fn": "register",
-    "block": 68636559,
+    "block": 68639148,
     "status": "success",
     "gasLimit": "373869",
     "gasUsed": "330818"
    },
-   "block": 68636559,
-   "blockTimestamp": 1791274796,
-   "wallTime": "2026-10-06T08:19:58.150Z",
-   "wallMs": 1791274798150,
+   "block": 68639148,
+   "blockTimestamp": 1791275586,
+   "wallTime": "2026-10-06T08:33:08.271Z",
+   "wallMs": 1791275588271,
    "data": {
     "uri": "data:application/json (demo)",
     "role": "farm"
@@ -2157,7 +2157,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -2167,28 +2167,28 @@
   {
    "type": "event",
    "seq": 44,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.wallet:farm-03 (demo)",
    "attempt": 1,
    "kind": "wallet",
    "label": "farm-03 (demo) wallet set",
-   "actor": "0x7256FFD0357aBf1227ccC3b30A5AE83189DC4d23",
+   "actor": "0x7256ffd0357abf1227ccc3b30a5ae83189dc4d23",
    "agentId": "2022",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0xbc12edde7eb12319eb7832bb53a5fc16cbd58fb70181b56ea6b735c4173d5014",
+    "hash": "0x348876a3d00c216caaa0fff1e93a3ef1ed2b27cbf1234bbad53008b67cee5409",
     "fn": "setAgentWallet",
-    "block": 68636560,
+    "block": 68639149,
     "status": "success",
     "gasLimit": "96784",
     "gasUsed": "82815"
    },
-   "block": 68636560,
-   "blockTimestamp": 1791274797,
-   "wallTime": "2026-10-06T08:19:58.261Z",
-   "wallMs": 1791274798261,
+   "block": 68639149,
+   "blockTimestamp": 1791275586,
+   "wallTime": "2026-10-06T08:33:08.408Z",
+   "wallMs": 1791275588408,
    "data": {
     "wallet": "0x14B4A3F910d9719ef5133858237f43371766B601"
    },
@@ -2216,7 +2216,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -2226,28 +2226,28 @@
   {
    "type": "event",
    "seq": 45,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.register:farm-04 (demo)",
    "attempt": 1,
    "kind": "register",
    "label": "farm owner (demo) registers farm-04 (demo) as agent #2023",
-   "actor": "0x7256FFD0357aBf1227ccC3b30A5AE83189DC4d23",
+   "actor": "0x7256ffd0357abf1227ccc3b30a5ae83189dc4d23",
    "agentId": "2023",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x46ca3b0ca0e31446a45f0f0681911b7a3f19d49daf6da861cc2a0f18b28f8296",
+    "hash": "0x0965d8c47a2fa8ae48a525f6f8d3a78d283f3e744fd327323fd2286159d70abb",
     "fn": "register",
-    "block": 68636561,
+    "block": 68639150,
     "status": "success",
     "gasLimit": "373869",
     "gasUsed": "330818"
    },
-   "block": 68636561,
-   "blockTimestamp": 1791274797,
-   "wallTime": "2026-10-06T08:19:58.772Z",
-   "wallMs": 1791274798772,
+   "block": 68639150,
+   "blockTimestamp": 1791275586,
+   "wallTime": "2026-10-06T08:33:08.869Z",
+   "wallMs": 1791275588869,
    "data": {
     "uri": "data:application/json (demo)",
     "role": "farm"
@@ -2276,7 +2276,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -2286,28 +2286,28 @@
   {
    "type": "event",
    "seq": 46,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.wallet:farm-04 (demo)",
    "attempt": 1,
    "kind": "wallet",
    "label": "farm-04 (demo) wallet set",
-   "actor": "0x7256FFD0357aBf1227ccC3b30A5AE83189DC4d23",
+   "actor": "0x7256ffd0357abf1227ccc3b30a5ae83189dc4d23",
    "agentId": "2023",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0xf9ea9dea24a6a83666ed44e24698bf7bf4112e220b54d9d62daf6ba9a6264416",
+    "hash": "0xebc8ba35047c47e0c0af6faf395e0702bfac7ca8070558f138c2ac32d6b53cbc",
     "fn": "setAgentWallet",
-    "block": 68636562,
+    "block": 68639151,
     "status": "success",
     "gasLimit": "96784",
     "gasUsed": "82815"
    },
-   "block": 68636562,
-   "blockTimestamp": 1791274797,
-   "wallTime": "2026-10-06T08:19:58.980Z",
-   "wallMs": 1791274798980,
+   "block": 68639151,
+   "blockTimestamp": 1791275586,
+   "wallTime": "2026-10-06T08:33:09.043Z",
+   "wallMs": 1791275589043,
    "data": {
     "wallet": "0x399b7FBC7290Bd8cD4E382924AAEdC991B953a75"
    },
@@ -2335,7 +2335,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -2345,28 +2345,28 @@
   {
    "type": "event",
    "seq": 47,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.register:farm-05 (demo)",
    "attempt": 1,
    "kind": "register",
    "label": "farm owner (demo) registers farm-05 (demo) as agent #2024",
-   "actor": "0x7256FFD0357aBf1227ccC3b30A5AE83189DC4d23",
+   "actor": "0x7256ffd0357abf1227ccc3b30a5ae83189dc4d23",
    "agentId": "2024",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x1a18dd4ce1b3717ddc9354329fce18e1226963dea121fc4a44cc34410bfa2d4b",
+    "hash": "0x0b3b5838bdc49f1b6cba54442ae58fa77f508552314fa63582e5572a0ed1e138",
     "fn": "register",
-    "block": 68636563,
+    "block": 68639152,
     "status": "success",
     "gasLimit": "373869",
     "gasUsed": "330818"
    },
-   "block": 68636563,
-   "blockTimestamp": 1791274798,
-   "wallTime": "2026-10-06T08:19:59.383Z",
-   "wallMs": 1791274799383,
+   "block": 68639152,
+   "blockTimestamp": 1791275587,
+   "wallTime": "2026-10-06T08:33:09.451Z",
+   "wallMs": 1791275589451,
    "data": {
     "uri": "data:application/json (demo)",
     "role": "farm"
@@ -2395,7 +2395,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -2405,28 +2405,28 @@
   {
    "type": "event",
    "seq": 48,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.wallet:farm-05 (demo)",
    "attempt": 1,
    "kind": "wallet",
    "label": "farm-05 (demo) wallet set",
-   "actor": "0x7256FFD0357aBf1227ccC3b30A5AE83189DC4d23",
+   "actor": "0x7256ffd0357abf1227ccc3b30a5ae83189dc4d23",
    "agentId": "2024",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0xf5bc879fdf0f5c398bb440b854d22142fc42733689e017ca76edacbd5a4612ca",
+    "hash": "0x2c2a58c31cbd32a1073e3bfbe46aa2b7c19fffb99804f1b1e511d0d055b95e55",
     "fn": "setAgentWallet",
-    "block": 68636564,
+    "block": 68639153,
     "status": "success",
-    "gasLimit": "96771",
-    "gasUsed": "82803"
+    "gasLimit": "96758",
+    "gasUsed": "82791"
    },
-   "block": 68636564,
-   "blockTimestamp": 1791274798,
-   "wallTime": "2026-10-06T08:19:59.589Z",
-   "wallMs": 1791274799589,
+   "block": 68639153,
+   "blockTimestamp": 1791275587,
+   "wallTime": "2026-10-06T08:33:09.677Z",
+   "wallMs": 1791275589677,
    "data": {
     "wallet": "0x831e67B2F89e912BCA1D00a96c66AdA14538A870"
    },
@@ -2454,7 +2454,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -2464,28 +2464,28 @@
   {
    "type": "event",
    "seq": 49,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.register:farm-06 (demo)",
    "attempt": 1,
    "kind": "register",
    "label": "farm owner (demo) registers farm-06 (demo) as agent #2025",
-   "actor": "0x7256FFD0357aBf1227ccC3b30A5AE83189DC4d23",
+   "actor": "0x7256ffd0357abf1227ccc3b30a5ae83189dc4d23",
    "agentId": "2025",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x38f4965e05473abcdbfe9c752aa62f4c307843be1b9e976b2e4349208bb6a634",
+    "hash": "0x320a440393bc85ebcc8c26e59b84642266c61826a62ec94f46ba3989d1340be9",
     "fn": "register",
-    "block": 68636565,
+    "block": 68639154,
     "status": "success",
     "gasLimit": "373869",
     "gasUsed": "330818"
    },
-   "block": 68636565,
-   "blockTimestamp": 1791274798,
-   "wallTime": "2026-10-06T08:20:00.112Z",
-   "wallMs": 1791274800112,
+   "block": 68639154,
+   "blockTimestamp": 1791275587,
+   "wallTime": "2026-10-06T08:33:10.147Z",
+   "wallMs": 1791275590147,
    "data": {
     "uri": "data:application/json (demo)",
     "role": "farm"
@@ -2514,7 +2514,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -2524,28 +2524,28 @@
   {
    "type": "event",
    "seq": 50,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.wallet:farm-06 (demo)",
    "attempt": 1,
    "kind": "wallet",
    "label": "farm-06 (demo) wallet set",
-   "actor": "0x7256FFD0357aBf1227ccC3b30A5AE83189DC4d23",
+   "actor": "0x7256ffd0357abf1227ccc3b30a5ae83189dc4d23",
    "agentId": "2025",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x4ea26b3ed3a6f305247cd90729a43c824e55f5ad7f017be29c928fde2b8f6008",
+    "hash": "0x9851149924058d0074110aefd33ec59e1bb06b7c81e57833f05dcc88b5b0dc8a",
     "fn": "setAgentWallet",
-    "block": 68636566,
+    "block": 68639155,
     "status": "success",
-    "gasLimit": "96771",
-    "gasUsed": "82803"
+    "gasLimit": "96784",
+    "gasUsed": "82815"
    },
-   "block": 68636566,
-   "blockTimestamp": 1791274799,
-   "wallTime": "2026-10-06T08:20:00.225Z",
-   "wallMs": 1791274800225,
+   "block": 68639155,
+   "blockTimestamp": 1791275588,
+   "wallTime": "2026-10-06T08:33:10.273Z",
+   "wallMs": 1791275590273,
    "data": {
     "wallet": "0xF30896Be52f5e1b1Df41C7E17Bf8ED3034F33727"
    },
@@ -2573,7 +2573,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -2583,28 +2583,28 @@
   {
    "type": "event",
    "seq": 51,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.register:farm-07 (demo)",
    "attempt": 1,
    "kind": "register",
    "label": "farm owner (demo) registers farm-07 (demo) as agent #2026",
-   "actor": "0x7256FFD0357aBf1227ccC3b30A5AE83189DC4d23",
+   "actor": "0x7256ffd0357abf1227ccc3b30a5ae83189dc4d23",
    "agentId": "2026",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0xf1d54bf8c86a6ce3d9770fc41386e6d685da714e79a023d15e51c28a01432394",
+    "hash": "0x02ecf023c28218c90c9986771cc39183f1f7476d2a3fdc126868755419906d9c",
     "fn": "register",
-    "block": 68636567,
+    "block": 68639156,
     "status": "success",
     "gasLimit": "373869",
     "gasUsed": "330818"
    },
-   "block": 68636567,
-   "blockTimestamp": 1791274799,
-   "wallTime": "2026-10-06T08:20:00.733Z",
-   "wallMs": 1791274800733,
+   "block": 68639156,
+   "blockTimestamp": 1791275588,
+   "wallTime": "2026-10-06T08:33:10.776Z",
+   "wallMs": 1791275590776,
    "data": {
     "uri": "data:application/json (demo)",
     "role": "farm"
@@ -2633,7 +2633,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -2643,28 +2643,28 @@
   {
    "type": "event",
    "seq": 52,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.wallet:farm-07 (demo)",
    "attempt": 1,
    "kind": "wallet",
    "label": "farm-07 (demo) wallet set",
-   "actor": "0x7256FFD0357aBf1227ccC3b30A5AE83189DC4d23",
+   "actor": "0x7256ffd0357abf1227ccc3b30a5ae83189dc4d23",
    "agentId": "2026",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x088a55d92a1a349fe4a5c7f688768ef8c47c2e6b6ac0b070ce0441d22e06ed7e",
+    "hash": "0x276d9fbb987b42873acd5fa9895cd5331a6ac46b10526a7121798cb4ca3ca500",
     "fn": "setAgentWallet",
-    "block": 68636568,
+    "block": 68639157,
     "status": "success",
     "gasLimit": "96784",
     "gasUsed": "82815"
    },
-   "block": 68636568,
-   "blockTimestamp": 1791274799,
-   "wallTime": "2026-10-06T08:20:00.873Z",
-   "wallMs": 1791274800873,
+   "block": 68639157,
+   "blockTimestamp": 1791275588,
+   "wallTime": "2026-10-06T08:33:10.912Z",
+   "wallMs": 1791275590912,
    "data": {
     "wallet": "0xaE82c6d52192BbA2A84294Dd52dbEb7f2dA63f46"
    },
@@ -2692,7 +2692,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -2702,28 +2702,28 @@
   {
    "type": "event",
    "seq": 53,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.register:farm-08 (demo)",
    "attempt": 1,
    "kind": "register",
    "label": "farm owner (demo) registers farm-08 (demo) as agent #2027",
-   "actor": "0x7256FFD0357aBf1227ccC3b30A5AE83189DC4d23",
+   "actor": "0x7256ffd0357abf1227ccc3b30a5ae83189dc4d23",
    "agentId": "2027",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x2a70daa497dbba576155b10b01a4e0d024c2a64cf4d87c8e698fb68df323ccfb",
+    "hash": "0x3cade8a0d93d7b76c692239577e2a284506b0f49b154bb8aa3ee2c211548da8d",
     "fn": "register",
-    "block": 68636569,
+    "block": 68639158,
     "status": "success",
     "gasLimit": "373869",
     "gasUsed": "330818"
    },
-   "block": 68636569,
-   "blockTimestamp": 1791274800,
-   "wallTime": "2026-10-06T08:20:01.382Z",
-   "wallMs": 1791274801382,
+   "block": 68639158,
+   "blockTimestamp": 1791275589,
+   "wallTime": "2026-10-06T08:33:11.362Z",
+   "wallMs": 1791275591362,
    "data": {
     "uri": "data:application/json (demo)",
     "role": "farm"
@@ -2752,7 +2752,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -2762,28 +2762,28 @@
   {
    "type": "event",
    "seq": 54,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.wallet:farm-08 (demo)",
    "attempt": 1,
    "kind": "wallet",
    "label": "farm-08 (demo) wallet set",
-   "actor": "0x7256FFD0357aBf1227ccC3b30A5AE83189DC4d23",
+   "actor": "0x7256ffd0357abf1227ccc3b30a5ae83189dc4d23",
    "agentId": "2027",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0xd268b997413f6526fb96df79ad16fe032b2c27cc7b0231a05fdd95a54a8ab46c",
+    "hash": "0x6d2e85361e4ac1c6e47b46a28b6a8ea0d9818ba3d392d385082f1d006ee1ef4d",
     "fn": "setAgentWallet",
-    "block": 68636570,
+    "block": 68639159,
     "status": "success",
-    "gasLimit": "96784",
-    "gasUsed": "82815"
+    "gasLimit": "96758",
+    "gasUsed": "82791"
    },
-   "block": 68636570,
-   "blockTimestamp": 1791274800,
-   "wallTime": "2026-10-06T08:20:01.608Z",
-   "wallMs": 1791274801608,
+   "block": 68639159,
+   "blockTimestamp": 1791275589,
+   "wallTime": "2026-10-06T08:33:11.480Z",
+   "wallMs": 1791275591480,
    "data": {
     "wallet": "0x0846B2BBc0205Cd90915552D3CCe503a7bbffc3C"
    },
@@ -2811,7 +2811,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -2821,28 +2821,28 @@
   {
    "type": "event",
    "seq": 55,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.register:farm-09 (demo)",
    "attempt": 1,
    "kind": "register",
    "label": "farm owner (demo) registers farm-09 (demo) as agent #2028",
-   "actor": "0x7256FFD0357aBf1227ccC3b30A5AE83189DC4d23",
+   "actor": "0x7256ffd0357abf1227ccc3b30a5ae83189dc4d23",
    "agentId": "2028",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0xf1442de86bf5685a57f0869b9af90c5bde1e0a188e304af4d3d1b9b794bf3d06",
+    "hash": "0x8dad903b6e23233b002c8976b743987965a3056e4e54bbe90aeef82bb0a94dd1",
     "fn": "register",
-    "block": 68636571,
+    "block": 68639160,
     "status": "success",
     "gasLimit": "373869",
     "gasUsed": "330818"
    },
-   "block": 68636571,
-   "blockTimestamp": 1791274800,
-   "wallTime": "2026-10-06T08:20:02.149Z",
-   "wallMs": 1791274802149,
+   "block": 68639160,
+   "blockTimestamp": 1791275589,
+   "wallTime": "2026-10-06T08:33:11.960Z",
+   "wallMs": 1791275591960,
    "data": {
     "uri": "data:application/json (demo)",
     "role": "farm"
@@ -2871,7 +2871,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -2881,28 +2881,28 @@
   {
    "type": "event",
    "seq": 56,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.wallet:farm-09 (demo)",
    "attempt": 1,
    "kind": "wallet",
    "label": "farm-09 (demo) wallet set",
-   "actor": "0x7256FFD0357aBf1227ccC3b30A5AE83189DC4d23",
+   "actor": "0x7256ffd0357abf1227ccc3b30a5ae83189dc4d23",
    "agentId": "2028",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x1b39066de3b986596d55f3577c2b5b34b9a75f56d5cd9a47b9796d23bdcd1be2",
+    "hash": "0x52423aa525a844740dc2052252996e28e9b93f08994d70df1c50e7b82d844b6b",
     "fn": "setAgentWallet",
-    "block": 68636572,
+    "block": 68639161,
     "status": "success",
     "gasLimit": "96771",
     "gasUsed": "82803"
    },
-   "block": 68636572,
-   "blockTimestamp": 1791274801,
-   "wallTime": "2026-10-06T08:20:02.256Z",
-   "wallMs": 1791274802256,
+   "block": 68639161,
+   "blockTimestamp": 1791275589,
+   "wallTime": "2026-10-06T08:33:12.076Z",
+   "wallMs": 1791275592076,
    "data": {
     "wallet": "0x3844D36F64031d920FD52f45b449D9e4A12580ff"
    },
@@ -2930,7 +2930,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -2940,28 +2940,28 @@
   {
    "type": "event",
    "seq": 57,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.register:farm-10 (demo)",
    "attempt": 1,
    "kind": "register",
    "label": "farm owner (demo) registers farm-10 (demo) as agent #2029",
-   "actor": "0x7256FFD0357aBf1227ccC3b30A5AE83189DC4d23",
+   "actor": "0x7256ffd0357abf1227ccc3b30a5ae83189dc4d23",
    "agentId": "2029",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x23b43fb7636451bc4c26c3bba692137d76f7d3e15fbf70f778fc86a4045a72b8",
+    "hash": "0x15546276a6b37187ad1537b91afa36669b2132b69fe80b53340b27acc962a93a",
     "fn": "register",
-    "block": 68636573,
+    "block": 68639162,
     "status": "success",
     "gasLimit": "373869",
     "gasUsed": "330818"
    },
-   "block": 68636573,
-   "blockTimestamp": 1791274801,
-   "wallTime": "2026-10-06T08:20:02.713Z",
-   "wallMs": 1791274802713,
+   "block": 68639162,
+   "blockTimestamp": 1791275590,
+   "wallTime": "2026-10-06T08:33:12.547Z",
+   "wallMs": 1791275592547,
    "data": {
     "uri": "data:application/json (demo)",
     "role": "farm"
@@ -2990,7 +2990,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -3000,28 +3000,28 @@
   {
    "type": "event",
    "seq": 58,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.wallet:farm-10 (demo)",
    "attempt": 1,
    "kind": "wallet",
    "label": "farm-10 (demo) wallet set",
-   "actor": "0x7256FFD0357aBf1227ccC3b30A5AE83189DC4d23",
+   "actor": "0x7256ffd0357abf1227ccc3b30a5ae83189dc4d23",
    "agentId": "2029",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x8e17e5923e6496b1ba9c6a21c20c4cd2f97f88ad47c297e22da954f39c15eb44",
+    "hash": "0xd3c56179216ec0e231a0915e30ed4957ff94179993e59d2d5cc9603eee50fa11",
     "fn": "setAgentWallet",
-    "block": 68636574,
+    "block": 68639163,
     "status": "success",
     "gasLimit": "96784",
     "gasUsed": "82815"
    },
-   "block": 68636574,
-   "blockTimestamp": 1791274801,
-   "wallTime": "2026-10-06T08:20:02.865Z",
-   "wallMs": 1791274802865,
+   "block": 68639163,
+   "blockTimestamp": 1791275590,
+   "wallTime": "2026-10-06T08:33:12.709Z",
+   "wallMs": 1791275592709,
    "data": {
     "wallet": "0x893775948539AF544AbcBb1445CACfC31cA60FFa"
    },
@@ -3049,7 +3049,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -3059,28 +3059,28 @@
   {
    "type": "event",
    "seq": 59,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.farm:1->target",
    "attempt": 1,
    "kind": "feedback",
    "label": "farm-01 wallet (demo) gives vouch 100 to farm target (demo)",
-   "actor": "0xA52183fF5cb424AB332fF73D5e1aEAEfa54845f7",
+   "actor": "0xa52183ff5cb424ab332ff73d5e1aeaefa54845f7",
    "agentId": "2019",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x5b16fd4e8cfcf09fb6d9f86815347695a971e16f730d3a528d7fc4463e46401e",
+    "hash": "0xdbbb667eac868888128bb2ccbcf34f600f05862dc0b1d19d2f6d961eb08a8f19",
     "fn": "giveFeedback",
-    "block": 68636575,
+    "block": 68639164,
     "status": "success",
     "gasLimit": "326950",
     "gasUsed": "288786"
    },
-   "block": 68636575,
-   "blockTimestamp": 1791274802,
-   "wallTime": "2026-10-06T08:20:03.166Z",
-   "wallMs": 1791274803166,
+   "block": 68639164,
+   "blockTimestamp": 1791275590,
+   "wallTime": "2026-10-06T08:33:12.977Z",
+   "wallMs": 1791275592977,
    "data": {
     "client": "0xA52183fF5cb424AB332fF73D5e1aEAEfa54845f7",
     "tag1": "vouch",
@@ -3113,7 +3113,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -3123,28 +3123,28 @@
   {
    "type": "event",
    "seq": 60,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.farm:1->2",
    "attempt": 1,
    "kind": "feedback",
    "label": "farm-01 wallet (demo) gives vouch 100 to farm-02 (demo)",
-   "actor": "0xA52183fF5cb424AB332fF73D5e1aEAEfa54845f7",
+   "actor": "0xa52183ff5cb424ab332ff73d5e1aeaefa54845f7",
    "agentId": "2021",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x24ed9e2dc26b7763c54178963c9c1d18d87ca3367ce030e8e9b90b5d60fafad6",
+    "hash": "0x7c81853c4bf3bec4db317f89af1649bc00e9e42cfeca6b8d83647e643ad76025",
     "fn": "giveFeedback",
-    "block": 68636576,
+    "block": 68639165,
     "status": "success",
     "gasLimit": "326950",
     "gasUsed": "288786"
    },
-   "block": 68636576,
-   "blockTimestamp": 1791274802,
-   "wallTime": "2026-10-06T08:20:03.417Z",
-   "wallMs": 1791274803417,
+   "block": 68639165,
+   "blockTimestamp": 1791275591,
+   "wallTime": "2026-10-06T08:33:13.242Z",
+   "wallMs": 1791275593242,
    "data": {
     "client": "0xA52183fF5cb424AB332fF73D5e1aEAEfa54845f7",
     "tag1": "vouch",
@@ -3177,7 +3177,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -3187,28 +3187,28 @@
   {
    "type": "event",
    "seq": 61,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.farm:2->target",
    "attempt": 1,
    "kind": "feedback",
    "label": "farm-02 wallet (demo) gives vouch 100 to farm target (demo)",
-   "actor": "0xbfe1CcB61f33A48d5Ed6d0F6779a0d596d741c3E",
+   "actor": "0xbfe1ccb61f33a48d5ed6d0f6779a0d596d741c3e",
    "agentId": "2019",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x8d113cf86cf5f86d0da6164aa547a67fddf4096a53679d213bafc0f78d2e2284",
+    "hash": "0xbdc7ef8e4aff5ed21ca481798a19201ac220acd4a1cb4c2cbd87c71939a2934b",
     "fn": "giveFeedback",
-    "block": 68636577,
+    "block": 68639166,
     "status": "success",
     "gasLimit": "307954",
     "gasUsed": "271786"
    },
-   "block": 68636577,
-   "blockTimestamp": 1791274802,
-   "wallTime": "2026-10-06T08:20:03.697Z",
-   "wallMs": 1791274803697,
+   "block": 68639166,
+   "blockTimestamp": 1791275591,
+   "wallTime": "2026-10-06T08:33:13.501Z",
+   "wallMs": 1791275593501,
    "data": {
     "client": "0xbfe1CcB61f33A48d5Ed6d0F6779a0d596d741c3E",
     "tag1": "vouch",
@@ -3241,7 +3241,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -3251,28 +3251,28 @@
   {
    "type": "event",
    "seq": 62,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.farm:2->3",
    "attempt": 1,
    "kind": "feedback",
    "label": "farm-02 wallet (demo) gives vouch 100 to farm-03 (demo)",
-   "actor": "0xbfe1CcB61f33A48d5Ed6d0F6779a0d596d741c3E",
+   "actor": "0xbfe1ccb61f33a48d5ed6d0f6779a0d596d741c3e",
    "agentId": "2022",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0xd1d2b0cae0cff9e84a7f750d45f46dd8bc9c4593bdf094ecad0a44bf1ea686d7",
+    "hash": "0x1e33bbb52af523d4f5903124aebe6fa68451a3cd03cbb05c64d8b058cc123683",
     "fn": "giveFeedback",
-    "block": 68636578,
+    "block": 68639167,
     "status": "success",
     "gasLimit": "326950",
     "gasUsed": "288786"
    },
-   "block": 68636578,
-   "blockTimestamp": 1791274802,
-   "wallTime": "2026-10-06T08:20:03.965Z",
-   "wallMs": 1791274803965,
+   "block": 68639167,
+   "blockTimestamp": 1791275591,
+   "wallTime": "2026-10-06T08:33:13.771Z",
+   "wallMs": 1791275593771,
    "data": {
     "client": "0xbfe1CcB61f33A48d5Ed6d0F6779a0d596d741c3E",
     "tag1": "vouch",
@@ -3305,7 +3305,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -3315,28 +3315,28 @@
   {
    "type": "event",
    "seq": 63,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.farm:3->target",
    "attempt": 1,
    "kind": "feedback",
    "label": "farm-03 wallet (demo) gives vouch 100 to farm target (demo)",
-   "actor": "0x14B4A3F910d9719ef5133858237f43371766B601",
+   "actor": "0x14b4a3f910d9719ef5133858237f43371766b601",
    "agentId": "2019",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x98c437710a0b11f86f31abfcfaa6d5705282ce2281af98d213f4cf1b2b57dcb5",
+    "hash": "0xa959c58e1db2a01d8bab1aa1a01a0a650e03a4e2072670d289d64277eb451d41",
     "fn": "giveFeedback",
-    "block": 68636579,
+    "block": 68639168,
     "status": "success",
     "gasLimit": "307954",
     "gasUsed": "271786"
    },
-   "block": 68636579,
-   "blockTimestamp": 1791274803,
-   "wallTime": "2026-10-06T08:20:04.217Z",
-   "wallMs": 1791274804217,
+   "block": 68639168,
+   "blockTimestamp": 1791275591,
+   "wallTime": "2026-10-06T08:33:14.042Z",
+   "wallMs": 1791275594042,
    "data": {
     "client": "0x14B4A3F910d9719ef5133858237f43371766B601",
     "tag1": "vouch",
@@ -3369,7 +3369,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -3379,28 +3379,28 @@
   {
    "type": "event",
    "seq": 64,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.farm:3->4",
    "attempt": 1,
    "kind": "feedback",
    "label": "farm-03 wallet (demo) gives vouch 100 to farm-04 (demo)",
-   "actor": "0x14B4A3F910d9719ef5133858237f43371766B601",
+   "actor": "0x14b4a3f910d9719ef5133858237f43371766b601",
    "agentId": "2023",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x5cc366206cba0df1499c51464cd0ccaf36dfcdf145c8ff89792eacab967a0842",
+    "hash": "0x25fb40929ec2542195478c490d856ffd66e2a033f8c7385f71813d9a92a6f4f6",
     "fn": "giveFeedback",
-    "block": 68636580,
+    "block": 68639169,
     "status": "success",
     "gasLimit": "326950",
     "gasUsed": "288786"
    },
-   "block": 68636580,
-   "blockTimestamp": 1791274803,
-   "wallTime": "2026-10-06T08:20:04.469Z",
-   "wallMs": 1791274804469,
+   "block": 68639169,
+   "blockTimestamp": 1791275592,
+   "wallTime": "2026-10-06T08:33:14.296Z",
+   "wallMs": 1791275594296,
    "data": {
     "client": "0x14B4A3F910d9719ef5133858237f43371766B601",
     "tag1": "vouch",
@@ -3433,7 +3433,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -3443,28 +3443,28 @@
   {
    "type": "event",
    "seq": 65,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.farm:4->target",
    "attempt": 1,
    "kind": "feedback",
    "label": "farm-04 wallet (demo) gives vouch 100 to farm target (demo)",
-   "actor": "0x399b7FBC7290Bd8cD4E382924AAEdC991B953a75",
+   "actor": "0x399b7fbc7290bd8cd4e382924aaedc991b953a75",
    "agentId": "2019",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x3cc774990625d3822c16f20505ef84b875dea3200750e3c361552edc66dadf90",
+    "hash": "0x15a8df3b4484a6dbb86b5d21f5099d3b2d3ba4f8059b491b210fa705c9fb5fc6",
     "fn": "giveFeedback",
-    "block": 68636581,
+    "block": 68639170,
     "status": "success",
     "gasLimit": "307954",
     "gasUsed": "271786"
    },
-   "block": 68636581,
-   "blockTimestamp": 1791274803,
-   "wallTime": "2026-10-06T08:20:04.750Z",
-   "wallMs": 1791274804750,
+   "block": 68639170,
+   "blockTimestamp": 1791275592,
+   "wallTime": "2026-10-06T08:33:14.552Z",
+   "wallMs": 1791275594552,
    "data": {
     "client": "0x399b7FBC7290Bd8cD4E382924AAEdC991B953a75",
     "tag1": "vouch",
@@ -3497,7 +3497,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -3507,28 +3507,28 @@
   {
    "type": "event",
    "seq": 66,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.farm:4->5",
    "attempt": 1,
    "kind": "feedback",
    "label": "farm-04 wallet (demo) gives vouch 100 to farm-05 (demo)",
-   "actor": "0x399b7FBC7290Bd8cD4E382924AAEdC991B953a75",
+   "actor": "0x399b7fbc7290bd8cd4e382924aaedc991b953a75",
    "agentId": "2024",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x18a629604d619de111aedfd4b5cc544f20abaea699f9bd72f9055eaa0b133618",
+    "hash": "0xd65b617f358857f50ad9b74a4df06b9a3f045ce4846119ece8a1a3845476cb44",
     "fn": "giveFeedback",
-    "block": 68636582,
+    "block": 68639171,
     "status": "success",
     "gasLimit": "326950",
     "gasUsed": "288786"
    },
-   "block": 68636582,
-   "blockTimestamp": 1791274803,
-   "wallTime": "2026-10-06T08:20:05.025Z",
-   "wallMs": 1791274805025,
+   "block": 68639171,
+   "blockTimestamp": 1791275592,
+   "wallTime": "2026-10-06T08:33:14.811Z",
+   "wallMs": 1791275594811,
    "data": {
     "client": "0x399b7FBC7290Bd8cD4E382924AAEdC991B953a75",
     "tag1": "vouch",
@@ -3561,7 +3561,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -3571,28 +3571,28 @@
   {
    "type": "event",
    "seq": 67,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.farm:5->target",
    "attempt": 1,
    "kind": "feedback",
    "label": "farm-05 wallet (demo) gives vouch 100 to farm target (demo)",
-   "actor": "0x831e67B2F89e912BCA1D00a96c66AdA14538A870",
+   "actor": "0x831e67b2f89e912bca1d00a96c66ada14538a870",
    "agentId": "2019",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x29dca724b053fca922d4267f7f713e0051154a7dd4dc3860d88d8346a929d2f3",
+    "hash": "0x723e3984ce26524516db6d6a3c41c679f113655490a92b4664b5b94483da1c0e",
     "fn": "giveFeedback",
-    "block": 68636583,
+    "block": 68639172,
     "status": "success",
     "gasLimit": "307954",
     "gasUsed": "271786"
    },
-   "block": 68636583,
-   "blockTimestamp": 1791274804,
-   "wallTime": "2026-10-06T08:20:05.375Z",
-   "wallMs": 1791274805375,
+   "block": 68639172,
+   "blockTimestamp": 1791275592,
+   "wallTime": "2026-10-06T08:33:15.070Z",
+   "wallMs": 1791275595070,
    "data": {
     "client": "0x831e67B2F89e912BCA1D00a96c66AdA14538A870",
     "tag1": "vouch",
@@ -3625,7 +3625,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -3635,28 +3635,28 @@
   {
    "type": "event",
    "seq": 68,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.farm:5->6",
    "attempt": 1,
    "kind": "feedback",
    "label": "farm-05 wallet (demo) gives vouch 100 to farm-06 (demo)",
-   "actor": "0x831e67B2F89e912BCA1D00a96c66AdA14538A870",
+   "actor": "0x831e67b2f89e912bca1d00a96c66ada14538a870",
    "agentId": "2025",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x25a6b7b23d79b9b0522c37feb5fe59f05fbe894594bc6825bdff7ce403709fe9",
+    "hash": "0x281f7e265b4188780871824c6d2686d91d5a253e5d8cfd0be52da1d02b52ffd3",
     "fn": "giveFeedback",
-    "block": 68636584,
+    "block": 68639173,
     "status": "success",
     "gasLimit": "326950",
     "gasUsed": "288786"
    },
-   "block": 68636584,
-   "blockTimestamp": 1791274804,
-   "wallTime": "2026-10-06T08:20:05.644Z",
-   "wallMs": 1791274805644,
+   "block": 68639173,
+   "blockTimestamp": 1791275593,
+   "wallTime": "2026-10-06T08:33:15.339Z",
+   "wallMs": 1791275595339,
    "data": {
     "client": "0x831e67B2F89e912BCA1D00a96c66AdA14538A870",
     "tag1": "vouch",
@@ -3689,7 +3689,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -3699,28 +3699,28 @@
   {
    "type": "event",
    "seq": 69,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.farm:6->target",
    "attempt": 1,
    "kind": "feedback",
    "label": "farm-06 wallet (demo) gives vouch 100 to farm target (demo)",
-   "actor": "0xF30896Be52f5e1b1Df41C7E17Bf8ED3034F33727",
+   "actor": "0xf30896be52f5e1b1df41c7e17bf8ed3034f33727",
    "agentId": "2019",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x7af309189d9caa5e7549fe46883b8ae086488c3c08b44897bdd1bfc6eceec153",
+    "hash": "0x8653c486bbd8ae99ec7d5fb44ac8a279bd5841044f3f5147a6b4dd325ceb271c",
     "fn": "giveFeedback",
-    "block": 68636585,
+    "block": 68639174,
     "status": "success",
     "gasLimit": "307954",
     "gasUsed": "271786"
    },
-   "block": 68636585,
-   "blockTimestamp": 1791274804,
-   "wallTime": "2026-10-06T08:20:06.026Z",
-   "wallMs": 1791274806026,
+   "block": 68639174,
+   "blockTimestamp": 1791275593,
+   "wallTime": "2026-10-06T08:33:15.617Z",
+   "wallMs": 1791275595617,
    "data": {
     "client": "0xF30896Be52f5e1b1Df41C7E17Bf8ED3034F33727",
     "tag1": "vouch",
@@ -3753,7 +3753,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -3763,28 +3763,28 @@
   {
    "type": "event",
    "seq": 70,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.farm:6->7",
    "attempt": 1,
    "kind": "feedback",
    "label": "farm-06 wallet (demo) gives vouch 100 to farm-07 (demo)",
-   "actor": "0xF30896Be52f5e1b1Df41C7E17Bf8ED3034F33727",
+   "actor": "0xf30896be52f5e1b1df41c7e17bf8ed3034f33727",
    "agentId": "2026",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x43b273aad1c02d25b5d11bdf4083411e66f2a39dd13691ea58e7289ebb2bcc5c",
+    "hash": "0x1a6b910ad31d4ed8d8a481a10b865f30cae010edf346032388fdc171dac6fcef",
     "fn": "giveFeedback",
-    "block": 68636586,
+    "block": 68639175,
     "status": "success",
     "gasLimit": "326950",
     "gasUsed": "288786"
    },
-   "block": 68636586,
-   "blockTimestamp": 1791274805,
-   "wallTime": "2026-10-06T08:20:06.315Z",
-   "wallMs": 1791274806315,
+   "block": 68639175,
+   "blockTimestamp": 1791275593,
+   "wallTime": "2026-10-06T08:33:15.960Z",
+   "wallMs": 1791275595960,
    "data": {
     "client": "0xF30896Be52f5e1b1Df41C7E17Bf8ED3034F33727",
     "tag1": "vouch",
@@ -3817,7 +3817,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -3827,28 +3827,28 @@
   {
    "type": "event",
    "seq": 71,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.farm:7->target",
    "attempt": 1,
    "kind": "feedback",
    "label": "farm-07 wallet (demo) gives vouch 100 to farm target (demo)",
-   "actor": "0xaE82c6d52192BbA2A84294Dd52dbEb7f2dA63f46",
+   "actor": "0xae82c6d52192bba2a84294dd52dbeb7f2da63f46",
    "agentId": "2019",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0xd0776269341832b5a47b41f2f72437ecbe1bad95d50515bbeebe03624723dfeb",
+    "hash": "0xe66e08dee99a617c3105876ced4f0c7b3b2eda12cc6c5c44adc4120fb1b2791f",
     "fn": "giveFeedback",
-    "block": 68636587,
+    "block": 68639176,
     "status": "success",
     "gasLimit": "307954",
     "gasUsed": "271786"
    },
-   "block": 68636587,
-   "blockTimestamp": 1791274805,
-   "wallTime": "2026-10-06T08:20:06.610Z",
-   "wallMs": 1791274806610,
+   "block": 68639176,
+   "blockTimestamp": 1791275594,
+   "wallTime": "2026-10-06T08:33:16.220Z",
+   "wallMs": 1791275596220,
    "data": {
     "client": "0xaE82c6d52192BbA2A84294Dd52dbEb7f2dA63f46",
     "tag1": "vouch",
@@ -3881,7 +3881,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -3891,28 +3891,28 @@
   {
    "type": "event",
    "seq": 72,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.farm:7->8",
    "attempt": 1,
    "kind": "feedback",
    "label": "farm-07 wallet (demo) gives vouch 100 to farm-08 (demo)",
-   "actor": "0xaE82c6d52192BbA2A84294Dd52dbEb7f2dA63f46",
+   "actor": "0xae82c6d52192bba2a84294dd52dbeb7f2da63f46",
    "agentId": "2027",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x7cb71578515ee913cd733c984ed75920b4ca93d5df696bb0810084ac75fce0e7",
+    "hash": "0xabeeb07dce25e1d30f2b91f29a226f939e9f2f94065188e92cb833fb1fe5ec10",
     "fn": "giveFeedback",
-    "block": 68636588,
+    "block": 68639177,
     "status": "success",
     "gasLimit": "326950",
     "gasUsed": "288786"
    },
-   "block": 68636588,
-   "blockTimestamp": 1791274805,
-   "wallTime": "2026-10-06T08:20:06.972Z",
-   "wallMs": 1791274806972,
+   "block": 68639177,
+   "blockTimestamp": 1791275594,
+   "wallTime": "2026-10-06T08:33:16.583Z",
+   "wallMs": 1791275596583,
    "data": {
     "client": "0xaE82c6d52192BbA2A84294Dd52dbEb7f2dA63f46",
     "tag1": "vouch",
@@ -3945,7 +3945,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -3955,28 +3955,28 @@
   {
    "type": "event",
    "seq": 73,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.farm:8->target",
    "attempt": 1,
    "kind": "feedback",
    "label": "farm-08 wallet (demo) gives vouch 100 to farm target (demo)",
-   "actor": "0x0846B2BBc0205Cd90915552D3CCe503a7bbffc3C",
+   "actor": "0x0846b2bbc0205cd90915552d3cce503a7bbffc3c",
    "agentId": "2019",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x9555cdc5a3ad5568e610c4ef5d638bed076d08524ac27e4ddfaab71203f711ad",
+    "hash": "0xadca55dba60391d0a89d58a70b17683044d9b45772957b027c09215b64bd599d",
     "fn": "giveFeedback",
-    "block": 68636589,
+    "block": 68639178,
     "status": "success",
     "gasLimit": "307954",
     "gasUsed": "271786"
    },
-   "block": 68636589,
-   "blockTimestamp": 1791274806,
-   "wallTime": "2026-10-06T08:20:07.231Z",
-   "wallMs": 1791274807231,
+   "block": 68639178,
+   "blockTimestamp": 1791275594,
+   "wallTime": "2026-10-06T08:33:16.901Z",
+   "wallMs": 1791275596901,
    "data": {
     "client": "0x0846B2BBc0205Cd90915552D3CCe503a7bbffc3C",
     "tag1": "vouch",
@@ -4009,7 +4009,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -4019,28 +4019,28 @@
   {
    "type": "event",
    "seq": 74,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.farm:8->9",
    "attempt": 1,
    "kind": "feedback",
    "label": "farm-08 wallet (demo) gives vouch 100 to farm-09 (demo)",
-   "actor": "0x0846B2BBc0205Cd90915552D3CCe503a7bbffc3C",
+   "actor": "0x0846b2bbc0205cd90915552d3cce503a7bbffc3c",
    "agentId": "2028",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x1d3cb5808ecf9a23419b903c8fff45f136662b88b5e4cbbdfe2cbf47baef9e56",
+    "hash": "0xe116e4aee032af33c62ea4661af1f468157dcb4827f94cb65afc62a2d3668c63",
     "fn": "giveFeedback",
-    "block": 68636590,
+    "block": 68639179,
     "status": "success",
     "gasLimit": "339019",
     "gasUsed": "299586"
    },
-   "block": 68636590,
-   "blockTimestamp": 1791274806,
-   "wallTime": "2026-10-06T08:20:07.568Z",
-   "wallMs": 1791274807568,
+   "block": 68639179,
+   "blockTimestamp": 1791275595,
+   "wallTime": "2026-10-06T08:33:17.145Z",
+   "wallMs": 1791275597145,
    "data": {
     "client": "0x0846B2BBc0205Cd90915552D3CCe503a7bbffc3C",
     "tag1": "vouch",
@@ -4073,7 +4073,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -4083,28 +4083,28 @@
   {
    "type": "event",
    "seq": 75,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.farm:9->target",
    "attempt": 1,
    "kind": "feedback",
    "label": "farm-09 wallet (demo) gives vouch 100 to farm target (demo)",
-   "actor": "0x3844D36F64031d920FD52f45b449D9e4A12580ff",
+   "actor": "0x3844d36f64031d920fd52f45b449d9e4a12580ff",
    "agentId": "2019",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0xab0a310d689657a15c8a39f11ebc7a969fdfa0fd9765d06d6115957040724c7f",
+    "hash": "0xcc42704af84c2edd20a3569def400880816d7816e326f1f85f9930e0a0a4e468",
     "fn": "giveFeedback",
-    "block": 68636591,
+    "block": 68639180,
     "status": "success",
     "gasLimit": "307954",
     "gasUsed": "271786"
    },
-   "block": 68636591,
-   "blockTimestamp": 1791274806,
-   "wallTime": "2026-10-06T08:20:07.910Z",
-   "wallMs": 1791274807910,
+   "block": 68639180,
+   "blockTimestamp": 1791275595,
+   "wallTime": "2026-10-06T08:33:17.432Z",
+   "wallMs": 1791275597432,
    "data": {
     "client": "0x3844D36F64031d920FD52f45b449D9e4A12580ff",
     "tag1": "vouch",
@@ -4137,7 +4137,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -4147,28 +4147,28 @@
   {
    "type": "event",
    "seq": 76,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.farm:9->10",
    "attempt": 1,
    "kind": "feedback",
    "label": "farm-09 wallet (demo) gives vouch 100 to farm-10 (demo)",
-   "actor": "0x3844D36F64031d920FD52f45b449D9e4A12580ff",
+   "actor": "0x3844d36f64031d920fd52f45b449d9e4a12580ff",
    "agentId": "2029",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x0113bb462cf369f7eb8fcd0b2f95d15328168e4b11348233e089c0c209145e9f",
+    "hash": "0x596cfce63511cdb9c57eeb454f3fb5ff4fd75ee10eb1d7f3af7eee311e488603",
     "fn": "giveFeedback",
-    "block": 68636592,
+    "block": 68639181,
     "status": "success",
     "gasLimit": "326950",
     "gasUsed": "288786"
    },
-   "block": 68636592,
-   "blockTimestamp": 1791274807,
-   "wallTime": "2026-10-06T08:20:08.173Z",
-   "wallMs": 1791274808173,
+   "block": 68639181,
+   "blockTimestamp": 1791275595,
+   "wallTime": "2026-10-06T08:33:17.683Z",
+   "wallMs": 1791275597683,
    "data": {
     "client": "0x3844D36F64031d920FD52f45b449D9e4A12580ff",
     "tag1": "vouch",
@@ -4201,7 +4201,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -4211,28 +4211,28 @@
   {
    "type": "event",
    "seq": 77,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.farm:10->target",
    "attempt": 1,
    "kind": "feedback",
    "label": "farm-10 wallet (demo) gives vouch 100 to farm target (demo)",
-   "actor": "0x893775948539AF544AbcBb1445CACfC31cA60FFa",
+   "actor": "0x893775948539af544abcbb1445cacfc31ca60ffa",
    "agentId": "2019",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0xf149090c53bbb101f11a9116e22ec79b77ac2c87a532ea092e00b8935626e6c2",
+    "hash": "0xd14edea808fa48193825a0ef5df403a252c3f630247010d8255579e9e862cfcb",
     "fn": "giveFeedback",
-    "block": 68636593,
+    "block": 68639182,
     "status": "success",
     "gasLimit": "307954",
     "gasUsed": "271786"
    },
-   "block": 68636593,
-   "blockTimestamp": 1791274807,
-   "wallTime": "2026-10-06T08:20:08.524Z",
-   "wallMs": 1791274808524,
+   "block": 68639182,
+   "blockTimestamp": 1791275595,
+   "wallTime": "2026-10-06T08:33:17.953Z",
+   "wallMs": 1791275597953,
    "data": {
     "client": "0x893775948539AF544AbcBb1445CACfC31cA60FFa",
     "tag1": "vouch",
@@ -4265,7 +4265,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -4275,28 +4275,28 @@
   {
    "type": "event",
    "seq": 78,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.farm:10->1",
    "attempt": 1,
    "kind": "feedback",
    "label": "farm-10 wallet (demo) gives vouch 100 to farm-01 (demo)",
-   "actor": "0x893775948539AF544AbcBb1445CACfC31cA60FFa",
+   "actor": "0x893775948539af544abcbb1445cacfc31ca60ffa",
    "agentId": "2020",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0xcd68fc0885ddeece33b763d72a5d896ddc853c5de4f3c13602b018b0cd6e6d51",
+    "hash": "0x36a23e9c4e5d90d3bcde72fea7b76282ed76676131712c2856243f3fe06b9b33",
     "fn": "giveFeedback",
-    "block": 68636594,
+    "block": 68639183,
     "status": "success",
     "gasLimit": "326950",
     "gasUsed": "288786"
    },
-   "block": 68636594,
-   "blockTimestamp": 1791274807,
-   "wallTime": "2026-10-06T08:20:08.781Z",
-   "wallMs": 1791274808781,
+   "block": 68639183,
+   "blockTimestamp": 1791275596,
+   "wallTime": "2026-10-06T08:33:18.194Z",
+   "wallMs": 1791275598194,
    "data": {
     "client": "0x893775948539AF544AbcBb1445CACfC31cA60FFa",
     "tag1": "vouch",
@@ -4329,7 +4329,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -4339,7 +4339,7 @@
   {
    "type": "event",
    "seq": 79,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.cert",
@@ -4350,10 +4350,10 @@
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636594,
-   "blockTimestamp": 1791274807,
-   "wallTime": "2026-10-06T08:20:09.187Z",
-   "wallMs": 1791274809187,
+   "block": 68639183,
+   "blockTimestamp": 1791275596,
+   "wallTime": "2026-10-06T08:33:18.520Z",
+   "wallMs": 1791275598520,
    "data": {
     "trigger": "farm feedback"
    },
@@ -4368,14 +4368,14 @@
     "mass": "518518518518518500",
     "graphRoot": "0xde03a68141ae727e39128f55f7e0e80e5ff1b4fa096849f1195111a0f8ab5c5e",
     "txs": [],
-    "computeMs": 202.9
+    "computeMs": 119.1
    },
    "latency": null
   },
   {
    "type": "event",
    "seq": 80,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.pay:target",
@@ -4386,10 +4386,10 @@
    "agentId": "2019",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636594,
-   "blockTimestamp": 1791274807,
-   "wallTime": "2026-10-06T08:20:09.234Z",
-   "wallMs": 1791274809234,
+   "block": 68639183,
+   "blockTimestamp": 1791275596,
+   "wallTime": "2026-10-06T08:33:18.567Z",
+   "wallMs": 1791275598567,
    "data": null,
    "agent": {
     "explorer": {
@@ -4415,7 +4415,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": {
@@ -4448,28 +4448,28 @@
   {
    "type": "event",
    "seq": 81,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.compromised:C->target",
    "attempt": 1,
    "kind": "feedback",
    "label": "anchor-C (demo) gives vouch 100 to farm target (demo)",
-   "actor": "0x730184Ca0b0088C0be0b01DF7Cb8f0f69947D786",
+   "actor": "0x730184ca0b0088c0be0b01df7cb8f0f69947d786",
    "agentId": "2019",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x2acd71c0fb3a543a5a07ca8114c4152f06212cb0f3d366f66776444cee21a775",
+    "hash": "0xe920a251851f6ae7c294d6a4e4e70815610bae8e048ab40092dbd691113dfb06",
     "fn": "giveFeedback",
-    "block": 68636595,
+    "block": 68639184,
     "status": "success",
     "gasLimit": "307954",
     "gasUsed": "271786"
    },
-   "block": 68636595,
-   "blockTimestamp": 1791274808,
-   "wallTime": "2026-10-06T08:20:09.471Z",
-   "wallMs": 1791274809471,
+   "block": 68639184,
+   "blockTimestamp": 1791275596,
+   "wallTime": "2026-10-06T08:33:18.795Z",
+   "wallMs": 1791275598795,
    "data": {
     "client": "0x730184Ca0b0088C0be0b01DF7Cb8f0f69947D786",
     "tag1": "vouch",
@@ -4502,7 +4502,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636550
+     "certBlock": 68639139
     }
    },
    "payer": null,
@@ -4512,7 +4512,7 @@
   {
    "type": "event",
    "seq": 82,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.cert-compromised",
@@ -4523,10 +4523,10 @@
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636596,
-   "blockTimestamp": 1791274808,
-   "wallTime": "2026-10-06T08:20:09.908Z",
-   "wallMs": 1791274809908,
+   "block": 68639185,
+   "blockTimestamp": 1791275597,
+   "wallTime": "2026-10-06T08:33:19.145Z",
+   "wallMs": 1791275599145,
    "data": {
     "trigger": "a compromised anchor vouched for the farm target"
    },
@@ -4534,7 +4534,7 @@
    "payer": null,
    "certificate": {
     "action": "certified",
-    "certBlock": 68636596,
+    "certBlock": 68639185,
     "nCert": 6,
     "rows": 6,
     "eEff": "19",
@@ -4543,20 +4543,20 @@
     "txs": [
      {
       "fn": "submitCertificate",
-      "hash": "0x962f4a81133317acca8f6ff22ccee943b6534eb1f90bd63b4329b9d08dfd24e3",
+      "hash": "0xa9659f0c08b074147bce3b26125955515a10f7cf4e65d447c3c52d979e8bbf8c",
       "gasLimit": "559599",
       "gasUsed": "515906",
-      "block": 68636596
+      "block": 68639185
      }
     ],
-    "computeMs": 138.2
+    "computeMs": 50.5
    },
    "latency": null
   },
   {
    "type": "event",
    "seq": 83,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.pay:target-after-compromise",
@@ -4567,10 +4567,10 @@
    "agentId": "2019",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636596,
-   "blockTimestamp": 1791274808,
-   "wallTime": "2026-10-06T08:20:09.996Z",
-   "wallMs": 1791274809996,
+   "block": 68639185,
+   "blockTimestamp": 1791275597,
+   "wallTime": "2026-10-06T08:33:19.173Z",
+   "wallMs": 1791275599173,
    "data": null,
    "agent": {
     "explorer": {
@@ -4596,7 +4596,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636596
+     "certBlock": 68639185
     }
    },
    "payer": {
@@ -4629,28 +4629,28 @@
   {
    "type": "event",
    "seq": 84,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.fund-farm-usdc:1",
    "attempt": 1,
    "kind": "fund",
    "label": "USDC to farm-01 wallet (demo) (for scene 3)",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x264a723dc777918b82246a4aa3efb89ff279a96757c2bb4f80ff58e5f99e49c9",
+    "hash": "0x4f34f64183508ee2eb3da05a723c045f22b86ffd5fca4054e27f6df0651c06b9",
     "fn": "transfer",
-    "block": 68636597,
+    "block": 68639186,
     "status": "success",
     "gasLimit": "115328",
     "gasUsed": "99526"
    },
-   "block": 68636597,
-   "blockTimestamp": 1791274809,
-   "wallTime": "2026-10-06T08:20:10.121Z",
-   "wallMs": 1791274810121,
+   "block": 68639186,
+   "blockTimestamp": 1791275597,
+   "wallTime": "2026-10-06T08:33:19.303Z",
+   "wallMs": 1791275599303,
    "data": {
     "token": "USDC",
     "to": "0xA52183fF5cb424AB332fF73D5e1aEAEfa54845f7",
@@ -4664,28 +4664,28 @@
   {
    "type": "event",
    "seq": 85,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.fund-farm-usdc:2",
    "attempt": 1,
    "kind": "fund",
    "label": "USDC to farm-02 wallet (demo) (for scene 3)",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x52ae76bc5fbb8ab4ae9ffab68403f5e8acdada4dd5db540d8f533f9487b454eb",
+    "hash": "0xc7e0ca6ddb8174ba679b72f6584592afa3bb1eb66b6106775a93b80a1f114139",
     "fn": "transfer",
-    "block": 68636598,
+    "block": 68639187,
     "status": "success",
     "gasLimit": "115328",
     "gasUsed": "99526"
    },
-   "block": 68636598,
-   "blockTimestamp": 1791274809,
-   "wallTime": "2026-10-06T08:20:10.252Z",
-   "wallMs": 1791274810252,
+   "block": 68639187,
+   "blockTimestamp": 1791275597,
+   "wallTime": "2026-10-06T08:33:19.428Z",
+   "wallMs": 1791275599428,
    "data": {
     "token": "USDC",
     "to": "0xbfe1CcB61f33A48d5Ed6d0F6779a0d596d741c3E",
@@ -4699,28 +4699,28 @@
   {
    "type": "event",
    "seq": 86,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.fund-farm-usdc:3",
    "attempt": 1,
    "kind": "fund",
    "label": "USDC to farm-03 wallet (demo) (for scene 3)",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0xc042ce65aeddf522000725aa512ee9b3177926a588a414f7a229d5a1971069a0",
+    "hash": "0x2473a2f82ccf4415589a1f4d7f196830efde05718a18effdeecf1d4a010ab951",
     "fn": "transfer",
-    "block": 68636599,
+    "block": 68639188,
     "status": "success",
     "gasLimit": "115328",
     "gasUsed": "99526"
    },
-   "block": 68636599,
-   "blockTimestamp": 1791274809,
-   "wallTime": "2026-10-06T08:20:10.395Z",
-   "wallMs": 1791274810395,
+   "block": 68639188,
+   "blockTimestamp": 1791275597,
+   "wallTime": "2026-10-06T08:33:19.642Z",
+   "wallMs": 1791275599642,
    "data": {
     "token": "USDC",
     "to": "0x14B4A3F910d9719ef5133858237f43371766B601",
@@ -4734,28 +4734,28 @@
   {
    "type": "event",
    "seq": 87,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.fund-farm-usdc:4",
    "attempt": 1,
    "kind": "fund",
    "label": "USDC to farm-04 wallet (demo) (for scene 3)",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x9e264cf553fc1308e0ecf5822b601ffad6727bbea3d850992b422f535f42c047",
+    "hash": "0x21fa217a0c8014f54d6874f316fd76922e5c72d6f76b71749a4a423e461374e3",
     "fn": "transfer",
-    "block": 68636600,
+    "block": 68639189,
     "status": "success",
     "gasLimit": "115328",
     "gasUsed": "99526"
    },
-   "block": 68636600,
-   "blockTimestamp": 1791274809,
-   "wallTime": "2026-10-06T08:20:10.616Z",
-   "wallMs": 1791274810616,
+   "block": 68639189,
+   "blockTimestamp": 1791275597,
+   "wallTime": "2026-10-06T08:33:19.800Z",
+   "wallMs": 1791275599800,
    "data": {
     "token": "USDC",
     "to": "0x399b7FBC7290Bd8cD4E382924AAEdC991B953a75",
@@ -4769,28 +4769,28 @@
   {
    "type": "event",
    "seq": 88,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.fund-farm-usdc:5",
    "attempt": 1,
    "kind": "fund",
    "label": "USDC to farm-05 wallet (demo) (for scene 3)",
-   "actor": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+   "actor": "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1",
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x867a61eee7766c71948c3a4f7642f50397acf5f6599f774fc997a721aaf18431",
+    "hash": "0x1654359350e8a285ed3dafb457d1e258314946b96ad37715d3ec3a0a6d5aa862",
     "fn": "transfer",
-    "block": 68636601,
+    "block": 68639190,
     "status": "success",
     "gasLimit": "115315",
     "gasUsed": "99514"
    },
-   "block": 68636601,
-   "blockTimestamp": 1791274809,
-   "wallTime": "2026-10-06T08:20:10.740Z",
-   "wallMs": 1791274810740,
+   "block": 68639190,
+   "blockTimestamp": 1791275597,
+   "wallTime": "2026-10-06T08:33:19.948Z",
+   "wallMs": 1791275599948,
    "data": {
     "token": "USDC",
     "to": "0x831e67B2F89e912BCA1D00a96c66AdA14538A870",
@@ -4804,7 +4804,7 @@
   {
    "type": "event",
    "seq": 89,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 2,
    "sceneName": "farm",
    "step": "2.end",
@@ -4815,10 +4815,10 @@
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636601,
-   "blockTimestamp": 1791274809,
-   "wallTime": "2026-10-06T08:20:10.747Z",
-   "wallMs": 1791274810747,
+   "block": 68639190,
+   "blockTimestamp": 1791275597,
+   "wallTime": "2026-10-06T08:33:19.955Z",
+   "wallMs": 1791275599955,
    "data": {
     "ok": true,
     "checks": [
@@ -4853,7 +4853,7 @@
       "actual": "0"
      }
     ],
-    "durationMs": 15100
+    "durationMs": 14006
    },
    "agent": null,
    "payer": null,
@@ -4863,7 +4863,7 @@
   {
    "type": "event",
    "seq": 90,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 3,
    "sceneName": "farm-pays-itself",
    "step": "3.start",
@@ -4874,10 +4874,10 @@
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636601,
-   "blockTimestamp": 1791274809,
-   "wallTime": "2026-10-06T08:20:10.753Z",
-   "wallMs": 1791274810753,
+   "block": 68639190,
+   "blockTimestamp": 1791275597,
+   "wallTime": "2026-10-06T08:33:19.965Z",
+   "wallMs": 1791275599965,
    "data": null,
    "agent": null,
    "payer": null,
@@ -4887,7 +4887,7 @@
   {
    "type": "event",
    "seq": 91,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 3,
    "sceneName": "farm-pays-itself",
    "step": "3.farm-pay:1",
@@ -4898,15 +4898,15 @@
    "agentId": "2021",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636602,
-   "blockTimestamp": 1791274809,
-   "wallTime": "2026-10-06T08:20:10.911Z",
-   "wallMs": 1791274810911,
+   "block": 68639191,
+   "blockTimestamp": 1791275598,
+   "wallTime": "2026-10-06T08:33:20.174Z",
+   "wallMs": 1791275600174,
    "data": {
     "from": "0xA52183fF5cb424AB332fF73D5e1aEAEfa54845f7",
     "to": "0xbfe1CcB61f33A48d5Ed6d0F6779a0d596d741c3E",
     "amount": "1000",
-    "settlementTx": "0x8f31f654377281c60526c63f083c1c40e4b69e95ef89c723a2884681f38cb0f5",
+    "settlementTx": "0x3f04af3a2a056a6448d801084f4b2cfeb9a8aa32292742bb6f7996539adbf8bc",
     "receiptVerified": true
    },
    "agent": {
@@ -4933,7 +4933,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636596
+     "certBlock": 68639185
     }
    },
    "payer": null,
@@ -4943,7 +4943,7 @@
   {
    "type": "event",
    "seq": 92,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 3,
    "sceneName": "farm-pays-itself",
    "step": "3.farm-pay:2",
@@ -4954,15 +4954,15 @@
    "agentId": "2022",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636603,
-   "blockTimestamp": 1791274810,
-   "wallTime": "2026-10-06T08:20:11.132Z",
-   "wallMs": 1791274811132,
+   "block": 68639192,
+   "blockTimestamp": 1791275598,
+   "wallTime": "2026-10-06T08:33:20.311Z",
+   "wallMs": 1791275600311,
    "data": {
     "from": "0xbfe1CcB61f33A48d5Ed6d0F6779a0d596d741c3E",
     "to": "0x14B4A3F910d9719ef5133858237f43371766B601",
     "amount": "1000",
-    "settlementTx": "0x8639d0ad0cceec684517de26119446969d9774b79daf600c1363c8e5c240eea7",
+    "settlementTx": "0xdc6acedec307409b227d7c23c887f3accb23c5b9a03367ecf148cc81822a5b7a",
     "receiptVerified": true
    },
    "agent": {
@@ -4989,7 +4989,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636596
+     "certBlock": 68639185
     }
    },
    "payer": null,
@@ -4999,7 +4999,7 @@
   {
    "type": "event",
    "seq": 93,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 3,
    "sceneName": "farm-pays-itself",
    "step": "3.farm-pay:3",
@@ -5010,15 +5010,15 @@
    "agentId": "2023",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636604,
-   "blockTimestamp": 1791274810,
-   "wallTime": "2026-10-06T08:20:11.280Z",
-   "wallMs": 1791274811280,
+   "block": 68639193,
+   "blockTimestamp": 1791275598,
+   "wallTime": "2026-10-06T08:33:20.457Z",
+   "wallMs": 1791275600457,
    "data": {
     "from": "0x14B4A3F910d9719ef5133858237f43371766B601",
     "to": "0x399b7FBC7290Bd8cD4E382924AAEdC991B953a75",
     "amount": "1000",
-    "settlementTx": "0x4f583c269445815a456b6620468f491544d548bcfe16921737331551f3b85905",
+    "settlementTx": "0x27ed98d7f4d02e985684f2cb196e5fc1f1fd287a95c4f5a873aaff6f295aabd2",
     "receiptVerified": true
    },
    "agent": {
@@ -5045,7 +5045,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636596
+     "certBlock": 68639185
     }
    },
    "payer": null,
@@ -5055,7 +5055,7 @@
   {
    "type": "event",
    "seq": 94,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 3,
    "sceneName": "farm-pays-itself",
    "step": "3.farm-pay:4",
@@ -5066,15 +5066,15 @@
    "agentId": "2024",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636605,
-   "blockTimestamp": 1791274810,
-   "wallTime": "2026-10-06T08:20:11.431Z",
-   "wallMs": 1791274811431,
+   "block": 68639194,
+   "blockTimestamp": 1791275598,
+   "wallTime": "2026-10-06T08:33:20.715Z",
+   "wallMs": 1791275600715,
    "data": {
     "from": "0x399b7FBC7290Bd8cD4E382924AAEdC991B953a75",
     "to": "0x831e67B2F89e912BCA1D00a96c66AdA14538A870",
     "amount": "1000",
-    "settlementTx": "0xdaa4e37a37a89645730965fa73f40baac4bcb50c45e6fe72056430074fb3b7cf",
+    "settlementTx": "0xcdf82b14676f5b7e70f5f0520c110cef9434c6ea63d91a70374741813e71f673",
     "receiptVerified": true
    },
    "agent": {
@@ -5101,7 +5101,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636596
+     "certBlock": 68639185
     }
    },
    "payer": null,
@@ -5111,7 +5111,7 @@
   {
    "type": "event",
    "seq": 95,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 3,
    "sceneName": "farm-pays-itself",
    "step": "3.farm-pay:5",
@@ -5122,15 +5122,15 @@
    "agentId": "2025",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636606,
-   "blockTimestamp": 1791274810,
-   "wallTime": "2026-10-06T08:20:11.695Z",
-   "wallMs": 1791274811695,
+   "block": 68639195,
+   "blockTimestamp": 1791275598,
+   "wallTime": "2026-10-06T08:33:20.879Z",
+   "wallMs": 1791275600879,
    "data": {
     "from": "0x831e67B2F89e912BCA1D00a96c66AdA14538A870",
     "to": "0xF30896Be52f5e1b1Df41C7E17Bf8ED3034F33727",
     "amount": "1000",
-    "settlementTx": "0x19cca20b788f4ab33603b7bca609d9bc27944e18b961940c08d5e18114a2223a",
+    "settlementTx": "0xf4a32a44d1478e5cce2f94b701ba6b329bb882a4f98f8dca46683f50ed697b25",
     "receiptVerified": true
    },
    "agent": {
@@ -5157,7 +5157,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636596
+     "certBlock": 68639185
     }
    },
    "payer": null,
@@ -5167,7 +5167,7 @@
   {
    "type": "event",
    "seq": 96,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 3,
    "sceneName": "farm-pays-itself",
    "step": "3.pay:target",
@@ -5178,10 +5178,10 @@
    "agentId": "2019",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636606,
-   "blockTimestamp": 1791274810,
-   "wallTime": "2026-10-06T08:20:11.739Z",
-   "wallMs": 1791274811739,
+   "block": 68639195,
+   "blockTimestamp": 1791275598,
+   "wallTime": "2026-10-06T08:33:20.918Z",
+   "wallMs": 1791275600918,
    "data": null,
    "agent": {
     "explorer": {
@@ -5207,7 +5207,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636596
+     "certBlock": 68639185
     }
    },
    "payer": {
@@ -5240,7 +5240,7 @@
   {
    "type": "event",
    "seq": 97,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 3,
    "sceneName": "farm-pays-itself",
    "step": "3.end",
@@ -5251,10 +5251,10 @@
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636606,
-   "blockTimestamp": 1791274810,
-   "wallTime": "2026-10-06T08:20:11.749Z",
-   "wallMs": 1791274811749,
+   "block": 68639195,
+   "blockTimestamp": 1791275598,
+   "wallTime": "2026-10-06T08:33:20.929Z",
+   "wallMs": 1791275600929,
    "data": {
     "ok": true,
     "checks": [
@@ -5277,7 +5277,7 @@
       "actual": "REFUSED"
      }
     ],
-    "durationMs": 996
+    "durationMs": 964
    },
    "agent": null,
    "payer": null,
@@ -5287,7 +5287,7 @@
   {
    "type": "event",
    "seq": 98,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 4,
    "sceneName": "breaker",
    "step": "4.start",
@@ -5298,10 +5298,10 @@
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636606,
-   "blockTimestamp": 1791274810,
-   "wallTime": "2026-10-06T08:20:11.755Z",
-   "wallMs": 1791274811755,
+   "block": 68639195,
+   "blockTimestamp": 1791275598,
+   "wallTime": "2026-10-06T08:33:20.938Z",
+   "wallMs": 1791275600938,
    "data": null,
    "agent": null,
    "payer": null,
@@ -5311,7 +5311,7 @@
   {
    "type": "event",
    "seq": 99,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 4,
    "sceneName": "breaker",
    "step": "4.pay:p2-before",
@@ -5322,10 +5322,10 @@
    "agentId": "2018",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636607,
-   "blockTimestamp": 1791274810,
-   "wallTime": "2026-10-06T08:20:11.897Z",
-   "wallMs": 1791274811897,
+   "block": 68639196,
+   "blockTimestamp": 1791275598,
+   "wallTime": "2026-10-06T08:33:21.098Z",
+   "wallMs": 1791275601098,
    "data": null,
    "agent": {
     "explorer": {
@@ -5351,7 +5351,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636596
+     "certBlock": 68639185
     }
    },
    "payer": {
@@ -5374,7 +5374,7 @@
      "verify": "ok",
      "settle": "ok"
     },
-    "settlementTx": "0x3e9cda4549558ab5c9b208828a7b851721815cd02811f2fdb6110f47afeb7f89",
+    "settlementTx": "0xa29ce8bdcc3011e4859ca1df53bfdeac473daa2bfc50f44b47b963c5378b704a",
     "providerReceived": "10000",
     "payerBalanceAfter": "70000"
    },
@@ -5384,34 +5384,35 @@
   {
    "type": "event",
    "seq": 100,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 4,
    "sceneName": "breaker",
    "step": "4.slash",
    "attempt": 1,
    "kind": "feedback",
    "label": "anchor-B (demo) slashes provider-2 (-100)",
-   "actor": "0x7B10023a69FA1cd4Be6C2b5dB094F81789Bc33d3",
+   "actor": "0x7b10023a69fa1cd4be6c2b5db094f81789bc33d3",
    "agentId": "2018",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0x8e69f84dcada5824417ebb5777d636a833c5a9164f83c23dc77ae87e2e61a21e",
+    "hash": "0x498dcf0f59ea7e29d308d71127f162bf4b4742b1a042750bc6e7a2a1090dcf76",
     "fn": "giveFeedback",
-    "block": 68636608,
+    "block": 68639197,
     "status": "success",
     "gasLimit": "222939",
     "gasUsed": "195714"
    },
-   "block": 68636608,
-   "blockTimestamp": 1791274810,
-   "wallTime": "2026-10-06T08:20:12.077Z",
-   "wallMs": 1791274812077,
+   "block": 68639197,
+   "blockTimestamp": 1791275599,
+   "wallTime": "2026-10-06T08:33:21.271Z",
+   "wallMs": 1791275601271,
    "data": {
     "client": "0x7B10023a69FA1cd4Be6C2b5dB094F81789Bc33d3",
     "tag1": "slash",
     "tag2": "demo",
     "value": "-100",
-    "decimals": 0
+    "decimals": 0,
+    "feedbackIndex": 2
    },
    "agent": {
     "explorer": {
@@ -5437,7 +5438,7 @@
      "vetoCount": 1,
      "triggerTag": "0xf83f8a174c4825c98b32d3757717b2efda126db29012b815e48bc296ccdf878e",
      "triggerTagName": "slash",
-     "certBlock": 68636596
+     "certBlock": 68639185
     }
    },
    "payer": null,
@@ -5447,7 +5448,7 @@
   {
    "type": "event",
    "seq": 101,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 4,
    "sceneName": "breaker",
    "step": "4.pay:p2-after-slash",
@@ -5458,10 +5459,10 @@
    "agentId": "2018",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636608,
-   "blockTimestamp": 1791274810,
-   "wallTime": "2026-10-06T08:20:12.119Z",
-   "wallMs": 1791274812119,
+   "block": 68639197,
+   "blockTimestamp": 1791275599,
+   "wallTime": "2026-10-06T08:33:21.306Z",
+   "wallMs": 1791275601306,
    "data": null,
    "agent": {
     "explorer": {
@@ -5487,7 +5488,7 @@
      "vetoCount": 1,
      "triggerTag": "0xf83f8a174c4825c98b32d3757717b2efda126db29012b815e48bc296ccdf878e",
      "triggerTagName": "slash",
-     "certBlock": 68636596
+     "certBlock": 68639185
     }
    },
    "payer": {
@@ -5520,7 +5521,7 @@
   {
    "type": "event",
    "seq": 102,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 4,
    "sceneName": "breaker",
    "step": "4.cert",
@@ -5531,10 +5532,10 @@
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636609,
-   "blockTimestamp": 1791274811,
-   "wallTime": "2026-10-06T08:20:12.613Z",
-   "wallMs": 1791274812613,
+   "block": 68639198,
+   "blockTimestamp": 1791275599,
+   "wallTime": "2026-10-06T08:33:21.651Z",
+   "wallMs": 1791275601651,
    "data": {
     "trigger": "an anchor slashed provider-2"
    },
@@ -5542,7 +5543,7 @@
    "payer": null,
    "certificate": {
     "action": "certified",
-    "certBlock": 68636609,
+    "certBlock": 68639198,
     "nCert": 6,
     "rows": 6,
     "eEff": "16",
@@ -5551,20 +5552,20 @@
     "txs": [
      {
       "fn": "submitCertificate",
-      "hash": "0x92d69610efc4c705aa9e8ed89a69c78fd14df0fe9030baefd545c775d389180e",
+      "hash": "0x6abd7c471515e92e4227abcdf37dfbe26fda6c66cf7ae65abe3a0f89ee833d96",
       "gasLimit": "538480",
       "gasUsed": "496260",
-      "block": 68636609
+      "block": 68639198
      }
     ],
-    "computeMs": 178.6
+    "computeMs": 50.9
    },
    "latency": null
   },
   {
    "type": "event",
    "seq": 103,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 4,
    "sceneName": "breaker",
    "step": "4.pay:p2-after-cert",
@@ -5575,10 +5576,10 @@
    "agentId": "2018",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636609,
-   "blockTimestamp": 1791274811,
-   "wallTime": "2026-10-06T08:20:12.639Z",
-   "wallMs": 1791274812639,
+   "block": 68639198,
+   "blockTimestamp": 1791275599,
+   "wallTime": "2026-10-06T08:33:21.676Z",
+   "wallMs": 1791275601676,
    "data": null,
    "agent": {
     "explorer": {
@@ -5604,7 +5605,7 @@
      "vetoCount": 1,
      "triggerTag": "0xf83f8a174c4825c98b32d3757717b2efda126db29012b815e48bc296ccdf878e",
      "triggerTagName": "slash",
-     "certBlock": 68636609
+     "certBlock": 68639198
     }
    },
    "payer": {
@@ -5637,21 +5638,21 @@
   {
    "type": "event",
    "seq": 104,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 4,
    "sceneName": "breaker",
    "step": "4.latency",
    "attempt": 1,
    "kind": "assess",
-   "label": "breaker latency: 0 block(s), 40 ms (fork)",
+   "label": "breaker latency: 0 block(s), 37 ms (fork)",
    "actor": null,
    "agentId": "2018",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636609,
-   "blockTimestamp": 1791274811,
-   "wallTime": "2026-10-06T08:20:12.643Z",
-   "wallMs": 1791274812643,
+   "block": 68639198,
+   "blockTimestamp": 1791275599,
+   "wallTime": "2026-10-06T08:33:21.680Z",
+   "wallMs": 1791275601680,
    "data": null,
    "agent": {
     "explorer": {
@@ -5677,7 +5678,7 @@
      "vetoCount": 1,
      "triggerTag": "0xf83f8a174c4825c98b32d3757717b2efda126db29012b815e48bc296ccdf878e",
      "triggerTagName": "slash",
-     "certBlock": 68636609
+     "certBlock": 68639198
     }
    },
    "payer": null,
@@ -5685,21 +5686,21 @@
    "latency": {
     "from": {
      "step": "4.slash",
-     "block": 68636608,
-     "wallMs": 1791274812075
+     "block": 68639197,
+     "wallMs": 1791275601267
     },
     "to": {
      "step": "4.pay:p2-after-slash",
-     "block": 68636608,
-     "wallMs": 1791274812115
+     "block": 68639197,
+     "wallMs": 1791275601304
     },
     "blocks": 0,
-    "ms": 40,
+    "ms": 37,
     "parts": [
      {
       "name": "slash -> refused payment (live veto, no certificate needed)",
       "blocks": 0,
-      "ms": 40
+      "ms": 37
      },
      {
       "name": "slash -> certificate carrying the veto",
@@ -5713,7 +5714,7 @@
   {
    "type": "event",
    "seq": 105,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 4,
    "sceneName": "breaker",
    "step": "4.end",
@@ -5724,10 +5725,10 @@
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636609,
-   "blockTimestamp": 1791274811,
-   "wallTime": "2026-10-06T08:20:12.645Z",
-   "wallMs": 1791274812645,
+   "block": 68639198,
+   "blockTimestamp": 1791275599,
+   "wallTime": "2026-10-06T08:33:21.683Z",
+   "wallMs": 1791275601683,
    "data": {
     "ok": true,
     "checks": [
@@ -5756,7 +5757,7 @@
       "actual": 4
      }
     ],
-    "durationMs": 891
+    "durationMs": 746
    },
    "agent": null,
    "payer": null,
@@ -5766,7 +5767,7 @@
   {
    "type": "event",
    "seq": 106,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 5,
    "sceneName": "anti-erasure",
    "step": "5.start",
@@ -5777,10 +5778,10 @@
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636609,
-   "blockTimestamp": 1791274811,
-   "wallTime": "2026-10-06T08:20:12.649Z",
-   "wallMs": 1791274812649,
+   "block": 68639198,
+   "blockTimestamp": 1791275599,
+   "wallTime": "2026-10-06T08:33:21.688Z",
+   "wallMs": 1791275601688,
    "data": null,
    "agent": null,
    "payer": null,
@@ -5790,28 +5791,28 @@
   {
    "type": "event",
    "seq": 107,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 5,
    "sceneName": "anti-erasure",
    "step": "5.review:rater->p2",
    "attempt": 1,
    "kind": "feedback",
    "label": "third-party rater (demo) gives review 1 to provider-2 (demo)",
-   "actor": "0xD85dF36Bb1c9aC5458d001771f81bE4D29b8e6Dc",
+   "actor": "0xd85df36bb1c9ac5458d001771f81be4d29b8e6dc",
    "agentId": "2018",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": {
-    "hash": "0xa68b2776511e8f4ed4c085d623cc4ceea1cc913e549b4d719c617ea4bbf39db7",
+    "hash": "0xf508fe78e2cd5f7c09257d6e368466762f39f8b86818376e44e628b2affe80a6",
     "fn": "giveFeedback",
-    "block": 68636610,
+    "block": 68639199,
     "status": "success",
     "gasLimit": "307967",
     "gasUsed": "271798"
    },
-   "block": 68636610,
-   "blockTimestamp": 1791274811,
-   "wallTime": "2026-10-06T08:20:12.885Z",
-   "wallMs": 1791274812885,
+   "block": 68639199,
+   "blockTimestamp": 1791275599,
+   "wallTime": "2026-10-06T08:33:21.917Z",
+   "wallMs": 1791275601917,
    "data": {
     "client": "0xD85dF36Bb1c9aC5458d001771f81bE4D29b8e6Dc",
     "tag1": "review",
@@ -5844,7 +5845,7 @@
      "vetoCount": 1,
      "triggerTag": "0xf83f8a174c4825c98b32d3757717b2efda126db29012b815e48bc296ccdf878e",
      "triggerTagName": "slash",
-     "certBlock": 68636609
+     "certBlock": 68639198
     }
    },
    "payer": null,
@@ -5854,7 +5855,7 @@
   {
    "type": "event",
    "seq": 108,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 5,
    "sceneName": "anti-erasure",
    "step": "5.cert",
@@ -5865,10 +5866,10 @@
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636610,
-   "blockTimestamp": 1791274811,
-   "wallTime": "2026-10-06T08:20:13.239Z",
-   "wallMs": 1791274813239,
+   "block": 68639199,
+   "blockTimestamp": 1791275599,
+   "wallTime": "2026-10-06T08:33:22.112Z",
+   "wallMs": 1791275602112,
    "data": {
     "trigger": "a third party reviewed provider-2"
    },
@@ -5883,14 +5884,14 @@
     "mass": "518518518518518500",
     "graphRoot": "0x835be7e6d873a058af1330dbcf3c290c77be7cae923bd98b4aa395bdee5a552f",
     "txs": [],
-    "computeMs": 192.5
+    "computeMs": 55
    },
    "latency": null
   },
   {
    "type": "event",
    "seq": 109,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 5,
    "sceneName": "anti-erasure",
    "step": "5.pay:p2",
@@ -5901,10 +5902,10 @@
    "agentId": "2018",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636610,
-   "blockTimestamp": 1791274811,
-   "wallTime": "2026-10-06T08:20:13.267Z",
-   "wallMs": 1791274813267,
+   "block": 68639199,
+   "blockTimestamp": 1791275599,
+   "wallTime": "2026-10-06T08:33:22.161Z",
+   "wallMs": 1791275602161,
    "data": null,
    "agent": {
     "explorer": {
@@ -5930,7 +5931,7 @@
      "vetoCount": 1,
      "triggerTag": "0xf83f8a174c4825c98b32d3757717b2efda126db29012b815e48bc296ccdf878e",
      "triggerTagName": "slash",
-     "certBlock": 68636609
+     "certBlock": 68639198
     }
    },
    "payer": {
@@ -5963,7 +5964,7 @@
   {
    "type": "event",
    "seq": 110,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 5,
    "sceneName": "anti-erasure",
    "step": "5.end",
@@ -5974,10 +5975,10 @@
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636610,
-   "blockTimestamp": 1791274811,
-   "wallTime": "2026-10-06T08:20:13.270Z",
-   "wallMs": 1791274813270,
+   "block": 68639199,
+   "blockTimestamp": 1791275599,
+   "wallTime": "2026-10-06T08:33:22.165Z",
+   "wallMs": 1791275602165,
    "data": {
     "ok": true,
     "checks": [
@@ -6000,7 +6001,7 @@
       "actual": "REFUSED"
      }
     ],
-    "durationMs": 622
+    "durationMs": 479
    },
    "agent": null,
    "payer": null,
@@ -6010,7 +6011,7 @@
   {
    "type": "event",
    "seq": 111,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 6,
    "sceneName": "fabricated-cert",
    "step": "6.start",
@@ -6021,10 +6022,10 @@
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636610,
-   "blockTimestamp": 1791274811,
-   "wallTime": "2026-10-06T08:20:13.273Z",
-   "wallMs": 1791274813273,
+   "block": 68639199,
+   "blockTimestamp": 1791275599,
+   "wallTime": "2026-10-06T08:33:22.169Z",
+   "wallMs": 1791275602169,
    "data": null,
    "agent": null,
    "payer": null,
@@ -6034,7 +6035,7 @@
   {
    "type": "event",
    "seq": 112,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 6,
    "sceneName": "fabricated-cert",
    "step": "6.fabricated",
@@ -6045,10 +6046,10 @@
    "agentId": "2019",
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636610,
-   "blockTimestamp": 1791274811,
-   "wallTime": "2026-10-06T08:20:13.678Z",
-   "wallMs": 1791274813678,
+   "block": 68639199,
+   "blockTimestamp": 1791275599,
+   "wallTime": "2026-10-06T08:33:22.361Z",
+   "wallMs": 1791275602361,
    "data": {
     "fn": "submitCertificate",
     "error": "EdgeMismatch(2, 1)",
@@ -6086,7 +6087,7 @@
      "vetoCount": 0,
      "triggerTag": null,
      "triggerTagName": null,
-     "certBlock": 68636609
+     "certBlock": 68639198
     }
    },
    "payer": null,
@@ -6096,7 +6097,7 @@
   {
    "type": "event",
    "seq": 113,
-   "runId": "run-20261006T081947Z",
+   "runId": "run-20261006T083258Z",
    "scene": 6,
    "sceneName": "fabricated-cert",
    "step": "6.end",
@@ -6107,10 +6108,10 @@
    "agentId": null,
    "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
    "tx": null,
-   "block": 68636610,
-   "blockTimestamp": 1791274811,
-   "wallTime": "2026-10-06T08:20:13.680Z",
-   "wallMs": 1791274813680,
+   "block": 68639199,
+   "blockTimestamp": 1791275599,
+   "wallTime": "2026-10-06T08:33:22.364Z",
+   "wallMs": 1791275602364,
    "data": {
     "ok": true,
     "checks": [
@@ -6127,7 +6128,7 @@
       "actual": true
      }
     ],
-    "durationMs": 408
+    "durationMs": 194
    },
    "agent": null,
    "payer": null,

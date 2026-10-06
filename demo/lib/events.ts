@@ -1,11 +1,11 @@
 // Event log of a run, format `ancre-demo-events-v1` (demo/EVENTS.md): run-<ts>.jsonl (append-only),
 // run-<ts>.json and latest.json (rewritten atomically after every event).
-import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { type Abi, type Address, type Hex, keccak256, toHex } from "viem";
+import { type Abi, type Address, type Hex, keccak256, toHex, zeroHash } from "viem";
 import { reputationAbi, STATUSES } from "./abi.ts";
 import type { Chain, TxRecord } from "./chain.ts";
-import { OUT } from "./config.ts";
+import { OUT, TESTNET } from "./config.ts";
 
 export const FORMAT = "ancre-demo-events-v1";
 const WAD = 10n ** 18n;
@@ -38,6 +38,7 @@ export class EventLog {
   seq = 0;
   chain: Chain;
   tagNames = new Map<string, string>();
+  timestamps = new Map<number, number>(); // block -> timestamp (3-4 Monad blocks share a second; events share blocks)
   ancre?: { address: Address; abi: Abi; setId: Hex; theta: bigint };
 
   constructor(chain: Chain, runId: string, header: Record<string, unknown>) {
@@ -73,19 +74,21 @@ export class EventLog {
   }
 
   flush() {
-    const body = json({ header: this.header, events: this.events });
-    for (const p of [this.path("json"), join(OUT, "latest.json")]) {
-      writeFileSync(p + ".tmp", body);
-      renameSync(p + ".tmp", p);
-    }
+    const p = this.path("json");
+    writeFileSync(p + ".tmp", json({ header: this.header, events: this.events }));
+    renameSync(p + ".tmp", p);
+    copyFileSync(p, join(OUT, "latest.json.tmp"));
+    renameSync(join(OUT, "latest.json.tmp"), join(OUT, "latest.json"));
   }
 
   /** Both columns of the screen for one agent, read at `block`. */
   async snapshot(agentId: bigint, block: bigint): Promise<AgentSnapshot> {
-    const [clients, , values, decs, , , revoked] = await this.chain.pub.readContract({
-      address: this.header.contracts && (this.header.contracts as { reputation: Address }).reputation,
-      abi: reputationAbi, functionName: "readAllFeedback", args: [agentId, [], "", "", true], blockNumber: block,
-    }) as readonly [readonly Address[], readonly bigint[], readonly bigint[], readonly number[], readonly string[], readonly string[], readonly boolean[]];
+    const [[clients, , values, decs, , , revoked], x] = await Promise.all([
+      this.chain.pub.readContract({ address: TESTNET.reputation, abi: reputationAbi, functionName: "readAllFeedback",
+        args: [agentId, [], "", "", true], blockNumber: block }),
+      this.ancre ? this.chain.pub.readContract({ address: this.ancre.address, abi: this.ancre.abi, functionName: "assess",
+        args: [agentId, this.ancre.setId, true], blockNumber: block }) as Promise<Record<string, bigint | number | boolean | Hex>> : undefined,
+    ]);
     const live = revoked.map((r, i) => (r ? -1 : i)).filter((i) => i >= 0);
     const explorer = {
       feedbackCount: live.length,
@@ -94,11 +97,9 @@ export class EventLog {
       naiveAverage: naiveAverage(live.map((i) => values[i]), live.map((i) => decs[i])),
     };
     let contract: Record<string, unknown> = { status: "NO_CERT", trusted: false };
-    if (this.ancre) {
-      const x = await this.chain.pub.readContract({ address: this.ancre.address, abi: this.ancre.abi, functionName: "assess",
-        args: [agentId, this.ancre.setId, true], blockNumber: block }) as Record<string, bigint | number | boolean | Hex>;
+    if (this.ancre && x) {
       const tt = x.triggerTag as Hex;
-      const none = /^0x0+$/.test(tt);
+      const none = tt === zeroHash;
       contract = {
         status: STATUSES[Number(x.status)], trusted: x.trusted,
         trust: x.trust, trustRobust: x.trustRobust, trustLow: x.trustLow, trustLowPct: pct(x.trustLow as bigint),
@@ -117,9 +118,14 @@ export class EventLog {
     tx?: TxRecord | null; block?: number; data?: unknown; payer?: unknown; certificate?: unknown; latency?: unknown;
     attempt?: number;
   }) {
-    const head = await this.chain.block();
-    const block = e.tx?.block ?? e.block ?? head.number;
-    const blockTimestamp = block === head.number ? head.timestamp : await this.chain.blockAt(block);
+    let block = e.tx?.block ?? e.block;
+    if (block === undefined) {
+      const head = await this.chain.block();
+      block = head.number;
+      this.timestamps.set(block, head.timestamp);
+    }
+    if (!this.timestamps.has(block)) this.timestamps.set(block, await this.chain.blockAt(block));
+    const blockTimestamp = this.timestamps.get(block)!;
     const agent = e.agentId != null ? await this.snapshot(e.agentId, BigInt(block)) : null;
     const now = Date.now();
     const ev = {

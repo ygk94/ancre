@@ -50,7 +50,8 @@ export class Chain {
     this.mode = mode;
     this.chainId = chainId;
     // 250 ms receipt polling: viem defaults to 4 s, which is 13 Monad blocks per transaction
-    this.pub = createPublicClient({ pollingInterval: 250, transport: http(rpc, { timeout: 120_000, retryCount: 5 }) }) as PublicClient;
+    // cacheTime 0: block numbers are read to pin reads after our own transactions, a cached head would be stale
+    this.pub = createPublicClient({ pollingInterval: 250, cacheTime: 0, transport: http(rpc, { timeout: 120_000, retryCount: 5 }) }) as PublicClient;
   }
 
   wallet(account: PrivateKeyAccount) {
@@ -76,16 +77,23 @@ export class Chain {
       if (req.value) await this.reserveWindow(account.address, req.value + gasLimit * (await this.pub.getGasPrice()));
     }
     const hash = await this.wallet(account).sendTransaction({ to: req.to ?? null, data, value: req.value, gas: gasLimit, chain: null });
+    const r = await this.record(label, fn, hash, estimate, gasLimit);
+    this.lastBlockOf.set(account.address, r.block);
+    if (req.value && req.to) this.fundedAt.set(getAddress(req.to), r.block);
+    if (r.status !== "success") throw new Error(`${label}: ${fn} reverted (${hash})`);
+    return r;
+  }
+
+  /** Wait for a transaction we sent (or the certifier sent for us) and add it to the cost ledger. */
+  async record(label: string, fn: string, hash: Hash, estimate: bigint, gasLimit?: bigint): Promise<TxRecord & { receipt: TransactionReceipt }> {
     const receipt = await this.pub.waitForTransactionReceipt({ hash, timeout: 180_000 });
+    const limit = gasLimit ?? (await this.pub.getTransaction({ hash })).gas;
     const gasPrice = receipt.effectiveGasPrice ?? 0n;
     const rec: TxRecord = {
-      label, fn, from: account.address, hash, block: Number(receipt.blockNumber), status: receipt.status,
-      estimate, gasLimit, gasUsed: receipt.gasUsed, gasPrice, costWei: gasLimit * gasPrice, logs: logsByAddress(receipt),
+      label, fn, from: receipt.from, hash, block: Number(receipt.blockNumber), status: receipt.status,
+      estimate, gasLimit: limit, gasUsed: receipt.gasUsed, gasPrice, costWei: limit * gasPrice, logs: logsByAddress(receipt),
     };
     this.ledger.push(rec);
-    this.lastBlockOf.set(account.address, rec.block);
-    if (req.value && req.to) this.fundedAt.set(getAddress(req.to), rec.block);
-    if (receipt.status !== "success") throw new Error(`${label}: ${fn} reverted (${hash})`);
     return { ...rec, receipt };
   }
 
@@ -118,12 +126,12 @@ export class Chain {
 
   async setBalance(who: Address, wei: bigint) {
     this.assertLocal();
-    await this.pub.request({ method: "anvil_setBalance" as never, params: [who, toHex(wei)] as never });
+    await this.rawRequest("anvil_setBalance", [who, toHex(wei)]);
   }
 
   async impersonate(who: Address) {
     this.assertLocal();
-    await this.pub.request({ method: "anvil_impersonateAccount" as never, params: [who] as never });
+    await this.rawRequest("anvil_impersonateAccount", [who]);
   }
 
   async rawRequest<T>(method: string, params: unknown[]): Promise<T> {
@@ -134,5 +142,3 @@ export class Chain {
     if (!this.isLocal) throw new Error("fork-only helper called on a real network");
   }
 }
-
-export const checksum = (a: string) => getAddress(a);

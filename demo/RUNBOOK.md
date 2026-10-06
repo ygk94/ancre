@@ -9,7 +9,7 @@ rejected. Everything below was run on 2026-10-06 (chantier 06); timings are MEAS
 | Replay the whole act on a fork | `node run.ts` | reads testnet state through the fork | 27 s (MEASURED 06/10, anvil start included) |
 | Replay scenes 1-6 with **no network at all** | `node run.ts --frozen` | none | 20 s (MEASURED 06/10) |
 | Resumable rehearsal | `node fork.ts` + `node run.ts --rpc http://127.0.0.1:8549` | fork | ~30 s |
-| Dress rehearsal of the testnet run | `node run.ts --rehearse-testnet --keystore <ks> --sweep` | fork, interval mining | 7.5 min at 1 s blocks |
+| Dress rehearsal of the testnet run | `node run.ts --rehearse-testnet --keystore <ks> --sweep` | fork, interval mining | 166 s at 1 s blocks (MEASURED 06/10) |
 | **Real testnet** (Hugo's go-ahead only) | `node run.ts --network testnet --keystore <ks> --sweep` | Monad testnet | 3-5 min (ESTIMATED) |
 
 ## 1. Prerequisites (≈ 5 minutes, once)

@@ -1,10 +1,10 @@
 // Local chains for the act: an `anvil --network monad` fork of Monad testnet 10143 (Monad gas model: MIP-8 pages,
 // gas limit billed), or the FROZEN demo (D28): the state dumped after the setup, replayed without any network.
-import { type ChildProcess, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 import { createPublicClient, http } from "viem";
 import { FOUNDRY, TESTNET } from "./config.ts";
 
-export type Anvil = { rpc: string; proc: ChildProcess; stop: () => Promise<void> };
+export type Anvil = { rpc: string; stop: () => Promise<void> };
 
 export function anvilArgs(o: { port: number; forkBlock?: number; loadState?: string; dumpState?: string; offline?: boolean; blockTime?: number }) {
   const a = ["--network", "monad", "--chain-id", String(TESTNET.chainId), "--port", String(o.port), "--silent"];
@@ -36,7 +36,7 @@ export async function startAnvil(o: Parameters<typeof anvilArgs>[0]): Promise<An
     try {
       await pub.getChainId();
       return {
-        rpc, proc,
+        rpc,
         stop: () => new Promise((res) => {                  // SIGINT: anvil writes --dump-state on a clean exit
           if (proc.exitCode !== null) return res();
           proc.once("exit", () => res());

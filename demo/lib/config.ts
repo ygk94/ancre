@@ -1,6 +1,6 @@
 // Act 2 configuration: network constants, demo set policy, farm size. Every number here is either MEASURED (dated)
 // or a demo choice explained in docs/chantiers/journal/06.md.
-import { getAddress, type Address } from "viem";
+import { getAddress } from "viem";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -71,6 +71,3 @@ export const TAG2 = "demo";
 /** Gas limit = ceil(estimate x 1.10) + 5 000: on Monad the LIMIT is billed (CLAUDE.md §7). */
 export const GAS_MARGIN_BPS = 1_000n;
 export const GAS_MARGIN_ABS = 5_000n;
-
-export type Hex32 = `0x${string}`;
-export type Addr = Address;

@@ -11,23 +11,28 @@
 import { copyFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
-import { createPublicClient, type Hex, http, keccak256, toHex } from "viem";
+import { parseArgs } from "node:util";
+import { createPublicClient, http, keccak256, toHex } from "viem";
 import { dumpState, forkCacheFile, mergeCache, writeFrozen } from "./lib/freeze.ts";
 import { privateKeyToAccount } from "viem/accounts";
 import { askPassword, decryptKeystore, demoAccounts, emitters, FORK_SEED } from "./lib/accounts.ts";
 import { type Anvil, startAnvil } from "./lib/anvil.ts";
-import { artifact, Chain, type Mode } from "./lib/chain.ts";
+import { Chain, type Mode } from "./lib/chain.ts";
 import { DEMO, FARM_SIZE, FORK_PORT, OUT, SET, TESTNET } from "./lib/config.ts";
 import { EventLog } from "./lib/events.ts";
 import { EmulatedFacilitator, HttpFacilitator } from "./lib/x402.ts";
-import { type Ctx, scene0, scene1, scene2, scene3, scene4, scene5, scene6 } from "./lib/scenes.ts";
+import { ancreArt, type Ctx, scene0, scene1, scene2, scene3, scene4, scene5, scene6 } from "./lib/scenes.ts";
 import { loadState, saveState, type State, statePath } from "./lib/state.ts";
 import { budgetReport } from "./lib/budget.ts";
 import { sweep } from "./lib/sweep.ts";
 
-const argv = process.argv.slice(2);
-const flag = (n: string) => argv.includes(`--${n}`);
-const opt = (n: string, d?: string) => { const i = argv.indexOf(`--${n}`); return i >= 0 ? argv[i + 1] : d; };
+// strict: a mistyped option (`--scene 0`) is an error, never silently "all scenes" (it matters on the testnet)
+const { values: args } = parseArgs({ strict: true, options: {
+  network: { type: "string", default: "fork" }, rpc: { type: "string" }, scenes: { type: "string" }, port: { type: "string" },
+  "fork-block": { type: "string" }, keystore: { type: "string" }, freeze: { type: "boolean" }, frozen: { type: "boolean" },
+  online: { type: "boolean" }, "keep-state": { type: "boolean" }, resume: { type: "boolean" }, sweep: { type: "boolean" },
+  "sweep-only": { type: "boolean" }, "rehearse-testnet": { type: "boolean" },
+} });
 
 function parseScenes(s: string): number[] {
   if (s === "all") return [0, 1, 2, 3, 4, 5, 6];
@@ -40,72 +45,63 @@ function parseScenes(s: string): number[] {
 const FROZEN_DIR = join(DEMO, "frozen"); // tracked: the judges replay act 2 with no RPC at all
 const FROZEN_STATE = join(FROZEN_DIR, "anvil-state.json");
 
+/** Keystore of the operator (testnet run and its rehearsal): its key is the seed of every demo account. */
+async function unlock(ks: string | undefined, real: boolean) {
+  if (!ks) throw new Error("--keystore <path> is required (the operator's encrypted Foundry keystore)");
+  if (real) {
+    if (!process.stdin.isTTY) throw new Error("the testnet run needs an interactive terminal (typed confirmation)");
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    const phrase = "send real testnet transactions";
+    const ans = await rl.question(`About to send REAL Monad testnet transactions (see demo/BUDGET.md). Type "${phrase}": `);
+    rl.close();
+    if (ans.trim() !== phrase) throw new Error("not confirmed");
+  }
+  const pw = await askPassword("keystore password: ");
+  const seed = decryptKeystore(ks, pw);
+  return { seed, passwordEnv: { ANCRE_DEMO_PASSWORD: pw }, signer: `keystore:${ks}:ANCRE_DEMO_PASSWORD:${privateKeyToAccount(seed).address}` };
+}
+
 async function main() {
-  const network = opt("network", "fork");
+  if (args.network !== "fork" && args.network !== "testnet") throw new Error(`--network ${args.network}: fork or testnet`);
   // dress rehearsal of the testnet run on a fork: keystore, cast keystore signer, reserve waits, interval mining,
   // a 5 MON operator; only the facilitator stays emulated (no request to any external service)
-  const rehearse = flag("rehearse-testnet");
-  const frozen = flag("frozen");
-  const freeze = flag("freeze");
-  const mode: Mode = network === "testnet" ? "testnet" : frozen ? "frozen" : "fork";
+  const rehearse = !!args["rehearse-testnet"];
+  const { frozen, freeze } = args;
+  const mode: Mode = args.network === "testnet" ? "testnet" : frozen ? "frozen" : "fork";
+  const monadRules = mode === "testnet" || rehearse;
   const name = rehearse ? "rehearsal" : mode;
-  const scenes = parseScenes(opt("scenes", frozen ? "1-6" : "all")!);
+  const scenes = parseScenes(args.scenes ?? (frozen ? "1-6" : "all"));
+  const ks = monadRules ? await unlock(args.keystore, mode === "testnet") : undefined;
   let anvil: Anvil | undefined;
-  let rpc = opt("rpc");
-  let seed: Hex = FORK_SEED;
-  let operatorIsSeed = false;
-  let passwordEnv: Record<string, string> | undefined;
-  let signer: string | undefined;
-  let forkBlock: number | undefined;
+  let rpc = args.rpc ?? (mode === "testnet" ? TESTNET.rpc : undefined);
+  let forkBlock = args["fork-block"] ? Number(args["fork-block"]) : undefined;
   let s0: Awaited<ReturnType<typeof dumpState>> | undefined;
 
-  if (mode === "testnet" || rehearse) {
-    if (mode === "testnet") rpc ??= TESTNET.rpc;
-    const ks = opt("keystore");
-    if (!ks) throw new Error("--keystore <path> is required on the testnet (the operator's encrypted Foundry keystore)");
-    if (mode === "testnet") {
-      if (!process.stdin.isTTY) throw new Error("the testnet run needs an interactive terminal (typed confirmation)");
-      const rl = createInterface({ input: process.stdin, output: process.stdout });
-      const phrase = "send real testnet transactions";
-      const ans = await rl.question(`About to send REAL Monad testnet transactions (see demo/BUDGET.md). Type "${phrase}": `);
-      rl.close();
-      if (ans.trim() !== phrase) throw new Error("not confirmed");
+  if (frozen) {
+    if (!existsSync(FROZEN_STATE)) throw new Error("no frozen state: run `node run.ts --freeze` first");
+    mkdirSync(OUT, { recursive: true });
+    if (!args["keep-state"]) { // fresh replay: the scene state of the freeze, no certifier cache
+      copyFileSync(join(FROZEN_DIR, "state-frozen.json"), statePath("frozen"));
+      rmSync(join(OUT, "frozen"), { recursive: true, force: true });
     }
-    const pw = await askPassword("keystore password: ");
-    seed = decryptKeystore(ks, pw);
-    operatorIsSeed = true;
-    passwordEnv = { ANCRE_DEMO_PASSWORD: pw };
-    signer = `keystore:${ks}:ANCRE_DEMO_PASSWORD:${privateKeyToAccount(seed).address}`;
-  }
-  if (mode !== "testnet") {
-    if (frozen) {
-      if (!existsSync(FROZEN_STATE)) throw new Error("no frozen state: run `node run.ts --freeze` first");
-      mkdirSync(OUT, { recursive: true });
-      if (!flag("keep-state")) { // fresh replay: the scene state of the freeze, no certifier cache
-        copyFileSync(join(FROZEN_DIR, "state-frozen.json"), statePath("frozen"));
-        rmSync(join(OUT, "frozen"), { recursive: true, force: true });
-      }
-      anvil = await startAnvil({ port: Number(opt("port", String(FORK_PORT + 1))), loadState: FROZEN_STATE, offline: !flag("online") });
-      rpc = anvil.rpc;
-    } else if (!rpc) {
-      if (!flag("resume")) { // own anvil = fresh chain = fresh state and certifier cache
-        rmSync(statePath(name), { force: true });
-        rmSync(join(OUT, name), { recursive: true, force: true });
-      }
-      mkdirSync(FROZEN_DIR, { recursive: true });
-      // a freeze pins the fork block: Foundry then caches every remote read of the rehearsal (lib/freeze.ts)
-      if (freeze && !opt("fork-block")) forkBlock = Number(await createPublicClient({ transport: http(TESTNET.rpc) }).getBlockNumber()) - 5;
-      else if (opt("fork-block")) forkBlock = Number(opt("fork-block"));
-      anvil = await startAnvil({ port: Number(opt("port", String(FORK_PORT))), forkBlock, blockTime: rehearse ? 1 : undefined });
-      rpc = anvil.rpc;
+    anvil = await startAnvil({ port: Number(args.port ?? FORK_PORT + 1), loadState: FROZEN_STATE, offline: !args.online });
+    rpc = anvil.rpc;
+  } else if (!rpc) {
+    if (!args.resume) { // own anvil = fresh chain = fresh state and certifier cache
+      rmSync(statePath(name), { force: true });
+      rmSync(join(OUT, name), { recursive: true, force: true });
     }
+    // a freeze pins the fork block: Foundry then caches every remote read of the rehearsal (lib/freeze.ts)
+    if (freeze) forkBlock ??= Number(await createPublicClient({ transport: http(TESTNET.rpc) }).getBlockNumber()) - 5;
+    anvil = await startAnvil({ port: Number(args.port ?? FORK_PORT), forkBlock, blockTime: rehearse ? 1 : undefined });
+    rpc = anvil.rpc;
   }
-  signer ??= "";
 
-  const chain = new Chain(rpc!, mode, TESTNET.chainId, mode === "testnet" || rehearse);
+  const chain = new Chain(rpc!, mode, TESTNET.chainId, monadRules);
   if ((await chain.pub.getChainId()) !== TESTNET.chainId) throw new Error("not chain 10143");
-  const acc = demoAccounts(seed, operatorIsSeed);
-  if (!signer) signer = `unlocked:${acc.operator.account.address}`;
+  const acc = demoAccounts(ks?.seed ?? FORK_SEED, !!ks);
+  const signer = ks?.signer ?? `unlocked:${acc.operator.account.address}`;
+  if (!ks) await chain.impersonate(acc.operator.account.address); // the certifier's `cast --unlocked` on a local chain
 
   // state: resume only if it belongs to this chain (its ANCRE still has code)
   let state = loadState(name);
@@ -116,21 +112,21 @@ async function main() {
   }
   const head = await chain.block();
   state ??= { version: 1, mode, chainId: TESTNET.chainId, operator: acc.operator.account.address, runId: EventLog.newRunId(),
-    startBlock: head.number, agents: {}, done: {}, notes: {} } as State;
-  if (frozen && !flag("keep-state")) state.runId = EventLog.newRunId();
+    agents: {}, done: {}, notes: {} } as State;
+  if (frozen && !args["keep-state"]) state.runId = EventLog.newRunId();
   saveState(name, state);
 
-  const log = new EventLog(chain, state.runId, {
+  const st = state;
+  const log = new EventLog(chain, st.runId, {
     network: { chainId: TESTNET.chainId, mode, forkBlock: forkBlock ?? (mode === "fork" ? head.number : null), rpc: mode === "testnet" ? rpc : "local" },
-    contracts: { identity: TESTNET.identity, reputation: TESTNET.reputation, ancre: state.ancre ?? null, payer: state.payer ?? null, usdc: TESTNET.usdc },
   });
   const header = () => log.setHeader({
-    contracts: { identity: TESTNET.identity, reputation: TESTNET.reputation, ancre: state!.ancre ?? null, payer: state!.payer ?? null, usdc: TESTNET.usdc },
-    set: state!.set ? {
-      setId: state!.setId, anchors: acc.anchors.map((a) => ({ address: a.account.address, label: a.label })),
+    contracts: { identity: TESTNET.identity, reputation: TESTNET.reputation, ancre: st.ancre ?? null, payer: st.payer ?? null, usdc: TESTNET.usdc },
+    set: st.set ? {
+      setId: st.setId, anchors: acc.anchors.map((a) => ({ address: a.account.address, label: a.label })),
       minAnchors: SET.minAnchors, vetoQuorum: SET.vetoQuorum, theta: SET.theta.toString(), thetaPct: Number(SET.theta) / 1e16,
       level: "Registry-verified, attested submitter", submitter: acc.operator.account.address, maxAge: SET.maxAge, minRefresh: SET.minRefresh,
-      tags: (state!.set.tags as { tag: string; min: string; neutral: string; max: string; kind: number }[]).map((t) => ({
+      tags: (st.set.tags as { tag: string; min: string; neutral: string; max: string; kind: number }[]).map((t) => ({
         tag: t.tag, hash: keccak256(toHex(t.tag)), kind: t.kind === 0 ? "endorsement" : "measurement", min: t.min, neutral: t.neutral, max: t.max })),
     } : null,
     actors: [
@@ -139,11 +135,11 @@ async function main() {
       { label: acc.payerOperator.label, role: "payer-operator", address: acc.payerOperator.account.address },
       { label: acc.farmOwner.label, role: "farm-owner", address: acc.farmOwner.account.address },
       { label: acc.rater.label, role: "rater", address: acc.rater.account.address },
-      ...Object.entries(state!.agents).map(([label, a]) => ({ label, role: a.role, agentId: a.agentId, owner: a.owner, wallet: a.wallet })),
+      ...Object.entries(st.agents).map(([label, a]) => ({ label, role: a.role, agentId: a.agentId, owner: a.owner, wallet: a.wallet })),
     ],
   });
   header();
-  if (state.ancre && state.setId) log.ancre = { address: state.ancre, abi: artifact("AnchoredReputation").abi, setId: state.setId, theta: SET.theta };
+  if (st.ancre && st.setId) log.ancre = { address: st.ancre, abi: ancreArt.abi, setId: st.setId, theta: SET.theta };
 
   // MON lent to each emitter for its gas: its transactions' MEASURED gas limits (fork, 06/10: giveFeedback <= 327 k,
   // register <= 393 k, setAgentWallet <= 97 k) at 102 gwei, x 1.5. Recoverable by `--sweep` (capital, not fees).
@@ -156,10 +152,10 @@ async function main() {
   monBudget[acc.rater.label] = wei(FB);
 
   const ctx: Ctx = {
-    chain, name, acc, state, log, signer, passwordEnv, monBudget, facilitatorTxs: [],
+    chain, name, acc, state: st, log, signer, passwordEnv: ks?.passwordEnv, monBudget, facilitatorTxs: [],
     fac: mode === "testnet" ? new HttpFacilitator(chain, TESTNET.facilitatorUrl) : new EmulatedFacilitator(chain, TESTNET.usdc),
   };
-  if (flag("sweep-only")) {
+  if (args["sweep-only"]) {
     await sweep(chain, emitters(acc), acc.operator);
     if (anvil) await anvil.stop();
     return;
@@ -175,7 +171,7 @@ async function main() {
         copyFileSync(statePath(name), join(FROZEN_DIR, "state-frozen.json"));
       }
     }
-    if (flag("sweep")) await sweep(chain, emitters(acc), acc.operator);
+    if (args.sweep) await sweep(chain, emitters(acc), acc.operator);
   } catch (e) {
     failed = e;
     console.error(`\n✗ stopped: ${(e as Error).message}\n  re-run the same command (with --rpc/--resume on a fork) to resume at the failed step`);
