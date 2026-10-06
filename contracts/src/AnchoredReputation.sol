@@ -163,6 +163,7 @@ contract AnchoredReputation {
         uint64 eLowMax;
         uint8 numSubmitters;
         uint16 endoMask; // bit i = tag i is an endorsement tag (cached at registration)
+        uint32 provenRows; // rows ever marked provenFalse in this set: 0 => the submission skips every lookup
         // slots 4..
         uint256 eEff; // eUp aggregated: sum_a ceil(lambda_a * eUp[a] / WAD)   (distrust, replacement rule)
         uint256 eLowEff; // eLow aggregated: sum_a ceil(lambda_a * eLow[a] / WAD) (trust lower bound)
@@ -1140,7 +1141,9 @@ contract AnchoredReputation {
         for (uint256 a; a < k; ++a) {
             anc[a] = address(uint160(s.anchors[a]));
         }
-        bytes32[] memory content = new bytes32[](n); // content hash of each non-alias row, by node (aliases)
+        // D48-C lookups only once a row of this set was proven false (an honest set never pays them)
+        bool check = s.provenRows != 0;
+        bytes32[] memory content = new bytes32[](check ? n : 0); // content hash of each non-alias row, by node
         mapping(bytes32 => bool) storage proven = provenFalse[setId];
         uint256 numRows = uint32(bytes4(rows[1:5]));
         uint256 off = 5;
@@ -1167,12 +1170,14 @@ contract AnchoredReputation {
             if (hdr & H_ALIAS != 0) {
                 uint256 ref = _be(rows, off, W);
                 off += W;
-                h = content[ref]; // ref < u is an earlier non-alias row with the same SRC (_rowLoop)
                 if (_keyAtBase(kb, ref) >> 248 != KIND_AGENT) revert NotCanonical(ri); // R4: agent rows only
+                if (check) h = content[ref]; // ref < u: an earlier non-alias row with the same SRC (_rowLoop)
             } else {
                 uint256 nE = hdr & H_NE;
-                h = _contentHash(rows, off, nE, W, client, sDecl);
-                content[u] = h;
+                if (check) {
+                    h = _contentHash(rows, off, nE, W, client, sDecl);
+                    content[u] = h;
+                }
                 for (uint256 e; e < nE; ++e) {
                     uint256 dst = _be(rows, off, W);
                     int256 w = int16(uint16(bytes2(rows[off + W:off + W + 2])));
@@ -1183,7 +1188,7 @@ contract AnchoredReputation {
                     if (reads && !_edgeHolds(s, client, dk & ID_MASK, w, fIdx)) revert EdgeMismatch(ri, e);
                 }
             }
-            if (proven[rowHash(u, hdr, h)]) revert ProvenRowResubmitted(u);
+            if (check && proven[rowHash(u, hdr, h)]) revert ProvenRowResubmitted(u);
         }
         if (off != rows.length) revert BadRows(6); // the same bytes as the arithmetic pass (R1)
         // R5: anchors carry a zero fingerprint (other nodes: _verifyOwners at Registry-verified)
@@ -1796,12 +1801,18 @@ contract AnchoredReputation {
         (uint256 dimNeed, uint256 pNeed, uint256 nNeed) = _needs(am, m.s0, m.n0, e.sDecl);
         (uint256 dim, uint256 inc) = _bill(st, dimNeed, pNeed, nNeed, m, e.sDecl);
         st.h = keccak256(abi.encodePacked(v.leaf, am));
-        provenFalse[setId][rowHash(v.u, v.hdr, _contentHash(eb, e.edgesOff, e.nE, s.idxWidth, client, e.sDecl))] = true;
+        _markProven(s, setId, rowHash(v.u, v.hdr, _contentHash(eb, e.edgesOff, e.nE, s.idxWidth, client, e.sDecl)));
         _widen(s, setId, v.u, dim, inc);
         // V13: an anchor row now holding a veto on a certified agent sets its certified bit (never cleared
         // before recertification, D21)
         if (v.u < s.k && wNew <= s.vetoMax && m.jp1 != 0 && m.jp1 <= s.nCert) _setFlag(setId, s, m.jp1 - 1, 1 << v.u);
         emit EdgeProven(setId, v.u, agentJ, m.wOld, wNew, s.eLowEff, s.eEff);
+    }
+
+    function _markProven(SetState storage s, bytes32 setId, bytes32 h) internal {
+        if (provenFalse[setId][h]) return;
+        provenFalse[setId][h] = true;
+        s.provenRows += 1;
     }
 
     /// D14 weight of (client -> agentJ) read NOW, with the D48-B controller rule: a current controller of agentJ
@@ -1843,7 +1854,7 @@ contract AnchoredReputation {
         // the row's client changed: worst case on every side (all committed positive mass lost, a full unknown row)
         (uint256 dim, uint256 inc) = _bill(st, WAD, WAD, WAD, m, e.sDecl);
         st.voided = true;
-        provenFalse[setId][rowHash(v.u, v.hdr, _contentHash(eb, e.edgesOff, e.nE, s.idxWidth, v.wallet, e.sDecl))] = true;
+        _markProven(s, setId, rowHash(v.u, v.hdr, _contentHash(eb, e.edgesOff, e.nE, s.idxWidth, v.wallet, e.sDecl)));
         _widen(s, setId, v.u, dim, inc);
         emit RowVoided(setId, v.u, s.eLowEff, s.eEff);
     }
