@@ -32,7 +32,16 @@
 5. [ ] **Trancher la divulgation aux auteurs d'ERC-8004 (D29).**
    - Le dépôt passe public le 12/10, et il décrit le contournement du garde-fou et l'EOA d'upgrade.
    - Deux options : envoyer le brouillon (c) de `docs/erc/drafts/` avant le 12/10 (recommandé), ou retirer ces passages de la version publique.
-6. [ ] **Me recopier la modale « Rules & Guidelines »** de la plateforme. Elle tranche quatre points : dépôt public obligatoire ou non, durée de la vidéo, déclaration des outils IA, critères.
+6. [x] **Modale « Rules & Guidelines »** ✅ 07/10. Les règles v3.0 sont résumées dans `docs/ressources/regles-metropolis-v3.md` ; elles ajoutent les points 6a et 6b.
+6a. [ ] **Choisir la licence : MIT recommandé** (OSI obligatoire, §7.2).
+   - Aujourd'hui, 20 fichiers `.sol` sont en CC0, qui n'est **pas** une licence OSI, et il n'y a aucun fichier `LICENSE`.
+   - Le plugin et l'indexeur sont déjà en MIT. L'ERC reste en CC0.
+   - Dis « MIT » et je fais le changement.
+6b. [ ] **Vérifier ton contrat de travail (§4.3).**
+   - Tu dois confirmer que ta participation ne viole aucun accord avec un employeur, clause de cession des inventions comprise.
+   - **117 des 201 commits sont signés avec une adresse professionnelle** (`@employer`), et 6 avec `@former-employer`.
+   - L'historique est obligatoire (§4.1), donc on ne peut pas publier un dépôt sans historique. Si tu préfères, je peux réécrire l'auteur de ces commits vers ton adresse perso avant la mise en public. Les dates et le contenu ne changent pas, mais les hashes changent.
+   - C'est à toi de juger ; je ne donne pas d'avis juridique.
 7. [ ] **Compte Alchemy gratuit (D54, D55).** Mets ces trois éléments dans `solver/.env`, jamais dans le dépôt :
    - la **clé d'API** ;
    - le **jeton Notify** et la clé de signature du webhook ;
@@ -50,7 +59,7 @@
 2. [ ] **Feu vert au test T1, celui du facilitator x402 (porte P3).**
    - Coût : environ 0,40 MON de testnet pour nous.
    - Il décide si le facilitator accepte le payeur ERC-1271. S'il le refuse, les paiements honnêtes de l'acte 2 s'arrêtent.
-3. [ ] **Acte 2 sur le vrai testnet**, après la répétition, T1 et ton feu vert. Commande :
+3. [ ] **Acte 2 sur le vrai testnet**, après la répétition, T1 et ton feu vert. **Indispensable d'après les règles** (§9.2, §9.4) : il faut des adresses ou des hashes de transaction, et une vidéo qui montre de vraies interactions avec Monad. Une démo en fork seule risque de ne pas compter. Commande :
    ```
    node run.ts --network testnet --keystore ~/.foundry/keystores/ancre-demo --sweep
    ```
@@ -101,8 +110,9 @@
 ## Jeu 09/10 : le mainnet et le dépôt public
 
 1. [ ] **Valider le budget mainnet** (environ 2 MON, ESTIMÉ), puis l'exécution minimale (D40).
-2. [ ] **Licence du code** : MIT ou Apache-2.0, à la place de CC0, qui n'est pas une licence OSI. L'ERC reste en CC0.
-3. [ ] **Décider ce qui reste privé** : `mustdo/`, `docs/conseil/`, l'historique git (emails, chemins machine). Liste : chantier 09.
+2. [ ] **Décider ce qui reste privé.** Candidats : `mustdo/` et `docs/conseil/`. Liste : chantier 09.
+   - **L'historique part avec le dépôt, et il est obligatoire (§4.1).** Retirer un fichier ne l'efface donc pas des anciens commits.
+   - Garde en tête la règle §5.3 : rien de confidentiel dans la soumission.
 
 ## Ven 10/10 : la relecture
 
@@ -113,6 +123,8 @@
 1. [ ] **Voix et tournage de la vidéo de 3 minutes** : `demo/VIDEO-SHOTS.md`, et sa checklist d'honnêteté. Au tournage, ré-exporter l'acte 1 (AM-07.1).
 2. [ ] Option : **vidéo Alchemy** de 2 minutes au plus.
 3. [ ] **Rendre le dépôt public**, seulement après la divulgation ou le retrait des passages sensibles.
+   - La règle §7.2 demande un code public « **throughout** and after the Hackathon ». Plus tôt vaut donc mieux que le 12/10.
+   - Il faut d'abord régler la divulgation, la licence (6a) et ton contrat de travail (6b).
 
 ## Dim 12/10 : la soumission
 
