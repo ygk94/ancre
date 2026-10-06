@@ -246,3 +246,5 @@ table.rank tr { cursor: pointer; }
 .agent-list { min-height: 0; flex: 1; }
 .main { overflow: auto; }
 @media (max-width: 1100px) { .app { height: auto; overflow: visible; } }
+.stats.three { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.board-title { font-size: 28px; }

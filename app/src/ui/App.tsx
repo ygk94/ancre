@@ -1,7 +1,9 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ChainHead } from "../lib/envio";
 import { int } from "../lib/format";
+import { useDemo, type Source } from "../sources/useDemo";
 import { Act1 } from "./Act1";
+import { Act2 } from "./Act2";
 
 type Tab = "act1" | "act2";
 const initialTab = (): Tab => (new URLSearchParams(location.search).get("act") === "2" ? "act2" : "act1");
@@ -10,6 +12,22 @@ export function App() {
   const [tab, setTab] = useState<Tab>(initialTab);
   const [head, setHead] = useState<ChainHead | null>(null);
   const onHead = useCallback((h: ChainHead | null) => setHead(h), []);
+  const demo = useDemo();
+
+  // presenter keys in act 2 replay: ← → step, space play/pause, 1-6 jump to a scene
+  useEffect(() => {
+    if (tab !== "act2" || demo.mode !== "replay") return;
+    const on = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement)?.tagName === "SELECT" || (e.target as HTMLElement)?.tagName === "INPUT") return;
+      if (e.key === "ArrowRight") demo.controls.step(1);
+      else if (e.key === "ArrowLeft") demo.controls.step(-1);
+      else if (e.key === " ") (e.preventDefault(), demo.controls.setPlaying(!(demo.source.kind === "replay" && demo.source.playing)));
+      else if (/^[1-6]$/.test(e.key)) demo.controls.jumpScene(Number(e.key));
+    };
+    window.addEventListener("keydown", on);
+    return () => window.removeEventListener("keydown", on);
+  }, [tab, demo]);
+
   return (
     <div className="app">
       <header className="topbar">
@@ -26,21 +44,40 @@ export function App() {
           </button>
         </nav>
         <div className="spacer" />
-        {tab === "act1" && (
+        {tab === "act1" ? (
           <div className="source">
-            <span className="dot replay" /> registry: live via Envio · ANCRE: solver snapshot
+            <span className="dot replay" /> registry: live via Envio · ANCRE: reference solver, block 108,835,675
           </div>
+        ) : (
+          <SourceBadge source={demo.source} mode={demo.screen.header?.network.mode} />
         )}
       </header>
-      {tab === "act1" ? <Act1 onHead={onHead} /> : <div className="main">Act 2: E3.</div>}
+      {tab === "act1" ? <Act1 onHead={onHead} /> : <Act2 demo={demo} />}
       <footer className="footer">
         <span>
           indexed by Envio HyperIndex
-          {head ? ` · Monad 143 head ${int(head.block)} · ${int(head.feedbacks)} ratings, ${int(head.agents)} agents` : " · …"}
+          {head ? ` · Monad 143 head ${int(head.block)} · ${int(head.feedbacks)} ratings, ${int(head.agents)} agents` : ""}
         </span>
-        <span>ERC-8004 v2.0.0 registries · Identity 0x8004A169…a432 · Reputation 0x8004BAa1…9b63</span>
+        <span>ERC-8004 v2.0.0 registries · mainnet Identity 0x8004A169…a432 · Reputation 0x8004BAa1…9b63</span>
         <span>Every figure shows its source and date.</span>
       </footer>
+    </div>
+  );
+}
+
+function SourceBadge({ source, mode }: { source: Source; mode?: string }) {
+  if (source.kind === "live")
+    return (
+      <div className="source">
+        <span className={`dot ${source.ok ? "live" : ""}`} />
+        {source.ok ? `LIVE · ${mode ?? "…"} · chantier 06 event log, polled every 250 ms` : `LIVE source unavailable: ${source.error ?? "…"}`}
+      </div>
+    );
+  const r = source.run;
+  return (
+    <div className="source">
+      <span className="dot replay" />
+      REPLAY of {r ? `${r.runId} (${r.mode}), blocks ${int(r.firstBlock)}…${int(r.lastBlock)}, recorded ${r.startedAt.slice(0, 10)}` : "…"}
     </div>
   );
 }

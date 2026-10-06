@@ -10,8 +10,9 @@ export type Header = {
   format: string;
   runId: string;
   network: { chainId: number; mode: "fork" | "frozen" | "testnet"; forkBlock: number | null; rpc: string };
-  contracts: { identity: string; reputation: string; ancre: string; payer: string; usdc: string };
-  set: {
+  // absent from the first header of a run (written before scene 0 deploys anything): see journal 07, INTERFACE
+  contracts?: { identity: string; reputation: string; ancre: string; payer: string; usdc: string };
+  set?: {
     setId: string;
     anchors: { address: string; label: string }[];
     minAnchors: number;
@@ -24,7 +25,7 @@ export type Header = {
     minRefresh: number;
     tags: TagRow[];
   };
-  actors: Actor[];
+  actors?: Actor[];
   startedAt: string;
 };
 
@@ -166,7 +167,7 @@ const FEED_KINDS = new Set(["feedback", "feedback-batch", "revoke", "certificate
 
 export function actorOf(h: Header | null, agentId: string | null): Actor | undefined {
   if (!h || !agentId) return undefined;
-  return h.actors.find((a) => a.agentId === agentId);
+  return h.actors?.find((a) => a.agentId === agentId);
 }
 
 function rowOf(e: DemoEvent): FeedRow {
@@ -234,6 +235,8 @@ export function reduce(s: ScreenState, line: Header | DemoEvent): ScreenState {
   if (e.agentId && e.agent) {
     const prev = s.agents[e.agentId];
     const actor = actorOf(s.header, e.agentId);
+    // the header lists an agent only once its scene ends; a `register` event names it right away
+    const reg = e.kind === "register" ? /registers (.+?) as agent #/.exec(e.label) : null;
     const naive = e.agent.explorer.naiveAverage === null ? null : Number(e.agent.explorer.naiveAverage);
     const point: HistoryPoint = {
       seq: e.seq,
@@ -246,8 +249,8 @@ export function reduce(s: ScreenState, line: Header | DemoEvent): ScreenState {
       ...s.agents,
       [e.agentId]: {
         agentId: e.agentId,
-        label: actor?.label ?? prev?.label ?? `agent #${e.agentId}`,
-        role: actor?.role ?? prev?.role ?? "agent",
+        label: actor?.label ?? reg?.[1] ?? prev?.label ?? `agent #${e.agentId}`,
+        role: actor?.role ?? (e.kind === "register" ? e.data?.role : undefined) ?? prev?.role ?? "agent",
         explorer: e.agent.explorer,
         contract: e.agent.contract,
         block: e.block,

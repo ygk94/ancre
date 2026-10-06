@@ -47,3 +47,14 @@ describe("demo reducer on recorded runs", () => {
     expect(s.warnings[0]).toMatch(/unknown format/);
   });
 });
+
+describe("labels before the header lists an agent", () => {
+  it("names an agent from its register event", () => {
+    const lines = load(index.runs[0].file);
+    const h = { ...(lines[0] as any), actors: [] };
+    const reg = lines.find((l: any) => l.kind === "register") as any;
+    const s = reduceAll([h, reg]);
+    expect(s.agents[reg.agentId].label).not.toMatch(/^agent #/);
+    expect(s.agents[reg.agentId].role).toBe(reg.data.role);
+  });
+});
