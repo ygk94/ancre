@@ -63,3 +63,11 @@ Commence par lire, puis écris la première entrée du journal (« démarrage : 
 - replay_identity_events ne retire pas l'owner courant des anciens owners, contrairement à load_identity et from_indexer.identity_file. Sur l'historique A→B→A, les exports produisent un pastOwners différent : corrige, et ajoute un test.
 - synthetic.py réimplémente le solveur PPR en flottants et redéfinit WAD : nettoyage optionnel.
 - Le contrat a un défaut critique (nœud address(0), R1 du chantier 02-bis). Une fois qu'il est corrigé, ajoute un vecteur « nœud address(0) » au jeu commun.
+
+
+=== INTÉGRATION ALCHEMY (D55, bounty Alchemy) : à faire après E1 et E2 ===
+- Un webhook Alchemy (Custom Webhook ou Address Activity, sur Monad 143 et 10143) qui surveille les events des registres ERC-8004 et du contrat ANCRE, et déclenche le certificateur (recertification) et le surveillant. Garde la boucle de sondage existante en repli.
+- Lis d'abord docs/ressources/alchemy.md.
+- Mesure le délai entre le bloc et la réception du webhook, et l'état du bloc au moment de l'envoi (Proposed ou Finalized).
+- La clé d'API, le jeton Notify et l'URL HTTPS publique du récepteur viennent de Hugo : écris « 🧑 BLOQUÉ » si tu ne les as pas, et code contre des événements rejoués en attendant. Aucune clé dans le dépôt : fichier .env local seulement.
+- Pour le README et la vidéo Alchemy (2 minutes au plus) : décris l'intégration en une phrase vérifiable.

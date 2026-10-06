@@ -16,3 +16,9 @@
 1. **`indexer/scripts/check.ts` pagine mal** : il s'arrête dès qu'une page est incomplète, alors que `from_indexer.py:81` et FORMAT.md §146 imposent de s'arrêter sur une page **vide**. Corrige, et ajoute un test.
 2. Le format d'id `Operator` est écrit à 3 endroits, et `state.isOperator` double `storeView.isOperator` : nettoyage.
 3. **Le contrat corrige un défaut critique** (nœud `address(0)` qui fait sauter la relecture du registre) **et change sa règle d'arête** (D48-B : on conserve les négatifs des contrôleurs). Il est aussi renommé : `isTrusted` devient `passesAnchorPolicy`. Le handler `CertificateSubmitted` doit attendre l'ABI de la branche `chantier/02bis-corrections`.
+
+
+## Relais du 06/10 : Alchemy (D55), pour l'écran 07 et l'indexeur
+
+- **Écran 07 : la Transfers API d'Alchemy explique le score.** Exemple : « les 7 665 noteurs d'Eve ont reçu leur premier MON du propriétaire d'Eve ». C'est MESURÉ sur un échantillon de 150, toujours 11,0 MON depuis `0x97cD…0996`. Voir `docs/ressources/alchemy.md`. La clé d'API vient de Hugo.
+- `monadLogs` reste plus rapide que les webhooks pour le direct à l'écran.
