@@ -9,7 +9,9 @@ Provenance (all on-chain, never 8004scan, AM-R4.2):
      readAllFeedback(agentId, [], "", "", includeRevoked = true): its feedback list in the snapshot is REPLACED by the
      registry's (values, decimals, tags and revocations exactly as stored; the logs only date the new feedbacks);
   3. the identity of block B is rolled forward with the decoded IdentityRegistry events (graph.replay_identity_events:
-     owner, past owners with their transfer block, agentWallet, approvals, operators).
+     owner, past owners with their transfer block, agentWallet, approvals, operators; the late MetadataSet of
+     register() after a callback change is ignored, REGCB, keyed by each log's transactionHash).
+A feedback whose NewFeedback log is in the window carries `h` = its indexedTag1 topic (graph R1 bis: matched by hash).
 Usage: .venv/bin/python refresh.py --to-block H [--from-snapshot B] [--rpc URL]   (writes data/mainnet-H.*.json.gz)
 """
 from __future__ import annotations
@@ -126,7 +128,9 @@ def decode(lg: dict) -> dict:
         v = _word(data, 1)
         ev.update(agent=int(tp[1], 16), client=a(tp[2]), idx=_word(data, 0),
                   value=v - 2**256 if v >= 2**255 else v, dec=_word(data, 2),
-                  tag1=_dyn(data, 3).decode(errors="replace"), tag2=_dyn(data, 4).decode(errors="replace"))
+                  tag1=_dyn(data, 3).decode(errors="replace"), tag2=_dyn(data, 4).decode(errors="replace"),
+                  tagHash=tp[3].lower())               # indexedTag1 = keccak256(tag1 bytes): exact even when the
+        #                                                text above is lossy (R1 bis, NUL review 06/10)
     elif ev["ev"] == "FeedbackRevoked":
         ev.update(agent=int(tp[1], 16), client=a(tp[2]), idx=int(tp[3], 16))
     elif ev["ev"] == "Transfer":
@@ -177,6 +181,8 @@ def main(argv=None):
     fresh = {ag: read_all(ag, H, a.rpc) for ag in touched}
     blocks = {(e["agent"], e["client"], e["idx"]): e["block"] for e in rep if e["ev"] == "NewFeedback"}
     old_b = {(f["a"], f["c"], f["i"]): f.get("b") for f in base["feedbacks"]}
+    hashes = {(e["agent"], e["client"], e["idx"]): e["tagHash"] for e in rep if e["ev"] == "NewFeedback"}
+    old_h = {(f["a"], f["c"], f["i"]): f.get("h") for f in base["feedbacks"]}
     for e in rep:                                         # every NewFeedback log is found by readAllFeedback
         if e["ev"] == "NewFeedback":
             row = next((f for f in fresh[e["agent"]] if (f["c"], f["i"]) == (e["client"], e["idx"])), None)
@@ -186,7 +192,8 @@ def main(argv=None):
     for ag, lst in fresh.items():
         for f in lst:
             b = blocks.get((ag, f["c"], f["i"])) or old_b.get((ag, f["c"], f["i"]))
-            new.append({**f, **({"b": b} if b else {})})
+            h = hashes.get((ag, f["c"], f["i"])) or old_h.get((ag, f["c"], f["i"]))
+            new.append({**f, **({"b": b} if b else {}), **({"h": h} if h else {})})
     fbs = sorted(kept + new, key=lambda f: (f["a"], f["c"], f["i"]))
     keys = {(f["a"], f["c"], f["i"]) for f in fbs}
     assert len(keys) == len(fbs)

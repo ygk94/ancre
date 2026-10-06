@@ -5,6 +5,10 @@ ports them to TypeScript; `tests/test_indexer_parity.py` is the judge. Decisions
 
   R1 (D12)  Tag schema per anchor set: tag -> (min, neutral, max, kind), bounds in WAD. Filter <= TAGS_MAX = 16 (D24).
   R2 (D15)  Only tags of kind `endorsement` create edges. `measurement` tags never propagate.
+  R1 bis (AM-04.2, NUL)  A tag is identified by keccak256 of its BYTES, as the contract does (`ts.hash != th`). A
+            feedback that carries its hash (`tag_hash`: the indexedTag1 topic, the indexer's `tagHash`) is matched by
+            that hash ONLY, never by its text (the indexer's text is a display form when tag1Exact = false: NUL,
+            ill-formed UTF-16, > 1 KiB). A feedback without a hash is matched by its text (exact: readAllFeedback).
   R3 (D14)  Per (client, agent, tag1): the non-revoked feedback with the highest feedbackIndex.
             If that feedback is out of bounds, this tag yields nothing (no fallback to an older feedback).
   R4 (D18)  Weight q = quantize(value, decimals, spec): int16 on the 1e-4 grid, truncated toward zero.
@@ -45,6 +49,8 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
 
+from Crypto.Hash import keccak as _keccak
+
 WAD = 10**18
 GRID = 10**4                 # 1 unité de poids = 1e-4 ; poids WAD = q * 1e14
 GRID_WAD = WAD // GRID       # 1e14
@@ -68,6 +74,13 @@ class Feedback:
     tag2: str
     revoked: bool
     block: int = 0
+    tag_hash: str | None = None   # "0x" + keccak256(tag1 bytes), lowercase, when the source carries it (R1 bis):
+    #                               then it is the ONLY identity of the tag, and tag1 is display text
+
+
+def tag_hash(tag: str) -> str:
+    """keccak256 of the UTF-8 bytes of a tag, as the contract and the NewFeedback indexedTag1 topic hash it."""
+    return "0x" + _keccak.new(digest_bits=256, data=tag.encode("utf-8")).hexdigest()
 
 
 def _parse_value(s) -> int:
@@ -99,14 +112,16 @@ def load_feedbacks(path: str | Path) -> list[Feedback]:
 
 
 def load_feedbacks_onchain(path: str | Path) -> list[Feedback]:
-    """Relecture on-chain (readAllFeedback, includeRevoked = true) : {"block", "feedbacks": [{a, c, i, v, d, t1, t2, r[, b]}]}
-    (b = bloc du log NewFeedback, quand il est connu ; il ne sert qu'au diagnostic AM-9.3).
+    """Relecture on-chain (readAllFeedback, includeRevoked = true) : {"block", "feedbacks": [{a, c, i, v, d, t1, t2, r[, b][, h]}]}
+    (b = bloc du log NewFeedback, quand il est connu ; il ne sert qu'au diagnostic AM-9.3 ;
+    h = keccak256 des octets de tag1, quand la source le porte : seule identité du tag, R1 bis).
     Source à préférer : 8004scan écrit valueDecimals = 0 pour 24 avis qui ont 2 décimales on-chain (AM-R4.2)."""
     p = Path(path)
     with (gzip.open if p.suffix == ".gz" else open)(p, "rt") as fh:
         raw = json.load(fh)
     return [Feedback(agent_id=int(x["a"]), client=x["c"].lower(), index=int(x["i"]), value=int(x["v"]),
-                     decimals=int(x["d"]), tag1=x["t1"], tag2=x["t2"], revoked=bool(x["r"]), block=int(x.get("b") or 0))
+                     decimals=int(x["d"]), tag1=x["t1"], tag2=x["t2"], revoked=bool(x["r"]), block=int(x.get("b") or 0),
+                     tag_hash=x["h"].lower() if x.get("h") else None)
             for x in raw["feedbacks"]]
 
 
@@ -256,17 +271,47 @@ TOPIC_APPROVAL_FOR_ALL = "0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca
 
 def replay_identity_events(idn: Identity, events: list[dict], after_block: int, to_block: int) -> Identity:
     """Roll an Identity forward with decoded IdentityRegistry events (scratchpad nv/dec.json format:
-    {ev, block, li, agent, frm/to | key/val | owner}). Applies Transfer (owner, approval reset, past holder)
+    {ev, block, li, agent, frm/to | key/val | owner [, tx]}). Applies Transfer (owner, approval reset, past holder)
     MetadataSet(agentWallet) (20 bytes or empty = cleared), Approval and ApprovalForAll (R6 inputs); an
     undecoded approval topic raises. URIUpdated / MetadataUpdate / other metadata keys do not change R6/R7.
-    Events must cover (after_block, to_block] completely; the caller vouches for that."""
+    Events must cover (after_block, to_block] completely; the caller vouches for that.
+
+    REGCB (review 06/10, same rule as indexer/src/handlers/identity.ts). register() of the v2.0.0 registry writes
+    agentWallet = msg.sender BEFORE _safeMint and emits MetadataSet(agentWallet, msg.sender) AFTER the
+    onERC721Received callback: logs Transfer(0, C), [callback], Registered, MetadataSet(C). If the callback changed
+    the agent's wallet or owner (unsetAgentWallet, setAgentWallet, transferFrom, which clears the wallet), the
+    registry keeps that change and the late MetadataSet(C) is IGNORED. Phases per agent, keyed by the registration
+    transaction: minted -> (callback) -> registered | registeredStale -> done.
+    Transaction key: `tx` (transactionHash, set by refresh.decode). Without it, the BLOCK is the key, which gives
+    the same answer on a complete log list: the logs of one transaction are contiguous, so every event of the
+    agent between its mint and its Registered belongs to the registration transaction, and register() emits its
+    MetadataSet right after Registered (an agent is minted once, there is no burn)."""
+    reg: dict[int, tuple[object, str]] = {}               # agent -> (registration tx key, phase)
+
+    def txk(e):
+        return e.get("tx") or ("block", e["block"])
+
+    def in_callback(a, e) -> bool:
+        k, ph = reg.get(a, (None, ""))
+        return k == txk(e) and ph in ("minted", "callback")
+
     for e in sorted(events, key=lambda e: (e["block"], e["li"])):
         if not after_block < e["block"] <= to_block:
             continue
         a = e.get("agent")
         if e["ev"] == "Transfer":
+            if e["frm"].lower() == ZERO:
+                reg[a] = (txk(e), "minted")
+            elif in_callback(a, e):
+                reg[a] = (txk(e), "callback")
             idn.apply_transfer(a, e["frm"], e["to"], e["block"])
         elif e["ev"] == "MetadataSet" and e.get("key") == "agentWallet":
+            k, ph = reg.get(a, (None, ""))
+            if k == txk(e):
+                if ph == "registeredStale":                # register()'s own late event after a callback change
+                    reg[a] = (k, "done")
+                    continue
+                reg[a] = (k, "done" if ph == "registered" else "callback" if ph in ("minted", "callback") else ph)
             idn.apply_wallet(a, e["val"])
         elif e["ev"] == "Approval":                       # approve(approved, tokenId)
             idn.apply_approval(a, e["approved"])
@@ -275,6 +320,9 @@ def replay_identity_events(idn: Identity, events: list[dict], after_block: int, 
         elif e["ev"] in (TOPIC_APPROVAL, TOPIC_APPROVAL_FOR_ALL):
             raise ValueError(f"undecoded approval event at block {e['block']}: decode it before replaying (R6 input)")
         elif e["ev"] == "Registered":
+            k, ph = reg.get(a, (None, ""))
+            if k == txk(e) and ph in ("minted", "callback"):
+                reg[a] = (k, "registered" if ph == "minted" else "registeredStale")
             idn.owner.setdefault(a, e["owner"].lower())
             idn.wallet.setdefault(a, ZERO)
     idn.block = to_block
@@ -442,6 +490,25 @@ class Graph:
         return self.index.get((AGENT, a))
 
 
+def _tag_resolver(ftags: set[str], schema: dict[str, TagSpec]):
+    """R1 bis: feedback -> the schema tag it IS (a tag of the filter and of the schema), or None. With a hash, by
+    hash only (keccak256 of the schema tag's UTF-8 bytes); without, by exact text (a tag that cannot be UTF-8
+    encoded, i.e. with a lone surrogate, never comes from the chain and matches no hash)."""
+    usable = {t for t in ftags if t in schema}
+    by_hash: dict[str, str] = {}
+    for t in usable:
+        try:
+            by_hash[tag_hash(t)] = t
+        except UnicodeEncodeError:
+            pass
+
+    def tag_of(f: Feedback) -> str | None:
+        if f.tag_hash is not None:
+            return by_hash.get(f.tag_hash)
+        return f.tag1 if f.tag1 in usable else None
+    return tag_of
+
+
 def combine_pairs(feedbacks: list[Feedback], identity: Identity, schema: dict[str, TagSpec],
                   filter_tags: list[str] | None, *, selection: str = "latest_then_reject",
                   combine: str = "neg_dominance", reject_controllers: bool = True,
@@ -460,6 +527,7 @@ def combine_pairs(feedbacks: list[Feedback], identity: Identity, schema: dict[st
     ftags = set(filter_tags)
     log = log if log is not None else defaultdict(int)
     rejected = rejected if rejected is not None else []
+    tag_of = _tag_resolver(ftags, schema)
 
     if combine == "latest_pair":                     # tour-2 rule: last non-revoked feedback of the pair, any tag
         best: dict[tuple[str, int], Feedback] = {}
@@ -478,19 +546,20 @@ def combine_pairs(feedbacks: list[Feedback], identity: Identity, schema: dict[st
         if f.revoked:
             log["rejet_revoque"] += 1
             continue
-        if f.tag1 not in ftags or f.tag1 not in schema:
+        t = tag_of(f)                                                       # R1 bis: by hash when known
+        if t is None:
             log["hors_filtre_ou_schema"] += 1
             continue
-        if schema[f.tag1].kind != "endorsement":                           # R2
+        if schema[t].kind != "endorsement":                                 # R2
             log["rejet_measurement_D15"] += 1
             continue
-        k = (f.client, f.agent_id, f.tag1)
-        if selection == "latest_valid" and quantize(f.value, f.decimals, schema[f.tag1]) is None:
+        k = (f.client, f.agent_id, t)
+        if selection == "latest_valid" and quantize(f.value, f.decimals, schema[t]) is None:
             log["rejet_hors_bornes"] += 1
             continue
         if k not in per_triple or f.index > per_triple[k].index:
             per_triple[k] = f
-    by_pair: dict[tuple[str, int], list[tuple[int, Feedback]]] = defaultdict(list)
+    by_pair: dict[tuple[str, int], list[tuple[int, Feedback, str]]] = defaultdict(list)
     for (c, a, t), f in per_triple.items():
         q = quantize(f.value, f.decimals, schema[t])                        # R4
         if q is None:
@@ -498,7 +567,7 @@ def combine_pairs(feedbacks: list[Feedback], identity: Identity, schema: dict[st
             rejected.append({"raison": "hors_bornes", "client": c, "agent": a, "tag1": t,
                              "index": f.index, "value": str(f.value)})
             continue
-        by_pair[(c, a)].append((q, f))
+        by_pair[(c, a)].append((q, f, t))
     out: dict[tuple[str, int], PairEdge] = {}
     blocks_of: dict[tuple[str, int], list[int]] | None = None            # AM-9.3: built once, only if needed
     for (c, a), lst in by_pair.items():
@@ -508,7 +577,7 @@ def combine_pairs(feedbacks: list[Feedback], identity: Identity, schema: dict[st
         neg = [x for x in lst if x[0] < 0]                                  # R5
         # ties between tags of equal weight: the HIGHEST feedbackIndex (unified v1, F-6: the contract stores only
         # tag hashes, so it cannot compare tag strings; it scans from the last index down and keeps the first)
-        q, f = min(neg, key=lambda x: (x[0], -x[1].index)) if neg else max(lst, key=lambda x: (x[0], x[1].index))
+        q, f, t = min(neg, key=lambda x: (x[0], -x[1].index)) if neg else max(lst, key=lambda x: (x[0], x[1].index))
         if reject_controllers:                                              # R6 on the COMBINED sign (D48-B)
             ctl = identity.controllers(a)
             if c in ctl:
@@ -523,7 +592,7 @@ def combine_pairs(feedbacks: list[Feedback], identity: Identity, schema: dict[st
         if q == 0:
             log["poids_nul"] += 1
             continue
-        out[(c, a)] = PairEdge(c, a, q, f.tag1, f.index)
+        out[(c, a)] = PairEdge(c, a, q, t, f.index)
         if diagnostics is not None and c not in identity.controllers(a):    # AM-9.3: report only
             kind = ("pastOwner" if c in identity.past_owners.get(a, ()) else
                     "pastWallet" if c in identity.past_wallets.get(a, ()) else None)
@@ -532,12 +601,12 @@ def combine_pairs(feedbacks: list[Feedback], identity: Identity, schema: dict[st
                 if blocks_of is None:                   # feedbacks that can make an edge: non-revoked, endorsement
                     blocks_of = defaultdict(list)       # tags of the filter (the ones R3 looked at)
                     for x in feedbacks:
-                        if x.block and not x.revoked and x.tag1 in ftags and x.tag1 in schema \
-                                and schema[x.tag1].kind == "endorsement":
+                        xt = tag_of(x) if x.block and not x.revoked else None
+                        if xt is not None and schema[xt].kind == "endorsement":
                             blocks_of[(x.client, x.agent_id)].append(x.block)
                 after = [b for b in blocks_of.get((c, a), ()) if tb is not None and b >= tb]
                 first = min(after) if after else None
-                diagnostics.append({"kind": kind, "client": c, "agentId": a, "w": q, "tag1": f.tag1,
+                diagnostics.append({"kind": kind, "client": c, "agentId": a, "w": q, "tag1": t,
                                     "feedbackIndex": f.index, "feedbackBlock": f.block or None, "transferBlock": tb,
                                     "firstFeedbackAfterTransfer": first,
                                     "blocksAfterTransfer": first - tb if first is not None else None})

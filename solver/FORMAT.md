@@ -1,7 +1,9 @@
 # Certificate format `ancre-cert-v1` (unified) and normative edge rules
 
 > Owner: solver. Updated **2026-10-01** by the integration session 02 + 04 (branch `chantier/integration-02-04`),
-> then **2026-10-06** by chantier 04-bis (D48: rule B in R6, rule A in R8, AM-9.3 diagnostic; vectors regenerated).
+> then **2026-10-06** by chantier 04-bis (D48: rule B in R6, rule A in R8, AM-9.3 diagnostic; vectors regenerated),
+> then **2026-10-06** by `chantier/solver-relais` (relays of the indexer review: R1 bis tag identity by hash, NUL;
+> REGCB in the identity replay; vectors unchanged, MEASURED).
 > **Single source for the binary layout, the integer arithmetic, the replacement rule and the proofs:
 > `contracts/ENCODING.md` (unified v1).** This file holds what ENCODING.md does not: the edge rules R1-R8 (what an
 > edge is, reference for the indexer), the JSON vector fields, and the solver's own policy. Where both files speak
@@ -20,6 +22,7 @@ The indexer ports them; `tests/test_indexer_parity.py` compares the pair edges `
 | # | Decision | Rule |
 |---|---|---|
 | R1 | D12, D24 | Tag schema per set: `tag → (min, neutral, max, kind)`, bounds in WAD, `min ≤ neutral ≤ max`. Filter ≤ **TAGS_MAX = 16**. |
+| R1 bis | AM-04.2, NUL (06/10) | **A tag is identified by keccak256 of its bytes**, as the contract compares it. A feedback that carries its hash (`h` in the feedbacks file: the indexer's `tagHash`, the NewFeedback `indexedTag1` topic) is matched to a schema tag `T` iff `h = keccak256(utf8(T))`, **never by its text**; the edge's `decidingTag` is then the schema text `T`. A feedback without a hash (readAllFeedback relays) is matched by exact text. An indexer row with `tag1Exact = false` (NUL, ill-formed UTF-16, > 1 KiB: display text only) is NOT excluded: a schema tag longer than 1 KiB or containing U+0000 is matched on chain and only has such rows. |
 | R2 | D15 | Only `kind = endorsement` tags create edges. |
 | R3 | D14 | Per `(client, agent, tag1)`: the non-revoked feedback with the **highest `feedbackIndex`**. If that feedback is out of bounds, the tag yields nothing (**no fallback** to an older feedback: "latest then reject"). |
 | R4 | D18 | `x = value·10^(18−dec)` exact; `x ∉ [min, max]` ⇒ rejected (never clamped); `x > n ⇒ w = ⌊(x−n)·10⁴/(max−n)⌋`; `x < n ⇒ w = −⌊(n−x)·10⁴/(n−min)⌋`; `x = n ⇒ 0`. (Floor of a non-negative quotient; in TypeScript use `bigint` on non-negative operands only.) |
@@ -156,7 +159,7 @@ wallet (D48-A).
 
 Read side of `docs/ressources/design-indexeur-envio.md` §5/§7. **To be relayed to chantier 03 by the pilot.**
 
-- **Entities and fields read** (Hasura names; a relation `agent` is read as `agent_id`): `Feedback {id, agent_id, client, feedbackIndex, value, valueDecimals, tag1, tag2, blockNumber, logIndex, revokedAtBlock}`, `OwnerChange {id, agent_id, from, to, isMint, blockNumber, logIndex}`, `WalletChange {id, agent_id, wallet, blockNumber, logIndex}`, `ApprovalChange {id, agent_id, approved, blockNumber, logIndex}`, `OperatorChange {id, owner, operator, approved, blockNumber, logIndex}`, `SetEdge {id, set_id, client, agent_id, w, decidingTag, feedbackIndex, rejected, updatedAtBlock}`. Filters used: `blockNumber: {_lte}`, `set_id: {_eq}`, keyset `id: {_gt}` with `order_by: {id: asc}`, `limit: 1000`.
+- **Entities and fields read** (Hasura names; a relation `agent` is read as `agent_id`): `Feedback {id, agent_id, client, feedbackIndex, value, valueDecimals, tag1, tagHash, tag1Exact, tag2, blockNumber, logIndex, revokedAtBlock}` (`tagHash`, `tag1Exact`: indexer schema v3; a dump without them keeps the text identity; `tagHash` is exported as `h`, R1 bis; a row `tag1Exact = false` without `tagHash`, or `tag1Exact` true with `keccak(tag1) != tagHash`, is refused), `OwnerChange {id, agent_id, from, to, isMint, blockNumber, logIndex}`, `WalletChange {id, agent_id, wallet, blockNumber, logIndex}`, `ApprovalChange {id, agent_id, approved, blockNumber, logIndex}`, `OperatorChange {id, owner, operator, approved, blockNumber, logIndex}`, `SetEdge {id, set_id, client, agent_id, w, decidingTag, feedbackIndex, rejected, updatedAtBlock}`. Filters used: `blockNumber: {_lte}`, `set_id: {_eq}`, keyset `id: {_gt}` with `order_by: {id: asc}`, `limit: 1000`.
 - **Per chain.** Every query filters `chainId: {_eq: C}` (multichain indexer, ids are `(id, chainId)`); rows of other chains must never mix (block numbers are not comparable across chains).
 - **Head check.** The export refuses a block the indexer has not processed: it reads `chain_metadata(where: {chain_id: {_eq: C}}) { latest_processed_block }` (Envio table, field names NON VÉRIFIÉ against a live endpoint) and fails if head < B. A fixture declares its block in `BLOCK`.
 - **Pagination** stops on an empty page (a server-side row cap below 1 000 must not truncate silently).
@@ -164,6 +167,15 @@ Read side of `docs/ressources/design-indexeur-envio.md` §5/§7. **To be relayed
 - **Identity replay** in `(blockNumber, logIndex)` order: an `OwnerChange` clears the approval and removes the new
   holder from the past owners (A → B → A leaves `pastOwners = {B}`; `pastOwnerUntil` keeps the block of each past
   holder's last transfer out, AM-9.3); the registry's own `MetadataSet(agentWallet, "")` at transfer MUST be indexed as a `WalletChange` to `0x0` (MEASURED 72/72, design §5).
+- **REGCB (normative, 06/10).** `register()` of the v2.0.0 registry writes `agentWallet = msg.sender` before
+  `_safeMint` and emits `MetadataSet(agentWallet, msg.sender)` after the `onERC721Received` callback (logs:
+  `Transfer(0, C)`, [callback], `Registered`, `MetadataSet(C)`). If an agentWallet `MetadataSet` or a `Transfer` of the
+  same agent occurs between its mint and its `Registered` in the registration transaction, the late `MetadataSet(C)`
+  is **ignored** (the registry keeps the callback's state). The indexer filters it (no `WalletChange` row,
+  `identity.ts` regTx/regPhase); `graph.replay_identity_events` applies the same rule on raw logs, keyed by
+  `transactionHash` (`tx`) or, when absent, by the block (same answer on a complete log list: a transaction's logs are
+  contiguous). Real data (108 835 675, 110 994 810]: 19 registrations, 0 with a callback change, identity unchanged
+  (MEASURED 06/10).
 - **SetEdge semantics expected by the parity test.** One row per `(set, client, agent)`: retained iff `rejected == null` and `w != 0`; `w`, `decidingTag`, `feedbackIndex` = R3-R5 (**tie rule changed on 01/10: highest feedbackIndex**, §0 R5; the TypeScript string-order risk AM-04.12 is gone). `OUT_OF_BOUNDS` is a **per-tag** outcome in R3: a pair is `OUT_OF_BOUNDS` only if no tag of the filter yields a weight; one out-of-bounds tag next to a valid tag still gives an edge. `CONTROLLER_*` = R6 on **current** controllers (no past-owner reason), **and only when the combined weight is positive (D48-B, 06/10): a controller's negative pair is retained** (`rejected == null`, w < 0). The emitter (R7) is **not** part of SetEdge: the solver resolves it.
 - **When parity is meaningful**: SetEdge is current state only, so compare at the indexer's head (or with the indexer stopped at B).
 - **Handing over a dump from another machine**: one `<Entity>.json` per entity (list of rows, GraphQL shape) plus a `BLOCK` file, in `solver/tests/fixtures/indexer/`; `test_parity_real_indexer_dump` then runs automatically. CLI: `.venv/bin/python from_indexer.py --fixture DIR --block B --out OUT --parity` (exit code 1 on any difference).
