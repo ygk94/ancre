@@ -113,3 +113,28 @@
 (À compléter par le délai mesuré quand le webhook existe ; ne pas annoncer de chiffre avant.)
 
 **Prochaine étape** : E3, vecteurs communs.
+
+## 2026-10-06 ~15:00 — E3 (en grande partie) : vecteurs communs avec 02-bis — ARRÊT (limite d'usage)
+
+**Fait** : `solver/common_vectors.py` → `solver/vectors/common/*.json` (format v1, re-vérifiés par `export.check_file_obj`). Chaque vecteur est **autonome** : bloc `registry` (agents, opérateurs, avis par ordre d'index, pour les mocks de `contracts/test/utils/Mocks.sol`), `expect.submission` (ACCEPTED ou l'erreur attendue), `expect.read` (contributions, trustRobust, distrust, vetoBits, vetoByApproval, passesAnchorPolicy).
+
+| vecteur | attendu (MESURÉ, solveur, 06/10) |
+|---|---|
+| common_A_anchor_not_source | ACCEPTED ; S (#10, wallet = ancre X) sans ligne ; F (#20) trustRobust 0 |
+| common_A_attack_anchor_copy | **AnchorAsSource(2)** (S porte la ligne de X) |
+| common_A_mainnet_old_slash_anchor | **AnchorAsSource(5)** (vecteur de démo du 01/10 sur le snapshot 110 994 810, fork) |
+| common_B_controller_negative | ACCEPTED ; #30 : négatifs de l'ancre opératrice A2 et de l'approuvé P gardés, d = 0,1111, veto (bit + approbation), refusé ; #31 OK (0,0556) |
+| common_C_proven_row_resubmitted | étape 1 ACCEPTED (attested, arête fabriquée A1→#41), preuve proveEdge, puis `resubmission` (mêmes lignes fausses, ligne vide de #40 retirée) → **ProvenRowResubmitted(u_A1)** ; `control` honnête → ACCEPTED |
+| common_2hop | ACCEPTED ; **H2 (#51) trustRobust 0,0741 > θ : OK**, alors qu'une liste à un saut dit « inconnu » (D50) |
+| common_2hop_one_anchor | H1 approuvé par une seule ancre : H2 = 0, refusé (AM-10.6) |
+
+Tests : **155 passed** (MESURÉ).
+
+**INTERFACE** : nouveaux vecteurs `vectors/common/` ; le test `test_A_mainnetSlashAnchorRefused` de 02-bis doit lire `common_A_mainnet_old_slash_anchor.json` (le `mainnet_slash_anchor.json` a changé d'ancres en E1, il est désormais ACCEPTÉ). Le hash canonique de C n'est pas dans le vecteur (défini par 02-bis).
+
+**Reste à faire** (session interrompue par la limite d'usage) :
+- E3 : vecteur « nœud address(0) » quand R1 est corrigé chez 02-bis ; tests pytest dédiés aux vecteurs communs ; FORMAT.md §8.
+- E4 : renommage `passesAnchorPolicy` (attend le commit de 02-bis ; seul `ppr.is_trusted` est concerné côté solveur), `simulate.py` sur fork contre le contrat corrigé.
+- E5 : `/code-review high` sur ce worktree.
+- Rapport `docs/chantiers/rapports/04bis.md`.
+- 🧑 Alchemy : clé de signature, jeton Notify, URL HTTPS (voir entrée D55).

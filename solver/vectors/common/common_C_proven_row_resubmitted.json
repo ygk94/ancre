@@ -1,0 +1,313 @@
+{
+ "format": "ancre-cert-v1",
+ "label": "common_C_proven_row_resubmitted",
+ "notes": "D48-C, step 1: the anchor row of A1 carries a FABRICATED edge A1 -> #41 (+10000, index 1). Submitter-attested: accepted, then proven false by proveEdge (v) on (row of A1, agentJ = 41).",
+ "alignedWith": "contracts/ENCODING.md unified v1 (2026-10-01), AnchoredReputation v1 (integration 02+04)",
+ "identityBlock": 0,
+ "set": {
+  "anchors": [
+   "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "0xa2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2"
+  ],
+  "lambdas": [
+   "500000000000000000",
+   "500000000000000000"
+  ],
+  "alphaN": 1,
+  "alphaD": 3,
+  "minAnchors": 2,
+  "tagSchemaHash": "0xbf022e546124195b714d2aeae68164f1c42d599c13353a09265cef61ddf0468e",
+  "tags": [
+   {
+    "tag": "vouch",
+    "min": "0",
+    "neutral": "0",
+    "max": "100000000000000000000",
+    "kind": 0
+   },
+   {
+    "tag": "review",
+    "min": "-1000000000000000000",
+    "neutral": "0",
+    "max": "1000000000000000000",
+    "kind": 0
+   },
+   {
+    "tag": "slash",
+    "min": "-100000000000000000000",
+    "neutral": "0",
+    "max": "0",
+    "kind": 0
+   }
+  ],
+  "policy": {
+   "theta": "1000000000000000",
+   "rhoN": 1,
+   "rhoD": 2,
+   "minAnchors": 2,
+   "vetoQuorum": 1,
+   "vetoMax": -1,
+   "maxAge": 288000,
+   "minRefresh": 600,
+   "slackRefresh": "0",
+   "eLowMax": "10000000000000000",
+   "strictTransfer": true,
+   "registryVerified": false,
+   "ownerFallback": false,
+   "submitters": [
+    "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+   ]
+  },
+  "setId": "0x586bf5b56516e3e560dd6ee0772aa6be4ca6c6a98bab956e3a156be07cb48c25"
+ },
+ "nCert": 4,
+ "nodes": [
+  {
+   "i": 0,
+   "kind": "anchor",
+   "address": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "hasRow": true
+  },
+  {
+   "i": 1,
+   "kind": "anchor",
+   "address": "0xa2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+   "hasRow": true
+  },
+  {
+   "i": 2,
+   "kind": "agent",
+   "agentId": 40,
+   "owner": "0x000000000000000000000000000000000000b028",
+   "agentWallet": "0x000000000000000000000000000000000000c028",
+   "hasRow": true
+  },
+  {
+   "i": 3,
+   "kind": "agent",
+   "agentId": 41,
+   "owner": "0x000000000000000000000000000000000000b029",
+   "agentWallet": "0x000000000000000000000000000000000000c029",
+   "hasRow": true
+  }
+ ],
+ "rows": [
+  {
+   "u": 0,
+   "source": null,
+   "via": "anchor",
+   "aliasOf": null,
+   "sPlus": 20000,
+   "bPlus": 20000,
+   "bMinus": 10000,
+   "edges": [
+    {
+     "dst": 2,
+     "w": 10000,
+     "feedbackIndex": 1,
+     "client": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+     "agentId": 40,
+     "tag1": "vouch"
+    },
+    {
+     "dst": 3,
+     "w": 10000,
+     "feedbackIndex": 1,
+     "client": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+     "agentId": 41,
+     "tag1": "vouch"
+    }
+   ]
+  },
+  {
+   "u": 1,
+   "source": null,
+   "via": "anchor",
+   "aliasOf": null,
+   "sPlus": 20000,
+   "bPlus": 20000,
+   "bMinus": 10000,
+   "edges": [
+    {
+     "dst": 2,
+     "w": 10000,
+     "feedbackIndex": 1,
+     "client": "0xa2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+     "agentId": 40,
+     "tag1": "vouch"
+    },
+    {
+     "dst": 3,
+     "w": 10000,
+     "feedbackIndex": 1,
+     "client": "0xa2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+     "agentId": 41,
+     "tag1": "vouch"
+    }
+   ]
+  },
+  {
+   "u": 2,
+   "source": "0x000000000000000000000000000000000000c028",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 0,
+   "bPlus": 10000,
+   "bMinus": 10000,
+   "edges": []
+  },
+  {
+   "u": 3,
+   "source": "0x000000000000000000000000000000000000c029",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 0,
+   "bPlus": 10000,
+   "bMinus": 10000,
+   "edges": []
+  }
+ ],
+ "vectors": {
+  "t": [
+   [
+    "333333333333333333",
+    "0",
+    "111111111111111111",
+    "111111111111111111"
+   ],
+   [
+    "0",
+    "333333333333333333",
+    "111111111111111111",
+    "111111111111111111"
+   ]
+  ],
+  "ownerFp": [
+   "0",
+   "0",
+   "45096",
+   "45097"
+  ]
+ },
+ "expected": {
+  "residualMode": "contract",
+  "subSolution": true,
+  "iterationsFromZero": 3,
+  "r": [
+   "5",
+   "5"
+  ],
+  "e": [
+   "15",
+   "15"
+  ],
+  "eEff": "16",
+  "qEff": "0",
+  "mass": "555555555555555554",
+  "distrustMass": "0",
+  "d": [
+   "0",
+   "0",
+   "0",
+   "0"
+  ],
+  "graphRoot": "0x84764eba1cfca56ca405cc7308abb4e8ff3c645cc3cf337dace41edf62074d9b",
+  "vectorRoot": "0xb1bbaadfea5d8f80cdb3f33708cfb9349c0ae95c3005b07b2f9e07d4b129f2d0",
+  "tight": {
+   "r": [
+    "1",
+    "1"
+   ],
+   "e": [
+    "3",
+    "3"
+   ]
+  }
+ },
+ "calldata": {
+  "W": 2,
+  "newNodes": "0x01000000280100000029",
+  "vectors": "0x04a03ce68d21555500000000000000000000000000000000000000000000000004a03ce68d2155550000000000000000018abef7846071c7018abef7846071c7000000000000b028018abef7846071c7018abef7846071c7000000000000b029",
+  "rows": "0x02000000040000000200022710000000010003271000000001000100020002271000000001000327100000000100028000000000000000000000000000000000000000c02800038000000000000000000000000000000000000000c029"
+ },
+ "registry": {
+  "agents": [
+   {
+    "agentId": 40,
+    "owner": "0x000000000000000000000000000000000000b028",
+    "agentWallet": "0x000000000000000000000000000000000000c028",
+    "approved": "0x0000000000000000000000000000000000000000"
+   },
+   {
+    "agentId": 41,
+    "owner": "0x000000000000000000000000000000000000b029",
+    "agentWallet": "0x000000000000000000000000000000000000c029",
+    "approved": "0x0000000000000000000000000000000000000000"
+   }
+  ],
+  "operators": [],
+  "feedbacks": [
+   {
+    "client": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "agentId": 40,
+    "value": 100,
+    "decimals": 0,
+    "tag1": "vouch",
+    "tag2": "",
+    "revoked": false
+   },
+   {
+    "client": "0xa2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+    "agentId": 40,
+    "value": 100,
+    "decimals": 0,
+    "tag1": "vouch",
+    "tag2": "",
+    "revoked": false
+   },
+   {
+    "client": "0xa2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+    "agentId": 41,
+    "value": 100,
+    "decimals": 0,
+    "tag1": "vouch",
+    "tag2": "",
+    "revoked": false
+   }
+  ]
+ },
+ "expect": {
+  "submission": "ACCEPTED",
+  "then": {
+   "proveEdge": {
+    "row": 0,
+    "agentJ": 41,
+    "kind": "FABRICATED"
+   }
+  },
+  "resubmission": "ProvenRowResubmitted(0)"
+ },
+ "resubmission": {
+  "why": "the same false row of A1 (same canonical content) with other bytes changed: the empty row of #40 is dropped (#40 listed without a row), hence other rows bytes, graphRoot and e. MUST revert ProvenRowResubmitted once step 1 is proven, including under REGISTRY_CHANGED (not expressible in a static vector).",
+  "calldata": {
+   "W": 2,
+   "newNodes": "0x01000000280100000029",
+   "vectors": "0x04a03ce68d21555500000000000000000000000000000000000000000000000004a03ce68d2155550000000000000000018abef7846071c7018abef7846071c7000000000000b028018abef7846071c7018abef7846071c7000000000000b029",
+   "rows": "0x02000000030000000200022710000000010003271000000001000100020002271000000001000327100000000100038000000000000000000000000000000000000000c029"
+  },
+  "nCert": 4,
+  "expected": {
+   "graphRoot": "0x8f6660cc94cb9f8e0179c8bbfb2e1e45a67717387fe0a331982c9fec0d2b9f2f",
+   "vectorRoot": "0xb1bbaadfea5d8f80cdb3f33708cfb9349c0ae95c3005b07b2f9e07d4b129f2d0"
+  }
+ },
+ "control": {
+  "why": "the honest certificate (no fabricated edge) on the same set must be ACCEPTED after the proof",
+  "calldata": {
+   "W": 2,
+   "newNodes": "0x01000000280100000029",
+   "vectors": "0x04a03ce68d21555500000000000000000000000000000000000000000000000004a03ce68d215555000000000000000003157def08c0e38e018abef7846071c7000000000000b0280000000000000000018abef7846071c7000000000000b029",
+   "rows": "0x0200000004000000010002271000000001000100020002271000000001000327100000000100028000000000000000000000000000000000000000c02800038000000000000000000000000000000000000000c029"
+  }
+ }
+}
