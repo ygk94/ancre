@@ -322,8 +322,14 @@ contract VerifiedTest is AncreBase {
         assertEq(eUpBefore, CertLib.eUp(g, t)[0], "the omitted half is in the margin of eUp");
         ar.proveEdge(setId, _proofA(g), _none(), "", 102);
         (uint256 eUpAfter, uint256 eLow0) = ar.columnBounds(setId, 0);
-        assertEq(eLow0, 0, "omission of a positive edge without dilution: no effect on the lower bound");
-        assertEq(eUpAfter, eUpBefore, "prepaid by the declared-budget margin: not billed twice");
+        // A2b (02-bis, review 06/10): the contract cannot tell this declared omission from a NEW edge (true sum
+        // 3 instead of 2), so it bills the worst case: X's entry 1/2 may be 1/3 (eLow += (1-a) t_A (1/6) / a) and
+        // the omitted mass may still be there (eUp += beyond the prepaid 1/2). Conservative, never unsound.
+        assertEq(eLow0, (t[0][0] * 2 * 166_666_666_666_666_667 + 1e18 - 1) / 1e18, "worst case: the edge is new");
+        assertGt(eUpAfter, eUpBefore);
+        // the honest certificate (same declared omission) still comes back at once: the proven edge (A, Y) is a
+        // fact, and a declared omission that covers it is allowed (ENCODING §3.5)
+        _submitOk(setId, g, t);
     }
 
     // ------------------------------------------------------------------ fabrication (v), revocation (iii), staleness (ii)
@@ -650,8 +656,9 @@ contract VerifiedTest is AncreBase {
         // the omitted edge, proven: no dilution (0.5 < 1), already prepaid by the margin
         ar.proveEdge(setId, _proofA(g), _none(), "", 102);
         (uint256 eUp1, uint256 eLow1) = ar.columnBounds(setId, 0);
-        assertEq(eLow1, 0);
-        assertEq(eUp1, eUp0, "prepaid (sPlus - S0)/B+ = 0.2: not billed twice");
+        assertEq(eLow1, 0, "below GRID the budget does not move: no dilution");
+        // A2b: if the revealed edge is NEW, the declared 0.2 is still omitted elsewhere: excess 0.4, prepaid 0.2
+        assertEq(eUp1 - eUp0, (t[0][0] * 2 * 2e17 + 1e18 - 1) / 1e18, "worst case beyond the prepaid 0.2");
         // a declared sPlus below the committed sum is refused
         g.rowBDecl[0] = 2999;
         vm.roll(5000);

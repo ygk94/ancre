@@ -130,8 +130,13 @@ abstract contract AncreBase is Test {
     }
 
     function _submit(bytes32 setId, CertLib.Graph memory g, uint256[][] memory t, uint256 eMax) internal {
+        _submitBytes(setId, uint32(g.n), eMax, CertLib.encodeVectors(g, t), CertLib.encodeRows(g, 2));
+    }
+
+    /// separate frame: keeps the callers' stacks shallow under via-IR
+    function _submitBytes(bytes32 setId, uint32 n, uint256 eMax, bytes memory v, bytes memory rows) internal {
         _direct();
-        ar.submitCertificate(setId, uint32(g.n), eMax, "", CertLib.encodeVectors(g, t), CertLib.encodeRows(g, 2));
+        ar.submitCertificate(setId, n, eMax, "", v, rows);
     }
 }
 

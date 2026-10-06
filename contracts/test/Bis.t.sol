@@ -87,10 +87,11 @@ contract BisTest is AncreBase {
         zero[0] = bytes1(uint8(2));
         vm.expectRevert(AnchoredReputation.BadNodes.selector);
         ar.addNodes(setId, zero);
-        // the same entry through submitCertificate(newNodes)
+        // the same entry through submitCertificate(newNodes), on an attested set (inline nodes are refused on open
+        // sets anyway, A1d): the refusal comes from the node table itself
+        bytes32 att = _set(1, 1, false);
         vm.expectRevert(AnchoredReputation.BadNodes.selector);
-        _direct();
-        ar.submitCertificate(setId, 1, type(uint256).max, zero, new bytes(16), hex"0200000000");
+        ar.submitCertificate(att, 1, type(uint256).max, zero, new bytes(16), hex"0200000000");
     }
 
     /// the PoC itself, end to end: node 1 = address(0) (permissionless addNodes), X = 2, Z = 3; the address(0)
@@ -590,5 +591,159 @@ contract BisTest is AncreBase {
         c.addRowDecl(0, address(0), _one(1), _oneW(5000), 25_000);
         c.ownerFp[1] = uint64(uint160(OX));
         _ok(setId, c, c.fixedPoint(60));
+    }
+
+    // ================================================================== revue maximale complète du 06/10 (relais)
+    /// L1: a source-less agent row carrying edges (formerly hidden behind K6) is refused at both levels
+    function test_L1_sourcelessRowWithEdgesRefused() public {
+        idr.setWallet(101, address(0));
+        address A = _anchors(1)[0];
+        vm.prank(A);
+        rep.giveFeedback(101, 100, 0, "vouch", "");
+        for (uint256 lvl; lvl < 2; ++lvl) {
+            bytes32 setId = _set(1, 1, lvl == 1);
+            CertLib.Graph memory g = CertLib.newGraph(4, 1, AN, AD, 4, 4);
+            g.addRow(0, address(0), _one(1), _oneW(10_000));
+            g.addRow(1, address(0), _one(2), _oneW(10_000)); // B -> Y fabricated, no SRC
+            g.ownerFp[1] = uint64(uint160(OX));
+            _refused(setId, g, g.fixedPoint(60), 2, abi.encodeWithSelector(AnchoredReputation.EdgeMismatch.selector, 1, 256));
+            vm.roll(block.number + 1);
+        }
+    }
+
+    /// K7: a proven certificate re-encoded with an extra empty row (a massless node) stays refused
+    function test_K7_extraEmptyRowStillRefused() public {
+        (bytes32 setId,,) = _provenDilution(true);
+        CertLib.Graph memory h = CertLib.newGraph(4, 1, AN, AD, 4, 4);
+        h.addRow(0, address(0), _one(1), _oneW(10_000)); // the same omission of A -> Y
+        h.addRow(1, OX, new uint256[](0), new int256[](0));
+        h.addRow(3, OZ, new uint256[](0), new int256[](0)); // extra empty row: other graphRoot
+        h.ownerFp[1] = uint64(uint160(OX));
+        h.ownerFp[3] = uint64(uint160(OZ));
+        _refused(setId, h, h.fixedPoint(60), 2, abi.encodeWithSelector(PROVEN_ROW, 0));
+    }
+
+    /// K10: an address row with the SRC bit, and an agent row whose SRC bit carries 0, are refused
+    function test_K10_srcBitOnAddressRowRefused() public {
+        bytes32 setId = _set(1, 1, false);
+        ar.addNodes(setId, abi.encodePacked(uint8(2), address(0xADD0))); // address node 4
+        CertLib.Graph memory g = CertLib.newGraph(5, 1, AN, AD, 4, 4);
+        g.addRow(4, address(0xBEEF), new uint256[](0), new int256[](0));
+        _refused(setId, g, g.fixedPoint(60), 2, abi.encodeWithSelector(AnchoredReputation.EdgeMismatch.selector, 0, 256));
+    }
+
+    /// E1: a client posting one feedback with a huge tag2 on its own pair no longer makes the pair unreadable for
+    /// submissions and proofs (the cap was VIEW_CALL_GAS = 120 000)
+    function test_E1_longTag2DoesNotBlockSubmission() public {
+        bytes32 setId = _set(1, 1, true);
+        address A = _anchors(1)[0];
+        vm.startPrank(A);
+        rep.giveFeedback(101, 100, 0, "vouch", "");
+        rep.giveFeedback(101, 70, 0, "uptime", string(new bytes(13_000))); // measurement tag, 13 kB tag2
+        vm.stopPrank();
+        CertLib.Graph memory g = CertLib.newGraph(4, 1, AN, AD, 4, 4);
+        g.addRow(0, address(0), _one(1), _oneW(10_000));
+        g.addRow(1, OX, new uint256[](0), new int256[](0));
+        g.ownerFp[1] = uint64(uint160(OX));
+        _ok(setId, g, g.fixedPoint(60));
+        vm.expectRevert(AnchoredReputation.NothingToProve.selector);
+        ar.proveEdge(setId, _rowRef(g, 0), _none(), "", 101);
+    }
+
+    /// K8 (scenario V1aBound): declared row sPlus = 2, committed {P: 1, B: 0.5}, C: 0.5 omitted; P revoked. The
+    /// true row is {B: 1/2, C: 1/2}: excess 0.75 of the row, 0.25 prepaid, 0.5 billed to eUp
+    function test_K8_revokedCommittedEdgeOfDeclaredRow() public {
+        bytes32 setId = _set(1, 1, false);
+        address A = _anchors(1)[0];
+        vm.startPrank(A);
+        rep.giveFeedback(101, 100, 0, "vouch", ""); // P = X
+        rep.giveFeedback(102, 50, 0, "vouch", ""); // B = Y
+        rep.giveFeedback(103, 50, 0, "vouch", ""); // C = Z, omitted
+        vm.stopPrank();
+        CertLib.Graph memory g = CertLib.newGraph(4, 1, AN, AD, 4, 4);
+        g.addRowDecl(0, address(0), _two(1, 2), _twoW(10_000, 5000), 20_000);
+        g.ownerFp[1] = uint64(uint160(OX));
+        g.ownerFp[2] = uint64(uint160(OY));
+        uint256[][] memory t = g.fixedPoint(60);
+        _ok(setId, g, t);
+        (uint256 eUp0,) = ar.columnBounds(setId, 0);
+        vm.prank(A);
+        rep.revokeFeedback(101, 1);
+        ar.proveEdge(setId, _rowRef(g, 0), _none(), "", 101);
+        (uint256 eUp1,) = ar.columnBounds(setId, 0);
+        assertEq(eUp1 - eUp0, (t[0][0] * 2 * 5e17 + 1e18 - 1) / 1e18, "0.75 - 0.25 prepaid = 0.5 of the row");
+    }
+
+    /// A2b: on a declared row, a NEW positive edge dilutes every committed entry: eLow must grow (here past eLowMax)
+    function test_A2b_newPositiveEdgeOfDeclaredRowBillsELow() public {
+        bytes32 setId = _set(1, 1, false);
+        address A = _anchors(1)[0];
+        vm.prank(A);
+        rep.giveFeedback(101, 100, 0, "vouch", "");
+        CertLib.Graph memory g = CertLib.newGraph(4, 1, AN, AD, 4, 4);
+        g.addRowDecl(0, address(0), _one(1), _oneW(10_000), 10_200);
+        g.ownerFp[1] = uint64(uint160(OX));
+        _ok(setId, g, g.fixedPoint(60));
+        vm.prank(A);
+        rep.giveFeedback(103, 2, 0, "vouch", ""); // after the certificate: A now also recommends Z (+0.02, inside the declared 0.02)
+        ar.proveEdge(setId, _rowRef(g, 0), _none(), "", 103);
+        (, uint256 eLow1) = ar.columnBounds(setId, 0);
+        assertGt(eLow1, 0, "X entry may have dropped from 1/1.02 to 1/1.04 (the edge may be new)");
+        assertEq(uint8(ar.assess(101, setId, true).status), uint8(AnchoredReputation.Status.STALE), "eLow > eLowMax");
+    }
+
+    /// ALT8: honest proofs of DECLARED omissions (rounding) no longer block the identical honest recertification
+    function test_ALT8_honestDeclaredOmissionsDoNotBlockRecertification() public {
+        bytes32 setId = _set(1, 1, true);
+        address A = _anchors(1)[0];
+        vm.startPrank(A);
+        rep.giveFeedback(101, 100, 0, "vouch", ""); // Y1 = X, committed
+        rep.giveFeedback(102, 8, 0, "vouch", ""); // Y2 = Y, omitted
+        rep.giveFeedback(103, 8, 0, "vouch", ""); // Y3 = Z, omitted
+        vm.stopPrank();
+        CertLib.Graph memory g = CertLib.newGraph(4, 1, AN, AD, 4, 4);
+        g.addRowDecl(0, address(0), _one(1), _oneW(10_000), 11_600);
+        g.addRow(1, OX, new uint256[](0), new int256[](0));
+        g.ownerFp[1] = uint64(uint160(OX));
+        uint256[][] memory t = g.fixedPoint(60);
+        _ok(setId, g, t);
+        ar.proveEdge(setId, _rowRef(g, 0), _none(), "", 102);
+        AnchoredReputation.RowRef memory r = _rowRef(g, 0);
+        r.path = new bytes32[](0);
+        ar.proveEdge(setId, r, _none(), abi.encodePacked(uint32(102), int16(0), int16(800)), 103);
+        _ok(setId, g, t); // the identical honest certificate is accepted at once
+    }
+
+    /// STUCK (contract part): the owner approves the anchor, someone proves the edge, the owner cancels. The proven
+    /// fact is stale; refreshFact re-reads it and the honest certificate is accepted (no dead set)
+    function test_STUCK_refreshAfterApprovalUndone() public {
+        bytes32 setId = _set(1, 1, true);
+        address A = _anchors(1)[0];
+        vm.prank(A);
+        rep.giveFeedback(101, 100, 0, "vouch", "");
+        CertLib.Graph memory g = CertLib.newGraph(4, 1, AN, AD, 4, 4);
+        g.addRow(0, address(0), _one(1), _oneW(10_000));
+        g.addRow(1, OX, new uint256[](0), new int256[](0));
+        g.ownerFp[1] = uint64(uint160(OX));
+        uint256[][] memory t = g.fixedPoint(60);
+        _ok(setId, g, t);
+        idr.setOperator(OX, A, true); // A becomes a controller of X: its positive edge no longer counts
+        ar.proveEdge(setId, _rowRef(g, 0), _none(), "", 101);
+        idr.setOperator(OX, A, false); // undone
+        _refused(setId, g, t, 2, abi.encodeWithSelector(PROVEN_ROW, 0)); // the fact (A, X) = 0 is stale
+        ar.refreshFact(setId, A, 101);
+        _ok(setId, g, t);
+    }
+
+    /// A1d: inline nodes on an open set would take the table's indices at execution (an interleaved addNodes
+    /// shifts them): refused; the listed submitters of an attested set keep them
+    function test_A1d_inlineNodesRefusedOnOpenSets() public {
+        AnchoredReputation.SetParams memory p = _params(_anchors(1), 1);
+        p.policy.registryVerified = true;
+        p.policy.submitters = new address[](0);
+        bytes32 setId = ar.registerAnchorSet(p);
+        vm.expectRevert(AnchoredReputation.BadNodes.selector);
+        vm.prank(address(0xE0A), address(0xE0A));
+        ar.submitCertificate(setId, 2, type(uint256).max, _agentEntries(101, 1), new bytes(32), hex"0200000000");
     }
 }

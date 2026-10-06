@@ -168,3 +168,42 @@ Le relais vers l'indexeur et le certificateur (04) : avant de soumettre sur un s
 **Prochaine étape** : rapport 02bis, puis 🧑 accord de Hugo pour le déploiement testnet.
 
 🧑 BLOQUÉ : accord de Hugo pour déployer sur le testnet. Le script `script/testnet/Deploy.s.sol` est prêt et simulé : 10,58 M gas, soit ≈ 1,06 MON à 100 gwei (2,15 MON au plafond de 203 gwei). Il faut le keystore et du MON de testnet ; le payeur doit être déployé avec trois adresses distinctes (owner, trésorerie, opérateur).
+
+## 2026-10-06 (nuit) — merge de `main` ; constats de la revue maximale complète (`docs/chantiers/relais/revue-vers-02bis.md`)
+
+`git merge main` : merge `46f7764`, sans conflit (indexeur, relais, revue complète). Constats traités, avec leur test de non-régression (`contracts/test/Bis.t.sol`) :
+
+| Id | Gravité | État | Test |
+|---|---|---|---|
+| **K6** | critique | corrigé en R1 (table et fin de passe) | `test_R1_zeroAddressNodeRefused`, `test_R1_pocFabricationNeverAccepted`, vecteur commun `common_R1_address_zero_node` |
+| **L1** | critique | corrigé : la ligne d'agent sans SRC doit être vide, et ce contrôle est maintenant atteint aux deux niveaux | **`test_L1_sourcelessRowWithEdgesRefused`** (nouveau) |
+| **K7** | haute | corrigé par les faits prouvés : W = 4, autres vecteurs, ligne vide en plus, SPLUS = S⁺, SRC à zéro, empreinte d'ancre | `test_C_*`, **`test_K7_extraEmptyRowStillRefused`** (nouveau), `test_C_sPlusEqualToSumRefused`, `test_C_srcBitWithZeroSourceRefused`, `test_R5_anchorFingerprintChecked` |
+| **E1** | haute | **corrigé** : les chemins payants passent tout le gas restant à `readFeedback` (les vues gardent 120 k), et seul `tag1` est copié | **`test_E1_longTag2DoesNotBlockSubmission`** (tag2 de 13 ko) ; mutation vérifiée : remettre le plafond fait échouer le test |
+| **K10** | moyenne | corrigé (bits testés, `NotCanonical`) | `test_C_srcBitWithZeroSourceRefused`, **`test_K10_srcBitOnAddressRowRefused`** (nouveau) |
+| **K8** | moyenne | corrigé en R3 | `test_R3_*`, **`test_K8_revokedCommittedEdgeOfDeclaredRow`** (scénario V1aBound : 0,75 − 0,25 prépayé = 0,5) |
+| **A2b** | moyenne | **corrigé** : X = Scur + (dEff − S0), toute arête révélée peut être nouvelle | **`test_A2b_newPositiveEdgeOfDeclaredRowBillsELow`** (+0,02 dans la marge déclarée : eLow 0,0126 > eLowMax, STALE) ; mutation vérifiée |
+| **ALT8** | moyenne | corrigé : il n'y a plus de garde « prouvé » ; les faits autorisent l'omission déclarée qui les couvre | **`test_ALT8_honestDeclaredOmissionsDoNotBlockRecertification`** |
+| **STUCK** (part contrat) | haute (04-bis + 02-bis) | corrigé par `refreshFact` et `clearSourceFact` : le certificateur relit le fait périmé | **`test_STUCK_refreshAfterApprovalUndone`** ; côté 04-bis, appeler `refreshFact` avant de resoumettre |
+| **A1d** (part contrat) | 04-bis + 02-bis | **corrigé** : `newNodes` refusé sur un set ouvert (`BadNodes`) ; harnais des vecteurs adaptés (`addNodes` d'abord) | **`test_A1d_inlineNodesRefusedOnOpenSets`** |
+| **K9** | faible | corrigé : les faits s'appliquent aussi sous REGISTRY_CHANGED | `test_C_provenRowResubmittedUnderRegistryChanged` |
+| **K11** | faible | corrigé en R5 (ancres) ; agents sans masse non lus : sans effet, R7 | `test_R5_*` |
+| **K12** | faible | corrigé en R5 (`dryRun`) | `test_R5_dryRunAppliesShapeAndBounds` |
+| **K13** | faible | corrigé en R7 | `test_R7_strictTransferOnMassNotTrust` |
+| **K14** | faible | corrigé en R6 | `test_R6_*` |
+| **CONV4** | nettoyage | corrigé (chiffre sourcé et daté) | — |
+
+**Non traités, et pourquoi.**
+- **A1b** (moyenne, `addNodes` ouvert gonfle la table) : ce sont des faux frais, pas une faille de confiance. La vraie correction est D23 (zone de transit), plus large qu'un lot. Pour la démo, le risque est accepté : soumetteurs listés (tour 7). À trancher par Hugo ou le pilote.
+- **EFF1** (moyenne, balayage de tout l'historique d'un couple) : la correction est **normative**, une fenêtre `scanMax` engagée dans la politique, donc la même règle dans le solveur, l'indexeur et l'ERC. Elle change le `setId`. À décider au niveau du conseil, pas dans ce lot.
+- Faibles et nettoyage restants : A1c, K29, K3 (payeur, annulation upto) et les 12 points de nettoyage. Ils viennent après la soumission, comme le prévoit le relais.
+
+**Mesures** (MESURÉ le 06/10) :
+- `ANCRE_VECTORS=.v04bis/solver/vectors/ forge test` → **197 tests verts** (16 suites, forks compris).
+- Taille du contrat : **39 261 octets**.
+
+**INTERFACE** :
+- sets ouverts : `newNodes` doit être vide (le certificateur appelle `addNodes` dans sa propre transaction) ;
+- formule X de §7.1 (A2b) : la révélation d'une omission déclarée honnête facture le pire cas ;
+- paying paths : gas non plafonné vers `readFeedback`.
+
+Relais vers 04-bis : A1d (porter les nœuds hors ligne), STUCK (`refreshFact`), et EFF1 si le conseil retient la fenêtre.

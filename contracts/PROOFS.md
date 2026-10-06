@@ -51,7 +51,7 @@
 
 **Énoncé.** Soit une ligne u, engagée C⁰ (budget B0 = max(GRID, dEff), dEff = sPlus déclaré sinon S0), dont l'état vrai C diffère de C⁰ par la liste d'amendements prouvés, plus des arêtes omises non révélées. Avec dim, incP, incN calculés par ENCODING.md §7.1 sur la liste après la preuve : ‖(C⁰ − C)⁺‖₁ ≤ dim (côté positif) et ‖(C − C⁰)⁺‖₁ ≤ incP (positif, masse omise comprise) et ≤ incN (négatif). Donc, une fois tout écart prouvé, ‖(t − t*_A)⁺‖₁ ≤ eLow_a et ‖t*_A − t‖₁ ≤ eUp_a.
 **Preuve (esquisse).**
-1. *Somme vraie.* La vraie somme positive X_vrai vaut Scur + U, où U est la masse omise non révélée. Sous un sPlus honnête, une arête non engagée révélée est soit dans la somme déclarée, soit nouvelle : X_vrai ≤ X = max(dEff − cOut + cIn, Scur), l'hypothèse « dans la somme tant qu'elle y tient » étant documentée en AM-02bis.4.
+1. *Somme vraie.* La vraie somme positive X_vrai vaut Scur + U, où U est la masse omise non révélée, U ≤ dEff − S0 sous un sPlus honnête. Une arête non engagée révélée est soit dans la somme déclarée, soit nouvelle ; dans les deux cas X_vrai ≤ X = Scur + (dEff − S0) = dEff − cOut + pIn. Révision A2b du 06/10 : la première version supposait l'arête révélée dans la somme tant qu'elle y tenait, ce qui laissait une arête nouvelle sans facture côté eLow.
 2. *Monotonie en X.* Posons z = 1/max(GRID, X).
    - Le déficit Σ(c_i − a_i z)⁺ croît quand z décroît.
    - Pour X ≥ GRID, l'excès vaut Σ(a_i z − c_i)⁺ + U z = 1 − S0/B0 + déficit(z) (calcul direct, avec U = X − Scur). Il croît donc aussi avec X.

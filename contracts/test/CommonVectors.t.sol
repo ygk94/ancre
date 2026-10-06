@@ -67,6 +67,12 @@ contract CommonVectorsTest is VectorBase {
         bytes memory nodes = ar.nodeCount(setId) > vm.parseJsonAddressArray(j, ".set.anchors").length
             ? bytes("")
             : vm.parseJsonBytes(j, string.concat(cdKey, ".newNodes"));
+        if (nodes.length != 0 && vm.parseJsonAddressArray(j, ".set.policy.submitters").length == 0) {
+            // open set: nodes in their own transaction (A1d); a refused node table is the outcome
+            (ok, ret) = address(ar).call(abi.encodeCall(AnchoredReputation.addNodes, (setId, nodes)));
+            if (!ok) return (ok, ret);
+            nodes = "";
+        }
         bytes memory cd = abi.encodeCall(
             AnchoredReputation.submitCertificate,
             (setId, uint32(n), type(uint256).max, nodes, vm.parseJsonBytes(j, string.concat(cdKey, ".vectors")),

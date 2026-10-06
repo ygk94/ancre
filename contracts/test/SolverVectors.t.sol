@@ -48,6 +48,10 @@ contract SolverVectorsTest is VectorBase {
             }
         }
         bytes memory nodes = ar.nodeCount(o.setId) > p.anchors.length ? bytes("") : vm.parseJsonBytes(j, ".calldata.newNodes");
+        if (nodes.length != 0 && p.policy.submitters.length == 0) {
+            ar.addNodes(o.setId, nodes); // open set: nodes in their own transaction (A1d)
+            nodes = "";
+        }
         bytes memory cd = abi.encodeCall(
             AnchoredReputation.submitCertificate,
             (o.setId, uint32(n), _u(j, ".expected.eEff"), nodes, vec, vm.parseJsonBytes(j, ".calldata.rows"))

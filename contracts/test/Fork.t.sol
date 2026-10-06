@@ -51,10 +51,18 @@ contract ForkTest is AncreBase {
         anc[1] = EA;
         setId = ar.registerAnchorSet(_params(anc, 1));
         ar.addNodes(setId, abi.encodePacked(uint8(1), uint32(2), uint8(1), uint32(3), uint8(1), uint32(4)));
+        gg = _forkGraph(omitEdgeTo3);
+        t = gg.fixedPoint(60);
+        _submit(setId, gg, t, type(uint256).max);
+    }
+
+    /// separate frame (via-IR stack depth)
+    function _forkGraph(bool omitEdgeTo3) internal view returns (CertLib.Graph memory gg) {
         gg = CertLib.newGraph(5, 2, AN, AD, 5, 4);
         gg.addRow(0, address(0), new uint256[](0), new int256[](0));
-        if (omitEdgeTo3) gg.addRow(1, address(0), _two(2, 4), _twoW(10_000, -10_000));
-        else {
+        if (omitEdgeTo3) {
+            gg.addRow(1, address(0), _two(2, 4), _twoW(10_000, -10_000));
+        } else {
             uint256[] memory d = new uint256[](3);
             (d[0], d[1], d[2]) = (2, 3, 4);
             int256[] memory w = new int256[](3);
@@ -64,8 +72,6 @@ contract ForkTest is AncreBase {
         for (uint256 i = 2; i <= 4; ++i) {
             gg.ownerFp[i] = ar.ownerFingerprint(IIdentityRegistry8004(ID).ownerOf(i));
         }
-        t = gg.fixedPoint(60);
-        _submit(setId, gg, t, type(uint256).max);
     }
 
     function test_fork_versionCommitted() public {

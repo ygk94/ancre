@@ -78,7 +78,10 @@ against `computeSetId` on chain by `simulate.py` and `test/SolverVectors.t.sol`)
 
 Node key (bytes32): `kind << 248 | value`, `kind` = 1 agent (agentId), 2 address, 3 anchor. Stable index, written once.
 `newNodes` (argument of `submitCertificate`) and `addNodes(setId, entries)`: entries `0x01 ‖ agentId:u32` or
-`0x02 ‖ address:20` (**`address(0)` is refused**, R1: client 0 marks a source-less row). Canonical order of a first certificate: anchors, agents by increasing agentId, addresses increasing
+`0x02 ‖ address:20` (**`address(0)` is refused**, R1: client 0 marks a source-less row). **On an open set, `newNodes`
+MUST be empty** (`BadNodes`, A1d): anyone may append nodes there, and inline nodes would take the table's indices at
+execution, which an interleaved `addNodes` shifts; the certifier adds its nodes in their own transaction, reads the
+table, then submits. Canonical order of a first certificate: anchors, agents by increasing agentId, addresses increasing
 (solver/FORMAT.md §0). Later nodes are appended at the end. Submitter-attested sets: only listed submitters append.
 
 ## 3. `submitCertificate(setId, nCert:u32, eMax:u256, newNodes, vectors, rows)`
@@ -268,6 +271,10 @@ otherwise `NotBetter(qNew, qCur, massNew, massCur)`. `quality(setId)` returns (m
 - **Live veto (D33)**: for each anchor, `getLastIndex(j, anchor)` then ONE `readFeedback`; veto iff not revoked, tag
   endorsement in the filter, weight <= vetoMax. `vetoCount` = anchors whose veto holds (live OR certified bit);
   `VETOED` iff `vetoCount >= q`. `Assessment.triggerTag` = **keccak256(tag1)** of the most negative live veto.
+- **Gas of registry reads (E1)**: views (`assess`, `passesAnchorPolicy`) forward at most `VIEW_CALL_GAS` = 120 000 per
+  call; paying paths (submissions, proofs, `refreshFact`) forward all the remaining gas to `readFeedback`, whose cost
+  grows with the tags' length (a client could otherwise make its own pair unreadable with a long `tag2`). Only the head
+  and `tag1` are copied out of the return data.
 - **Veto by approval (D48-B)**, strict mode: an anchor that is `getApproved(j)` or `isApprovedForAll(ownerOf(j), anchor)`
   cannot post on j (the registry forbids a controller's feedback): it counts as that anchor's veto. Read only for the
   anchors that do not already veto (one `getApproved`, one `ownerOf`, at most k `isApprovedForAll`). Fast mode: posted by
@@ -296,8 +303,8 @@ Permissionless, the prover pays; on the current certificate (`certNonce`).
   (wc, wn) (committed, current):
 ```
 S0, N0  = committed positive / |negative| sums        dEff = sPlus if declared, else S0        B0 = max(GRID, dEff)
-cOut = Σ wc⁺   cIn = Σ_{wc ≠ 0} wn⁺   pIn = Σ wn⁺      Scur = S0 − cOut + pIn                    Su = S0 − cOut
-X    = max(dEff − cOut + cIn, Scur)                     Bh = max(GRID, X)        (largest possible true positive sum)
+cOut = Σ wc⁺   pIn = Σ wn⁺      Scur = S0 − cOut + pIn                    Su = S0 − cOut
+X    = dEff − cOut + pIn = Scur + (dEff − S0)            Bh = max(GRID, X)        (largest possible true positive sum)
 dim  = ⌈ WAD·[ Su·(Bh − B0)⁺ + Σ (wc⁺·Bh − wn⁺·B0)⁺ ] / (B0·Bh) ⌉                  >= Σ_v (C⁰ − C)⁺, positive side
 incP = ⌈ WAD·[ Su·(B0 − Bh)⁺ + Σ (wn⁺·B0 − wc⁺·Bh)⁺ + (X − Scur)·B0 ] / (B0·Bh) ⌉  >= Σ_v (C − C⁰)⁺, omitted mass included
 incN = same as incP on the negative side, no declaration: Bn0 = max(GRID, N0), Bnh = max(GRID, Ncur), no omitted term
@@ -308,9 +315,11 @@ bill: eLow_a += ⌈ t_u^(a)·om·(dim − billed dim) / (alphaN·WAD) ⌉
 ```
   Why: before 02-bis the positive budget of a declared row stayed at max(GRID, sPlus) when a COMMITTED edge was revoked,
   so the true budget drop (all other entries, omitted ones included, grow) was never billed to eUp (R3). X follows the
-  committed edges; a revealed uncommitted edge is assumed within the declared sum while it fits (it cannot be told from
-  a declared omission: AM-02bis.4). Both bounds grow with the budget, so the largest X covers every true sum in
-  [Scur, X] (PROOFS.md L6). Bills are monotone: returning to the committed state bills nothing more and refunds nothing.
+  committed edges, and **every revealed uncommitted edge may be new** (A2b, review of 06/10: assuming it inside the
+  declared sum let a new positive edge bill nothing to eLow). The contract cannot tell a declared omission from a new
+  edge, so revealing an honest declared omission bills the worst case (conservative; the honest certificate comes back
+  at once, §3.5). Both bounds grow with the budget, so X covers every true sum in [Scur, X] (PROOFS.md L6). Bills are
+  monotone: returning to the committed state bills nothing more and refunds nothing.
 Then eLowEff and eEff are recomputed; `eLowEff > eLowMax` ⇒ `STALE` (D36).
 
 ### 7.2 `proveWallet(setId, r, src, amends)` — (iv) SOURCE

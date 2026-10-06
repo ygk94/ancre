@@ -526,7 +526,13 @@ contract AnchoredReputation {
         // G-11 / AM-03.3: on an open set the rows must be readable from the transaction itself (Monad has no
         // traces): a certificate sent through a contract could not be audited, nor its rows proven
         if (s.numSubmitters == 0 && msg.sender != tx.origin) revert NotSubmitter();
-        if (newNodes.length != 0) _appendNodes(s, setId, newNodes);
+        if (newNodes.length != 0) {
+            // A1d (review 06/10): on an open set anyone may append nodes; inline nodes would get the indices of the
+            // table AT EXECUTION, which an interleaved addNodes shifts. The certifier adds them in its own
+            // transaction, reads the table, then submits.
+            if (s.numSubmitters == 0) revert BadNodes();
+            _appendNodes(s, setId, newNodes);
+        }
         uint256 k = s.k;
         uint256 n = nCert;
         if (n < s.nCert || n > s.nodeCount || n < k) revert BadNCert();
@@ -1729,7 +1735,9 @@ contract AnchoredReputation {
         bytes32 minTag;
         bytes32 maxTag;
         for (uint256 j = last; j >= 1; --j) {
-            (bool rok, int256 value, uint256 dec, bytes32 th, bool revoked) = _readFb(agentId, client, uint64(j));
+            // E1 (review 06/10): paying paths only (submissions, proofs): no VIEW_CALL_GAS cap on readFeedback,
+            // whose cost grows with the tags' length (a client could make its own pair unreadable with a long tag2)
+            (bool rok, int256 value, uint256 dec, bytes32 th, bool revoked) = _readFb(agentId, client, uint64(j), gasleft());
             if (!rok) return (false, 0, 0, 0);
             if (!revoked) {
                 for (uint256 i; i < nt; ++i) {
@@ -1764,7 +1772,8 @@ contract AnchoredReputation {
         uint256 last;
         (ok, last) = _staticWord(address(reputation), abi.encodeCall(IReputationRegistry8004.getLastIndex, (agentId, client)));
         if (!ok || last == 0) return (ok, 0, 0);
-        (bool rok, int256 value, uint256 dec, bytes32 th, bool revoked) = _readFb(agentId, client, uint64(last));
+        (bool rok, int256 value, uint256 dec, bytes32 th, bool revoked) =
+            _readFb(agentId, client, uint64(last), VIEW_CALL_GAS);
         if (!rok) return (false, 0, 0);
         if (revoked) return (true, 0, 0);
         uint256 nt = s.numTags;
@@ -1823,7 +1832,10 @@ contract AnchoredReputation {
         }
     }
 
-    function _readFb(uint256 agentId, address client, uint64 idx)
+    /// readFeedback(agentId, client, idx): value, decimals, keccak256(tag1), revoked. Only the head and tag1 are
+    /// copied out of the return data (tag2 can be arbitrarily long, E1). `g` = gas forwarded: VIEW_CALL_GAS in
+    /// views (assess), all the remaining gas in paying paths.
+    function _readFb(uint256 agentId, address client, uint64 idx, uint256 g)
         internal
         view
         returns (bool ok, int256 value, uint256 dec, bytes32 tagHash, bool revoked)
@@ -1831,19 +1843,21 @@ contract AnchoredReputation {
         bytes memory cd = abi.encodeCall(IReputationRegistry8004.readFeedback, (agentId, client, idx));
         address rep = address(reputation);
         assembly ("memory-safe") {
-            let success := staticcall(VIEW_CALL_GAS, rep, add(cd, 32), mload(cd), 0, 0)
+            let success := staticcall(g, rep, add(cd, 32), mload(cd), 0, 0)
             let sz := returndatasize()
             if and(success, iszero(lt(sz, 160))) {
                 let p := mload(0x40)
-                returndatacopy(p, 0, sz)
+                returndatacopy(p, 0, 160)
                 value := mload(p)
                 dec := mload(add(p, 32))
                 let o1 := mload(add(p, 64))
                 revoked := iszero(iszero(mload(add(p, 128))))
                 if lt(o1, sub(sz, 31)) {
-                    let len := mload(add(p, o1))
+                    returndatacopy(p, o1, 32)
+                    let len := mload(p)
                     if iszero(gt(len, sub(sub(sz, o1), 32))) {
-                        tagHash := keccak256(add(add(p, o1), 32), len)
+                        returndatacopy(p, add(o1, 32), len)
+                        tagHash := keccak256(p, len)
                         ok := 1
                     }
                 }
@@ -2161,10 +2175,10 @@ contract AnchoredReputation {
     ///   incP >= sum_v (C_v - C0_v)^+ on the positive side, the not-yet-revealed omitted mass included (eUp),
     ///   incN >= the same on the negative side (eUp, distrust).
     /// C0 = committed row, budget B0 = max(GRID, sPlus or S0). C = amended row, budget max(GRID, X) with X its
-    /// largest possible true positive sum: X = max(dEff + Dc, Scur), dEff = sPlus or S0, Dc = net change of the
-    /// COMMITTED edges (a revealed uncommitted edge is assumed within the declared sum while it fits: it cannot
-    /// be told from a declared omission), Scur = amended positive sum. Both bounds grow with X, so the largest X
-    /// covers every true sum in [Scur, X]; the omitted mass not yet revealed is X - Scur.
+    /// largest possible true positive sum: X = dEff - cOut + pIn = Scur + (dEff - S0), dEff = sPlus or S0: every
+    /// revealed uncommitted edge may be NEW (A2b, review 06/10: assuming it within the declared sum let a new
+    /// positive edge bill nothing to eLow). Both bounds grow with X, so it covers every true sum in [Scur, X];
+    /// the omitted mass not yet revealed is at most X - Scur.
     function _needs(bytes memory am, uint256 s0, uint256 n0, uint256 d)
         internal
         pure
@@ -2172,7 +2186,6 @@ contract AnchoredReputation {
     {
         uint256 G = uint256(GRID);
         uint256 cOut; // sum of committed w+ of the amended edges
-        uint256 cIn; // sum of current w+ of the amended COMMITTED edges
         uint256 pIn; // sum of current w+ of every amended edge
         uint256 nOut; // same, negative side (absolute values)
         uint256 nIn;
@@ -2183,12 +2196,10 @@ contract AnchoredReputation {
             nOut += _pos(-wc);
             pIn += _pos(wn);
             nIn += _pos(-wn);
-            if (wc != 0) cIn += _pos(wn);
         }
         uint256 dEff = d != 0 ? d : s0;
         uint256 scur = s0 - cOut + pIn;
-        uint256 x = dEff - cOut + cIn;
-        if (scur > x) x = scur;
+        uint256 x = dEff - cOut + pIn; // >= scur since dEff >= s0
         uint256 b0 = dEff > G ? dEff : G;
         uint256 bh = x > G ? x : G;
         uint256 su = s0 - cOut; // committed positive mass of the edges never amended
