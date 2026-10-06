@@ -6,7 +6,7 @@
 import { createDecipheriv, pbkdf2Sync, scryptSync } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createInterface } from "node:readline";
-import { concat, keccak256, toBytes, toHex, type Hex } from "viem";
+import { bytesToHex, concat, keccak256, toHex, type Hex } from "viem";
 import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 import { FARM_SIZE } from "./config.ts";
 
@@ -78,7 +78,7 @@ export function decryptKeystore(path: string, password: string): Hex {
   const d = createDecipheriv("aes-128-ctr", dk.subarray(0, 16), Buffer.from(c.cipherparams.iv, "hex"));
   const key = Buffer.concat([d.update(ct), d.final()]);
   if (key.length !== 32) throw new Error("keystore: unexpected key length");
-  return toHex(toBytes(key));
+  return bytesToHex(new Uint8Array(key));
 }
 
 /** Password from ANCRE_DEMO_PASSWORD, or typed at the terminal (not echoed). */

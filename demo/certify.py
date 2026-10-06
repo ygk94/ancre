@@ -15,12 +15,13 @@ Two departures from `certifier.main`, both on the adapter side:
 Usage (called by demo/lib/certify.ts; prints one JSON object on stdout):
   solver/.venv/bin/python demo/certify.py --config set.json --print-set
   solver/.venv/bin/python demo/certify.py --rpc URL --ancre 0x.. --config set.json --data data.json \
-      --signer unlocked:0xADDR | keystore:/path/to/keystore:PASSWORD_ENV_VAR  [--journal f.jsonl] [--fabricate JSON]
+      --signer unlocked:0xADDR | keystore:/path/to/keystore:PASSWORD_ENV_VAR:0xADDR  [--journal f.jsonl] [--fabricate JSON]
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -57,18 +58,57 @@ def load_data(path: Path):
     return fbs, load_identity_json(obj["identity"]), int(obj["block"])
 
 
+class PasswordFile:
+    """Foundry >= 1.8 reads ETH_PASSWORD as a password FILE path (`cast send --help`: --password-file, env ETH_PASSWORD),
+    while certifier.Signer puts the password itself there (INTERFACE note in journal/06.md). Without touching solver/,
+    the password goes to a 0600 file in a private temp dir, removed as soon as the certifier returns."""
+
+    def __init__(self, signer: C.Signer):
+        self.signer, self.dir = signer, None
+
+    def __enter__(self):
+        if self.signer.mode == "keystore":
+            import tempfile
+            pw = os.environ.get(self.signer.password_env, "")
+            if not pw:
+                raise SystemExit(f"env var {self.signer.password_env} not set")
+            self.dir = tempfile.mkdtemp(prefix="ancre-pw-")
+            path = os.path.join(self.dir, "pw")
+            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            with os.fdopen(fd, "w") as fh:
+                fh.write(pw)
+            os.environ["ANCRE_PASSWORD_FILE"] = path
+            self.signer.password_env = "ANCRE_PASSWORD_FILE"
+        return self
+
+    def __exit__(self, *exc):
+        if self.dir:
+            import shutil
+            shutil.rmtree(self.dir, ignore_errors=True)
+            os.environ.pop("ANCRE_PASSWORD_FILE", None)
+
+
 def signer_of(spec: str) -> C.Signer:
     mode, _, rest = spec.partition(":")
     if mode == "unlocked":
         return C.Signer(rest)
-    if mode == "keystore":
+    if mode == "keystore":  # keystore:<path>:<password env var>:<address> (Foundry keystores carry no address)
+        rest, _, addr = rest.rpartition(":")
         path, _, env = rest.rpartition(":")
-        addr = json.loads(Path(path).read_text()).get("address", "")
-        return C.Signer("0x" + addr.removeprefix("0x"), "keystore", path, env)
+        return C.Signer(addr.lower(), "keystore", path, env)
     raise SystemExit(f"bad --signer {spec}")
 
 
 def main(argv=None) -> int:
+    a = _args(argv)
+    if a.print_set:
+        return _main(a, None)
+    signer = signer_of(a.signer)
+    with PasswordFile(signer):
+        return _main(a, signer)
+
+
+def _args(argv):
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True, help="SetConfig JSON written by the scene scripts")
     ap.add_argument("--print-set", action="store_true", help="print the set block and setId, then exit")
@@ -80,13 +120,15 @@ def main(argv=None) -> int:
     ap.add_argument("--journal")
     ap.add_argument("--reason", default="demo")
     ap.add_argument("--fabricate", help='JSON {"a": agentId, "c": client, "v": value, "d": dec, "t1": tag}')
-    a = ap.parse_args(argv)
+    return ap.parse_args(argv)
 
+
+def _main(a, signer) -> int:
     cfg = C.SetConfig.load(a.config)
     if a.print_set:  # one source for the set: the scene scripts register exactly what the certifier certifies
         print(json.dumps({"setId": cfg.set_id, "set": cfg.set_block()}))
         return 0
-    chain = C.Chain(a.rpc, signer_of(a.signer))
+    chain = C.Chain(a.rpc, signer)
     set_id = cfg.set_id
     fbs, idn, block = load_data(Path(a.data))
     jr = C.Journal(Path(a.journal) if a.journal else None)
@@ -116,7 +158,9 @@ def main(argv=None) -> int:
     try:
         ev = svc.run_once(fbs, idn, reason=a.reason, block=block)
     except Exception as e:  # journal it and let the caller decide (resume)
-        ev = jr.log(action="error", set=cfg.name, error=str(e)[-800:])
+        import traceback
+        ev = jr.log(action="error", set=cfg.name, error=f"{type(e).__name__}: {e}"[-800:],
+                    trace=traceback.format_exc()[-1500:])
         print(json.dumps(ev))
         return 1
     print(json.dumps(ev))

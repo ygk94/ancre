@@ -141,7 +141,9 @@ function journalSince(ctx: Ctx, from: number): Record<string, unknown>[] {
   }
 }
 
-async function certifyStep(ctx: Ctx, scene: number, stepId: string, reason: string) {
+/** `mayBeIdentical`: the graph change cannot move mass (the farm, a zero-mass rater), so `skip_identical` is the
+ * expected outcome; otherwise only `certified` passes (a deferred certificate would fake the recertification). */
+async function certifyStep(ctx: Ctx, scene: number, stepId: string, reason: string, mayBeIdentical = false) {
   let result: Record<string, unknown> = {};
   await step(ctx, stepId, async () => {
     const before = journalSince(ctx, 0).length;
@@ -149,7 +151,9 @@ async function certifyStep(ctx: Ctx, scene: number, stepId: string, reason: stri
     const data = await registryData(ctx.chain, TESTNET.identity, TESTNET.reputation, Object.values(ctx.state.agents));
     const r = await certify({ chain: ctx.chain, mode: ctx.name, ancre: ctx.state.ancre!, data, signer: ctx.signer,
       passwordEnv: ctx.passwordEnv, reason, cfg: setConfig(ctx.acc.anchors.map((x) => x.account.address), ctx.acc.operator.account.address) });
-    if (r.action === "error") throw new Error(`certifier: ${String(r.error)}`);
+    if (r.action !== "certified" && !(mayBeIdentical && r.action === "skip_identical")) {
+      throw new Error(`certifier: ${r.action}${r.error ? ` ${String(r.error)}` : ""}${r.waitBlocks ? ` (wait ${String(r.waitBlocks)} blocks)` : ""}`);
+    }
     const txs = [];
     for (const j of journalSince(ctx, before).filter((x) => typeof x.tx === "string")) {
       const hash = j.tx as Hex;
@@ -176,6 +180,7 @@ type PayOutcome = { decision: "PAID" | "REFUSED"; stage: string; reason: string;
  * refuses: the refusal shown is the contract's (hard guard, D41), not the client's. */
 async function payViaPayer(ctx: Ctx, scene: number, stepId: string, label: string, expect: "PAID" | "REFUSED"): Promise<PayOutcome> {
   let out!: PayOutcome;
+  const key = `pay:${stepId}`;
   await step(ctx, stepId, async () => {
     const a = agent(ctx, label);
     const payer = ctx.state.payer!;
@@ -199,14 +204,15 @@ async function payViaPayer(ctx: Ctx, scene: number, stepId: string, label: strin
       args: [hash, blob] }) as [number, number, bigint, Address, bigint, { status: number; trustLow: bigint; distrustUp: bigint; triggerTag: Hex }];
     const bal = () => ctx.chain.pub.readContract({ address: TESTNET.usdc, abi: usdcAbi, functionName: "balanceOf", args: [a.wallet] });
     const b0 = await bal();
+    const evalBlock = (await ctx.chain.block()).number; // /verify is an eth_call on this state (latency of scene 4)
     const v = await ctx.fac.verify(payload, req);
     const s = v.ok ? await ctx.fac.settle(payload, req) : undefined;
     const received = (await bal()) - b0;
     if (s?.hash) ctx.facilitatorTxs.push({ label: `settle ${label}`, hash: s.hash, gasLimit: s.gasLimit, gasUsed: s.gasUsed });
     const decision = s?.ok && received === PAY_AMOUNT ? "PAID" : "REFUSED";
     const stage = !v.ok ? "verify" : !s?.ok ? (s?.broadcast ? "onchain" : "settle") : "settled";
-    const head = await ctx.chain.block();
-    out = { decision, stage, reason: REASONS[explainReason], block: s?.block ?? head.number, wallMs: Date.now(), providerReceived: received };
+    out = { decision, stage, reason: REASONS[explainReason], block: s?.block ?? evalBlock, wallMs: Date.now(), providerReceived: received };
+    ctx.state.notes[key] = { ...out, providerReceived: received.toString() }; // a resumed run re-checks the saved outcome
     const payerBal = await ctx.chain.pub.readContract({ address: TESTNET.usdc, abi: usdcAbi, functionName: "balanceOf", args: [payer] });
     await ctx.log.emit({ scene, step: stepId, kind: "payment", agentId: id(a), block: out.block, actor: ctx.acc.payerOperator.account.address,
       label: `payer pays ${label} ${Number(PAY_AMOUNT) / 1e6} USDC: ${decision}${decision === "REFUSED" ? ` (${REASONS[explainReason]})` : ""}`,
@@ -216,7 +222,17 @@ async function payViaPayer(ctx: Ctx, scene: number, stepId: string, label: strin
           trustLow: x.trustLow.toString(), distrustUp: x.distrustUp.toString(), triggerTag: /^0x0+$/.test(x.triggerTag) ? null : x.triggerTag },
         facilitator: { verify: v.ok ? "ok" : v.error, settle: s ? (s.ok ? "ok" : s.error ?? "failed") : null },
         settlementTx: s?.hash ?? null, providerReceived: received.toString(), payerBalanceAfter: payerBal.toString() } });
+    // a refusal counts only if it is the CONTRACT's (refused at /verify, explain != OK): a facilitator or RPC failure
+    // must never pass for a guard decision; the step is then left undone and is retried on the next run
+    if (decision !== expect) throw new Error(`${stepId}: expected ${expect}, got ${decision} (stage ${stage}, ${v.error ?? s?.error ?? ""})`);
+    if (decision === "REFUSED" && (stage !== "verify" || explainReason === 0)) {
+      throw new Error(`${stepId}: refused at ${stage} with explain = ${REASONS[explainReason]}: not a contract refusal (${v.error ?? s?.error ?? ""})`);
+    }
   });
+  if (!out) {
+    const n = ctx.state.notes[key] as PayOutcome & { providerReceived: string };
+    out = { ...n, providerReceived: BigInt(n.providerReceived) };
+  }
   return out;
 }
 
@@ -227,7 +243,10 @@ export async function scene0(ctx: Ctx) {
   const op = acc.operator;
   await scene(ctx, 0, "setup: ANCRE, anchor set, honest providers, funded payer, first certificate", async () => {
     await step(ctx, "0.fund-mon", async () => {
-      if (chain.isLocal) await chain.setBalance(op.account.address, 1_000n * 10n ** 18n); // stands in for the faucet
+      // the faucet, on a local chain only: 5 MON in a rehearsal of the testnet run (BUDGET.md §3), plenty otherwise
+      if (chain.isLocal && (await chain.pub.getBalance({ address: op.account.address })) === 0n) {
+        await chain.setBalance(op.account.address, (chain.monadRules ? 5n : 1_000n) * 10n ** 18n);
+      }
       for (const [label, target] of Object.entries(ctx.monBudget)) {
         const actor = [...acc.anchors, acc.farmOwner, ...acc.farm, acc.rater].find((x) => x.label === label)!;
         const have = await chain.pub.getBalance({ address: actor.account.address });
@@ -324,7 +343,7 @@ export async function scene2(ctx: Ctx) {
       await feedback(ctx, 2, `2.farm:${i + 1}->target`, acc.farm[i], TARGET, VALUES.farmVouch, "vouch");
       await feedback(ctx, 2, `2.farm:${i + 1}->${((i + 1) % N) + 1}`, acc.farm[i], farmLabel((i + 1) % N), VALUES.farmVouch, "vouch");
     }
-    await certifyStep(ctx, 2, "2.cert", "farm feedback");
+    await certifyStep(ctx, 2, "2.cert", "farm feedback", true);
     const r1 = await payViaPayer(ctx, 2, "2.pay:target", TARGET, "REFUSED");
     // a compromised anchor endorses the target: one anchor is not enough with leave-one-out m = 2 (D8)
     await feedback(ctx, 2, "2.compromised:C->target", acc.anchors[2], TARGET, VALUES.compromisedVouch, "vouch");
@@ -358,7 +377,6 @@ export async function scene3(ctx: Ctx) {
   const K = Math.min(FARM_PAYMENTS, N);
   await scene(ctx, 3, `the farm pays itself over x402 (${K} true receipts), mass still 0, refusal holds`, async () => {
     const t0 = Date.now();
-    let verified = 0;
     for (let i = 0; i < K; i++) {
       await step(ctx, `3.farm-pay:${i + 1}`, async () => {
         const from = acc.farm[i];
@@ -374,10 +392,11 @@ export async function scene3(ctx: Ctx) {
         ctx.facilitatorTxs.push({ label: `farm settle ${i + 1}`, hash: s.hash, gasLimit: s.gasLimit, gasUsed: s.gasUsed });
         const t = await transferInReceipt(ctx.chain, s.hash, TESTNET.usdc);
         const ok = !!t && getAddress(t.from) === from.account.address && getAddress(t.to) === toRec.wallet && t.value === FARM_PAY_AMOUNT;
-        if (ok) verified++;
         await ctx.log.emit({ scene: 3, step: `3.farm-pay:${i + 1}`, kind: "farm-payment", agentId: id(toRec), block: s.block,
           actor: from.account.address, label: `${from.label} pays ${farmLabel((i + 1) % N)} ${Number(FARM_PAY_AMOUNT) / 1e6} USDC over x402 (true receipt)`,
           data: { from: from.account.address, to: toRec.wallet, amount: FARM_PAY_AMOUNT.toString(), settlementTx: s.hash, receiptVerified: ok } });
+        if (!ok) throw new Error(`farm payment ${i + 1}: no matching USDC Transfer in the settlement receipt ${s.hash}`);
+        ctx.state.notes[`farmReceipt:${i + 1}`] = s.hash;
       });
     }
     const r = await payViaPayer(ctx, 3, "3.pay:target", TARGET, "REFUSED");
@@ -385,7 +404,7 @@ export async function scene3(ctx: Ctx) {
     const durationMs = Date.now() - t0;
     ctx.state.notes.scene3DurationMs = durationMs;
     return [
-      check("farm payments with an on-chain receipt verified (this run)", true, ctx.state.done["3.farm-pay:1"] ? true : verified === K),
+      check("farm payments with a verified on-chain receipt", K, Array.from({ length: K }, (_, i) => ctx.state.notes[`farmReceipt:${i + 1}`]).filter(Boolean).length),
       check("robust mass of the target and the paid farm agents", "0", masses.reduce((a, b) => a + b, 0n).toString()),
       ...(r ? [check("payer still refuses the target", "REFUSED", r.decision)] : []),
     ];
@@ -416,7 +435,8 @@ export async function scene4(ctx: Ctx) {
     const refused = await payViaPayer(ctx, 4, "4.pay:p2-after-slash", P2, "REFUSED");
     const cert = await certifyStep(ctx, 4, "4.cert", "an anchor slashed provider-2");
     const refused2 = await payViaPayer(ctx, 4, "4.pay:p2-after-cert", P2, "REFUSED");
-    const certBlock = (cert.txs as { block: number }[] | undefined)?.at(-1)?.block;
+    const certBlock = (cert.txs as { block: number }[] | undefined)?.at(-1)?.block ?? (ctx.state.notes.cert4Block as number | undefined);
+    if (certBlock) ctx.state.notes.cert4Block = certBlock;
     if (refused && slash) {
       const lat = {
         from: { step: "4.slash", block: slash.block, wallMs: slash.wallMs },
@@ -447,7 +467,7 @@ export async function scene5(ctx: Ctx) {
   const P2 = "provider-2 (demo)";
   await scene(ctx, 5, "anti-erasure: a +1 from another rater under another tag does not lift the veto", async () => {
     await feedback(ctx, 5, "5.review:rater->p2", ctx.acc.rater, P2, VALUES.thirdPartyReview, "review");
-    await certifyStep(ctx, 5, "5.cert", "a third party reviewed provider-2");
+    await certifyStep(ctx, 5, "5.cert", "a third party reviewed provider-2", true);
     const r = await payViaPayer(ctx, 5, "5.pay:p2", P2, "REFUSED");
     const x = await assess(ctx, agent(ctx, P2));
     return [

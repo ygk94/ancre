@@ -6,8 +6,9 @@ import { FOUNDRY, TESTNET } from "./config.ts";
 
 export type Anvil = { rpc: string; proc: ChildProcess; stop: () => Promise<void> };
 
-export function anvilArgs(o: { port: number; forkBlock?: number; loadState?: string; dumpState?: string; offline?: boolean }) {
+export function anvilArgs(o: { port: number; forkBlock?: number; loadState?: string; dumpState?: string; offline?: boolean; blockTime?: number }) {
   const a = ["--network", "monad", "--chain-id", String(TESTNET.chainId), "--port", String(o.port), "--silent"];
+  if (o.blockTime) a.push("--block-time", String(o.blockTime)); // interval mining: blocks keep coming, as on Monad
   if (!o.offline) {
     a.push("--fork-url", TESTNET.rpc, "--timeout", "120000", "--retries", "10");
     if (o.forkBlock) a.push("--fork-block-number", String(o.forkBlock));
@@ -18,8 +19,16 @@ export function anvilArgs(o: { port: number; forkBlock?: number; loadState?: str
 }
 
 export async function startAnvil(o: Parameters<typeof anvilArgs>[0]): Promise<Anvil> {
+  // never reuse whatever already answers on the port (an `npm run fork` anvil, an orphan): it is not a fresh chain
+  try {
+    await createPublicClient({ transport: http(`http://127.0.0.1:${o.port}`, { retryCount: 0, timeout: 1_000 }) }).getChainId();
+    throw new Error(`port ${o.port} is already in use: stop that node, pass --port, or use --rpc to run against it`);
+  } catch (e) {
+    if ((e as Error).message.startsWith("port ")) throw e;
+  }
   const proc = spawn(`${FOUNDRY}/anvil`, anvilArgs(o), { stdio: ["ignore", "ignore", "inherit"],
     env: { ...process.env, ETH_RPC_TIMEOUT: "900" } });
+  process.once("exit", () => { if (proc.exitCode === null) proc.kill("SIGINT"); }); // no orphan, whatever throws
   const rpc = `http://127.0.0.1:${o.port}`;
   const pub = createPublicClient({ transport: http(rpc) });
   for (let i = 0; i < 240; i++) {

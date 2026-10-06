@@ -3,7 +3,8 @@
 import type { Actor } from "./accounts.ts";
 import type { Ctx } from "./scenes.ts";
 
-/** Testnet gas price, MEASURED with `cast gas-price --rpc-url https://testnet-rpc.monad.xyz` (see BUDGET.md). */
+/** Testnet gas price: 102 gwei, MEASURED 2026-10-06 07:34 UTC (`cast gas-price --rpc-url https://testnet-rpc.monad.xyz`,
+ * base fee 100 gwei), same value as 27/09 and 01/10 (chantier 05). See demo/BUDGET.md §1. */
 export const TESTNET_GAS_PRICE = 102n * 10n ** 9n;
 
 const mon = (wei: bigint) => Number(wei / 10n ** 12n) / 1e6;
@@ -22,6 +23,8 @@ export function budgetReport(ctx: Ctx, emitters: Actor[]) {
     byFn.set(k, r);
     gasLimit += t.gasLimit;
   }
+  const events: Record<string, number> = {};
+  for (const t of ctx.chain.ledger) for (const [a, n] of Object.entries(t.logs ?? {})) events[a] = (events[a] ?? 0) + n;
   const accounts = new Set(ctx.chain.ledger.map((t) => t.from.toLowerCase()));
   const capital = Object.values(ctx.monBudget).reduce((a, b) => a + b, 0n);
   const fac = ctx.facilitatorTxs.reduce((a, t) => a + (t.gasLimit ?? 0n), 0n);
@@ -35,6 +38,7 @@ export function budgetReport(ctx: Ctx, emitters: Actor[]) {
     capitalLentToEmittersMon: mon(capital),
     facilitatorGasLimitTotal: fac,
     facilitatorMonAt102gwei: mon(fac * TESTNET_GAS_PRICE),
+    eventsByContract: events, // Envio budget: identity + reputation entries (the indexer follows only the registries)
     byFunction: Object.fromEntries([...byFn].map(([k, v]) => [k, { ...v, avgLimit: v.gasLimit / BigInt(v.n), monAt102gwei: mon(v.gasLimit * TESTNET_GAS_PRICE) }])),
     ledger: ctx.chain.ledger,
     facilitator: ctx.facilitatorTxs,
