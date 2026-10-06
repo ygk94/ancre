@@ -14,32 +14,40 @@ const featured = scan.featured as Record<string, ScanAgent>;
 type RegistrySnap = { feedbacks: number; clients: number; naiveAverage: string | null; outOfRange: number; topClientShare: number | null; owner: string; wallet: string };
 const registry = act1.registry as unknown as Record<string, RegistrySnap>;
 type LensAgent = { inSupport: boolean; trust: string; trustRobust: string; distrust: string; verdict: { pay: boolean; reason: string; detail: string } };
+type Ranked = LensAgent & { agentId: string };
 
 export const agentName = (id: string) => {
   const n = featured[id]?.name ?? scan.top.find((a) => a.agentId === id)?.name;
   return n ? n.replace(/^monad:\/\//, "") : `Agent #${id}`;
 };
 
+// Captions: counts come from the solver snapshot (act1.registry, block act1.snapshotBlock), never typed by hand;
+// the explorer column next to them shows the live count, so a drift is visible, not hidden.
 const farmShare = Math.round((act1.farm.eveFeedbacks / act1.snapshotFeedbacks) * 100);
 const ORDER = ["182", "8317", "4", "18", "2", "3", "9", "87", "19", "10279", "10278"];
+const oneWallet = (id: string) => {
+  const r = registry[id];
+  return r && r.clients === 1 && r.feedbacks > 1 ? `${int(r.feedbacks)} ratings from a single wallet` : null;
+};
 const CAPTIONS: Record<string, string> = {
   "182": `${farmShare} % of all mainnet ratings, from one farm`,
-  "8317": "rated 78 times by its own agent wallet",
+  "8317": `${int(act1.selfRating8317.received)} ratings from its own agent wallet`,
   "4": "rated by the honest chain, then slashed",
   "18": "start of the one honest chain",
-  "9": "518 ratings from a single wallet",
-  "87": "508 ratings from a single wallet",
-  "10279": "created 05/10, no rating yet",
-  "10278": "created 05/10, no rating yet",
+  "9": oneWallet("9") ?? "",
+  "87": oneWallet("87") ?? "",
+  "10279": `created ${scan.featured["10279"]?.created_at.slice(0, 10) ?? "?"}, no rating`,
+  "10278": `created ${scan.featured["10278"]?.created_at.slice(0, 10) ?? "?"}, no rating`,
 };
+const CAPTION_SOURCE = `counts: solver snapshot, block ${int(act1.snapshotBlock)}`;
 
 /** The solver exported every featured agent; any other agent's values come from the lens ranking, which lists
  *  every node with non-zero mass or distrust: absent from it means mass 0, unknown to these anchors. */
 export function lensAgent(lens: Lens, id: string): LensAgent {
   const a = (lens.agents as Record<string, LensAgent>)[id];
   if (a) return a;
-  const r = lens.ranking.find((x) => x.agentId === id);
-  if (r) return { inSupport: true, ...r, verdict: { pay: false, reason: "n/a", detail: "verdict not exported for this agent" } };
+  const r = (lens.ranking as Ranked[]).find((x) => x.agentId === id);
+  if (r) return { ...r, inSupport: true };
   return { inSupport: false, trust: "0", trustRobust: "0", distrust: "0", verdict: { pay: false, reason: "UNTRUSTED", detail: "unknown to these anchors (mass 0)" } };
 }
 
@@ -151,7 +159,12 @@ function AgentHead({ id, reg }: { id: string; reg: AgentRegistryView | "error" |
               · agentWallet <span className="mono">{short(wallet)}</span>
             </>
           ) : null}
-          {CAPTIONS[id] ? <> · {CAPTIONS[id]}</> : null}
+          {CAPTIONS[id] ? (
+            <>
+              {" "}
+              · <span title={CAPTION_SOURCE}>{CAPTIONS[id]}</span>
+            </>
+          ) : null}
         </div>
       </div>
     </div>
@@ -235,7 +248,7 @@ function ContractColumn({ id, lens }: { id: string; lens: Lens }) {
         <Stat label="raw mass Σλt" value={pctU(a.trust)} foot="before leave-one-out" />
         <Stat label="error bound e" value={bound(lens.eEff)} foot="certificate, upper" />
         <Stat label="distrust" value={pctU(a.distrust)} foot="one hop (slashes)" />
-        <Stat label="mass on the farm" value={pctU(lens.massOnFarm[0])} foot={`${int(act1.farm.agents)} agents`} />
+        <Stat label="mass on the farm Σλt" value={pctU(lens.massOnFarmWeighted)} foot={`${int(act1.farm.agents)} agents around Eve`} />
       </div>
       <Verdict
         pay={a.verdict.pay}

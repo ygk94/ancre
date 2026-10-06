@@ -221,6 +221,7 @@ export function reduce(s: ScreenState, line: Header | DemoEvent): ScreenState {
     return { ...s, header: line, agents };
   }
   const e = line;
+  if (!s.header) return s; // no (valid) header yet: an event is never read with guessed field semantics
   if (e.seq <= s.lastSeq) return s; // already applied (live re-reads the whole file)
   const next: ScreenState = { ...s, lastSeq: e.seq, block: Math.max(s.block, e.block) };
 

@@ -5,6 +5,8 @@ import { SCENE_TITLES, type AgentState, type FeedRow, type ScreenState } from ".
 import { bound, int, pct, short } from "../lib/format";
 import { NETWORKS } from "../config/networks";
 import { readAgent, rpcForRun, type OnchainRead } from "../sources/chain";
+import { median, stateOf, type HeadsState } from "../core/heads";
+import { useHeads, type HeadsSource } from "../sources/useHeads";
 import type { useDemo } from "../sources/useDemo";
 import { Avatar, BigNum, Meter, Spark, Stat, Verdict } from "./common";
 
@@ -19,11 +21,19 @@ export function Act2({ demo }: { demo: Demo }) {
   const focusId = pinned && s.agents[pinned] ? pinned : s.focus;
   const agent = focusId ? s.agents[focusId] : null;
   const currentScene = s.scenes.at(-1)?.n ?? null;
+  const { heads, info } = useHeads(demo.mode === "live" ? wsForRun(s) : null);
+  // finality gating only when this screen actually tracks the chain's commit states
+  const gate: HeadsState | null = demo.mode === "live" && info.connected ? heads : null;
 
   return (
     <div className="act2">
       <section className="main">
         <SourceBar demo={demo} />
+        {(s.warnings.length > 0 || (demo.source.kind === "replay" && demo.source.error)) && (
+          <div className="banner">
+            {[...s.warnings, ...(demo.source.kind === "replay" && demo.source.error ? [demo.source.error] : [])].join(" · ")}
+          </div>
+        )}
         <div className="scenes">
           {[1, 2, 3, 4, 5, 6].map((n) => {
             const sc = s.scenes.find((x) => x.n === n);
@@ -41,6 +51,7 @@ export function Act2({ demo }: { demo: Demo }) {
             );
           })}
         </div>
+        {demo.mode === "live" && <ChainClock heads={heads} info={info} />}
         <div className="chips">
           {Object.values(s.agents)
             .sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role) || Number(a.agentId) - Number(b.agentId))
@@ -58,12 +69,17 @@ export function Act2({ demo }: { demo: Demo }) {
               </button>
             ))}
         </div>
-        {agent && s.header?.set && s.header.contracts ? <AgentPanel s={s} a={agent} /> : <Empty s={s} />}
+        {agent && s.header?.set && s.header.contracts ? <AgentPanel s={s} a={agent} gate={gate} reread={demo.mode === "live"} /> : <Empty s={s} />}
       </section>
       <aside className="side">
         <Latency s={s} />
-        <h3>Payer decisions and registry events</h3>
-        <Feed rows={s.feed} s={s} onPick={(id) => setPinned(id)} />
+        <h3>
+          Payer decisions and registry events{" "}
+          <span className="muted" style={{ textTransform: "none", letterSpacing: 0 }}>
+            · {s.paid} paid · {s.refused} refused
+          </span>
+        </h3>
+        <Feed rows={s.feed} s={s} gate={gate} onPick={(id) => setPinned(id)} />
         <div className="cite">
           x402 refusals leave no on-chain trace (AM-6.8): each refusal is rebuilt with <span className="mono">TrustGatedPayer.explain()</span> at the
           attempt's block; <span className="mono">reportRefusal()</span> can post it as a <span className="mono">RefusalReported</span> event.
@@ -150,13 +166,13 @@ function SourceBar({ demo }: { demo: Demo }) {
   );
 }
 
-function AgentPanel({ s, a }: { s: ScreenState; a: AgentState }) {
+function AgentPanel({ s, a, gate, reread }: { s: ScreenState; a: AgentState; gate: HeadsState | null; reread: boolean }) {
   const h = s.header!;
   const set = h.set!, contracts = h.contracts!;
   const c = a.contract;
   const x = a.explorer;
   const fresh = c.certBlock ? a.block - c.certBlock : null;
-  const onchain = useOnchain(s, a);
+  const onchain = useOnchain(s, a, reread);
   const pay = a.lastPayment;
   return (
     <>
@@ -211,7 +227,9 @@ function AgentPanel({ s, a }: { s: ScreenState; a: AgentState }) {
             <Stat label="distrust" value={`${pct(c.distrust)} %`} foot="one hop" />
             <Stat label="certificate" value={fresh === null ? "none" : `${fresh} blk`} foot={c.certBlock ? `old · cert block ${int(c.certBlock)}` : "NO_CERT"} />
           </div>
-          {pay ? (
+          {pay && gate && stateOf(gate, pay.block) !== "Finalized" ? (
+            <Verdict pay={null} title="AWAITING FINALITY" why={`payment evaluated at block ${int(pay.block)}: ${stateOf(gate, pay.block) ?? "not seen yet"}; the verdict shows once the block is Finalized`} />
+          ) : pay ? (
             <Verdict
               pay={pay.decision === "PAID"}
               title={pay.decision === "PAID" ? "PAID" : "REFUSED"}
@@ -242,14 +260,15 @@ function AgentPanel({ s, a }: { s: ScreenState; a: AgentState }) {
 type ReadState = { key: string; r: OnchainRead | null; error: string | null };
 
 /** Re-read assess()/decide() on the run's RPC at the event's block; null when unreachable (offline replay). */
-function useOnchain(s: ScreenState, a: AgentState): ReadState | null {
+function useOnchain(s: ScreenState, a: AgentState, enabled: boolean): ReadState | null {
   const h = s.header!;
   const key = `${h.runId}:${a.agentId}:${a.block}`;
   const [st, setSt] = useState<ReadState | null>(null);
   useEffect(() => {
-    const rpc = rpcForRun(h.network, NETWORKS.fork.http);
+    // replay never re-reads: a fork RPC running now may hold another run's state at the same blocks
+    const rpc = enabled ? rpcForRun(h.network, NETWORKS.fork.http) : null;
     if (!rpc || !h.set || !h.contracts) {
-      setSt({ key, r: null, error: `no RPC for a ${h.network.mode} run` });
+      setSt({ key, r: null, error: enabled ? `no RPC for a ${h.network.mode} run` : "replay" });
       return;
     }
     let dead = false;
@@ -262,7 +281,7 @@ function useOnchain(s: ScreenState, a: AgentState): ReadState | null {
     return () => {
       dead = true;
     };
-  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [key, enabled]); // eslint-disable-line react-hooks/exhaustive-deps
   return st?.key === key ? st : null;
 }
 
@@ -280,7 +299,9 @@ function OnchainBadge({ s, a, r }: { s: ScreenState; a: AgentState; r: ReadState
   }
   return (
     <span className="badge" title={r.error ?? ""}>
-      recorded by the scene script at block {int(a.block)} ({mode}); RPC not reachable from this screen
+      {r.error === "replay"
+        ? `replay: values recorded by the scene script at block ${int(a.block)} (${mode})`
+        : `recorded by the scene script at block ${int(a.block)} (${mode}); RPC not reachable from this screen`}
     </span>
   );
 }
@@ -320,24 +341,28 @@ function Latency({ s }: { s: ScreenState }) {
   );
 }
 
-function Feed({ rows, s, onPick }: { rows: FeedRow[]; s: ScreenState; onPick: (id: string) => void }) {
+function Feed({ rows, s, gate, onPick }: { rows: FeedRow[]; s: ScreenState; gate: HeadsState | null; onPick: (id: string) => void }) {
   const shown = groupBursts(rows).slice(-40).reverse();
   return (
     <div className="feed">
       {shown.length === 0 && <div className="muted">No payment or rating yet.</div>}
       {shown.map((r) => {
         const isSlash = r.kind === "feedback" && /slash/.test(r.detail ?? "");
+        const st = gate ? stateOf(gate, r.block) : null;
+        const pending = gate !== null && st !== "Finalized" && r.verdict !== null;
         const cls = r.verdict === "PAID" ? "paid" : r.verdict === "REFUSED" ? "refused" : r.verdict === "REJECTED" ? "rejected" : isSlash ? "slash" : "";
         return (
           <div key={r.seq} className={`row ${cls}`} onClick={() => r.agentId && onPick(r.agentId)} style={{ cursor: r.agentId ? "pointer" : "default" }}>
             <div className="blk">
               blk {int(r.block)}
               {r.count > 1 ? `…${int(r.lastBlock)}` : ""}
+              {gate && <StateMark st={stateOf(gate, r.block)} />}
               <br />
               scene {r.scene}
             </div>
             <div>
-              {r.verdict && (
+              {pending && <span className="v pending">◐ {st ?? "pending"} · verdict at finality </span>}
+              {r.verdict && !pending && (
                 <span className="v">
                   {r.verdict === "PAID" ? "✓ PAID" : r.verdict === "REFUSED" ? `⛔ REFUSED · ${r.reason}` : `✗ REJECTED · ${r.reason}`}{" "}
                 </span>
@@ -367,4 +392,47 @@ function groupBursts(rows: FeedRow[]): Burst[] {
     } else out.push({ ...r, count: 1, lastBlock: r.block, firstLabel: r.label.split(" gives ")[0] });
   }
   return out;
+}
+
+/** WebSocket of the run's chain: Monad testnet (monadNewHeads) or the anvil fork (newHeads). Frozen: none. */
+function wsForRun(s: ScreenState): string | null {
+  // ?clock=testnet: check the testnet WebSocket before filming, whatever the run (live mode only)
+  if (new URLSearchParams(location.search).get("clock") === "testnet") return NETWORKS.testnet.wss ?? null;
+  const n = s.header?.network;
+  if (!n) return null;
+  if (n.mode === "testnet") return NETWORKS.testnet.wss ?? null;
+  if (n.mode === "fork") return NETWORKS.fork.http.replace(/^http/, "ws");
+  return null;
+}
+
+const MARK: Record<string, string> = { Proposed: "○", Voted: "◐", Finalized: "■", Verified: "■" };
+function StateMark({ st }: { st: string | null }) {
+  return <span title={st ?? "not seen by this screen"}> {st ? MARK[st] : "·"}</span>;
+}
+
+function ChainClock({ heads, info }: { heads: HeadsState; info: HeadsSource }) {
+  const recent = [...heads.blocks.values()].sort((a, b) => b.number - a.number || a.hash.localeCompare(b.hash)).slice(0, 14).reverse();
+  const v = median(heads.latencies.voted), f = median(heads.latencies.finalized);
+  return (
+    <div className="clock">
+      <span className={`dot ${info.connected ? "live" : ""}`} />
+      <span>
+        {info.connected ? `${info.method}` : info.url ? "connecting…" : "no chain feed"} · head <b className="num">{int(heads.head)}</b> · finalized{" "}
+        <b className="num">{int(heads.finalized)}</b>
+      </span>
+      <span className="blocks">
+        {recent.map((b) => (
+          <span key={`${b.number}:${b.hash}`} className={`blk-mark s-${b.state}`} title={`${b.number} ${b.state}`}>
+            {MARK[b.state]}
+          </span>
+        ))}
+      </span>
+      {info.method === "monadNewHeads" && (
+        <span className="muted">
+          Proposed→Voted {v ?? "…"} ms · →Finalized {f ?? "…"} ms (median, measured here, {heads.latencies.finalized.length} blocks) · speculative dropped {heads.dropped}
+        </span>
+      )}
+      {info.method === "newHeads" && <span className="muted">anvil: a block is final when mined</span>}
+    </div>
+  );
 }

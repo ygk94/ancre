@@ -52,7 +52,13 @@ def verdict(st, eeff: int) -> dict:
     tl = int(st["trustRobust"])
     du = int(st["distrust"]) + eeff
     if tl < THETA:
-        return {"pay": False, "reason": "UNTRUSTED", "detail": "trustLow below theta" if tl else "unknown to these anchors (mass 0)"}
+        if tl:
+            detail = "leave-one-out mass below theta"
+        elif int(st["trust"]):
+            detail = "reached by one anchor only: leave-one-out mass 0"
+        else:
+            detail = "unknown to these anchors (mass 0)"
+        return {"pay": False, "reason": "UNTRUSTED", "detail": detail}
     if RHO_D * du > RHO_N * tl:
         return {"pay": False, "reason": "UNTRUSTED", "detail": "distrust too high"}
     return {"pay": True, "reason": "OK", "detail": "trustLow >= theta, distrust within rho"}
@@ -75,8 +81,11 @@ def lens(lid, title, blurb, fbs, idn, schema, filt, anchors, anchor_labels, farm
         c = contributions(cert, ci)
         if sum(c) == 0 and distrust(cert, ci) == 0:
             continue
-        ranking.append({"agentId": str(key), "trust": wad_str(sum(c)), "trustRobust": wad_str(trust_robust(c, M)),
-                        "distrust": wad_str(distrust(cert, ci))})
+        st = {"agentId": str(key), "trust": wad_str(sum(c)), "trustRobust": wad_str(trust_robust(c, M)),
+              "distrust": wad_str(distrust(cert, ci))}
+        st["verdict"] = verdict(st, eeff) if len(anchors) >= M else {"pay": False, "reason": "UNTRUSTED",
+                                                                    "detail": f"one anchor: leave-one-out (m = {M}) leaves 0"}
+        ranking.append(st)
     ranking.sort(key=lambda r: (-int(r["trustRobust"]), -int(r["trust"]), int(r["agentId"])))
     mass = rm.mass_in(g, cert, inv, farm)
     return {
@@ -86,7 +95,8 @@ def lens(lid, title, blurb, fbs, idn, schema, filt, anchors, anchor_labels, farm
         "schema": _schema_name, "filter": filt,
         "edges": len(g.pairs), "certifiedNodes": cert.n, "iterations": cert.iterations,
         "e": [wad_str(x) for x in cert.e], "eEff": wad_str(eeff),
-        "massOnFarm": [wad_str(x) for x in mass],
+        "massOnFarm": [wad_str(x) for x in mass],  # per anchor column t^(a)(S)
+        "massOnFarmWeighted": wad_str(sum(cert.lambdas[a] * mass[a] // WAD for a in range(cert.k))),  # Σλ_a t^(a)(S)
         "agents": agents, "ranking": ranking,
     }
 

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ChainHead } from "../lib/envio";
-import { int } from "../lib/format";
+import act1 from "../data/act1.json";
+import { NETWORKS } from "../config/networks";
+import { int, short } from "../lib/format";
 import { useDemo, type Source } from "../sources/useDemo";
 import { Act1 } from "./Act1";
 import { Act2 } from "./Act2";
@@ -18,7 +20,10 @@ export function App() {
   useEffect(() => {
     if (tab !== "act2" || demo.mode !== "replay") return;
     const on = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement)?.tagName === "SELECT" || (e.target as HTMLElement)?.tagName === "INPUT") return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "SELECT" || tag === "INPUT") return;
+      // a focused button would also react to Space/arrows: take the key away from it
+      if (tag === "BUTTON") (e.target as HTMLElement).blur();
       if (e.key === "ArrowRight") demo.controls.step(1);
       else if (e.key === "ArrowLeft") demo.controls.step(-1);
       else if (e.key === " ") (e.preventDefault(), demo.controls.setPlaying(!(demo.source.kind === "replay" && demo.source.playing)));
@@ -46,7 +51,8 @@ export function App() {
         <div className="spacer" />
         {tab === "act1" ? (
           <div className="source">
-            <span className="dot replay" /> registry: live via Envio · ANCRE: reference solver, block 108,835,675
+            <span className={`dot ${head ? "live" : "replay"}`} />
+            {head ? "registry: live via Envio" : "registry: Envio unreachable, solver snapshot"} · ANCRE: reference solver, block {int(act1.snapshotBlock)}
           </div>
         ) : (
           <SourceBadge source={demo.source} mode={demo.screen.header?.network.mode} />
@@ -58,7 +64,9 @@ export function App() {
           indexed by Envio HyperIndex
           {head ? ` · Monad 143 head ${int(head.block)} · ${int(head.feedbacks)} ratings, ${int(head.agents)} agents` : ""}
         </span>
-        <span>ERC-8004 v2.0.0 registries · mainnet Identity 0x8004A169…a432 · Reputation 0x8004BAa1…9b63</span>
+        <span>
+          ERC-8004 v2.0.0 registries · mainnet Identity {short(NETWORKS.mainnet.identity)} · Reputation {short(NETWORKS.mainnet.reputation)}
+        </span>
         <span>Every figure shows its source and date.</span>
       </footer>
     </div>

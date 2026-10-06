@@ -2,7 +2,7 @@
  "format": "ancre-screen-act1-v1",
  "status": "COMPUTED by the reference solver (not deployed on mainnet), reproducible",
  "command": "cd app && ../solver/.venv/bin/python scripts/export_act1.py",
- "solverCommit": "7c4cd95",
+ "solverCommit": "ac1a4d3",
  "chainId": 143,
  "snapshotBlock": 108835675,
  "snapshotFeedbacks": 9283,
@@ -168,6 +168,7 @@
     "0",
     "0"
    ],
+   "massOnFarmWeighted": "0",
    "agents": {
     "182": {
      "inSupport": false,
@@ -340,25 +341,45 @@
      "agentId": "18",
      "trust": "222222222222222222",
      "trustRobust": "111111111111111111",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": true,
+      "reason": "OK",
+      "detail": "trustLow >= theta, distrust within rho"
+     }
     },
     {
      "agentId": "2",
      "trust": "74074074074074074",
      "trustRobust": "37037037037037037",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": true,
+      "reason": "OK",
+      "detail": "trustLow >= theta, distrust within rho"
+     }
     },
     {
      "agentId": "3",
      "trust": "74074074074074074",
      "trustRobust": "37037037037037037",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": true,
+      "reason": "OK",
+      "detail": "trustLow >= theta, distrust within rho"
+     }
     },
     {
      "agentId": "4",
      "trust": "0",
      "trustRobust": "0",
-     "distrust": "148148148148148148"
+     "distrust": "148148148148148148",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "unknown to these anchors (mass 0)"
+     }
     }
    ]
   },
@@ -394,6 +415,7 @@
    "massOnFarm": [
     "345622119815668159"
    ],
+   "massOnFarmWeighted": "345622119815668159",
    "agents": {
     "182": {
      "inSupport": true,
@@ -555,175 +577,320 @@
      "agentId": "182",
      "trust": "138248847926267255",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "2422",
      "trust": "10240655401945724",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "4078",
      "trust": "10240655401945724",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "4993",
      "trust": "10240655401945724",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "5169",
      "trust": "10240655401945724",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "5205",
      "trust": "10240655401945724",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "5240",
      "trust": "10240655401945724",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "5329",
      "trust": "10240655401945724",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "3156",
      "trust": "8704557091653865",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "4557",
      "trust": "8704557091653865",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "5117",
      "trust": "8704557091653865",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "5720",
      "trust": "8704557091653865",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "5957",
      "trust": "8704557091653865",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "6149",
      "trust": "8704557091653865",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "6618",
      "trust": "8704557091653865",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "6906",
      "trust": "8704557091653865",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "7222",
      "trust": "8704557091653865",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "7362",
      "trust": "8704557091653865",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "7657",
      "trust": "8704557091653865",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "8095",
      "trust": "8704557091653865",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "8220",
      "trust": "8704557091653865",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "8357",
      "trust": "8704557091653865",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "4442",
      "trust": "6144393241167434",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "6238",
      "trust": "6144393241167434",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "7537",
      "trust": "6144393241167434",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "5710",
      "trust": "3072196620583717",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "5779",
      "trust": "3072196620583717",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "8216",
      "trust": "3072196620583717",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     },
     {
      "agentId": "1829",
      "trust": "1024065540194572",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
     }
    ]
   },
@@ -759,6 +926,7 @@
    "massOnFarm": [
     "0"
    ],
+   "massOnFarmWeighted": "0",
    "agents": {
     "182": {
      "inSupport": false,
@@ -955,6 +1123,7 @@
     "0",
     "222222222222222222"
    ],
+   "massOnFarmWeighted": "111111111111111111",
    "agents": {
     "182": {
      "inSupport": true,
@@ -968,7 +1137,7 @@
      "verdict": {
       "pay": false,
       "reason": "UNTRUSTED",
-      "detail": "unknown to these anchors (mass 0)"
+      "detail": "reached by one anchor only: leave-one-out mass 0"
      }
     },
     "4": {
@@ -1127,7 +1296,12 @@
      "agentId": "182",
      "trust": "111111111111111111",
      "trustRobust": "0",
-     "distrust": "0"
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "reached by one anchor only: leave-one-out mass 0"
+     }
     }
    ]
   }

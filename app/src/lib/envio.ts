@@ -54,8 +54,18 @@ export type AgentRegistryView = {
 
 type Row = { id: string; value: string; valueDecimals: number; client: string; revokedAtBlock: string | null };
 
-/** Everything the "explorer" column needs about one agent, straight from the indexed registry. */
+const cache = new Map<string, AgentRegistryView>();
+
+/** Everything the "explorer" column needs about one agent, straight from the indexed registry (cached per session). */
 export async function agentRegistryView(chainId: number, agentId: string, signal?: AbortSignal): Promise<AgentRegistryView> {
+  const hit = cache.get(`${chainId}:${agentId}`);
+  if (hit) return hit;
+  const agentQ = gql<{ Agent: { owner: string; wallet: string }[] }>(
+    `query($c: Int!, $a: String!) { Agent(where: {chainId: {_eq: $c}, id: {_eq: $a}}) { owner wallet } }`,
+    { c: chainId, a: agentId },
+    signal,
+  );
+  agentQ.catch(() => undefined); // awaited below; avoid an unhandled rejection if the pages fail first
   const rows: Row[] = [];
   let last = "";
   for (;;) {
@@ -72,11 +82,7 @@ export async function agentRegistryView(chainId: number, agentId: string, signal
     if (d.Feedback.length < 1000) break;
     last = d.Feedback[d.Feedback.length - 1].id;
   }
-  const a = await gql<{ Agent: { owner: string; wallet: string }[] }>(
-    `query($c: Int!, $a: String!) { Agent(where: {chainId: {_eq: $c}, id: {_eq: $a}}) { owner wallet } }`,
-    { c: chainId, a: agentId },
-    signal,
-  );
+  const a = await agentQ;
   const live = rows.filter((r) => r.revokedAtBlock === null);
   const byClient = new Map<string, number>();
   let sumWad = 0n;
@@ -88,7 +94,7 @@ export async function agentRegistryView(chainId: number, agentId: string, signal
     byClient.set(r.client, (byClient.get(r.client) ?? 0) + 1);
   }
   const mean = live.length ? Number(sumWad / BigInt(live.length)) / 1e18 : null;
-  return {
+  const view: AgentRegistryView = {
     agentId,
     feedbacks: live.length,
     revoked: rows.length - live.length,
@@ -99,4 +105,6 @@ export async function agentRegistryView(chainId: number, agentId: string, signal
     owner: a.Agent[0]?.owner ?? null,
     wallet: a.Agent[0]?.wallet ?? null,
   };
+  cache.set(`${chainId}:${agentId}`, view);
+  return view;
 }

@@ -6,7 +6,7 @@ import { initialScreen, parseRun, reduce, type DemoEvent, type Header, type Scre
 export type RunInfo = { file: string; runId: string; mode: string; chainId: number; startedAt: string; events: number; firstBlock: number; lastBlock: number };
 export type Pacing = "recorded" | "presenter";
 export type Source =
-  | { kind: "replay"; run: RunInfo | null; cursor: number; total: number; playing: boolean; speed: number; pacing: Pacing; at: Header | DemoEvent | null }
+  | { kind: "replay"; run: RunInfo | null; cursor: number; total: number; playing: boolean; speed: number; pacing: Pacing; at: Header | DemoEvent | null; error: string | null }
   | { kind: "live"; ok: boolean; error: string | null; polls: number; lastChangeMs: number | null };
 
 const params = () => new URLSearchParams(location.search);
@@ -38,14 +38,31 @@ export function useDemo() {
       .catch(() => setRuns([]));
   }, []);
 
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const firstLoad = useRef(true);
   useEffect(() => {
     if (!runFile) return;
-    fetch(`${base}runs/${runFile.endsWith(".json") ? runFile : runFile + ".json"}`)
-      .then((r) => r.text())
+    let stale = false;
+    const file = runFile.endsWith(".json") ? runFile : runFile + ".json";
+    fetch(`${base}runs/${file}`)
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.text();
+      })
       .then((t) => {
-        setLines(parseRun(t));
-        setCursor(Number(params().get("at") ?? 0));
-      });
+        if (stale) return;
+        const ls = parseRun(t); // throws on HTML (missing file served as the SPA) or bad JSON
+        if (ls[0]?.type !== "header") throw new Error("not an event log");
+        const at = firstLoad.current ? Number(params().get("at") ?? 0) : 0; // ?at= applies to the first run only
+        firstLoad.current = false;
+        setLines(ls);
+        setCursor(Number.isFinite(at) ? Math.max(0, Math.min(ls.length - 1, at)) : 0);
+        setLoadError(null);
+      })
+      .catch((e) => !stale && setLoadError(`${file}: ${(e as Error).message}`));
+    return () => {
+      stale = true;
+    };
   }, [runFile]);
 
   // every prefix state, once per run: stepping back is free and replay is exactly the reducer's output
@@ -108,7 +125,7 @@ export function useDemo() {
   const source: Source =
     mode === "live"
       ? { kind: "live", ...liveInfo }
-      : { kind: "replay", run: runInfo, cursor, total: lines.length, playing, speed, pacing, at: lines[cursor] ?? null };
+      : { kind: "replay", run: runInfo, cursor, total: lines.length, playing, speed, pacing, at: lines[cursor] ?? null, error: loadError };
 
   const step = useCallback((d: number) => setCursor((c) => Math.max(0, Math.min(lines.length - 1, c + d))), [lines.length]);
   const jumpScene = useCallback(

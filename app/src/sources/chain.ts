@@ -55,12 +55,16 @@ export async function readAgent(
   const c = clientFor(rpc);
   const t0 = performance.now();
   const blockNumber = BigInt(block);
-  const [a, d] = await Promise.all([
+  const [ra, rd] = await Promise.allSettled([
     c.readContract({ address: ancre, abi: ANCRE_ABI, functionName: "assess", args: [BigInt(agentId), setId, true], blockNumber }),
     payer && pay
       ? c.readContract({ address: payer, abi: PAYER_ABI, functionName: "decide", args: [BigInt(agentId), pay.to, BigInt(pay.amount)], blockNumber })
       : Promise.resolve(null),
   ]);
+  if (ra.status === "rejected") throw ra.reason;
+  const a = ra.value;
+  // decide() may revert (cleared wallet, odd payee): keep the assess() that answered
+  const d = rd.status === "fulfilled" ? rd.value : null;
   return {
     block,
     status: STATUS[a.status] ?? String(a.status),
@@ -68,7 +72,7 @@ export async function readAgent(
     trustLow: a.trustLow.toString(),
     e: a.e.toString(),
     certBlock: Number(a.certBlock),
-    decide: d ? (REASON[d[0]] ?? String(d[0])) : null,
+    decide: d ? (REASON[d[0]] ?? String(d[0])) : rd.status === "rejected" ? "reverted" : null,
     ms: Math.round(performance.now() - t0),
   };
 }
