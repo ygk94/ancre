@@ -22,7 +22,7 @@
 ## 1. Licences
 
 **État mesuré (06/10)**
-- `contracts/` : **17 fichiers** en `SPDX-License-Identifier: MIT`, **7** en `MIT`.
+- `contracts/` (état du 06/10) : **17 fichiers** en `SPDX-License-Identifier: CC0-1.0`, **7** en `MIT`. ✅ Depuis le 07/10, tous en MIT (20 fichiers changés, nouveaux tests de 02-bis compris).
   - CC0 : `src/AnchoredReputation.sol`, `src/interfaces/IERC8004.sol`, `script/Deploy.s.sol`, et 14 tests (`AnchoredReputation`, `Base`, `Diff`, `Fork`, `Fuzz`, `Gas`, `Profile`, `RegistryBench`, `SolverVectors`, `ToolingProbe`, `Upgrade`, `Verified`, `utils/CertLib`, `utils/Mocks`).
   - MIT : `src/TrustGatedPayer.sol`, `script/t1/T1.s.sol`, `script/t1/T1Oracle.sol`, `test/TrustGatedPayer*.t.sol`, `test/utils/PayerBase.sol`, `test/utils/MockUSDC3009.sol`.
 - `plugin/package.json` et `indexer/package.json` : `"license": "MIT"`. `indexer/LICENSE` existe (MIT). **Aucun `LICENSE` à la racine.**
@@ -32,7 +32,7 @@
 
 **À faire (par une session de code ou par Hugo, pas par le 09 : `contracts/` est hors de mon périmètre)**
 1. Créer `LICENSE` à la racine (texte MIT ou Apache-2.0, titulaire et année : 🧑).
-2. Remplacer `CC0-1.0` par l'identifiant choisi dans les 17 en-têtes : `grep -rl "CC0-1.0" contracts/src contracts/test contracts/script | xargs sed -i '' 's/SPDX-License-Identifier: MIT/SPDX-License-Identifier: MIT/'`.
+2. Remplacer `CC0-1.0` par l'identifiant choisi dans les 17 en-têtes : `grep -rl "CC0-1.0" contracts/src contracts/test contracts/script | xargs sed -i '' 's/SPDX-License-Identifier: CC0-1.0/SPDX-License-Identifier: MIT/'`.
 3. Ajouter un fichier `LICENSE` (ou une ligne dans le README de `docs/erc/`) qui dit que **le texte de l'ERC** reste en CC0.
 4. Si Apache-2.0 : changer aussi les 7 en-têtes MIT et les deux `package.json`, et ajouter un `NOTICE`.
 5. Relancer `forge build` (les SPDX ne changent pas le bytecode des contrats déployés, mais la vérification de source compare le fichier exact : **changer la licence avant le déploiement final**).
