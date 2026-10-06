@@ -19,6 +19,21 @@
   - **Keystore de démo** : à créer avec la commande donnée dans la conversation, puis à alimenter au faucet (au moins 15 MON et 1 USDC de testnet).
   - **Domaine HTTPS pour Mera** : choisir le nom d'hôte, définitif, puisque le passkey y sera lié.
 
+- [ ] **06/10, chantier 07 (écran de démo)**, fait et fusionné sur `main`. Détails : `docs/chantiers/rapports/07.md`, lancement : `demo/SCREEN.md`, tournage : `demo/VIDEO-SHOTS.md`.
+  - **Hébergement du lien « product live »** (🧑 bloqué, rien n'est en ligne) :
+    - A. **Netlify, recommandé** : 0 $ (Free plan, « 300 credit limit », SSL et domaine personnalisé), `npx netlify-cli deploy --prod --dir=app/dist` avec ton compte. Marche avec le dépôt privé.
+    - B. **Vercel** : 0 $ (Hobby, 100 Go/mois), mais réservé à un usage « personal, non-commercial ».
+    - **Une seule décision pour trois besoins** : le même domaine HTTPS doit servir l'écran, le `rpId` de Mera (définitif) et l'URL des webhooks Alchemy (D55). Choisis-le en une fois.
+    - La page publique montre l'acte 1 en direct (Envio) et l'acte 2 en **rejeu** ; le live de l'acte 2 ne tourne qu'en local.
+  - **Feu vert du run testnet du 06 (E6)** : c'est lui qui donne au plan 8 de la vidéo une vraie latence Monad (« refusé au bloc N+1, en X ms »). Sans lui, la vidéo dit « the very next payment », sans chiffre.
+  - **Clé Alchemy (déjà demandée)** : elle permettrait aussi d'afficher à l'écran « les 7 665 noteurs d'Eve ont reçu leur premier MON de son propriétaire » (D55). Optionnel.
+  - **Relancer une session 07** pour ce qui reste du tour 7 :
+    - **D49, poids effectif d'une revue** (à faire en premier : prêt côté données pour l'acte 1) ;
+    - **D50, vue du 2ᵉ saut**, dès que le 06 aura la scène ;
+    - revérifier l'écran sur l'ABI finale de 02-bis (`passesAnchorPolicy`).
+  - **Au tournage** : `cd app && npm run snapshot:scan && ../solver/.venv/bin/python scripts/export_act1.py && npm run sync:runs && npm run build`, puis suivre `demo/VIDEO-SHOTS.md` et sa checklist d'honnêteté. Ne jamais citer une latence mesurée sur fork comme une latence Monad.
+  - **Pousser `main`** : je ne pousse pas sans ton accord.
+
 - [ ] **📅 Ton plan jour par jour (tour 7, D52)** :
   - **Lun 06/10** :
     - inscription et projet (track 04, bounties Envio et Mera) ;
