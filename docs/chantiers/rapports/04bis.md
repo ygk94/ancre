@@ -14,7 +14,7 @@
 | E4 | Renommage solveur `is_trusted` → `passes_anchor_policy` ; scénario `common` dans `simulate.py` ; rejeu fork contre le contrat de `main` | ✅ côté solveur ; ⏳ rejeu contre 02-bis (pas encore commité) |
 | E5 | `/code-review high` sur ce worktree | voir §6 |
 
-Tests : **169 verts** (`cd solver && .venv/bin/python -m pytest -q tests`), contre 135 au démarrage.
+Tests : **174 verts** (`cd solver && .venv/bin/python -m pytest -q tests`), contre 135 au démarrage.
 
 ## 2. Mesures
 
