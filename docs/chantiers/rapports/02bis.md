@@ -80,3 +80,21 @@
 - **04-bis** : `simulate.py` sur fork contre ce contrat (montants des preuves ENCODING §7.1) ; `refreshFact` dans le certificateur.
 - **02-E9** : déploiement testnet et vérification Sourcify / MonadVision, après l'accord de Hugo.
 - Banc C pour un set qui a des faits (AM-02bis.3).
+
+## 8. Addendum du 06/10 (nuit) : revue maximale complète
+
+Après `git merge main`, les constats du relais `docs/chantiers/relais/revue-vers-02bis.md` ont été traités. Le détail par identifiant est dans le journal, avec un test par constat :
+- **les 2 critiques et les 2 hautes du contrat** : K6, L1, K7, E1 ;
+- **la part contrat de STUCK et A1d** ;
+- **les moyennes** K10, K8, A2b et ALT8.
+
+Mesuré : 197 tests verts ; taille du contrat 39 261 octets.
+
+Ce qui reste ouvert :
+- **A1b** (zone de transit D23) et **EFF1** (fenêtre `scanMax`, normative) : à trancher par le pilote ou le conseil ;
+- les faibles et le nettoyage, après la soumission.
+
+Changements d'interface :
+- `newNodes` interdit sur un set ouvert ;
+- formule X de ENCODING §7.1 : la révélation d'une omission déclarée facture le pire cas ;
+- gas non plafonné vers `readFeedback` sur les chemins payants.
