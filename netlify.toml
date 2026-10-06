@@ -1,0 +1,15 @@
+# Netlify: publish ONLY the built demo screen (app/dist), never the repository itself.
+# Without this file Netlify served the raw repo (CLAUDE.md, docs/conseil/, mustdo/...) on 07/10.
+[build]
+  base = "app"
+  command = "npm ci && npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# single-page app: unknown paths fall back to the screen
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
