@@ -36,3 +36,19 @@
 
 - `plugin/README.md` : override (épinglage, passerelle seule, limites écrites honnêtement, plus de « any freshly funded key is refused » absolu), issues d'un paiement (PAID / REFUSED / UNKNOWN), journal (`pay_aborted`), garde SDK (`chainId`, `register("eip155:143")`), statut (ABI 02-bis, override non essayé en session réelle), 70 tests.
 - `plugin/skills/ancre/SKILL.md` : agir sur `outcome` (UNKNOWN = peut-être payé, ne rien re-signer avant `validBefore`), note d'override absente hors refus d'ANCRE, `OVER_LIMIT`.
+
+### `/code-review high` (sur `/Users/hugo/Projet/ancre-plugin-revue`, 854da9b contre main 89c959e, AM-02.9 vérifié : le chemin et la branche sont dans le compte rendu de la revue)
+
+9 constats, 8 traités, 1 assumé :
+
+| # | Constat | Suite | Test |
+|---|---|---|---|
+| 1 | `pay` concluait REFUSED sur un refus `/verify` avec un nonce illisible | REFUSED exige `used === false`, comme l'override | « a /verify rejection with an unreadable nonce is UNKNOWN… » |
+| 2 | Épinglage M4 par sous-chaîne sur toute la sortie, wallet ignoré | `policyAllowsContract()` : JSON `{ policy, address }`, adresse du wallet vérifiée, adresse du payeur comptée seulement sous une clé d'allowlist, jamais sous `recipient`, `deny`, `block` ; tout format inconnu refuse | « the Guard Mode pin parses the policy… » (7 cas refusés, 3 acceptés) |
+| 3 | K19 : une offre conforme plus loin dans `accepts` n'était plus choisie | `selectOffer` préfère la première offre ≤ `maxPerPayment`, sinon garde la première (OVER_LIMIT) | « an offer within maxPerPayment is still preferred… » |
+| 4 | ABI en avance sur les contrats de `main` | **assumé** : demandé par le brief (ABI finale de 02-bis) ; écrit dans le README (Statut) et le rapport, à vérifier à la fusion | — |
+| 5 | Un refus sur la page fermait toute la session | la page reste ouverte ; minuteur ou Ctrl-C rejettent avec le dernier refus | « a refused signature leaves the page open… », test A4d adapté |
+| 6 | Trous de journal : `--confirm` absent, échecs dans la commande, exception après `override_signed` | journaler créé avant les contrôles ; `trackedJournal` dans `pay` et `override` pour les échecs hors flux ; `override_failed` après signature | « pay without --confirm is journaled too », « a refusal after the human signed… » |
+| 7 | `eth_chainId` vérifié deux fois pour l'override | dépendance `chainId` retirée de l'override ; le contrôle unique est dans `hostDeps` (testé par K20) | K20 |
+| 8 | `verify()` exécuté deux fois | le résultat accepté sur la page est réutilisé ; vérification seulement si `humanSign` n'est pas passé par la page | tests A4d |
+| 9 | Deux clés de nonce normalisées séparément | `nonceKey()` unique, exporté par `human.ts` | tests A4d |

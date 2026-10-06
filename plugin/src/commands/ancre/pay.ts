@@ -2,7 +2,7 @@ import { type CommandIO, InputFieldType, type InputSchema, PluginCommand, schema
 import { optionalUsdc, resolveConfig } from "../../lib/config.js";
 import { type PayResult, payFlow } from "../../lib/flows.js";
 import { hostDeps, toCommandError } from "../../lib/host.js";
-import { fileJournal } from "../../lib/journal.js";
+import { fileJournal, trackedJournal } from "../../lib/journal.js";
 
 const inputs = {
   url: { type: InputFieldType.Text, flag: "url", message: "x402 resource URL", required: true, index: 0 },
@@ -22,16 +22,20 @@ export default class AncrePay extends PluginCommand<PayResult> {
   protected readonly pluginCommandId = "ancre:pay";
 
   async execute(io: CommandIO): Promise<PayResult> {
+    const tj = trackedJournal(fileJournal());
+    let url: string | undefined;
     try {
       const inp = await io.resolveInputs(inputs);
+      url = inp.url;
       const cfg = resolveConfig({ chainId: inp.chainId, payer: inp.payer });
-      const d = { ...(await hostDeps(this.ctx, io, cfg, inp.confirm ? "ancre:pay" : null)), journal: fileJournal() };
+      const d = { ...(await hostDeps(this.ctx, io, cfg, inp.confirm ? "ancre:pay" : null)), journal: tj.journal };
       return await payFlow(d, cfg, inp.url, {
         agentId: inp.agentId,
         maxAmount: optionalUsdc(inp.maxAmount),
         confirm: Boolean(inp.confirm),
       });
     } catch (e) {
+      if (url !== undefined) tj.failedOutside("pay_aborted", url, e);
       return toCommandError(e);
     }
   }

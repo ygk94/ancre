@@ -82,16 +82,19 @@ mm ancre override http://provider.example/quote     # run by the human, in their
 - The override **pays from the human's personal wallet**, that is, **the payer's owner or treasury** (addresses the
   human set on-chain). The plugin prepares an ordinary EIP-3009 payment and opens a one-time page on `127.0.0.1`;
   the human signs it in **their MetaMask browser extension**. It never uses the Agent Wallet and never touches the
-  payer contract's funds. The page answers "Signed" only after the plugin accepted the signature; a second click
-  issues a second authorisation and never invalidates the first; Ctrl-C closes the page.
+  payer contract's funds. The page answers "Signed" only after the plugin accepted the signature, and after a
+  refusal (wrong account connected) it stays open for another attempt; a second click issues a second
+  authorisation and never invalidates the first; Ctrl-C closes the page.
 - **Who may sign** is read on-chain: any key other than the payer's owner or treasury is refused, including
   every address of the Agent Wallet (selected or not) and every operator of the payer. If the owner **or** the
   treasury is an agent address, there is no human and the override is refused as misconfigured.
 - **Which payer, read where.** The caller chooses neither: the override reads only through the MetaMask gateway
   (`ctx.publicClient`, so it needs `mm login`; `--rpc-url` does not exist for it and `ANCRE_RPC_URL` is
   ignored), checks the gateway's `eth_chainId`, and requires the payer to be **pinned by the Agent Wallet setup**:
-  the selected wallet is a server wallet, it is an operator of that payer, and the payer's address appears in its
-  Guard Mode policy (read with the host's own `mm wallet policy get`). A payer that an agent deployed for itself,
+  the selected wallet is a server wallet, it is an operator of that payer, and the payer's address is in an
+  allowlist of contract addresses of **that wallet's** Guard Mode policy (read with the host's own
+  `mm wallet policy get --json`; an address under token recipients, a deny or block key, or anywhere else does
+  not count). A payer that an agent deployed for itself,
   with a key it funded as owner, is therefore refused unless the human added it to the Guard Mode policy.
 - The command declares no `wallet-submit` capability (the host refuses it the wallet executor) and refuses to run
   without an interactive terminal or with machine output (`--json`, `-f json`, or a persistent
@@ -103,9 +106,9 @@ the user can run a modified copy of the plugin, and can write anything into the 
 can stop that. What it cannot change is on-chain: an override only spends from the signer's own address, never
 from the payer contract or the Agent Wallet, so an agent that "overrides" with a key of its own spends its own
 money, which it could do without the plugin. Two assumptions are not verified yet: that changing the Guard Mode
-policy requires the human's 2FA (the host's documentation says so for Guard Mode), and the exact output of
-`mm wallet policy get` in a real session (the plugin only looks for the payer's address in it, and refuses
-when it cannot read it). `test/override.test.mjs` checks each path, plus that no file other than `lib/host.ts`
+policy requires the human's 2FA (mm 7.0.0's policy update can answer `mfaRequired`; not tried), and the exact output of
+`mm wallet policy get --json` in a real session (the plugin expects `{ policy: <YAML>, address }` and an
+allowlist key, since the schema is not public, and refuses whatever it does not recognise). `test/override.test.mjs` checks each path, plus that no file other than `lib/host.ts`
 reaches the executor.
 
 ## Journal
@@ -120,8 +123,8 @@ on-chain trace of a refusal is the payer's `reportRefusal`.
 ## How a payment works
 
 1. `GET url` returns 402 + `PAYMENT-REQUIRED` (x402 v2). The plugin keeps the `exact` USDC offer on this chain,
-   within `--max-amount`. An amount above the payer's `maxPerPayment` is not filtered out: `decide()` answers
-   `OVER_LIMIT`, which is journaled.
+   within `--max-amount`, preferring one within the payer's `maxPerPayment`. If every offer is above it, the
+   first one is kept and `decide()` answers `OVER_LIMIT`, which is journaled.
 2. The agent id comes from `--agent-id`, or from the offer's `extra.erc8004AgentId`. That field is **not
    standard**: it is an ANCRE proposal. The id is never guessed: the payer checks `agentWallet(agentId) == payTo`.
 3. `payer.decide(agentId, payTo, amount)` is a view call. If the verdict is not `PAY`, the plugin stops.
@@ -143,7 +146,7 @@ on-chain trace of a refusal is the payer's `reportRefusal`.
 ## Tests
 
 ```bash
-npm test                       # 70 tests on stubs: manifest (official schema), x402, blobs, verdicts, flows with a spy executor, client guard, human override, review fixes
+npm test                       # 76 tests on stubs: manifest (official schema), x402, blobs, verdicts, flows with a spy executor, client guard, human override, review fixes
 node scripts/demo-local.mjs    # rehearsal of the demo on an anvil --network monad fork (no real transaction)
 node scripts/t1.mjs --local    # test T1 dry run: the facilitator emulated as x402-rs does it
 node scripts/setup-fork.mjs    # demo setup on a fork: register, setAgentWallet, payer (operator = Agent Wallet), funding

@@ -305,7 +305,32 @@ test("K19: an offer above maxPerPayment reaches decide (OVER_LIMIT), is journale
   assert.match(r.humanOverride, /Only the human/);
   assert.equal(w.signs.length, 0);
   assert.deepEqual(log().map((e) => [e.kind, e.verdict]), [["refusal", "OVER_LIMIT"]]);
-  assert.equal(w.calls.some((c) => c.functionName === "maxPerPayment"), false, "selectOffer no longer filters on it");
+});
+
+test("code-review: an offer within maxPerPayment is still preferred to an earlier one above it", async () => {
+  const w = world({ maxPer: 50_000n });
+  const cheap = { scheme: "exact", network: "eip155:143", amount: "10000", asset: USDC, payTo: PAYTO, maxTimeoutSeconds: 60, extra: { name: "USDC", version: "2", erc8004AgentId: "12" } };
+  const dear = { ...cheap, amount: "1000000" };
+  const orig = w.deps.fetch;
+  w.deps.fetch = async (url, init = {}) => (init.headers ? orig(url, init)
+    : new Response("", { status: 402, headers: { "PAYMENT-REQUIRED": encodeB64Json({ x402Version: 2, resource: { url }, accepts: [dear, cheap] }) } }));
+  const r = await payFlow(w.deps, cfg, "https://p/quote", { confirm: true });
+  assert.equal(r.offer.amount, "10000");
+  assert.equal(r.outcome, "PAID");
+});
+
+test("code-review: a /verify rejection with an unreadable nonce is UNKNOWN, not REFUSED (no override note)", async () => {
+  const w = world({ settle: "verify", used: new Error("429"), explain: [0, 1, 12n, PAYTO, 10000n, A({ passesPolicy: true })] });
+  const r = await payFlow(w.deps, cfg, "https://p/quote", { confirm: true });
+  assert.equal(r.outcome, "UNKNOWN");
+  assert.equal(r.humanOverride, undefined);
+});
+
+test("code-review: pay without --confirm is journaled too", async () => {
+  const w = world();
+  const log = journaled(w);
+  await assert.rejects(payFlow(w.deps, cfg, "https://p/quote", { confirm: false }), (e) => e.code === "ANCRE_CONFIRM_REQUIRED");
+  assert.deepEqual(log().map((e) => e.kind), ["pay_aborted"]);
 });
 
 test("M1: every exit of pay is journaled (paid GET failure, non-operator signer, wallet refusal, RPC error)", async () => {

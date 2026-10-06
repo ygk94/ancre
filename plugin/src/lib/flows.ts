@@ -127,7 +127,7 @@ export type InspectResult = {
  * here: decide() reports OVER_LIMIT, which pay journals and the human may override (K19).
  */
 export async function challenge(
-  d: Pick<Deps, "fetch" | "signal">, cfg: Config, url: string, agentIdFlag: string | undefined, maxAmount: bigint | undefined,
+  d: Pick<Deps, "fetch" | "signal"> & { readContract?: Deps["readContract"] }, cfg: Config, url: string, agentIdFlag: string | undefined, maxAmount: bigint | undefined,
 ): Promise<Challenge> {
   let res: Response;
   try {
@@ -136,7 +136,16 @@ export async function challenge(
     throw new AncreError("ANCRE_HTTP_ERROR", `GET ${url} failed: ${(e as Error).message}`, "Check the URL");
   }
   const pr = parsePaymentRequired(res.status, res.headers, await res.text());
-  const offer = selectOffer(pr, { network: cfg.network, usdc: cfg.usdc, maxAmount });
+  // prefer an offer the payer can pay alone; else the first payable one, so that decide() reports OVER_LIMIT (K19)
+  let preferAtMost: bigint | undefined;
+  if (d.readContract) {
+    try {
+      preferAtMost = await read<bigint>({ readContract: d.readContract }, cfg.payer, payerAbi, "maxPerPayment");
+    } catch {
+      preferAtMost = undefined; // a preference only: decide() still reads the cap
+    }
+  }
+  const offer = selectOffer(pr, { network: cfg.network, usdc: cfg.usdc, maxAmount, preferAtMost });
   return { url, pr, offer, agentId: resolveAgentId(agentIdFlag, offer) };
 }
 
@@ -239,12 +248,12 @@ export async function payFlow(
   url: string,
   opts: { agentId?: string; maxAmount?: bigint; confirm: boolean },
 ): Promise<PayResult> {
-  if (!opts.confirm) {
-    throw new AncreError("ANCRE_CONFIRM_REQUIRED", "Refusing to pay without --confirm", "Run `mm ancre inspect <url>` first and get the human's approval");
-  }
-  if (!d.signTypedData) throw new AncreError("ANCRE_NO_SIGNER", "No wallet executor", "This command needs the wallet-submit capability");
   const jr = journaler(d.journal, { url, agentId: opts.agentId ?? "?", payTo: "?", amount: "?" });
   try {
+    if (!opts.confirm) {
+      throw new AncreError("ANCRE_CONFIRM_REQUIRED", "Refusing to pay without --confirm", "Run `mm ancre inspect <url>` first and get the human's approval");
+    }
+    if (!d.signTypedData) throw new AncreError("ANCRE_NO_SIGNER", "No wallet executor", "This command needs the wallet-submit capability");
     return await runPay(d, d.signTypedData, cfg, url, opts, jr);
   } catch (e) {
     // an abort, an RPC or HTTP error, the wallet refusing or a non-operator signer: journaled too (M1)
@@ -347,7 +356,7 @@ async function runPay(
   // very authorisation now (and the nonce is still unused). Otherwise (5xx, 504, settlement_pending, a failed
   // /settle after a broadcast) the outcome is UNKNOWN, never "Not paid" (A4a).
   const refusedNow = used === false && raw !== undefined && !raw.pay;
-  if (ev.kind === "verify_rejected" || refusedNow) {
+  if ((ev.kind === "verify_rejected" && used === false) || refusedNow) {
     jr.j("settlement_refused", { payer: cfg.payer, detail: `HTTP ${res.status}`, ...(explainAfterFailure ? verdictFields(explainAfterFailure) : {}) });
     return { ...base, outcome: "REFUSED", paid: false, nonceUsed: used, settlement, settlementError, explainAfterFailure, liveAuthorization: live,
       ...(explainAfterFailure && overridable(explainAfterFailure) ? { humanOverride: HUMAN_OVERRIDE_NOTE } : {}) };

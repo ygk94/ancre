@@ -18,13 +18,18 @@ export type HumanSignRequest = {
    *  account), so that the validity window starts when the human acts, not when the page was opened.
    *  message.nonce identifies the template: a second click issues a second template, never overwrites the first */
   prepare: () => TypedDataJson;
-  /** checks a posted signature before the page is told "Signed" (A4d); throwing refuses it, with its message */
+  /** checks a posted signature before the page is told "Signed" (A4d); throwing refuses it, with its message, and the
+   *  page stays open for another attempt (another account, after funding) until the timeout or Ctrl-C, which then
+   *  reject with the last refusal */
   accept?: (s: HumanSignature) => Promise<void>;
   /** Ctrl-C (io.signal): closes the page and rejects (A4g) */
   signal?: AbortSignal;
   timeoutMs?: number;
   onUrl: (url: string) => void; // print it / open it
 };
+
+/** The one key of a template: its message.nonce, lower-case (shared with override.ts). */
+export const nonceKey = (n: unknown): string => String(n).toLowerCase();
 
 /** `template` is the typed data the plugin issued for this nonce (held server-side, never taken back from the page). */
 export type HumanSignature = { address: `0x${string}`; signature: `0x${string}`; template: TypedDataJson };
@@ -68,6 +73,7 @@ export function humanSign(req: HumanSignRequest): Promise<HumanSignature> {
   return new Promise((resolve, reject) => {
     let settled = false;
     let busy = false;
+    let lastRefusal: Error | undefined;
     const issued = new Map<string, TypedDataJson>(); // nonce -> template (A4d: a double click never mixes them)
     const finish = (err: Error | undefined, value?: HumanSignature) => {
       if (settled) return;
@@ -79,7 +85,7 @@ export function humanSign(req: HumanSignRequest): Promise<HumanSignature> {
       if (err) reject(err);
       else resolve(value!);
     };
-    const onAbort = () => finish(new Error("cancelled (Ctrl-C)"));
+    const onAbort = () => finish(new Error(`cancelled (Ctrl-C)${lastRefusal ? `; last refusal: ${lastRefusal.message}` : ""}`));
     const server = createServer((r, w) => {
       const u = new URL(r.url ?? "/", "http://127.0.0.1");
       if (u.searchParams.get("t") !== token) return w.writeHead(403).end("bad token");
@@ -89,7 +95,7 @@ export function humanSign(req: HumanSignRequest): Promise<HumanSignature> {
       }
       if (r.method === "GET" && u.pathname === "/template") {
         const t = req.prepare();
-        issued.set(String(t.message.nonce).toLowerCase(), t);
+        issued.set(nonceKey(t.message.nonce), t);
         return w.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }).end(JSON.stringify(t));
       }
       if (r.method === "POST" && u.pathname === "/done") {
@@ -105,7 +111,7 @@ export function humanSign(req: HumanSignRequest): Promise<HumanSignature> {
             busy = false;
             return w.writeHead(400).end("bad body");
           }
-          const template = issued.get(String(posted.nonce).toLowerCase());
+          const template = issued.get(nonceKey(posted.nonce));
           if (!template) {
             busy = false;
             return w.writeHead(400).end("unknown authorisation: reload the page and sign again");
@@ -114,8 +120,10 @@ export function humanSign(req: HumanSignRequest): Promise<HumanSignature> {
           try {
             await req.accept?.(sig);
           } catch (e) {
-            // the page shows why; the terminal gets the same error once the answer is sent
-            return void w.writeHead(400).end((e as Error).message ?? String(e), () => finish(e as Error));
+            // the page shows why and stays open: the human may connect the right account and sign again
+            lastRefusal = e as Error;
+            busy = false;
+            return void w.writeHead(400).end((e as Error).message ?? String(e));
           }
           if (settled) return void w.writeHead(410).end("cancelled in the terminal");
           w.writeHead(200).end("ok", () => finish(undefined, sig));
@@ -124,7 +132,7 @@ export function humanSign(req: HumanSignRequest): Promise<HumanSignature> {
       }
       w.writeHead(404).end();
     });
-    const timer = setTimeout(() => finish(new Error("no human signature before the timeout")), req.timeoutMs ?? 5 * 60_000);
+    const timer = setTimeout(() => finish(lastRefusal ?? new Error("no human signature before the timeout")), req.timeoutMs ?? 5 * 60_000);
     timer.unref?.();
     if (req.signal?.aborted) return onAbort();
     req.signal?.addEventListener("abort", onAbort, { once: true });

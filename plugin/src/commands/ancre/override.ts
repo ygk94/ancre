@@ -4,7 +4,7 @@ import { optionalUsdc, resolveConfig } from "../../lib/config.js";
 import { allWalletAddresses, hostDeps, readGuardPolicy, selectedWallet, toCommandError } from "../../lib/host.js";
 import { isInteractive } from "../../lib/interactive.js";
 import { humanSign } from "../../lib/human.js";
-import { fileJournal } from "../../lib/journal.js";
+import { fileJournal, trackedJournal } from "../../lib/journal.js";
 import { type OverrideResult, overrideFlow } from "../../lib/override.js";
 
 // no --rpc-url here (M4): the roles that decide who is human are read through the MetaMask gateway only
@@ -36,8 +36,11 @@ export default class AncreOverride extends PluginCommand<OverrideResult> {
   protected readonly pluginCommandId = "ancre:override";
 
   async execute(io: CommandIO): Promise<OverrideResult> {
+    const tj = trackedJournal(fileJournal());
+    let url: string | undefined;
     try {
       const inp = await io.resolveInputs(inputs);
+      url = inp.url;
       const cfg = resolveConfig({ chainId: inp.chainId, payer: inp.payer });
       const argv = [...process.argv, ...(this.ctx.argv ?? [])];
       const interactive = isInteractive(process.stdin.isTTY, process.stdout.isTTY, argv, io.isInteractive);
@@ -56,7 +59,6 @@ export default class AncreOverride extends PluginCommand<OverrideResult> {
       return await overrideFlow(
         {
           readContract: base.readContract,
-          chainId: base.chainId,
           fetch: base.fetch,
           nowSec: base.nowSec,
           random32: base.random32,
@@ -64,8 +66,8 @@ export default class AncreOverride extends PluginCommand<OverrideResult> {
           interactive,
           selectedWallet: selected,
           agentWallets,
-          guardPolicy: () => readGuardPolicy(base.signal),
-          journal: fileJournal(),
+          guardPolicy: () => readGuardPolicy(base.signal), // `mm wallet policy get` shows the selected wallet's; policyAllowsContract checks its address
+          journal: tj.journal,
           print,
           confirm: async (prompt, expected) => {
             const rl = createInterface({ input: process.stdin, output: process.stderr });
@@ -87,6 +89,7 @@ export default class AncreOverride extends PluginCommand<OverrideResult> {
         { agentId: inp.agentId, maxAmount: optionalUsdc(inp.maxAmount) },
       );
     } catch (e) {
+      if (url !== undefined) tj.failedOutside("override_refused", url, e); // e.g. a reader on the wrong chain
       return toCommandError(e);
     }
   }

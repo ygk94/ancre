@@ -2,7 +2,7 @@ import { type Address, erc20Abi, getAddress, type Hex, isAddress, recoverTypedDa
 import { type Config, fmtUsdc } from "./config.js";
 import { AncreError, type ReadContract } from "./errors.js";
 import { challenge, inspectChallenge, type InspectResult, journaler, nonceUsed, payerRoles, read } from "./flows.js";
-import type { HumanSignature, HumanSignRequest } from "./human.js";
+import { type HumanSignature, type HumanSignRequest, nonceKey } from "./human.js";
 import type { Journal } from "./journal.js";
 import { type Authorization, usdcAuthorizationTypedData, usdcAuthorizationTypedDataJson } from "./payer.js";
 import { payerAbi } from "./payerAbi.js";
@@ -31,10 +31,8 @@ import { buildPaymentPayload, encodeB64Json, H_SIGNATURE, newAuthorization, paid
  * ordinary EIP-3009 payment from the human's address.
  */
 export type OverrideDeps = {
-  /** the host gateway client (ctx.publicClient), never a caller-chosen RPC */
+  /** the host gateway client (ctx.publicClient), never a caller-chosen RPC; hostDeps already checked its eth_chainId */
   readContract: ReadContract;
-  /** eth_chainId of that same client */
-  chainId: () => Promise<number>;
   fetch: typeof fetch;
   nowSec: () => number;
   random32: () => Hex;
@@ -49,7 +47,7 @@ export type OverrideDeps = {
   selectedWallet?: { address: Address; mode?: "byok" | "server" };
   /** every address of the host Agent Wallet (selected or not): none may sign an override */
   agentWallets: Address[];
-  /** the Guard Mode policy (text) of the selected server wallet, as `mm wallet policy get` prints it */
+  /** the Guard Mode policy of the selected server wallet, as `mm wallet policy get --json` prints it */
   guardPolicy: (wallet: Address) => Promise<string>;
   journal?: Journal;
   print?: (s: string) => void;
@@ -67,10 +65,12 @@ export type OverrideResult = InspectResult & {
 export async function overrideFlow(d: OverrideDeps, cfg: Config, url: string, opts: { agentId?: string; maxAmount?: bigint }): Promise<OverrideResult> {
   // every exit is journaled, the refusals first of all (an agent trying is exactly what the screen must show)
   const jr = journaler(d.journal, { url, agentId: opts.agentId ?? "?", payTo: "?", amount: "?" });
+  const state = { signed: false };
   try {
-    return await run(d, cfg, url, opts, jr);
+    return await run(d, cfg, url, opts, jr, state);
   } catch (e) {
-    jr.fallback(e instanceof AncreError && e.code === "ANCRE_OVERRIDE_NOT_SIGNED" ? "override_failed" : "override_refused", e);
+    const failed = state.signed || (e instanceof AncreError && e.code === "ANCRE_OVERRIDE_NOT_SIGNED");
+    jr.fallback(failed ? "override_failed" : "override_refused", e);
     throw e;
   }
 }
@@ -81,13 +81,6 @@ const unpinned = (msg: string) =>
 
 /** M4: the payer is the one the human pinned in the Agent Wallet setup, read on the configured chain. */
 async function checkPinned(d: OverrideDeps, cfg: Config): Promise<Address> {
-  let id: number;
-  try {
-    id = await d.chainId();
-  } catch (e) {
-    throw new AncreError("ANCRE_RPC_ERROR", `eth_chainId failed: ${(e as Error).message}`, "Run `mm login`; the override reads through the MetaMask gateway only");
-  }
-  if (id !== cfg.chainId) throw new AncreError("ANCRE_WRONG_CHAIN", `The reader is on chain ${id}, not ${cfg.chainId}`, "Check --chain-id");
   const w = d.selectedWallet;
   if (!w) throw unpinned("The host wallet state could not be read: no Agent Wallet pins the payer");
   if (w.mode !== "server") throw unpinned(`The selected Agent Wallet ${w.address} is not a server wallet (${w.mode ?? "unknown mode"}): BYOK has no Guard Mode policy to pin the payer`);
@@ -103,14 +96,50 @@ async function checkPinned(d: OverrideDeps, cfg: Config): Promise<Address> {
   } catch (e) {
     throw unpinned(`The Guard Mode policy of ${w.address} could not be read: ${(e as Error).message}`);
   }
-  if (!policy.toLowerCase().includes(cfg.payer.slice(2).toLowerCase())) {
-    throw unpinned(`Payer ${cfg.payer} is not in the Guard Mode policy of your Agent Wallet ${w.address}`);
-  }
+  const pinned = policyAllowsContract(policy, w.address, cfg.payer);
+  if (pinned !== true) throw unpinned(`Payer ${cfg.payer} is not in the Guard Mode allowlist of your Agent Wallet ${w.address} (${pinned})`);
   return w.address;
+}
+
+/**
+ * True when `contract` is in a contract-address allowlist of the policy of `wallet`, else why not (M4).
+ * The Guard Mode YAML schema is not public (docs/ressources/metamask-agent-wallet.md): the policy is read as
+ * `mm wallet policy get --json` prints it ({ policy: <YAML>, address }), the wallet must be the one asked for, and
+ * the address only counts on a line whose key path names an allowlist (allow / whitelist) of addresses or
+ * contracts, never under a token-recipient, deny or block key. Anything unrecognised fails closed.
+ */
+export function policyAllowsContract(raw: string, wallet: Address, contract: Address): true | string {
+  let text = raw;
+  try {
+    const j = JSON.parse(raw) as unknown;
+    const o = (typeof j === "object" && j !== null ? ((j as { data?: unknown }).data ?? j) : undefined) as { policy?: unknown; address?: unknown } | undefined;
+    if (!o || typeof o.policy !== "string") return "no policy in the output";
+    if (typeof o.address !== "string" || !isAddress(o.address) || getAddress(o.address) !== getAddress(wallet)) return "the policy is not this wallet's";
+    text = o.policy;
+  } catch {
+    return "the output is not the JSON of `mm wallet policy get --json`";
+  }
+  const want = contract.slice(2).toLowerCase();
+  const path: { indent: number; key: string }[] = [];
+  for (const line of text.split(/\r?\n/)) {
+    if (!line.trim() || line.trim().startsWith("#")) continue;
+    const indent = line.length - line.trimStart().length;
+    const m = /^\s*(?:-\s+)?([A-Za-z_][\w-]*)\s*:/.exec(line);
+    // a key closes its siblings and their children; a bare value ("- 0x…") belongs to the last key at or above it
+    while (path.length && (m ? path[path.length - 1].indent >= indent : path[path.length - 1].indent > indent)) path.pop();
+    if (m) path.push({ indent, key: m[1].toLowerCase() });
+    if (!line.toLowerCase().includes(want)) continue;
+    const keys = path.map((p) => p.key);
+    const allow = keys.some((k) => /allow|whitelist/.test(k));
+    const excluded = keys.some((k) => /recipient|deny|block/.test(k));
+    if (allow && !excluded) return true;
+  }
+  return "not under an allowlist of contract addresses";
 }
 
 async function run(
   d: OverrideDeps, cfg: Config, url: string, opts: { agentId?: string; maxAmount?: bigint }, jr: ReturnType<typeof journaler>,
+  state: { signed: boolean },
 ): Promise<OverrideResult> {
   if (!d.interactive) {
     throw new AncreError("ANCRE_OVERRIDE_HUMAN_ONLY", "The override is for a human at an interactive terminal",
@@ -155,12 +184,12 @@ async function run(
   const issued = new Map<string, Authorization>();
   const prepare = () => {
     const a = newAuthorization(zeroAddress, c.offer, d.nowSec(), d.random32());
-    issued.set(a.nonce.toLowerCase(), a);
+    issued.set(nonceKey(a.nonce), a);
     return usdcAuthorizationTypedDataJson(cfg.chainId, cfg.usdc, a);
   };
   /** the signer check, run before the page says "Signed" and again on the result */
   const verify = async (s: HumanSignature): Promise<{ signer: Address; auth: Authorization }> => {
-    const nonce = typeof s.template?.message?.nonce === "string" ? s.template.message.nonce.toLowerCase() : undefined;
+    const nonce = typeof s.template?.message?.nonce === "string" ? nonceKey(s.template.message.nonce) : undefined;
     const issuedAuth = nonce ? issued.get(nonce) : undefined;
     if (!issuedAuth) throw new AncreError("ANCRE_OVERRIDE_BAD_SIGNATURE", "No authorisation was issued to the signing page", "Nothing was paid");
     if (typeof s.address !== "string" || !isAddress(s.address)) throw new AncreError("ANCRE_OVERRIDE_BAD_SIGNATURE", "The signing page returned no address", "Nothing was paid");
@@ -182,12 +211,16 @@ async function run(
     return { signer, auth };
   };
   let sig: HumanSignature;
+  let accepted: { key: string; signer: Address; auth: Authorization } | undefined;
   try {
     sig = await d.humanSign({
       chainId: cfg.chainId,
       summary: `Pay ${ins.offer.amountUsdc} USDC to ${ins.offer.payTo} (ERC-8004 agent #${ins.agentId}) for ${url}, from your own wallet. ANCRE verdict: ${ins.verdict}.`,
       prepare,
-      accept: async (s) => void (await verify(s)),
+      accept: async (s) => {
+        const v = await verify(s);
+        accepted = { key: nonceKey(s.template.message.nonce), ...v };
+      },
       signal: d.signal,
     });
   } catch (e) {
@@ -195,7 +228,10 @@ async function run(
     throw new AncreError("ANCRE_OVERRIDE_NOT_SIGNED", `No human signature: ${(e as Error).message}`, "Nothing was paid");
   }
   if (d.signal?.aborted) throw new AncreError("ANCRE_OVERRIDE_NOT_SIGNED", "Cancelled (Ctrl-C) before the payment was sent", "Nothing was paid");
-  const { signer, auth } = await verify(sig);
+  // verified once, on the page, before "Signed"; a humanSign without the page (tests, scripts) is verified here
+  const { signer, auth } = accepted && accepted.key === nonceKey(sig.template?.message?.nonce) && getAddress(accepted.signer) === getAddress(sig.address)
+    ? accepted : await verify(sig);
+  state.signed = true;
   jr.j("override_signed", { payer: signer });
 
   const live = {

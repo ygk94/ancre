@@ -64,6 +64,8 @@ export function parsePaymentRequired(status: number, headers: Headers, body: str
 
 /** What an offer must be for ANCRE to pay it. Shared by the CLI (selectOffer) and the SDK guard (x402-guard.ts, M3). */
 export type OfferRules = { network: string; usdc: Address; maxAmount?: bigint };
+/** selectOffer only: among payable offers, prefer the first at most this amount (the payer's maxPerPayment) */
+export type OfferChoice = OfferRules & { preferAtMost?: bigint };
 
 /**
  * Why an offer is not payable, or undefined if it is: exact (EIP-3009, the default asset transfer method) in USDC
@@ -84,8 +86,8 @@ export function offerProblem(o: Partial<PaymentRequirements>, want: OfferRules):
   return undefined;
 }
 
-/** The first payable offer of the challenge (offerProblem), else ANCRE_NO_OFFER with every reason. */
-export function selectOffer(pr: PaymentRequired, want: OfferRules): PaymentRequirements {
+/** The first payable offer of the challenge (offerProblem), preferring one within preferAtMost, else ANCRE_NO_OFFER. */
+export function selectOffer(pr: PaymentRequired, want: OfferChoice): PaymentRequirements {
   const why: string[] = [];
   const ok = pr.accepts.filter((o, i) => {
     const p = offerProblem(o, want);
@@ -96,7 +98,8 @@ export function selectOffer(pr: PaymentRequired, want: OfferRules): PaymentRequi
     throw new AncreError("ANCRE_NO_OFFER", `No payable offer (${why.join("; ") || "empty accepts"})`,
       `ANCRE pays "exact" USDC on ${want.network} only, within --max-amount`);
   }
-  return ok[0];
+  const within = want.preferAtMost === undefined ? undefined : ok.find((o) => BigInt(o.amount) <= want.preferAtMost!);
+  return within ?? ok[0];
 }
 
 /**

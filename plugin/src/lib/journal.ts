@@ -47,6 +47,21 @@ export function fileJournal(path = journalPath(), warn: (s: string) => void = (s
   };
 }
 
+/**
+ * For the commands: a journal that remembers whether the flow wrote anything, so that a failure before or
+ * outside the flow (eth_chainId, the gateway, the host wallet state) is journaled too, once (M1, D47).
+ */
+export function trackedJournal(j: Journal) {
+  let wrote = false;
+  return {
+    journal: ((e) => { wrote = true; j(e); }) as Journal,
+    failedOutside: (kind: JournalEntry["kind"], url: string, e: unknown) => {
+      if (wrote) return;
+      j({ kind, url, agentId: "?", payTo: "?", amount: "?", detail: `${(e as { code?: string }).code ?? "ERROR"}: ${(e as Error)?.message ?? String(e)}` });
+    },
+  };
+}
+
 export function readJournal(path = journalPath(), limit = 100): (JournalEntry & { at: string })[] {
   if (limit <= 0 || !existsSync(path)) return [];
   const lines = readFileSync(path, "utf8").split("\n").filter(Boolean);

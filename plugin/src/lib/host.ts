@@ -100,7 +100,8 @@ export function toCommandError(e: unknown): never {
 /**
  * The Guard Mode policy of the selected server wallet, as the host itself prints it (`mm wallet policy get --json`),
  * run with the same Node and the same mm entry point as this process (not a `mm` found on PATH). The policy lives
- * in MetaMask's backend; changing it goes through the host's policy flow (2FA in Guard Mode, per the host's docs).
+ * in MetaMask's backend; changing it goes through the host's policy update, which can require MFA (mm 7.0.0
+ * `updatePolicy` answers `mfaRequired`; NOT VERIFIED in a real session).
  */
 export function readGuardPolicy(signal?: AbortSignal): Promise<string> {
   const entry = process.argv[1];
