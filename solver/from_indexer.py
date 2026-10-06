@@ -127,9 +127,12 @@ def _tag_identity(r: dict) -> str | None:
     """NUL (review 06/10): the tag's identity is `tagHash` = keccak256(tag1 bytes), exported as `h`; graph matches a
     feedback that has `h` by hash ONLY (R1 bis), so a `tag1Exact = false` display text (NUL, ill-formed UTF-16,
     > 1 KiB) is never matched. Excluding those feedbacks instead would be wrong: a schema tag longer than 1 KiB, or
-    containing U+0000, is matched by hash on chain and only has non-exact texts. A dump without these fields (schema
-    before v3, solver/tests/fixtures/indexer/) keeps the text (its tags are exact: 0 NUL in the real data). An
-    inconsistent row (non-exact text without hash, or an exact text that does not hash to tagHash) is refused."""
+    containing U+0000, is matched by hash on chain and only has non-exact texts. An inconsistent row (non-exact text
+    without hash, or an exact text that does not hash to tagHash) is refused.
+    A dump WITHOUT these fields (schema before v3, solver/tests/fixtures/indexer/ at 110 813 936) is accepted for
+    compatibility and matched by keccak of its text: its texts are NOT guaranteed exact (Envio's NUL retry stored
+    'vouch\\0' as 'vouch', review NUL), so such a dump must not feed a certificate. MEASURED 06/10 on that fixture:
+    9 290 tags, 0 U+0000 and 0 U+FFFD (a stripped NUL is invisible). The live source asks for tagHash (schema v3)."""
     h, exact = r.get("tagHash"), r.get("tag1Exact")
     if not h:
         if exact is False:
@@ -236,6 +239,11 @@ def parity(set_edges: list[dict], pairs: dict[tuple[str, int], PairEdge]) -> lis
 # ----------------------------------------------------------------------------- stub
 
 
+def _stub_tag(f: Feedback) -> dict:
+    th = tag_hash(f.tag1)
+    return {"tagHash": f.tag_hash or th, "tag1Exact": f.tag_hash in (None, th)}
+
+
 def make_stub(fbs: list[Feedback], idn: Identity, pairs: dict[tuple[str, int], PairEdge], out: Path,
               set_id: str = "ref", block: int = 3) -> Path:
     """Fixture in the indexer's GraphQL shape, built from a snapshot. The identity history is synthetic: one mint
@@ -266,7 +274,7 @@ def make_stub(fbs: list[Feedback], idn: Identity, pairs: dict[tuple[str, int], P
                               "logIndex": nxt(2)})
     feed = [{"id": f"{f.agent_id}-{f.client}-{f.index}", "agent_id": str(f.agent_id), "client": f.client,
              "feedbackIndex": str(f.index), "value": str(f.value), "valueDecimals": f.decimals, "tag1": f.tag1,
-             "tagHash": f.tag_hash or tag_hash(f.tag1), "tag1Exact": f.tag_hash in (None, tag_hash(f.tag1)),
+             **_stub_tag(f),
              "tag2": f.tag2, "blockNumber": str(f.block or 3), "logIndex": nxt(3),
              "revokedAtBlock": "4" if f.revoked else None}
             for f in fbs]

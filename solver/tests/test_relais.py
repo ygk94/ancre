@@ -13,13 +13,12 @@ import pytest
 from export import keccak
 from from_indexer import feedbacks_file, identity_file, parity
 from graph import (GRID, ZERO, Feedback, Identity, TagSpec, build_graph, dec_to_wad, load_feedbacks_onchain,
-                   replay_identity_events)
+                   replay_identity_events, tag_hash)
 import refresh as RF
 from test_solver import ident, schema
 
 C, D, W2, H1 = ("0x" + c * 40 for c in "cde1")
 FILT = ["vouch", "review", "slash"]
-tag_hash = lambda t: "0x" + keccak(t.encode()).hex()          # = the NewFeedback indexedTag1 topic
 
 
 # ----------------------------------------------------------------------------- REGCB
@@ -102,15 +101,27 @@ def test_regcb_raw_logs_through_refresh_decode():
 
 
 def test_regcb_indexer_export_agrees():
-    """from_indexer replays WalletChange rows; identity.ts writes NO WalletChange for the ignored late event, so the
-    export gives the same wallet as replay_identity_events (no tx hash needed on that path)."""
+    """from_indexer replays WalletChange rows; it cannot apply REGCB (no tx hash) and relies on identity.ts writing NO
+    WalletChange for the ignored late event (asserted by indexer/test/review.test.ts "REGCB": changes == [ZERO]).
+    Given those rows, the export and replay_identity_events on the raw logs give the same identity."""
+    unset = {"ev": "MetadataSet", "agent": 7, "key": "agentWallet", "val": ZERO}
+    raw = _reg(7, "0x01", [unset])
     rows = {"OwnerChange": [{"agent_id": "7", "from": ZERO, "to": C, "blockNumber": "10", "logIndex": 0}],
             "WalletChange": [{"agent_id": "7", "wallet": ZERO, "blockNumber": "10", "logIndex": 1}]}
 
     class Src:
         def rows(self, entity, block=None, where=None):
             return rows.get(entity, [])
-    assert identity_file(Src(), 10)["wallet"] == {"7": ZERO}
+    exp, rep = identity_file(Src(), 10), _replay(raw)
+    assert (exp["wallet"], exp["owner"]) == ({"7": rep.wallet[7]}, {"7": rep.owner[7]}) == ({"7": ZERO}, {"7": C})
+
+
+def test_regcb_mixed_tx_keys_refused():
+    """Events with and without transactionHash in one list: the keys never match, REGCB would be silently off."""
+    evs = _reg(7, "0x01", [{"ev": "MetadataSet", "agent": 7, "key": "agentWallet", "val": ZERO}])
+    evs[0] = {k: v for k, v in evs[0].items() if k != "tx"}
+    with pytest.raises(ValueError, match="mix"):
+        _replay(evs)
 
 
 # ----------------------------------------------------------------------------- NUL / tag1Exact
@@ -205,3 +216,16 @@ def test_nul_refresh_decode_keeps_the_topic_hash():
     e = RF.decode(lg)
     assert (e["tag1"], e["tagHash"], e["idx"], e["value"]) == ("vouch�", th, 1, 100)
     assert tag_hash(e["tag1"]) != th                      # the text is not the tag: only the hash identifies it
+
+
+def test_nul_refresh_read_all_hashes_the_bytes(monkeypatch):
+    """refresh.read_all reads the tags as bytes[]: every row carries h = keccak(tag1 bytes); main() checks it against
+    the NewFeedback topic instead of comparing two lossy texts."""
+    out = json.dumps([[C], [1], ["100"], [0], ["0x" + b"vouch\xff".hex()], ["0x"], [False]])
+
+    class P:
+        stdout = out
+    monkeypatch.setattr(RF.subprocess, "run", lambda *a, **k: P)
+    (row,) = RF.read_all(1, 10, "http://x")
+    assert (row["t1"], row["t2"], row["h"]) == ("vouch\ufffd", "", "0x" + keccak(b"vouch\xff").hex())
+    assert "bytes[],bytes[]" in RF.READ_ALL

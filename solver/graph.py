@@ -269,6 +269,13 @@ TOPIC_APPROVAL = "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3
 TOPIC_APPROVAL_FOR_ALL = "0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31"
 
 
+# REGCB phases, as in indexer/src/handlers/identity.ts (regPhase), applied only to events of the registration
+# transaction: event kind -> {phase before: phase after}; "ignore" = drop the event (late MetadataSet), phase done.
+_REGCB = {"transfer": {"minted": "callback", "callback": "callback"},
+          "wallet": {"minted": "callback", "callback": "callback", "registered": "done", "registeredStale": "ignore"},
+          "registered": {"minted": "registered", "callback": "registeredStale"}}
+
+
 def replay_identity_events(idn: Identity, events: list[dict], after_block: int, to_block: int) -> Identity:
     """Roll an Identity forward with decoded IdentityRegistry events (scratchpad nv/dec.json format:
     {ev, block, li, agent, frm/to | key/val | owner [, tx]}). Applies Transfer (owner, approval reset, past holder)
@@ -285,34 +292,33 @@ def replay_identity_events(idn: Identity, events: list[dict], after_block: int, 
     Transaction key: `tx` (transactionHash, set by refresh.decode). Without it, the BLOCK is the key, which gives
     the same answer on a complete log list: the logs of one transaction are contiguous, so every event of the
     agent between its mint and its Registered belongs to the registration transaction, and register() emits its
-    MetadataSet right after Registered (an agent is minted once, there is no burn)."""
+    MetadataSet right after Registered (an agent is minted once, there is no burn). A list that mixes events with
+    and without `tx` is refused (the two keys never compare equal: the rule would be silently off)."""
+    window = [e for e in events if after_block < e["block"] <= to_block]
+    if len({bool(e.get("tx")) for e in window}) > 1:      # mixed keys would never compare equal: REGCB silently off
+        raise ValueError("identity events mix logs with and without 'tx': give all or none their transactionHash")
     reg: dict[int, tuple[object, str]] = {}               # agent -> (registration tx key, phase)
 
-    def txk(e):
-        return e.get("tx") or ("block", e["block"])
-
-    def in_callback(a, e) -> bool:
+    def regcb(a, e, kind: str) -> bool:
+        """Advance the agent's registration phase (_REGCB); True = this is the late event to ignore."""
         k, ph = reg.get(a, (None, ""))
-        return k == txk(e) and ph in ("minted", "callback")
+        tk = e.get("tx") or ("block", e["block"])
+        if kind == "mint":
+            reg[a] = (tk, "minted")
+        elif k == tk and ph in _REGCB[kind]:
+            nxt = _REGCB[kind][ph]
+            reg[a] = (k, "done" if nxt == "ignore" else nxt)
+            return nxt == "ignore"
+        return False
 
-    for e in sorted(events, key=lambda e: (e["block"], e["li"])):
-        if not after_block < e["block"] <= to_block:
-            continue
+    for e in sorted(window, key=lambda e: (e["block"], e["li"])):
         a = e.get("agent")
         if e["ev"] == "Transfer":
-            if e["frm"].lower() == ZERO:
-                reg[a] = (txk(e), "minted")
-            elif in_callback(a, e):
-                reg[a] = (txk(e), "callback")
+            regcb(a, e, "mint" if e["frm"].lower() == ZERO else "transfer")
             idn.apply_transfer(a, e["frm"], e["to"], e["block"])
         elif e["ev"] == "MetadataSet" and e.get("key") == "agentWallet":
-            k, ph = reg.get(a, (None, ""))
-            if k == txk(e):
-                if ph == "registeredStale":                # register()'s own late event after a callback change
-                    reg[a] = (k, "done")
-                    continue
-                reg[a] = (k, "done" if ph == "registered" else "callback" if ph in ("minted", "callback") else ph)
-            idn.apply_wallet(a, e["val"])
+            if not regcb(a, e, "wallet"):
+                idn.apply_wallet(a, e["val"])
         elif e["ev"] == "Approval":                       # approve(approved, tokenId)
             idn.apply_approval(a, e["approved"])
         elif e["ev"] == "ApprovalForAll":
@@ -320,9 +326,7 @@ def replay_identity_events(idn: Identity, events: list[dict], after_block: int, 
         elif e["ev"] in (TOPIC_APPROVAL, TOPIC_APPROVAL_FOR_ALL):
             raise ValueError(f"undecoded approval event at block {e['block']}: decode it before replaying (R6 input)")
         elif e["ev"] == "Registered":
-            k, ph = reg.get(a, (None, ""))
-            if k == txk(e) and ph in ("minted", "callback"):
-                reg[a] = (k, "registered" if ph == "minted" else "registeredStale")
+            regcb(a, e, "registered")
             idn.owner.setdefault(a, e["owner"].lower())
             idn.wallet.setdefault(a, ZERO)
     idn.block = to_block
@@ -491,9 +495,9 @@ class Graph:
 
 
 def _tag_resolver(ftags: set[str], schema: dict[str, TagSpec]):
-    """R1 bis: feedback -> the schema tag it IS (a tag of the filter and of the schema), or None. With a hash, by
-    hash only (keccak256 of the schema tag's UTF-8 bytes); without, by exact text (a tag that cannot be UTF-8
-    encoded, i.e. with a lone surrogate, never comes from the chain and matches no hash)."""
+    """R1 bis: feedback -> the schema tag it IS (a tag of the filter and of the schema), or None, ALWAYS by hash:
+    keccak256 of the schema tag's UTF-8 bytes against the feedback's hash, or against keccak256 of its text when the
+    source carries no hash (the text is then the exact tag). One identity, one path."""
     usable = {t for t in ftags if t in schema}
     by_hash: dict[str, str] = {}
     for t in usable:
@@ -502,10 +506,18 @@ def _tag_resolver(ftags: set[str], schema: dict[str, TagSpec]):
         except UnicodeEncodeError:
             pass
 
+    text_hash: dict[str, str | None] = {}
+
     def tag_of(f: Feedback) -> str | None:
-        if f.tag_hash is not None:
-            return by_hash.get(f.tag_hash)
-        return f.tag1 if f.tag1 in usable else None
+        h = f.tag_hash
+        if h is None:                                   # exact text (readAllFeedback relay): its bytes are the tag
+            if f.tag1 not in text_hash:
+                try:
+                    text_hash[f.tag1] = tag_hash(f.tag1)
+                except UnicodeEncodeError:              # lone surrogate: not a byte string, matches nothing
+                    text_hash[f.tag1] = None
+            h = text_hash[f.tag1]
+        return by_hash.get(h) if h else None
     return tag_of
 
 

@@ -11,7 +11,9 @@ Provenance (all on-chain, never 8004scan, AM-R4.2):
   3. the identity of block B is rolled forward with the decoded IdentityRegistry events (graph.replay_identity_events:
      owner, past owners with their transfer block, agentWallet, approvals, operators; the late MetadataSet of
      register() after a callback change is ignored, REGCB, keyed by each log's transactionHash).
-A feedback whose NewFeedback log is in the window carries `h` = its indexedTag1 topic (graph R1 bis: matched by hash).
+Every re-read feedback carries `h` = keccak256 of its tag1 bytes (readAllFeedback read as bytes; checked against the
+NewFeedback indexedTag1 topic). Feedbacks kept from the base snapshot have no `h` (text identity: 0 NUL and 0 U+FFFD
+in the 9 291 tags of mainnet-110994810, MEASURED 06/10).
 Usage: .venv/bin/python refresh.py --to-block H [--from-snapshot B] [--rpc URL]   (writes data/mainnet-H.*.json.gz)
 """
 from __future__ import annotations
@@ -54,8 +56,9 @@ def _topics() -> dict[str, str]:
 
 T = _topics()
 NAME = {v: k for k, v in T.items()}
+# tags read as bytes[] (same ABI encoding as string[]): exact bytes, so `h` = keccak256(tag1) for every row (R1 bis)
 READ_ALL = ("readAllFeedback(uint256,address[],string,string,bool)"
-            "(address[],uint64[],int128[],uint8[],string[],string[],bool[])")
+            "(address[],uint64[],int128[],uint8[],bytes[],bytes[],bool[])")
 
 
 class RpcError(RuntimeError):
@@ -149,11 +152,16 @@ def decode(lg: dict) -> dict:
 
 
 def read_all(agent: int, block: int, rpc_url: str) -> list[dict]:
-    """readAllFeedback(agent, [], "", "", true) at `block`, through cast --json (exact int128, strings as stored)."""
+    """readAllFeedback(agent, [], "", "", true) at `block`, through cast --json (exact int128). Tags come back as
+    raw bytes (MEASURED 06/10: "0x766f756368" for agent #2): `h` = keccak256(tag1 bytes) is the tag identity, `t1`
+    and `t2` are display text (UTF-8 decoded with replacement, lossy only on invalid UTF-8)."""
     p = subprocess.run([CAST, "call", "--rpc-url", rpc_url, "--block", str(block), "--json", REPUTATION, READ_ALL,
                         str(agent), "[]", "", "", "true"], capture_output=True, text=True, check=True)
     cl, ix, vs, ds, t1, t2, rv = json.loads(p.stdout)
-    return [{"a": agent, "c": c.lower(), "i": int(i), "v": str(int(v)), "d": int(d), "t1": a1, "t2": a2, "r": bool(r)}
+    raw = lambda x: bytes.fromhex(x[2:])
+    return [{"a": agent, "c": c.lower(), "i": int(i), "v": str(int(v)), "d": int(d),
+             "t1": raw(a1).decode(errors="replace"), "t2": raw(a2).decode(errors="replace"), "r": bool(r),
+             "h": "0x" + keccak(raw(a1)).hex()}
             for c, i, v, d, a1, a2, r in zip(cl, ix, vs, ds, t1, t2, rv)]
 
 
@@ -181,19 +189,16 @@ def main(argv=None):
     fresh = {ag: read_all(ag, H, a.rpc) for ag in touched}
     blocks = {(e["agent"], e["client"], e["idx"]): e["block"] for e in rep if e["ev"] == "NewFeedback"}
     old_b = {(f["a"], f["c"], f["i"]): f.get("b") for f in base["feedbacks"]}
-    hashes = {(e["agent"], e["client"], e["idx"]): e["tagHash"] for e in rep if e["ev"] == "NewFeedback"}
-    old_h = {(f["a"], f["c"], f["i"]): f.get("h") for f in base["feedbacks"]}
     for e in rep:                                         # every NewFeedback log is found by readAllFeedback
         if e["ev"] == "NewFeedback":
             row = next((f for f in fresh[e["agent"]] if (f["c"], f["i"]) == (e["client"], e["idx"])), None)
-            assert row and (int(row["v"]), row["d"], row["t1"]) == (e["value"], e["dec"], e["tag1"]), (e, row)
+            assert row and (int(row["v"]), row["d"], row["h"]) == (e["value"], e["dec"], e["tagHash"]), (e, row)
     kept = [f for f in base["feedbacks"] if f["a"] not in fresh]
     new = []
     for ag, lst in fresh.items():
         for f in lst:
             b = blocks.get((ag, f["c"], f["i"])) or old_b.get((ag, f["c"], f["i"]))
-            h = hashes.get((ag, f["c"], f["i"])) or old_h.get((ag, f["c"], f["i"]))
-            new.append({**f, **({"b": b} if b else {}), **({"h": h} if h else {})})
+            new.append({**f, **({"b": b} if b else {})})
     fbs = sorted(kept + new, key=lambda f: (f["a"], f["c"], f["i"]))
     keys = {(f["a"], f["c"], f["i"]) for f in fbs}
     assert len(keys) == len(fbs)
