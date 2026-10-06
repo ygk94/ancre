@@ -3,6 +3,33 @@
 Légende : **MESURÉ** = sorti de `forge test` (commande donnée) · **CALCULÉ** = formule appliquée aux mesures · **DOC** = documentation Monad · **ESTIMÉ (CR)** = chiffre du CR du conseil, pour comparaison.
 Environnement : Foundry 1.8.3, solc 0.8.28 via-IR, optimizer 200, `network = "monad"`. Limite par transaction : **30 M gas** (DOC, `developer-essentials`, tableau « Transaction gas limit ») ; prix du gas **102 gwei** (MESURÉ, `cast gas-price --rpc-url https://rpc.monad.xyz`, 28/09 ; base fee 100 gwei).
 
+## Lot 02-bis (2026-10-06) : corrections A, B, C, R1-R8, renommage
+
+Méthode : mêmes bancs, sur une copie du contrat d'avant (commit `bc2d911`, worktree détaché dans le scratchpad) et sur le contrat corrigé, en fork du mainnet au bloc 108 445 171, avec les vrais registres. Les forks passent par `rpc1.monad.xyz` (historique complet ; `rpc.monad.xyz` ne sert plus ce bloc, mesuré le 06/10).
+Commandes :
+- `forge test --match-contract RegistryBenchTest --match-test "test_bench_small|test_bench_demo" -vv` (lignes `P1|`) ;
+- `forge test --match-contract VerifiedTest --gas-report` (preuves, sur les mocks) ;
+- `forge build --sizes`.
+
+| Cas (k = 3) | Avant (`bc2d911`) | 02-bis | Écart |
+|---|---|---|---|
+| Démo P1 (300 arêtes, 100 nœuds), mise à jour, **Registry-verified**, set jamais prouvé | 14 974 802 | **15 001 792** | +27 k (+0,18 %) |
+| Démo P1, premier certificat (après `reserveCapacity`), Registry-verified | 15 170 029 | 15 197 016 | +0,18 % |
+| Démo P1, mise à jour, Submitter-attested | 1 351 917 | 1 441 139 | +6,6 % (seconde passe : forme, AnchorAsSource) |
+| Démo P1, Registry-verified, **set déjà prouvé** (recherches `provenFalse` actives) | 15 170 029 | 16 101 820 | **+0,93 M pour 100 lignes, ≈ 9,3 k par ligne** |
+| `assess` avec veto, **mode strict** (veto par approbation, D48-B), agent avec masse, 100 nœuds | 139 138 | **182 127** | **+43 k** (le tour 7 estimait ≈ 32 k) |
+| `assess` avec veto, mode strict, 10 nœuds | 165 765 | 208 728 | +43 k |
+| `assess` sans veto, mode strict | 80 695 | 80 983 | 0 % |
+| `passesAnchorPolicy` / `isTrusted`, agent inconnu (refus bon marché) | 29 275 | 28 882 | −1 % |
+| `proveEdge`, médiane (mocks, 17 appels) | 202 195 | 242 945 | +41 k (marque `provenFalse` : nouveau slot, compteur) |
+| `proveWallet`, médiane (mocks) | 99 439 | 104 280 | +5 % |
+| **Taille du runtime** | 33 462 o | **37 121 o** | +3,7 Ko (limite Monad : 131 072 o ; EIP-170 ne s'applique pas sur Monad) |
+
+Tous les chiffres sont MESURÉS le 06/10.
+- **Coût de C.** La ligne « set déjà prouvé » a été mesurée avant l'optimisation `provenRows` : un set jamais prouvé ne fait aucune recherche. Ce chiffre est donc le coût que paie un set dont au moins une ligne est prouvée fausse.
+- **Veto par approbation.** Le surcoût vient d'un `getApproved`, d'un `ownerOf` et de 3 `isApprovedForAll` : 5 pages froides et des appels via proxy. Il n'est payé que par les ancres qui ne vetent pas déjà, et seulement dans un `assess` non paresseux. `passesAnchorPolicy` refuse avant toute lecture du registre quand les bornes échouent déjà. En mode rapide, ce coût est nul (`proveApproval`).
+- **Limite par transaction.** La démo Registry-verified tient sous la limite de 30 M gas (DOC). Elle reste sous 2²⁴ = 16,78 M même si un set est prouvé (16,10 M) : la marge vaut 0,68 M si l'EIP-7825 s'appliquait un jour (NON VÉRIFIÉ sur Monad).
+
 ## Intégration 02 + 04 (2026-10-01) : contrat v1 unifié
 
 Changements qui touchent le gas : règle de remplacement par qualité (accumulation de la masse par colonne, somme de la méfiance, quatre slots de plus : `mass`, `eFloor`, `distrustMass`, `eSubmitted` ; les deux derniers ajoutés après la revue de code), contrôle de la source des lignes (`_clientOf` : chemin rapide et chemin rare pour VIA_OWNER et les lignes sans source), tags stockés par leur seul hash (un slot de moins par tag).

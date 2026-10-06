@@ -76,3 +76,48 @@ Mock d'identité étendu : `getApproved`, `isApprovedForAll`, `approve`, `isAuth
 - mesures de gas : veto par approbation, coût de C, taille du contrat ;
 - ENCODING, PROOFS et GAS ;
 - E6 (vecteurs 04-bis), E7 (`/code-review high`, `/security-review`), E8 (script testnet simulé, rôles séparés), rapport 02bis.
+
+## 2026-10-06 (après-midi) — E2 à E6 terminés, E8 simulé
+
+**Fait.**
+- Les 7 tests rouges de l'entrée précédente sont corrigés :
+  - `test_B_*` : le défaut était dans **le test**, pas dans le contrat. Le jeu `_trustedX` n'avait pas de ligne vide pour X, donc la marge de troncature faisait échouer la règle ρ avant même l'approbation. En E1, ces 3 tests échouaient donc pour une autre raison que l'attaque : écart noté. Avec la ligne vide, ils passent après la correction.
+  - 4 tests existants sont mis à jour pour la nouvelle sémantique : R6 (REGISTRY_CHANGED au lieu de TRANSFERRED sur un registre illisible), C (`ProvenRowResubmitted`), R3 (retour à l'état engagé : plus de facture), burn réel au lieu d'un `getAgentWallet` qui revert.
+- **Optimisation C** : `SetState.provenRows`. Tant qu'aucune ligne du set n'est prouvée fausse, la soumission ne fait aucune recherche `provenFalse` ni aucun hash.
+- **E6, test différentiel** sur les vecteurs de 04-bis, lus en lecture seule : `git archive chantier/04bis-solveur solver/vectors` vers `contracts/.v04bis/` (ignoré par git), avec `ANCRE_VECTORS=.v04bis/solver/vectors/`.
+  - `test/CommonVectors.t.sol` rejoue les 8 vecteurs communs : registre rejoué sur les mocks, soumission, lectures attendues, et séquence C (preuve, resoumission, REGISTRY_CHANGED, contrôle honnête).
+  - `SolverVectors.t.sol` rejoue les vecteurs régénérés (snapshot 110 994 810).
+  - `VectorBase.sol` regroupe les helpers communs.
+- **R8, scripts** : T1 sépare owner (D), trésorerie (`T1_TREASURY`) et opérateur (`T1_OPERATOR`) ; nouveau `script/testnet/Deploy.s.sol` (étapes `ancre` puis `payer`).
+- **Documentation** :
+  - `ENCODING.md` : §0bis INTERFACE (G-1 à G-11, dont AM-03.3, l'appel direct obligatoire), §3.2, §3.4, §3.5 (hash des lignes prouvées), §5, §6, §7.1 (nouveaux montants), §7.2 à §7.4 ;
+  - `PROOFS.md` : L6 réécrit, L8 ajouté (ancre ≠ source) ;
+  - `GAS.md` : section 02-bis ;
+  - `PAYER.md`.
+- Forks : `foundry.toml` pointe sur `rpc1.monad.xyz`. MESURÉ le 06/10 : `rpc.monad.xyz` ne sert plus l'état du bloc 108 445 171.
+
+**Mesures** (MESURÉ le 06/10, commandes dans GAS.md §02-bis) :
+- Tests :
+  - 170 tests hors vecteurs (fork compris) ;
+  - 12 tests de vecteurs (`ANCRE_VECTORS=.v04bis/solver/vectors/ forge test --match-contract "CommonVectors|SolverVectors"`) ;
+  - **182 tests au total, tous verts**.
+- Veto par approbation, mode strict, k = 3 : **+43 k gas** par `assess` (139 138 → 182 127). Le tour 7 estimait ≈ 32 k.
+- C : **+27 k** sur la démo Registry-verified pour un set jamais prouvé (14 974 802 → 15 001 792), et **≈ 9,3 k par ligne** pour un set déjà prouvé (+0,93 M pour 100 lignes). Le tour 7 estimait 0,8 M.
+- `proveEdge` : +41 k (médiane sur les mocks).
+- Taille du contrat : **37 121 octets** (33 462 avant ; limite Monad 131 072).
+- Déploiement testnet simulé (`DEPLOY_STEP=ancre forge script script/testnet/Deploy.s.sol --rpc-url monad_testnet --sender …`) : **10 580 519 gas estimés**, soit ≈ 1,06 MON à 100 gwei et 2,15 MON au plafond affiché de 203 gwei. Monad facture la gas limit.
+
+**Décisions.**
+- **Hash des lignes sur la forme DÉCODÉE**, sans le feedbackIndex (non vérifié au niveau attesté) et indépendant de W. W = 4 reste donc permis, ce qui garde le chemin W = 4 testable (AM-08.22) : dans ce hash, W ne permet aucun réencodage.
+- Le hash d'une ligne d'alias = le contenu de sa référence : un alias et une copie complète équivalente ont le même hash.
+- L'ancienne garde sur les racines brutes est supprimée : `provenFalse` la couvre entièrement, puisque toute preuve qui élargit marque une ligne.
+- **R3** : bornes cumulées contre la ligne engagée, au lieu d'une somme d'écarts successifs. La preuve est plus simple et la borne plus serrée ; elle reste conservatrice sur les révélations ambiguës (AM-02bis.4).
+- **R6** : seule `ERC721NonexistentToken` vaut « agent inexistant » (mesuré sur le vrai registre).
+- **R8** : interdiction dans le contrat (constructeur, `setPolicy`, `setOperator`), plutôt que simple documentation.
+- `proveApproval` réutilise le bit de veto certifié.
+
+**INTERFACE** : voir ENCODING.md §0bis (renommage ABI, règle d'arête B, nouvelles erreurs, SPLUS strict, `rowHash` et `provenFalse` publics, `proveApproval` et `ApprovalProven`, montants §7.1, appel direct).
+- Le vecteur `mainnet_slash_anchor` du 01/10 (sur `main`) est refusé, comme attendu.
+- Les vecteurs de `main` ne passent plus `SolverVectors` sans `ANCRE_VECTORS` : ce sera réglé quand le pilote aura fusionné 04-bis.
+
+**Prochaine étape** : E7, `/code-review high` puis `/security-review` sur tout `contracts/src`.

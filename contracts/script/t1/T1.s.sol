@@ -6,12 +6,15 @@ import {AnchoredReputation} from "../../src/AnchoredReputation.sol";
 import {TrustGatedPayer, IERC20Min} from "../../src/TrustGatedPayer.sol";
 import {T1Oracle} from "./T1Oracle.sol";
 
-/// Test T1 (porte P3), on-chain side. One step per run, selected by T1_STEP. The broadcaster D is the
-/// deployer, owner, treasury and operator of the payer (testnet only). Run (Hugo, keystore account):
+/// Test T1 (porte P3), on-chain side. One step per run, selected by T1_STEP. The broadcaster D is the deployer
+/// and owner of the payer; the treasury (T1_TREASURY) and the operator (T1_OPERATOR) are two OTHER addresses
+/// (R8, review 05/10: an operator that is also the treasury drains the payer by sweep; the payer now refuses it).
+/// Run (Hugo, keystore account):
 ///   forge script script/t1/T1.s.sol --rpc-url monad_testnet --account <D> --broadcast --gas-estimate-multiplier 110
 /// Without --broadcast it is a simulation (no transaction). Steps:
 ///   deploy  : T1Oracle(burn 78 000) + TrustGatedPayer(maxPerPayment 0.01 USDC) + USDC.transfer(payer, T1_FUND)
-///             env: T1_PROVIDER (payTo P), T1_FUND (default 100000 = 0.1 USDC)
+///             env: T1_PROVIDER (payTo P), T1_TREASURY, T1_OPERATOR (distinct from D and from each other),
+///                  T1_FUND (default 100000 = 0.1 USDC)
 ///   burn    : oracle.setBurn(T1_BURN)                       env: T1_ORACLE, T1_BURN
 ///   agent   : oracle.setAgent(1, P, T1_TRUSTED, T1_STATUS)  env: T1_ORACLE, T1_PROVIDER, T1_TRUSTED, T1_STATUS
 ///   permit2 : payer.approvePermit2(max)                     env: T1_PAYER
@@ -30,10 +33,14 @@ contract T1Script is Script {
             address provider = vm.envAddress("T1_PROVIDER");
             uint256 fund = vm.envOr("T1_FUND", uint256(100_000));
             address d = msg.sender;
+            address treasury = vm.envAddress("T1_TREASURY");
+            address operator = vm.envAddress("T1_OPERATOR");
+            require(treasury != d && operator != d && operator != treasury, "T1: owner, treasury, operator must differ");
             T1Oracle oracle = new T1Oracle(78_000);
             oracle.setAgent(AGENT_ID, provider, true, 0);
             TrustGatedPayer payer = new TrustGatedPayer(
-                IERC20Min(USDC_TESTNET), PERMIT2, UPTO, AnchoredReputation(address(oracle)), d, d, d, bytes32(uint256(1)), 10_000
+                IERC20Min(USDC_TESTNET), PERMIT2, UPTO, AnchoredReputation(address(oracle)), d, treasury, operator,
+                bytes32(uint256(1)), 10_000
             );
             require(IERC20Min(USDC_TESTNET).transfer(address(payer), fund), "fund");
             console.log("T1_ORACLE=%s", address(oracle));
