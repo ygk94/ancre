@@ -253,7 +253,7 @@ function AgentPanel({ s, a, gate, reread }: { s: ScreenState; a: AgentState; gat
               }
             />
           ) : (
-            <Verdict pay={null} why={c.trusted ? "isTrusted = true: the payer would sign" : "isTrusted = false: the payer would refuse"} />
+            <Verdict pay={null} why={c.trusted ? "passesAnchorPolicy = true: the payer would sign" : "passesAnchorPolicy = false: the payer would refuse"} />
           )}
           <div className="badges">
             <span className="badge accent">certificate: {set.level}</span>
