@@ -83,3 +83,33 @@
 **INTERFACE** : `onchain_feedbacks.json` gagne le champ optionnel `b` (bloc du NewFeedback) ; `from_indexer` l'exporte depuis `Feedback.blockNumber`.
 
 **Prochaine étape** : intégration Alchemy (D55), puis E3.
+
+## 2026-10-06 ~14:00 — Intégration Alchemy (D55) : récepteur de Custom Webhook, codé contre des événements rejoués
+
+**Fait** (`solver/alchemy_hook.py`, `solver/tests/test_alchemy.py`, `solver/.env.example`)
+- `query` : le filtre GraphQL du Custom Webhook à coller dans le tableau de bord (un par réseau, 143 et 10143) : Reputation (NewFeedback, FeedbackRevoked), Identity (Transfer, MetadataSet, Approval, ApprovalForAll), Upgraded sur les deux, `CertificateSubmitted` du contrat ANCRE. Topics dérivés des signatures que la boucle de sondage utilise déjà (une seule source).
+- `serve` : récepteur HTTP `POST /alchemy`. **Signature vérifiée avant tout parsing** (HMAC-SHA256 du corps brut, comparaison à temps constant ; 401 sinon), réponse immédiate (Alchemy relance les non-200 pendant 10 min, DOC), traitement dans un thread, **déduplication par (txHash, logIndex)**. Les événements passent par le **même code** que le sondage : `certifier.relevant` → `Certifier.run_once` (recertification), `CertificateSubmitted` du set surveillé → `watcher.watch_once` (audit + preuves). À blanc par défaut, `--send` pour du réel.
+- **Repli conservé** : un sondeur `eth_getLogs` (`poll_once`) couvre en continu les blocs non traités, via le même dédoublonneur (le webhook donne la latence, le sondage la complétude) ; alarme `webhook_silent`.
+- **Mesures journalisées à chaque webhook** : `latencyS` = réception − timestamp du bloc (résolution 1 s) ; **état du bloc à la réception** lu par les étiquettes RPC juste après le POST (`Finalized` si bloc ≤ `finalized`, sinon `notFinalized`), et l'écart à `latest` en blocs. Si l'export de l'indexeur est en retard sur le bloc de l'événement : `data_behind`, rattrapé au tour de sondage suivant.
+- `payloads` / `replay` : charges utiles au format Alchemy **reconstruites à partir de vrais logs du mainnet**, signées et rejouées. Fixture : `tests/fixtures/alchemy/mainnet-108835676-110994810.jsonl`.
+- Secrets : `ALCHEMY_SIGNING_KEY`, `ALCHEMY_NOTIFY_TOKEN`, `ALCHEMY_API_KEY` depuis l'environnement ou `solver/.env` (ignoré par git, `*.env`, vérifié par `git check-ignore`). Aucune clé dans le dépôt.
+
+**Mesures**
+- MESURÉ (06/10, rpc1) : les étiquettes `latest`, `safe`, `finalized` répondent ; à l'instant de la sonde, `safe = latest` et `finalized = latest − 1` (`cast block <tag> --field number`).
+- MESURÉ (06/10) : fixture = **29 blocs, 51 logs** (8 NewFeedback, 21 Transfer, 22 MetadataSet) sur (108 835 675, 110 994 810], en un seul `eth_getLogs` par adresse sur rpc1 (2,6 s). Les 8 NewFeedback décodés = les 8 avis relus par `refresh.py`.
+- MESURÉ (local, à blanc, mainnet 9 291 avis, set honnête 0x0730/0xf7d5, filtre core) : **POST signé → plan du certificateur : médiane 1,2 ms, p90 1,3 ms, max 8,4 ms** sur 20 POST (`run_once` seul : 3,2 ms à froid).
+- **NON MESURÉ** : le délai réel bloc → réception du webhook et l'état du bloc à l'envoi par Alchemy. Il faut le webhook de Hugo (voir blocage). La syntaxe `topics: [[…]]` (OU en position 0) est **NON VÉRIFIÉE** sur Monad tant que « Test Webhook » ne l'a pas acceptée.
+- Tests : `.venv/bin/python -m pytest -q tests` → **155 passed** (dont 9 Alchemy). Le test de refus de signature vérifie aussi que le **même corps est accepté** avec la bonne signature, et qu'un POST refusé n'atteint jamais le dispatcher (AM-INT.2).
+
+**Décisions**
+- Le webhook est un **déclencheur**, pas une source de données : les avis eux-mêmes sont relus depuis l'export de l'indexeur (Envio, 03) ou le registre. Envio reste la base historique et l'auditeur (D42) ; Alchemy pousse l'événement. Les deux rôles ne se recouvrent pas.
+- Réponse 200 **avant** le traitement : une recertification lente ne doit pas provoquer de relances en rafale.
+- État de commit classé en deux valeurs seulement (`Finalized` / `notFinalized`) : le RPC public ne distingue pas Proposed de Voted (`safe = latest` mesuré).
+
+🧑 **BLOQUÉ (Hugo)** : compte Alchemy (offre gratuite, 5 webhooks), app « ANCRE » sur Monad mainnet + testnet, puis : (1) la **clé de signature** du Custom Webhook, (2) le **jeton Notify** (seulement pour créer le webhook par API), (3) une **URL HTTPS publique** pour le récepteur (tunnel pendant la démo, hôte permanent pour le 13 → 27/10). À mettre dans `solver/.env` (jamais commité). Ensuite : `alchemy_hook.py query --chain 10143 --ancre <adresse>` → coller dans le tableau de bord → « Test Webhook » → `serve`, puis mesurer délai et état sur le testnet.
+
+**Phrase pour le README et la vidéo Alchemy** (vérifiable dans `solver/alchemy_hook.py`) :
+> *Every ERC-8004 feedback, transfer or certificate submission on Monad reaches ANCRE through an Alchemy Custom Webhook; the receiver checks the HMAC signature, then recertifies the anchor set or audits the new certificate with the same code as the polling loop, which now only fills gaps.*
+(À compléter par le délai mesuré quand le webhook existe ; ne pas annoncer de chiffre avant.)
+
+**Prochaine étape** : E3, vecteurs communs.
