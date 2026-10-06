@@ -12,6 +12,9 @@
               recompute (skipped), a growing graph (AM-04.1), a censoring certificate by a third party (refused), a
               zero-mass client (ignored), a third-party addNodes front-run, an age refresh
   scenario D  a large first certificate split (addNodes chunks, reserveCapacity, submitCertificate) with a crash
+Against the contract of 02-bis: on an OPEN set the nodes go through addNodes first (A1d, inline newNodes revert
+BadNodes), every row of A, B and common carries `expect` and `pass`, and an expected refusal is asserted on its error
+(common: name and argument). The exit code is 1 if any row fails.
 Every transaction records eth_estimateGas, the gas limit sent and gasUsed.
 
 Usage: .venv/bin/python simulate.py [--fork-url URL] [--fork-block B] [--out report.json]
@@ -79,7 +82,46 @@ def build_contract() -> str:
     subprocess.run([str(FOUNDRY / "forge"), "build", "--root", str(ROOT / "contracts"), "--out", str(out),
                     "--cache-path", str(SCR / "forge-cache"), "src/AnchoredReputation.sol"], check=True,
                    capture_output=True)
-    return json.loads((out / "AnchoredReputation.sol" / "AnchoredReputation.json").read_text())["bytecode"]["object"]
+    art = json.loads((out / "AnchoredReputation.sol" / "AnchoredReputation.json").read_text())
+    _learn_errors(art["abi"])
+    return art["bytecode"]["object"]
+
+
+def _learn_errors(abi: list) -> None:
+    """Every custom error of the compiled contract decodes by name in the report (certifier.ERROR_SIGS predates 02-bis:
+    AnchorAsSource, ProvenRowResubmitted... came back as raw selectors). Only the in-memory table is extended."""
+    for it in abi:
+        if it.get("type") == "error":
+            sig = f"{it['name']}({','.join(i['type'] for i in it['inputs'])})"
+            C.ERRORS.setdefault(C._selector(sig), it["name"])
+
+
+def _err_name(reason: str | None) -> str:
+    return (reason or "").split("(")[0]
+
+
+def _is_open(cfg: C.SetConfig) -> bool:
+    return not cfg.submitters
+
+
+def nodes_first(chain: C.Chain, contract: str, set_id: str, cfg: C.SetConfig, enc: dict) -> tuple[dict, dict | None]:
+    """02-bis A1d: an OPEN set refuses inline `newNodes` (BadNodes): the nodes go in their own addNodes transaction,
+    then the certificate is submitted with empty newNodes, as certifier.py does (and contracts/test/CommonVectors.t.sol
+    `_call`). Idempotent: nothing is sent once the table holds more than the anchors. Returns the encoding to submit
+    and the addNodes record (None when nothing was sent)."""
+    if not _is_open(cfg) or not enc["newNodes"]:
+        return enc, None
+    if int(chain.call(contract, "nodeCount(bytes32)(uint256)", set_id).split()[0]) > len(cfg.anchors):
+        return {**enc, "newNodes": b""}, None
+    args = (set_id, "0x" + enc["newNodes"].hex())
+    try:
+        est = chain.estimate(contract, C.ADD_NODES_SIG, *args)
+    except C.ChainError as e:
+        return enc, {"fn": "addNodes", "result": "REJECTED", "reason": C.revert_reason(str(e))}
+    rc = chain.send(contract, C.ADD_NODES_SIG, *args, gas_limit=cfg.gas.limit(est))
+    assert rc["ok"], rc
+    return {**enc, "newNodes": b""}, {"fn": "addNodes", "result": "ACCEPTED", "estimate": est,
+                                       "gasUsed": int(rc["gasUsed"], 16)}
 
 
 def deploy(chain: C.Chain, bytecode: str) -> str:
@@ -148,15 +190,19 @@ def _submit_args(set_id: str, obj: dict, enc: dict, vectors: bytes | None = None
 def submit_vector(chain: C.Chain, contract: str, set_id: str, obj: dict, cfg: C.SetConfig) -> dict:
     """Submit one vector; returns the outcome with the on-chain values to compare (eEff, roots, quality)."""
     cert, nodes, enc = vector_calldata(obj)
+    enc, added = nodes_first(chain, contract, set_id, cfg, enc)
+    if added and added["result"] != "ACCEPTED":
+        return {"result": "REJECTED", "reason": added["reason"], "addNodes": added}
     args = _submit_args(set_id, obj, enc)
     try:
         est = chain.estimate(contract, C.SUBMIT_SIG, *args)
     except C.ChainError as e:
-        return {"result": "REJECTED", "reason": C.revert_reason(str(e))}
+        return {"result": "REJECTED", "reason": C.revert_reason(str(e)), **({"addNodes": added} if added else {})}
     rc = chain.send(contract, C.SUBMIT_SIG, *args, gas_limit=cfg.gas.limit(est))
     oc = C.OnChain.read(chain, contract, set_id)
     exp = obj["expected"]
-    return {"result": "ACCEPTED" if rc["ok"] else "REVERTED", "estimate": est, "gasLimit": cfg.gas.limit(est),
+    return {"result": "ACCEPTED" if rc["ok"] else "REVERTED", **({"addNodes": added} if added else {}),
+            "estimate": est, "gasLimit": cfg.gas.limit(est),
             "gasUsed": int(rc["gasUsed"], 16), "eEffOnChain": oc.e_eff, "eEffExpected": int(exp["eEff"]),
             "graphRootMatch": oc.graph_root == exp["graphRoot"], "vectorRootMatch": oc.vector_root == exp["vectorRoot"],
             "massMatch": oc.mass == int(exp["mass"]), "qMatch": oc.q_cur == int(exp["qEff"])}
@@ -171,6 +217,8 @@ def scenario_vectors(chain: C.Chain, contract: str) -> list[dict]:
         set_id, reg = register(chain, contract, cfg)
         assert set_id == obj["set"]["setId"]
         cert, nodes, enc = vector_calldata(obj)
+        enc, added = nodes_first(chain, contract, set_id, cfg, enc)    # the mutated copy needs the table too
+        assert added is None or added["result"] == "ACCEPTED", added
         bad = bytearray(enc["vectors"])                 # mutated copy first: t of the last massive node of column 0
         rec = (cert.k + 1) * 8
         v = max(i for i in range(cert.n) if cert.t[0][i] > 0)
@@ -181,8 +229,14 @@ def scenario_vectors(chain: C.Chain, contract: str) -> list[dict]:
         except C.ChainError as e:
             mutated = "rejected: " + C.revert_reason(str(e))
         out = submit_vector(chain, contract, set_id, obj, cfg)
+        if added:
+            out["addNodes"] = added
+        ok = (out["result"] == "ACCEPTED" and mutated.startswith("rejected: NotSubSolution")
+              and out["eEffOnChain"] == out["eEffExpected"]
+              and all(out[k] for k in ("graphRootMatch", "vectorRootMatch", "massMatch", "qMatch")))
         res.append({"vector": name, "level": "Registry-verified" if cfg.registry_verified else "Submitter-attested",
                     "ownerFallback": cfg.owner_fallback, "setIdMatch": True, "registerGas": reg["gasUsed"],
+                    "expect": "ACCEPTED, mutated copy NotSubSolution, on-chain values = expected", "pass": ok,
                     "mutated": mutated, **out})
     return res
 
@@ -235,17 +289,41 @@ def scenario_violations(chain: C.Chain, contract: str) -> list[dict]:
             r = submit_vector(chain, contract, set_id, obj, cfg)
             row = {"vector": name, "level": level, "submission": r["result"], "reason": r.get("reason"),
                    "gasUsed": r.get("gasUsed")}
+            if "addNodes" in r:
+                row["addNodes"] = r["addNodes"]
+            refused = level == "Registry-verified" and name in REFUSED_AT_SUBMISSION
+            row["expect"] = REFUSED_AT_SUBMISSION[name] if refused else "ACCEPTED, then proven by the watcher"
             if r["result"] == "ACCEPTED":
                 _, nodes, _ = vector_calldata(obj)
                 row.update(_prove_all(chain, contract, cfg, set_id, nodes, fbs, idn, start))
+            if refused:
+                row["pass"] = r["result"] == "REJECTED" and _err_name(r.get("reason")) == row["expect"]
+            else:
+                want = sorted(VIOLATION_KINDS[name])
+                row["pass"] = (r["result"] == "ACCEPTED" and sorted(row.get("detected", [])) == want
+                               and sorted(p["kind"] for p in row.get("proofs", []) if p.get("status") is True) == want)
             out.append(row)
     return out
 
 
+# Registry-verified refuses these at submission (the row is re-read in the registry: the committed weight differs)
+REFUSED_AT_SUBMISSION = {"fabricated": "EdgeMismatch", "inflated": "EdgeMismatch"}
+VIOLATION_KINDS = {"fabricated": ["FABRICATED"], "inflated": ["INFLATED"], "dilution": ["DILUTION"],
+                   "omitted_negative": ["OMITTED_NEGATIVE"], "two_omissions_one_row": ["DILUTION", "OMITTED_NEGATIVE"]}
+
+
+def _outcome_ok(result: str | None, reason: str | None, expect: str) -> bool:
+    """`expect` is either ACCEPTED or the exact revert of the vector (name and arguments, e.g. AnchorAsSource(5))."""
+    if expect == "ACCEPTED":
+        return result == "ACCEPTED"
+    return result == "REJECTED" and reason == expect
+
+
 def scenario_common(chain: C.Chain, contract: str) -> list[dict]:
-    """Common vectors 02-bis / 04-bis (vectors/common/). The toy registries are not on the fork, so the toys run at the
-    Submitter-attested level (own setId); the mainnet one runs Registry-verified. Against the contract of `main` this
-    records the state BEFORE the D48/R1 fixes (attacks expected to pass); against 02-bis, `expect.submission` holds."""
+    """Common vectors 02-bis / 04-bis (vectors/common/), against the contract of 02-bis: `expect.submission` (and for C
+    `expect.resubmission`) must hold exactly, an expected refusal is asserted on its error AND its argument. The toy
+    registries are not on the fork, so the toys run at the Submitter-attested level (own setId); the mainnet one runs
+    Registry-verified (open set: its nodes go through addNodes first, A1d)."""
     import common_vectors as CV
     out = []
     for p in sorted((HERE / "vectors" / "common").glob("*.json")):
@@ -256,27 +334,60 @@ def scenario_common(chain: C.Chain, contract: str) -> list[dict]:
             obj, "att_" + name, registry_verified=False, submitters=[DEV_ADDR],
             tag_schema_hash=vector_schema_hash("attested:" + name))
         row = {"vector": name, "level": "Registry-verified" if real else "Submitter-attested",
-               "expectAfterFix": obj["expect"]["submission"]}
+               "expect": obj["expect"]["submission"]}
         try:
             set_id, _ = register(chain, contract, cfg)
             start = chain.block_number()
             r = submit_vector(chain, contract, set_id, obj, cfg)
             row.update(result=r["result"], reason=r.get("reason"), gasUsed=r.get("gasUsed"))
-            if "resubmission" in obj and r["result"] == "ACCEPTED":      # C: prove the false row, then resubmit
-                fbs, idn = CV.Reg.from_block(obj["registry"]).build()
-                _, nodes, _ = vector_calldata(obj)
-                row["proof"] = _prove_all(chain, contract, cfg, set_id, nodes, fbs, idn, start)["proofs"]
-                again = {**obj, "calldata": obj["resubmission"]["calldata"], "nCert": obj["resubmission"]["nCert"],
-                         "expected": {**obj["expected"], **obj["resubmission"]["expected"]}}
-                r2 = submit_vector(chain, contract, set_id, again, cfg)
-                row["resubmission"] = {"result": r2["result"], "reason": r2.get("reason"),
-                                       "expectAfterFix": obj["expect"]["resubmission"]}
-                ctl = submit_vector(chain, contract, set_id, {**obj, "calldata": obj["control"]["calldata"]}, cfg)
-                row["control"] = {"result": ctl["result"], "reason": ctl.get("reason"), "expectAfterFix": "ACCEPTED"}
+            if "addNodes" in r:
+                row["addNodes"] = r["addNodes"]
+            row["pass"] = _outcome_ok(r["result"], r.get("reason"), row["expect"])
+            if "resubmission" in obj and r["result"] == "ACCEPTED":
+                row.update(_scenario_c(chain, contract, cfg, set_id, obj, start, CV))
+                row["pass"] = row["pass"] and row["resubmission"]["pass"] and row["control"]["pass"] \
+                    and row["fact"]["pass"]
         except Exception as e:                                           # one vector never stops the scenario
-            row.update(result="ERROR", reason=C.revert_reason(str(e)) if isinstance(e, C.ChainError) else str(e)[:300])
+            row.update(result="ERROR", reason=C.revert_reason(str(e)) if isinstance(e, C.ChainError) else str(e)[:300],
+                       **{"pass": False})
         out.append(row)
     return out
+
+
+def _scenario_c(chain, contract, cfg, set_id, obj, start, CV) -> dict:
+    """D48-C (02-bis): the false row is proven (proveEdge, by the watcher), which stores the edge FACT; the same false
+    row resubmitted is then REFUSED (ProvenRowResubmitted(u), expect.resubmission), and the honest certificate (control)
+    is accepted. The resubmission is not "adapted" to pass: refusing it is the rule under test. The liveness path is
+    checked too: refreshFact on the unchanged registry has nothing to update (NothingToProve), the fact stays."""
+    fbs, idn = CV.Reg.from_block(obj["registry"]).build()
+    _, nodes, _ = vector_calldata(obj)
+    res = {"proof": _prove_all(chain, contract, cfg, set_id, nodes, fbs, idn, start)["proofs"]}
+    then = obj["expect"]["then"]["proveEdge"]
+    proven = [p for p in res["proof"] if p.get("status") is True]
+    res["proofPass"] = [p["kind"] for p in proven] == [then["kind"]]
+    # the fact stored by the proof: (client of the proven row, agentJ) -> registry weight 0 (no such feedback)
+    client = obj["nodes"][then["row"]]["address"]
+    fact = chain.call(contract, "edgeFact(bytes32,address,uint256)(bool,int256)", set_id, client,
+                      str(then["agentJ"])).split()
+    try:
+        chain.estimate(contract, "refreshFact(bytes32,address,uint256)", set_id, client, str(then["agentJ"]))
+        refresh = "ACCEPTED (unexpected: the registry did not change)"
+    except C.ChainError as e:
+        refresh = C.revert_reason(str(e))
+    res["fact"] = {"client": client, "agentJ": then["agentJ"], "proven": fact[0] == "true", "w": int(fact[1]),
+                   "refreshFact": refresh, "pass": res["proofPass"] and fact[0] == "true" and int(fact[1]) == 0
+                   and refresh == "NothingToProve()"}
+    again = {**obj, "calldata": obj["resubmission"]["calldata"], "nCert": obj["resubmission"]["nCert"],
+             "expected": {**obj["expected"], **obj["resubmission"]["expected"]}}
+    r2 = submit_vector(chain, contract, set_id, again, cfg)
+    exp2 = obj["expect"]["resubmission"]
+    res["resubmission"] = {"result": r2["result"], "reason": r2.get("reason"), "expect": exp2,
+                           "pass": _outcome_ok(r2["result"], r2.get("reason"), exp2)}
+    ctl = submit_vector(chain, contract, set_id, {**obj, "calldata": obj["control"]["calldata"],
+                                                  "nCert": obj["resubmission"]["nCert"]}, cfg)
+    res["control"] = {"result": ctl["result"], "reason": ctl.get("reason"), "gasUsed": ctl.get("gasUsed"),
+                      "expect": "ACCEPTED", "pass": ctl["result"] == "ACCEPTED"}
+    return res
 
 
 def _run(svc: C.Certifier, *args, **kw) -> dict:
@@ -475,7 +586,12 @@ def main(argv=None):
         anvil.kill()
     Path(args.out).parent.mkdir(exist_ok=True)
     Path(args.out).write_text(json.dumps(report, indent=1))
-    print(json.dumps({k: report[k] for k in ("vectors", "violations") if k in report}, indent=1)[:12000])
+    summary = {k: [{"vector": r["vector"], "level": r.get("level"), "pass": r.get("pass")} for r in report[k]]
+               for k in ("vectors", "violations", "common") if k in report}
+    print(json.dumps(summary, indent=1))
+    failed = [(k, r["vector"], r.get("level")) for k, rows in summary.items() for r in rows if r["pass"] is not True]
+    print(f"{sum(len(v) for v in summary.values()) - len(failed)} pass, {len(failed)} fail: {failed}")
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":
