@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import from_indexer as FI
 import run_mainnet as R
-from graph import build_graph, load_feedbacks_onchain, load_identity_json, load_schema
+from graph import build_graph, load_feedbacks_onchain, load_identity_json, load_schema, tag_hash
 
 HERE = Path(__file__).resolve().parents[1]
 RAW = json.load(open(HERE / "schema_reference.json"))
@@ -34,8 +34,9 @@ def test_stub_roundtrip_identity_and_feedbacks(stub, tmp_path):
     fbs, idn, _, d = stub
     files = FI.export(FI.FixtureSource(d), R.BLOCK, tmp_path)
     fb2 = load_feedbacks_onchain(files["feedbacks"])
-    nob = lambda l: sorted((replace(f, block=0) for f in l), key=lambda f: (f.agent_id, f.client, f.index))
+    nob = lambda l: sorted((replace(f, block=0, tag_hash=None) for f in l), key=lambda f: (f.agent_id, f.client, f.index))
     assert nob(fb2) == nob(fbs)                     # the stub dates unknown blocks at 3 (blocks: next test)
+    assert all(f.tag_hash == tag_hash(f.tag1) for f in fb2)    # schema v3 rows: tagHash exported as the identity
     assert all(f2.block == f.block for f, f2 in zip(sorted(fbs, key=lambda f: (f.agent_id, f.client, f.index)),
                                                     sorted(fb2, key=lambda f: (f.agent_id, f.client, f.index)))
                if f.block)

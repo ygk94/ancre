@@ -31,15 +31,15 @@ import urllib.request
 from collections import defaultdict
 from pathlib import Path
 
-from graph import ZERO, Feedback, Identity, PairEdge, identity_to_json
+from graph import ZERO, Feedback, Identity, PairEdge, identity_to_json, tag_hash
 
 PAGE = 1000
 CHAIN_FIELD = "chainId"          # per-chain key of the multichain indexer (design §5: ids are (id, chainId))
 
 # Entity -> fields, as in design-indexeur-envio.md §5. Relations are exposed by Hasura as `<field>_id`.
 ENTITIES = {
-    "Feedback": ["id", "agent_id", "client", "feedbackIndex", "value", "valueDecimals", "tag1", "tag2",
-                 "blockNumber", "logIndex", "revokedAtBlock"],
+    "Feedback": ["id", "agent_id", "client", "feedbackIndex", "value", "valueDecimals", "tag1", "tagHash",
+                 "tag1Exact", "tag2", "blockNumber", "logIndex", "revokedAtBlock"],   # tagHash, tag1Exact: schema v3
     "OwnerChange": ["id", "agent_id", "from", "to", "isMint", "blockNumber", "logIndex"],
     "WalletChange": ["id", "agent_id", "wallet", "blockNumber", "logIndex"],
     "ApprovalChange": ["id", "agent_id", "approved", "blockNumber", "logIndex"],
@@ -123,19 +123,50 @@ def _order(r: dict) -> tuple[int, int]:
     return int(r["blockNumber"]), int(r["logIndex"])
 
 
+def _tag_identity(r: dict) -> str | None:
+    """NUL (review 06/10): the tag's identity is `tagHash` = keccak256(tag1 bytes), exported as `h`; graph matches a
+    feedback that has `h` by hash ONLY (R1 bis), so a `tag1Exact = false` display text (NUL, ill-formed UTF-16,
+    > 1 KiB) is never matched. Excluding those feedbacks instead would be wrong: a schema tag longer than 1 KiB, or
+    containing U+0000, is matched by hash on chain and only has non-exact texts. An inconsistent row (non-exact text
+    without hash, or an exact text that does not hash to tagHash) is refused.
+    A dump WITHOUT these fields (schema before v3, solver/tests/fixtures/indexer/ at 110 813 936) is accepted for
+    compatibility and matched by keccak of its text: its texts are NOT guaranteed exact (Envio's NUL retry stored
+    'vouch\\0' as 'vouch', review NUL), so such a dump must not feed a certificate. MEASURED 06/10 on that fixture:
+    9 290 tags, 0 U+0000 and 0 U+FFFD (a stripped NUL is invisible). The live source asks for tagHash (schema v3)."""
+    h, exact = r.get("tagHash"), r.get("tag1Exact")
+    if not h:
+        if exact is False:
+            raise ValueError(f"Feedback {r.get('id')}: tag1Exact = false without tagHash, the tag cannot be identified")
+        return None
+    h = h.lower()
+    if exact is not False:
+        try:
+            same = tag_hash(r["tag1"]) == h
+        except UnicodeEncodeError:
+            same = False
+        if not same:
+            raise ValueError(f"Feedback {r.get('id')}: tag1 claimed exact but keccak(tag1) != tagHash {h}")
+    return h
+
+
 def feedbacks_file(src, block: int) -> dict:
     fbs = []
     for r in src.rows("Feedback", block):
         rev = r.get("revokedAtBlock")
+        h = _tag_identity(r)
         fbs.append({"a": int(r["agent_id"]), "c": r["client"].lower(), "i": int(r["feedbackIndex"]),
                     "v": str(int(r["value"])), "d": int(r["valueDecimals"]), "t1": r["tag1"], "t2": r["tag2"],
-                    "r": rev is not None and int(rev) <= block, "b": int(r["blockNumber"])})
+                    "r": rev is not None and int(rev) <= block, "b": int(r["blockNumber"]),
+                    **({"h": h} if h else {})})
     return {"block": block, "feedbacks": sorted(fbs, key=lambda f: (f["a"], f["c"], f["i"]))}
 
 
 def identity_file(src, block: int) -> dict:
     """Replay the identity history up to `block` (inclusive), in chain order. A Transfer clears getApproved
-    (ERC-721); the registry itself emits MetadataSet(agentWallet, "") on transfer, indexed as a WalletChange."""
+    (ERC-721); the registry itself emits MetadataSet(agentWallet, "") on transfer, indexed as a WalletChange.
+    REGCB: the late MetadataSet of register() after a callback change is filtered by the indexer (identity.ts writes
+    no WalletChange for it), so this replay applies every row; it has no transaction hash to apply the rule itself
+    (graph.replay_identity_events does it on raw logs)."""
     ev = [("owner", r) for r in src.rows("OwnerChange", block)]
     ev += [("wallet", r) for r in src.rows("WalletChange", block)]
     ev += [("approval", r) for r in src.rows("ApprovalChange", block)]
@@ -208,6 +239,11 @@ def parity(set_edges: list[dict], pairs: dict[tuple[str, int], PairEdge]) -> lis
 # ----------------------------------------------------------------------------- stub
 
 
+def _stub_tag(f: Feedback) -> dict:
+    th = tag_hash(f.tag1)
+    return {"tagHash": f.tag_hash or th, "tag1Exact": f.tag_hash in (None, th)}
+
+
 def make_stub(fbs: list[Feedback], idn: Identity, pairs: dict[tuple[str, int], PairEdge], out: Path,
               set_id: str = "ref", block: int = 3) -> Path:
     """Fixture in the indexer's GraphQL shape, built from a snapshot. The identity history is synthetic: one mint
@@ -238,6 +274,7 @@ def make_stub(fbs: list[Feedback], idn: Identity, pairs: dict[tuple[str, int], P
                               "logIndex": nxt(2)})
     feed = [{"id": f"{f.agent_id}-{f.client}-{f.index}", "agent_id": str(f.agent_id), "client": f.client,
              "feedbackIndex": str(f.index), "value": str(f.value), "valueDecimals": f.decimals, "tag1": f.tag1,
+             **_stub_tag(f),
              "tag2": f.tag2, "blockNumber": str(f.block or 3), "logIndex": nxt(3),
              "revokedAtBlock": "4" if f.revoked else None}
             for f in fbs]
