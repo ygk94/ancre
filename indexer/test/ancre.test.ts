@@ -3,9 +3,10 @@
 // is attached to the ANCRE events, as a direct EOA call would carry it.
 import { describe, it } from "vitest";
 import { createTestIndexer } from "envio";
-import { encodeFunctionData, keccak256, toHex, type Hex } from "viem";
+import { encodeFunctionData, type Hex } from "viem";
 import abi from "../abis/AnchoredReputation.json" with { type: "json" };
 import { decodeRows, graphRoot } from "../src/lib/certificate.js";
+import { decodeSetCall } from "../src/lib/calls.js";
 
 const CHAIN = 10143;
 const ZERO: Hex = "0x0000000000000000000000000000000000000000";
@@ -15,7 +16,6 @@ const O1: Hex = "0x1111111111111111111111111111111111111111";
 const W1: Hex = "0x2222222222222222222222222222222222222222";
 const O2: Hex = "0x3333333333333333333333333333333333333333";
 const SUBMITTER: Hex = "0x4444444444444444444444444444444444444444";
-const SET_ID = keccak256(toHex("demo-set"));
 const E18 = 10n ** 18n;
 
 const mint = (tokenId: bigint, to: Hex) => ({ contract: "IdentityRegistry" as const, event: "Transfer" as const, params: { from: ZERO, to, tokenId } });
@@ -46,6 +46,9 @@ const policy = { theta: E18 / 1000n, rhoN: 1, rhoD: 2, minAnchors: 2, vetoQuorum
 const registerInput = encodeFunctionData({ abi, functionName: "registerAnchorSet", args: [{
   anchors: [A, B], lambdas: [E18 / 2n, E18 / 2n], alphaN: 1, alphaD: 3, tagSchemaHash: ("0x" + "00".repeat(32)) as Hex,
   tags: [{ tag: "vouch", min: 0n, neutral: 0n, max: 100n * E18, kind: 0 }], policy }] });
+const SET_ID = decodeSetCall(registerInput)!.setId; // computeSetId(p), as the contract emits it
+const CONTRACT: Hex = "0x0000000000000000000000000000000000000001"; // config placeholder on 10143
+const ANCRE = { contract: "AnchoredReputation" as const, srcAddress: CONTRACT };
 const certInput = (rows: Row[]) => encodeFunctionData({ abi, functionName: "submitCertificate",
   args: [SET_ID, 4, E18, agentNodes(1, 2), "0x", encodeRows(rows)] });
 
@@ -60,17 +63,18 @@ function world() {
   return [
     mint(1n, O1), setWallet(1n, W1), mint(2n, O2),
     fb(1n, A, 1n, 100n, "vouch"), fb(1n, B, 1n, 100n, "vouch"), fb(2n, W1, 1n, 50n, "vouch"),
-    { contract: "AnchoredReputation" as const, event: "AnchorSetRegistered" as const,
-      transaction: { input: registerInput, hash: ("0x" + "01".repeat(32)) as Hex },
+    { ...ANCRE, event: "AnchorSetRegistered" as const,
+      transaction: { input: registerInput, to: CONTRACT, hash: ("0x" + "01".repeat(32)) as Hex },
       params: { setId: SET_ID, anchors: [A, B], lambdas: [E18 / 2n, E18 / 2n], alphaN: 1n, alphaD: 3n } },
   ];
 }
-const submit = (rows: Row[], input: Hex = certInput(rows), tx = "02") => [
-  { contract: "AnchoredReputation" as const, event: "NodesAdded" as const, transaction: { input },
+const rootOf = (rows: Row[]) => graphRoot(decodeRows(encodeRows(rows)).rows.map((r) => r.leaf));
+const submit = (rows: Row[], input: Hex = certInput(rows), root: Hex = rootOf(HONEST), tx = "02") => [
+  { ...ANCRE, event: "NodesAdded" as const, transaction: { input, to: CONTRACT },
     params: { setId: SET_ID, fromIndex: 2n, count: 2n } },
-  { contract: "AnchoredReputation" as const, event: "CertificateSubmitted" as const,
-    transaction: { input, from: SUBMITTER, hash: ("0x" + tx.repeat(32)) as Hex },
-    params: { setId: SET_ID, certBlock: 1n, eEff: 15n, graphRoot: ("0x" + "00".repeat(32)) as Hex,
+  { ...ANCRE, event: "CertificateSubmitted" as const,
+    transaction: { input, to: CONTRACT, from: SUBMITTER, hash: ("0x" + tx.repeat(32)) as Hex },
+    params: { setId: SET_ID, certBlock: 1n, eEff: 15n, graphRoot: root,
       vectorRoot: ("0x" + "00".repeat(32)) as Hex, versionHash: ("0x" + "00".repeat(32)) as Hex,
       nCert: 4n, numRows: BigInt(rows.length), registryVerified: true } },
 ];
@@ -82,14 +86,12 @@ async function run(items: unknown[]) {
 }
 
 describe("AnchoredReputation handlers", () => {
-  it("registers the set from calldata and rebuilds the node table", async (t) => {
+  it("registers the set from calldata (params hash to setId) and rebuilds the node table", async (t) => {
     const ix = await run([...world(), ...submit(HONEST)]);
     const set = await ix.AnchorSet.getOrThrow(SET_ID);
-    t.expect(set.decodable).toBe(true);
+    t.expect([set.decodable, set.nodesComplete, set.registryVerified, set.nodeCount]).toEqual([true, true, true, 4]);
     t.expect(set.anchors).toEqual([A, B]);
     t.expect(JSON.parse(set.tagsJson!)).toEqual([{ tag: "vouch", min: "0", neutral: "0", max: (100n * E18).toString(), kind: 0 }]);
-    t.expect(set.registryVerified).toBe(true);
-    t.expect(set.nodeCount).toBe(4);
     const nodes = (await ix.SetNode.getAll()).sort((a, b) => a.index - b.index).map((n) => [n.index, n.kind, n.agentId ?? n.address]);
     t.expect(nodes).toEqual([[0, "anchor", A], [1, "anchor", B], [2, "agent", "1"], [3, "agent", "2"]]);
   });
@@ -97,33 +99,60 @@ describe("AnchoredReputation handlers", () => {
   it("an honest certificate is AUDITED with 0 discrepancy and the set is CLEAN", async (t) => {
     const ix = await run([...world(), ...submit(HONEST)]);
     const [cert] = await ix.Certificate.getAll();
-    t.expect(cert!.status).toBe("AUDITED");
+    t.expect([cert!.status, cert!.graphRootMatches, cert!.submitter]).toEqual(["AUDITED", true, SUBMITTER]);
     t.expect([cert!.rowsChecked, cert!.edgesChecked, cert!.discrepancyCount]).toEqual([3, 3, 0]);
-    t.expect(cert!.submitter).toBe(SUBMITTER);
-    t.expect(cert!.graphRootMatches).toBe(false); // the simulated event carries a dummy root: the mismatch is reported
-    const root = graphRoot(decodeRows(encodeRows(HONEST)).rows.map((r) => r.leaf));
-    const items = submit(HONEST);
-    (items[1]!.params as { graphRoot: Hex }).graphRoot = root;
-    const ok = await run([...world(), ...items]);
-    t.expect((await ok.Certificate.getAll())[0]!.graphRootMatches).toBe(true);
     const h = await ix.SetHealth.getOrThrow(SET_ID);
     t.expect([h.status, h.certificates, h.openDiscrepancies]).toEqual(["CLEAN", 1, 0]);
   });
 
-  it("an inflated edge is reported with its on-chain remedy and the set flagged", async (t) => {
-    const inflated: Row[] = [HONEST[0]!, HONEST[1]!, { u: 2, src: W1, edges: [[3, 10_000, 1]] }];
-    const ix = await run([...world(), ...submit(inflated)]);
-    const ds = (await ix.Discrepancy.getAll()).map((d) => [d.kind, d.agentId, d.wCommitted, d.wRegistry, d.proof]);
-    t.expect(ds).toEqual([["INFLATED", "2", 10_000, 5_000, "proveEdge"]]);
-    t.expect((await ix.SetHealth.getOrThrow(SET_ID)).status).toBe("DISCREPANCY");
+  it("rows that do not hash to the committed graphRoot are ROOT_MISMATCH, never CLEAN", async (t) => {
+    const ix = await run([...world(), ...submit(HONEST, certInput(HONEST), ("0x" + "00".repeat(32)) as Hex)]);
+    const [cert] = await ix.Certificate.getAll();
+    t.expect([cert!.status, cert!.graphRootMatches, cert!.discrepancyCount]).toEqual(["ROOT_MISMATCH", false, 0]);
+    t.expect((await ix.SetHealth.getOrThrow(SET_ID)).status).toBe("UNAUDITED");
   });
 
-  it("a relayed submission (wrapper calldata) is UNDECODABLE, never reported clean", async (t) => {
+  it("an inflated edge is flagged with its remedy; the on-chain proof closes it", async (t) => {
+    const inflated: Row[] = [HONEST[0]!, HONEST[1]!, { u: 2, src: W1, edges: [[3, 10_000, 1]] }];
+    const ix = await run([...world(), ...submit(inflated, certInput(inflated), rootOf(inflated))]);
+    const ds = (await ix.Discrepancy.getAll()).map((d) => [d.kind, d.u, d.agentId, d.wCommitted, d.wRegistry, d.proof]);
+    t.expect(ds).toEqual([["INFLATED", 2, "2", 10_000, 5_000, "proveEdge"]]);
+    t.expect((await ix.SetHealth.getOrThrow(SET_ID)).status).toBe("DISCREPANCY");
+    await ix.process({ chains: { [CHAIN]: { simulate: [{ ...ANCRE, event: "EdgeProven",
+      params: { setId: SET_ID, node: 2n, agentId: 2n, wOld: 10_000n, wNew: 5_000n, eLowEff: 20n, eEff: 20n } }] } } as never });
+    const h = await ix.SetHealth.getOrThrow(SET_ID);
+    t.expect([h.status, h.openDiscrepancies, h.edgesProven]).toEqual(["CLEAN", 0, 1]);
+    t.expect((await ix.Discrepancy.getAll())[0]!.provenAtBlock).toBeDefined();
+  });
+
+  it("a relayed call (wrapper calldata, or not addressed to the contract) is never audited", async (t) => {
     const wrapper = ("0xdeadbeef" + certInput(HONEST).slice(2)) as Hex;
     const ix = await run([...world(), ...submit(HONEST, wrapper)]);
-    const [cert] = await ix.Certificate.getAll();
-    t.expect(cert!.status).toBe("UNDECODABLE");
+    t.expect((await ix.Certificate.getAll())[0]!.status).toBe("UNDECODABLE");
     t.expect((await ix.SetHealth.getOrThrow(SET_ID)).status).toBe("UNAUDITED");
-    t.expect((await ix.AnchorSet.getOrThrow(SET_ID)).decodable).toBe(false); // its NodesAdded was undecodable too
+    const set = await ix.AnchorSet.getOrThrow(SET_ID);
+    t.expect([set.decodable, set.nodesComplete]).toEqual([true, false]); // the schema is known; the node table is not
+
+    const items = submit(HONEST);
+    for (const it of items) (it.transaction as { to: Hex }).to = "0x00000000000000000000000000000000000000ff"; // a forwarder
+    const fwd = await run([...world(), ...items]);
+    t.expect((await fwd.Certificate.getAll())[0]!.status).toBe("UNDECODABLE");
+  });
+
+  it("set params that do not hash to the event's setId give no schema (UNKNOWN_SET)", async (t) => {
+    const items = world();
+    const reg = items[items.length - 1] as { params: { setId: Hex } };
+    const other = ("0x" + "ab".repeat(32)) as Hex;
+    reg.params.setId = other;
+    const certs = submit(HONEST).map((it) => ({ ...it, params: { ...it.params, setId: other } }));
+    const ix = await run([...items, ...certs]);
+    t.expect((await ix.AnchorSet.getOrThrow(other)).decodable).toBe(false);
+    t.expect((await ix.Certificate.getAll())[0]!.status).toBe("UNDECODABLE"); // the cert calldata names SET_ID, not `other`
+  });
+
+  it("a registry upgrade after the certificate marks the set STALE", async (t) => {
+    const ix = await run([...world(), ...submit(HONEST), { ...ANCRE, event: "RegistryChanged",
+      params: { setId: SET_ID, certifiedVersionHash: ("0x" + "01".repeat(32)) as Hex, currentVersionHash: ("0x" + "02".repeat(32)) as Hex } }]);
+    t.expect((await ix.SetHealth.getOrThrow(SET_ID)).status).toBe("STALE");
   });
 });

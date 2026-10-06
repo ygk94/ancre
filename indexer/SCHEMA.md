@@ -73,16 +73,18 @@ anchor set may commit its own filter, D12; the certificate audit replays it).
 ## ANCRE certificates — live audit (contract `AnchoredReputation`)
 
 Handlers in `src/handlers/ancre.ts`. Node tables, tag schemas and certificate rows are decoded from the calldata of
-**direct** calls (`registerAnchorSet`, `addNodes`, `submitCertificate`, read via `transaction.input`); a relayed call
-(multicall, Safe, relayer) is never guessed: it is marked undecodable.
+**direct** calls to the contract (`registerAnchorSet`, `addNodes`, `submitCertificate`, read via `transaction.input`,
+`transaction.to` = the contract). Decoded data is trusted only when it provably is the committed data: set params must
+hash to the setId (`computeSetId`), rows must hash to the event's `graphRoot`. A relayed call (multicall, Safe, relayer)
+is never guessed: it is marked undecodable.
 
 | Entity | Content |
 |---|---|
-| `AnchorSet` (kind `onchain`, id = setId) | anchors, lambdas, α, `tagsJson` (the set's edge schema, bounds in WAD), `policyJson`, `ownerFallback`, `registryVerified`, `decodable`, `nodeCount` |
+| `AnchorSet` (kind `onchain`, id = setId) | anchors, lambdas, α, `tagsJson` (the set's edge schema, bounds in WAD), `policyJson`, `ownerFallback`, `registryVerified`, `decodable` (params decoded **and** hashing to setId), `nodesComplete`, `nodeCount` |
 | `SetNode` (id = setId-index) | the set's node table: anchors at 0..k−1, then appended agents/addresses in contract order |
-| `Certificate` (id = txHash-logIndex) | event fields + `submitter`, `status` (`AUDITED` / `UNDECODABLE` / `UNKNOWN_SET` / `NODES_MISSING`), `graphRootMatches`, `rowsChecked`, `edgesChecked`, `discrepancyCount` |
-| `Discrepancy` | one audit finding: `kind` (see `src/lib/audit.ts`), the edge (`u`, `dst`, `client`, `agentId`, committed vs registry weight and row sums) and `proof`, the on-chain remedy (`proveEdge`, `proveWallet`, or refused at submission) |
-| `SetHealth` (id = setId) | `status` (`CLEAN` / `DISCREPANCY` / `UNAUDITED`), certificates, latest certificate and `eEff`, `openDiscrepancies`, `edgesProven`, `rowsVoided` |
+| `Certificate` (id = txHash-logIndex) | event fields + `submitter`, `status` (`AUDITED` / `UNDECODABLE` / `ROOT_MISMATCH` / `UNKNOWN_SET` / `NODES_MISSING`), `graphRootMatches`, `rowsChecked`, `edgesChecked`, `discrepancyCount` |
+| `Discrepancy` | one audit finding: `kind` (see `src/lib/audit.ts`), the edge (`u`, `dst`, `client`, `agentId`, committed vs registry weight and row sums) `proof`, the on-chain remedy (`proveEdge`, `proveWallet`, or refused at submission, by certificate level), and `provenAtBlock` once a proof landed |
+| `SetHealth` (id = setId) | `status` (`CLEAN` / `DISCREPANCY` / `UNAUDITED` / `STALE` after `RegistryChanged`), certificates, latest certificate and `eEff`, `openDiscrepancies` (closed by `EdgeProven` / `RowVoided`), `edgesProven`, `rowsVoided`, `transfersFlagged`, `registryChangedAtBlock` |
 
 The audit runs inside the handler against the registry state rebuilt by the indexer **at that log** (events of a chain
 are processed in block/log order). Contract address: placeholder (`0x…01`) on 143 and 10143 until deployment.
@@ -109,9 +111,11 @@ query { Discrepancy(where: {set_id: {_eq: "0x…"}}) { kind proof agentId client
 - `test/audit.test.ts` (`pnpm test:parity`): audit on Monad's rebuilt state (block 108 835 675): 4 honest vectors →
   0 discrepancy, 4 normative violations (D37) → FABRICATED, INFLATED, OMITTED_NEG ×2, INFLATED (dilution).
 - `test/ancre.test.ts` (`pnpm test`): the certificate handlers on a simulated registry: set and node table from calldata,
-  honest certificate AUDITED/CLEAN, Merkle root check, inflated edge flagged with `proveEdge`, relayed call UNDECODABLE.
+  honest certificate AUDITED/CLEAN, wrong root → ROOT_MISMATCH, inflated edge flagged with `proveEdge` then closed by
+  `EdgeProven`, relayed or forwarded call UNDECODABLE, params not hashing to setId → no schema, `RegistryChanged` → STALE.
 - `test/ancre.real.test.ts` (`pnpm test:parity`): the same handlers on Monad's real state (block 108 835 675) with the
-  real calldata of the normative vectors: 4 honest → AUDITED, 0 discrepancy, root identical; 4 violations flagged. MESURÉ 06/10.
+  real calldata of the normative vectors: our `computeSetId` equals the solver's setId on all 8; 4 honest → AUDITED,
+  0 discrepancy, root identical; 4 violations flagged. MESURÉ 06/10.
 
 ## Example queries
 

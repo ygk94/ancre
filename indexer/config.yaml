@@ -30,6 +30,8 @@ contracts:
       - event: "CertificateSubmitted(bytes32 indexed setId, uint64 indexed certBlock, uint256 eEff, bytes32 graphRoot, bytes32 vectorRoot, bytes32 versionHash, uint32 nCert, uint32 numRows, bool registryVerified)"
       - event: "EdgeProven(bytes32 indexed setId, uint256 indexed node, uint256 indexed agentId, int256 wOld, int256 wNew, uint256 eLowEff, uint256 eEff)"
       - event: "RowVoided(bytes32 indexed setId, uint256 indexed node, uint256 eLowEff, uint256 eEff)"
+      - event: "TransferFlagged(bytes32 indexed setId, uint256 indexed agentId)"
+      - event: "RegistryChanged(bytes32 indexed setId, bytes32 certifiedVersionHash, bytes32 currentVersionHash)"
 chains:
   - id: 143                         # Monad mainnet
     start_block: 52952790           # Identity proxy deployment (Reputation: 52952794), MESURÉ 27/09

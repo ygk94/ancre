@@ -142,7 +142,9 @@ type AnchorSet {                     # "ref" = reference schema (src/lib/schema_
   policyJson: String                 # full Policy struct (theta, rho, m, q, vetoMax, maxAge, ...)
   ownerFallback: Boolean             # D44
   registryVerified: Boolean          # D32
-  decodable: Boolean                 # false = registerAnchorSet not called directly (relayed): no schema, no audit
+  decodable: Boolean                 # false = registerAnchorSet not decodable as a direct call (relayed, or params not
+                                     # hashing to setId): no schema, no audit (null for a set seen only through later events)
+  nodesComplete: Boolean             # false once an addNodes / newNodes could not be decoded: later certificates NODES_MISSING
   nodeCount: Int                     # anchors + appended nodes, as seen by the indexer
   registeredBlock: BigInt
   registeredTx: String
@@ -164,6 +166,7 @@ type SetNode {                       # node table of an on-chain set; id = setId
 enum CertificateStatus {
   AUDITED                            # decoded and audited against the registry state at its block
   UNDECODABLE                        # submitCertificate not called directly (relayer, multicall, Safe): calldata unavailable
+  ROOT_MISMATCH                      # decoded rows do not hash to the event's graphRoot (or nCert differs): not the committed graph
   UNKNOWN_SET                        # set registered by an undecodable transaction: no schema to audit against
   NODES_MISSING                      # node table incomplete (an addNodes was undecodable)
 }
@@ -194,6 +197,7 @@ type Discrepancy {                   # one audit finding; id = certificateId-n (
   id: ID!
   certificate: Certificate!
   set_id: String! @index
+  provenAtBlock: BigInt              # EdgeProven / RowVoided on this row after the certificate: remedied on chain
   kind: String! @index               # FABRICATED | INFLATED | OVERSTATED_NEG | OMITTED_NEG | WRONG_INDEX | SOURCE | SOURCE_MISSING | UNKNOWN_AGENT | SHAPE
   proof: String                      # on-chain remedy: proveEdge | proveWallet | refused at submission | none
   u: Int!
@@ -214,10 +218,12 @@ type SetHealth {                     # id = setId: what a watcher needs at a gla
   certificates: Int!
   lastCertificate: Certificate
   lastCertBlock: BigInt
-  status: String!                    # CLEAN | DISCREPANCY | UNAUDITED
-  openDiscrepancies: Int!            # findings of the latest certificate
+  status: String!                    # CLEAN | DISCREPANCY | UNAUDITED | STALE (registry upgraded since the certificate)
+  openDiscrepancies: Int!            # findings of the latest certificate not yet remedied on chain
   edgesProven: Int!                  # EdgeProven events (a proof landed on chain)
   rowsVoided: Int!                   # RowVoided events
+  transfersFlagged: Int!             # TransferFlagged events (a certified agent changed hands, D35)
+  registryChangedAtBlock: BigInt     # RegistryChanged: the ERC-8004 implementation differs from the certified one
   lastEEff: BigInt
 }
 

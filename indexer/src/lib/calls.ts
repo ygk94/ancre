@@ -1,7 +1,7 @@
 // Decoding of the ANCRE contract's calls from the transaction input (P2 gate, chantier 03: a handler reads
 // `transaction.input`). Only DIRECT calls are decodable: through a relayer, a multicall or a Safe, the input is the
 // wrapper's, and the caller gets `undefined` (UNDECODABLE). Pure functions: safe in both handler phases.
-import { decodeFunctionData, type Hex } from "viem";
+import { decodeFunctionData, encodeAbiParameters, keccak256, type Hex } from "viem";
 import abi from "../../abis/AnchoredReputation.json" with { type: "json" };
 import { decodeNewNodes, type NewNode } from "./certificate.js";
 
@@ -9,6 +9,7 @@ const ABI = abi as readonly unknown[] as Parameters<typeof decodeFunctionData>[0
 
 export type SetTag = { tag: string; min: string; neutral: string; max: string; kind: number };
 export type SetCall = {
+  setId: Hex;                        // computeSetId(p), recomputed from the decoded params
   anchors: string[]; lambdas: string[]; alphaN: number; alphaD: number; tags: SetTag[];
   policy: Record<string, unknown> & { ownerFallback: boolean; registryVerified: boolean };
 };
@@ -37,6 +38,7 @@ export function decodeSetCall(input: string | undefined): SetCall | undefined {
     policy: Record<string, unknown> & { ownerFallback: boolean; registryVerified: boolean };
   };
   return {
+    setId: computeSetId(p),
     anchors: p.anchors.map((a) => a.toLowerCase()),
     lambdas: p.lambdas.map(String),
     alphaN: Number(p.alphaN), alphaD: Number(p.alphaD),
@@ -59,4 +61,13 @@ export function decodeCertCall(input: string | undefined): CertCall | undefined 
   const args = decode(input, "submitCertificate");
   if (!args) return undefined;
   return { setId: args[0] as Hex, nCert: Number(args[1]), newNodes: args[3] as Hex, rows: args[5] as Hex };
+}
+
+// AnchoredReputation.computeSetId: keccak256(abi.encode(anchors, lambdas, alphaN, alphaD, tagSchemaHash, tags, policy)).
+// The handler compares it with the event's setId, so that calldata from a wrapper sharing the selector is never trusted.
+const SET_PARAMS = (ABI as readonly { type: string; name?: string; inputs?: { components?: unknown[] }[] }[])
+  .find((x) => x.type === "function" && x.name === "registerAnchorSet")!.inputs![0]!.components as
+  readonly { name: string; type: string; components?: unknown[] }[];
+function computeSetId(p: Record<string, unknown>): Hex {
+  return keccak256(encodeAbiParameters(SET_PARAMS as never, SET_PARAMS.map((c) => p[c.name]) as never));
 }

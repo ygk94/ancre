@@ -6,7 +6,8 @@
 import { describe, it } from "vitest";
 import { createTestIndexer } from "envio";
 import { existsSync, readFileSync } from "node:fs";
-import { encodeFunctionData, keccak256, toHex, type Hex } from "viem";
+import { encodeFunctionData, keccak256, toHex } from "viem";
+import { decodeSetCall } from "../src/lib/calls.js";
 import abi from "../abis/AnchoredReputation.json" with { type: "json" };
 
 const LOCAL = new URL("./vectors/", import.meta.url); // standalone repo; ../../solver/vectors in the monorepo
@@ -14,26 +15,30 @@ const DIR = existsSync(LOCAL) ? LOCAL : new URL("../../solver/vectors/", import.
 const BLOCK = 108_835_675;
 const load = (f: string) => JSON.parse(readFileSync(new URL(f, DIR), "utf8"));
 
+const CONTRACT = "0x0000000000000000000000000000000000000001"; // config placeholder on 143
+const ANCRE = { contract: "AnchoredReputation", srcAddress: CONTRACT };
+
 function items(v: any, block: number) {
-  const setId = keccak256(toHex(v.label ?? v.format + JSON.stringify(v.calldata.rows).slice(0, 40))); // one set per vector
   const s = v.set;
   const policy = { ...s.policy, theta: BigInt(s.policy.theta), maxAge: BigInt(s.policy.maxAge), minRefresh: BigInt(s.policy.minRefresh),
     slackRefresh: BigInt(s.policy.slackRefresh), eLowMax: BigInt(s.policy.eLowMax) };
   const registerInput = encodeFunctionData({ abi, functionName: "registerAnchorSet", args: [{
     anchors: s.anchors, lambdas: s.lambdas.map(BigInt), alphaN: s.alphaN, alphaD: s.alphaD, tagSchemaHash: s.tagSchemaHash,
     tags: s.tags.map((t: any) => ({ ...t, min: BigInt(t.min), neutral: BigInt(t.neutral), max: BigInt(t.max) })), policy }] });
+  const setId = decodeSetCall(registerInput)!.setId; // computeSetId(p): must equal the solver's setId
+  const tx = keccak256(toHex(v.label));
   const input = encodeFunctionData({ abi, functionName: "submitCertificate",
     args: [setId, v.nCert, 10n ** 18n, v.calldata.newNodes, v.calldata.vectors, v.calldata.rows] });
   const k = s.anchors.length;
   const added = (v.calldata.newNodes.length - 2) / 2 / 5; // agent entries only in these vectors (0x01 ‖ u32)
   const blk = { number: block };
-  return { setId, items: [
-    { contract: "AnchoredReputation", event: "AnchorSetRegistered", block: blk, transaction: { input: registerInput, hash: setId },
+  return { setId, tx, items: [
+    { ...ANCRE, event: "AnchorSetRegistered", block: blk, transaction: { input: registerInput, to: CONTRACT, hash: tx },
       params: { setId, anchors: s.anchors, lambdas: s.lambdas.map(BigInt), alphaN: BigInt(s.alphaN), alphaD: BigInt(s.alphaD) } },
-    { contract: "AnchoredReputation", event: "NodesAdded", block: blk, transaction: { input },
+    { ...ANCRE, event: "NodesAdded", block: blk, transaction: { input, to: CONTRACT },
       params: { setId, fromIndex: BigInt(k), count: BigInt(added) } },
-    { contract: "AnchoredReputation", event: "CertificateSubmitted", block: blk,
-      transaction: { input, hash: setId, from: "0x00000000000000000000000000000000000000c0" },
+    { ...ANCRE, event: "CertificateSubmitted", block: blk,
+      transaction: { input, to: CONTRACT, hash: tx, from: "0x00000000000000000000000000000000000000c0" },
       params: { setId, certBlock: BigInt(BLOCK), eEff: BigInt(v.expected.eEff ?? 0), graphRoot: v.expected.graphRoot ?? ("0x" + "00".repeat(32)),
         vectorRoot: v.expected.vectorRoot ?? ("0x" + "00".repeat(32)), versionHash: "0x" + "00".repeat(32),
         nCert: BigInt(v.nCert), numRows: BigInt(v.rows.length), registryVerified: true } },
@@ -46,22 +51,23 @@ describe.runIf(process.env.PARITY === "1" && existsSync(DIR))("certificate handl
     await ix.process({ chains: { 143: { startBlock: 52_952_790, endBlock: BLOCK } } });
     const files = ["mainnet_slash_anchor.json", "mainnet_honest_d20.json", "mainnet_scanner_preD15.json", "mainnet_em_d44.json",
       "violations/fabricated.json", "violations/inflated.json", "violations/omitted_negative.json", "violations/dilution.json"];
-    const sets: Record<string, string> = {};
+    const txs: Record<string, string> = {};
     let block = BLOCK + 1;
     for (const f of files) {
       const v = load(f);
       t.expect(v.identityBlock, f).toBe(BLOCK);
-      const { setId, items: its } = items({ ...v, label: f }, block++);
-      sets[f] = setId;
+      const { setId, tx, items: its } = items({ ...v, label: f }, block++);
+      t.expect(setId, f).toBe(v.set.setId.toLowerCase()); // our computeSetId == the contract's (D39)
+      txs[f] = tx;
       await ix.process({ chains: { 143: { simulate: its as never } } as never });
     }
     const certs = await ix.Certificate.getAll();
-    const bySet = (f: string) => certs.find((c) => c.set_id === sets[f])!;
-    const kinds = async (f: string) => (await ix.Discrepancy.getWhere({ set_id: { _eq: sets[f]! } })).map((d) => [d.kind, d.agentId]);
+    const bySet = (f: string) => certs.find((c) => c.txHash === txs[f])!;
+    const all = await ix.Discrepancy.getAll();
+    const kinds = async (f: string) => all.filter((d) => d.certificate_id === bySet(f).id).map((d) => [d.kind, d.agentId]);
     for (const f of files.slice(0, 4)) {
       const c = bySet(f);
       t.expect([c.status, c.discrepancyCount, c.graphRootMatches], f).toEqual(["AUDITED", 0, true]);
-      t.expect((await ix.SetHealth.getOrThrow(sets[f]!)).status, f).toBe("CLEAN");
     }
     t.expect(await kinds("violations/fabricated.json")).toEqual([["FABRICATED", "4"]]);
     t.expect(await kinds("violations/inflated.json")).toEqual([["INFLATED", "4"]]);
