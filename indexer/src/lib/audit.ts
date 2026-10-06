@@ -116,7 +116,10 @@ export async function auditRows(view: RegistryView, schema: EdgeSchema, nodes: N
         if (row.src !== undefined && anchors.has(row.src)) shape.push("agent row sourced by an anchor (AnchorAsSource, D48-A)");
         if (row.aliasOf !== undefined && nodes[row.aliasOf]?.kind !== "agent") shape.push("alias of a non-agent row");
         if (row.src === undefined) {
-          if (client) out.push({ kind: "SOURCE_MISSING", u: row.u, client, agentId, wCommitted: 0, wRegistry: 0, proof: "proveWallet" });
+          if (client) {
+            out.push({ kind: "SOURCE_MISSING", u: row.u, client, agentId, wCommitted: 0, wRegistry: 0, proof: "proveWallet" });
+            voidedBy = "SOURCE_MISSING"; // a source-less row has no edge to prove (BadProof(7)): proveWallet voids it
+          }
         } else if (row.src !== client || row.viaOwner !== viaOwner) {
           out.push({ kind: "SOURCE", u: row.u, client: row.src, agentId, wCommitted: 0, wRegistry: 0, proof: "proveWallet" });
           voidedBy = "SOURCE";
@@ -134,8 +137,17 @@ export async function auditRows(view: RegistryView, schema: EdgeSchema, nodes: N
     const edgeProof = voidedBy ? "proveWallet" : client ? "proveEdge" : REFUSED;
     const committedPlus = row.edges.reduce((s, e) => s + (e.w > 0 ? e.w : 0), 0);
     const bPlusC = Math.max(G, row.sPlusEffective); // declared true sum when present (D32), else committed Σw+
-    // dilution of the positive side: the committed budget is below the true one, so the committed shares are too large
-    const diluted = client !== undefined && bPlusC < truth.bPlus;
+    // Dilution of the positive side: the budget left once the provable faults of the row are proven (fabricated edges
+    // to 0, inflated ones to the registry weight: ENCODING §7.1, X = max(dEff - cOut + cIn, Scur) = dEff - Σcorr) is
+    // below the true one, so the correct committed shares are too large. Using the raw committed budget would let an
+    // invented edge mask an omission (code review 06/10).
+    const excess = row.edges.reduce((s, e) => {
+      if (e.w <= 0) return s;
+      const n = nodes[e.dst];
+      const wr = n?.kind === "agent" ? truth.w.get(n.agentId!.toString()) ?? 0 : 0;
+      return s + e.w - Math.min(e.w, Math.max(wr, 0));
+    }, 0);
+    const diluted = client !== undefined && Math.max(G, row.sPlusEffective - excess) < truth.bPlus;
     const dil = { bCommitted: bPlusC, bRegistry: truth.bPlus, rowPlus: committedPlus, rowDeclared: row.sPlusEffective };
     const committedAgents = new Set<string>();
     for (const e of row.edges) {

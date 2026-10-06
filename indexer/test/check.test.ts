@@ -1,9 +1,21 @@
 // scripts/check.ts (live consistency check): pagination and feedback comparison (review 06/10, K22 and CHECKCOV).
 import { describe, it } from "vitest";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { keccak256, stringToBytes, toHex } from "viem";
 import { feedbackDiff, feedbacksToCompare, paginate, type IndexedFeedback } from "../scripts/check.js";
 
 describe("check.ts", () => {
+  it("code review: launched through a symlinked path, main() still runs (no silent exit 0)", (t) => {
+    const dir = mkdtempSync(join(tmpdir(), "ancre-check-"));
+    symlinkSync(new URL("..", import.meta.url).pathname, join(dir, "ix"));
+    const r = spawnSync(process.execPath, ["--experimental-strip-types", join(dir, "ix/scripts/check.ts"), "--endpoint", "http://127.0.0.1:1/v1/graphql"],
+      { encoding: "utf8" });
+    t.expect(r.status).toBe(2); // main ran and failed on the unreachable endpoint
+  });
+
   it("K22: pagination stops on an EMPTY page, not on a short one (server row cap below the page size)", async (t) => {
     const rows = [...Array(2_345).keys()].map((i) => ({ id: String(i).padStart(5, "0") }));
     let calls = 0;

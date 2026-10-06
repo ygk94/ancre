@@ -4,12 +4,12 @@
 import { afterAll, beforeAll, describe, it } from "vitest";
 import { createTestIndexer } from "envio";
 import { readFileSync } from "node:fs";
-import { encodeFunctionData, keccak256, stringToBytes, type Hex } from "viem";
+import { encodeAbiParameters, encodeFunctionData, keccak256, stringToBytes, toFunctionSelector, type Hex } from "viem";
 import abi from "../abis/AnchoredReputation.json" with { type: "json" };
 import { decodeRows, graphRoot } from "../src/lib/certificate.js";
-import { decodeSetCall } from "../src/lib/calls.js";
+import { decodeSetCall, findCertCalls, findSetCall } from "../src/lib/calls.js";
 import { combine, quantize, REF_SCHEMA } from "../src/lib/rules.js";
-import { TEXT_MAX, safeText } from "../src/lib/text.js";
+import { TEXT_MAX, safeText, schemaTagHash } from "../src/lib/text.js";
 import { startMockRpc, type MockRpc } from "./rpcmock.js";
 
 const CHAIN = 10143;
@@ -236,12 +236,61 @@ describe("SW1: a dilution is filed on the OMITTED edge, with the proof that clos
     t.expect((await ix.Discrepancy.getAll()).find((d) => d.kind === "SHAPE")!.provenAtBlock).toBeUndefined();
   });
 
+  it("code review: an invented edge cannot mask an omission (budget judged after the provable faults)", async (t) => {
+    // registry: A vouches #1 and #2 (B+ 20 000); the row commits #1 and an invented #3, and omits #2 (raw Σw+ = 20 000)
+    const rows: Row[] = [{ u: 0, edges: [[2, 10_000, 1], [4, 10_000, 1]] }, ANCHORS[1]!,
+      { u: 2, src: W1, edges: [[3, 10_000, 1], [4, 10_000, 1]] }];
+    const ix = await run([...world(), fb(2n, A, 1n, 100n, "vouch"), ...submit(rows)]);
+    t.expect((await findings(ix)).map((d) => [d[0], d[1], d[2]])).toEqual([["FABRICATED", 0, "3"], ["DILUTION", 0, "2"]]);
+    // proving the invented edge leaves the dilution open (amended budget 10 000 < 20 000)
+    await ix.process({ chains: { [CHAIN]: { simulate: [{ ...ANCRE, event: "EdgeProven",
+      params: { setId: SET_ID, node: 0n, agentId: 3n, wOld: 10_000n, wNew: 0n, eLowEff: 20n, eEff: 20n } }] } } as never });
+    const h = await ix.SetHealth.getOrThrow(SET_ID);
+    t.expect([h.status, h.openDiscrepancies]).toEqual(["DISCREPANCY", 1]);
+  });
+
+  it("code review: the edge findings of a SOURCE_MISSING row carry proveWallet", async (t) => {
+    const rows: Row[] = [...ANCHORS, { u: 2, edges: [] }]; // #1 has the wallet W1 but its row has no SRC
+    const ix = await run([...world(), ...submit(rows)]);
+    const ds = await findings(ix);
+    t.expect(ds.map((d) => [d[0], d[2], d[5]])).toEqual(
+      [["SOURCE_MISSING", "1", "proveWallet"], ["DILUTION", "2", "proveWallet"], ["DILUTION", "3", "proveWallet"]]);
+  });
+
   it("edge findings of a row with a wrong source are labelled proveWallet (proveEdge reverts BadProof(25))", async (t) => {
     const rows: Row[] = [...ANCHORS, { u: 2, src: C, edges: [[3, 10_000, 1]] }];
     const ix = await run([...world(), ...submit(rows)]);
     const ds = await findings(ix);
     t.expect(ds[0]).toEqual(["SOURCE", 2, "1", 0, 0, "proveWallet"]);
     t.expect(ds.slice(1).every((d) => d[5] === "proveWallet")).toBe(true);
+  });
+});
+
+describe("code review: nested calls and schema tags", () => {
+  const M3 = [{ type: "function", name: "aggregate", stateMutability: "payable", outputs: [],
+    inputs: [{ name: "calls", type: "tuple[]", components: [{ name: "target", type: "address" }, { name: "callData", type: "bytes" }] }] }] as const;
+  it("decoys for another set never push the real certificate out of the scan", (t) => {
+    const other = ("0x" + "cd".repeat(32)) as Hex;
+    const decoy = encodeFunctionData({ abi, functionName: "submitCertificate", args: [other, 4, E18, "0x", "0x", "0x02" + "00000000"] });
+    const real = certInput(ANCHORS);
+    const input = encodeFunctionData({ abi: M3, functionName: "aggregate",
+      args: [[...Array(40).fill({ target: CONTRACT, callData: decoy }), { target: CONTRACT, callData: real }]] });
+    const got = [...findCertCalls(input, SET_ID)];
+    t.expect(got.map((c) => c.rows)).toEqual([encodeRows(ANCHORS)]);
+  });
+  it("a schema tag that is not valid UTF-8 keeps the hash of its bytes", (t) => {
+    const fn = (abi as any[]).find((x) => x.type === "function" && x.name === "registerAnchorSet");
+    const params = JSON.parse(JSON.stringify(fn.inputs[0]));
+    params.components.find((c: any) => c.name === "tags").components.find((c: any) => c.name === "tag").type = "bytes";
+    const p = { anchors: [A, B], lambdas: [E18 / 2n, E18 / 2n], alphaN: 1, alphaD: 3, tagSchemaHash: ("0x" + "00".repeat(32)) as Hex,
+      tags: [{ tag: "0xff76" as Hex, min: 0n, neutral: 0n, max: 100n * E18, kind: 0 }], policy };
+    const encoded = encodeAbiParameters([params], [p]);
+    const input = (toFunctionSelector(fn) + encoded.slice(2)) as Hex;
+    const setId = keccak256(encodeAbiParameters(params.components, params.components.map((c: any) => (p as any)[c.name])));
+    const call = findSetCall(input, setId)!;
+    t.expect(call).toBeDefined();
+    t.expect(schemaTagHash(call.tags[0]!.tag)).toBe(keccak256("0xff76"));
+    t.expect(schemaTagHash("vouch")).toBe(keccak256(stringToBytes("vouch")));
   });
 });
 

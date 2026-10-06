@@ -23,6 +23,15 @@ export function tagHash(tag1: string, indexedTopic?: string): Hex {
   return h;
 }
 
+/** Marker of a schema tag whose bytes are not valid UTF-8 (src/lib/calls.ts): "<marker>0x<hex>". A schema can only
+ *  hold it through calldata; a feedback is matched by its topic, never through this function. */
+export const BYTES_TAG = "\u0000bytes:";
+/** keccak256 of a SCHEMA tag's bytes (the text, or the bytes behind the BYTES_TAG marker). */
+export function schemaTagHash(tag: string): Hex {
+  if (tag.startsWith(BYTES_TAG + "0x")) return keccak256(tag.slice(BYTES_TAG.length) as Hex);
+  return tagHash(tag);
+}
+
 const isWellFormed = (s: string) => !/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(s);
 
 /** Postgres-safe display text: NUL and lone surrogates escaped (\u0000), truncated to TEXT_MAX bytes. */

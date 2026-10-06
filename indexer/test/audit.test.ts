@@ -94,6 +94,7 @@ describe.runIf(process.env.PARITY === "1" && existsSync(DIR))("certificate audit
     const ghost = clone();
     ghost.find((r) => r.u === node(3))!.edges = [{ dst: node(4), w: 10_000, feedbackIndex: 1 }];
     t.expect((await audit(v, ghost, ghostNodes)).discrepancies.map((d) => [d.kind, d.u])).toEqual(
-      [["FABRICATED", ea0b], ["UNKNOWN_AGENT", node(3)], ["FABRICATED", node(3)], ["FABRICATED", node(18)]]);
+      [["FABRICATED", ea0b], ["DILUTION", ea0b], ["UNKNOWN_AGENT", node(3)], ["FABRICATED", node(3)], ["FABRICATED", node(18)],
+       ["DILUTION", node(18)]]); // the true edge to the real #3 is now missing from both rows: diluted once the ghost is proven
   }, 900_000);
 });

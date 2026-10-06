@@ -15,7 +15,8 @@
 // GraphQL pagination stops on an EMPTY page, like solver/from_indexer.py (solver/FORMAT.md §7, review 06/10 K22): a
 // server-side row cap below the page size must not truncate silently.
 // Exit code 0 when everything matches, 1 otherwise. Writes a JSON report to stdout.
-import { pathToFileURL } from "node:url";
+import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { createPublicClient, http, keccak256, parseAbi, type Address, type Hex } from "viem";
 
 const args = process.argv.slice(2);
@@ -216,6 +217,7 @@ async function main() {
   process.exit(failures.length === 0 ? 0 : 1);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+// run only when launched as a script (the test imports the helpers); both sides resolved, symlinks included (/tmp on macOS)
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   main().catch((e) => { console.error(e); process.exit(2); });
 }

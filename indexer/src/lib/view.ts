@@ -2,7 +2,7 @@
 // (both expose Entity.get / Entity.getWhere on the current chain).
 import type { RegistryView } from "./audit.js";
 import type { EdgeSchema, TagKind, TagSpec } from "./rules.js";
-import { tagHash, tripleId } from "./text.js";
+import { schemaTagHash, tripleId } from "./text.js";
 
 type Getter<T> = { get(id: string): Promise<T | undefined> };
 type Store = {
@@ -20,7 +20,7 @@ export function storeView(s: Store): RegistryView {
     isOperator: async (owner, client) => (await s.Operator.get(`${owner}-${client}`))?.active ?? false,
     // keyed by keccak256(tag): the schema's tag text is hashed, the stored (display) text is never compared (NUL)
     latest: async (client, agentId, tag1) => {
-      const t = await s.TripleLatest.get(tripleId(client, agentId, tagHash(tag1)));
+      const t = await s.TripleLatest.get(tripleId(client, agentId, schemaTagHash(tag1)));
       const f = t?.feedback_id ? await s.Feedback.get(t.feedback_id) : undefined;
       return f && { tag1, value: f.value, decimals: f.valueDecimals, feedbackIndex: f.feedbackIndex };
     },

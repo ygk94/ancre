@@ -1,9 +1,10 @@
 // Node-table repair from the contract (review 06/10, OUTERCALL). addNodes is permissionless on an open set and may be
 // sent through any contract (Multicall3, Safe, 4337, EIP-7702): its entries are then not in a calldata we can trust,
 // and Monad serves no call traces. The node keys, however, are written once and never change (NodeExists, stable
-// index, ENCODING §2): `nodeKeyAt(setId, i)` read at the head gives the key of every index already appended, whatever
-// the block the indexer is at. A zero key means "not appended (yet) at the RPC's head" (lagging RPC, or a reorg dropped
-// it): it is never cached, the index stays a hole and is retried on the next use (next NodesAdded or certificate).
+// index, ENCODING §2): `nodeKeyAt(setId, i)` read at the FINALIZED head gives the key of every index appended in a
+// finalized block, whatever the block the indexer is at; a speculative block that is later dropped can never put a
+// wrong key in the cache (code review 06/10). A zero key means "not appended in a finalized block (yet)": it is never
+// cached, the index stays a hole and is retried on the next use (next NodesAdded or certificate).
 // Effect API (DOC docs.envio.dev effect-api, read 06/10): batched, deduplicated, rate limited; never a raw RPC call in a
 // handler (handlers run twice).
 import { createEffect, S } from "envio";
@@ -39,7 +40,8 @@ export const nodeKeysEffect = createEffect({
   const n = Math.min(input.count, MAX_KEYS);
   try {
     const keys = await Promise.all([...Array(n).keys()].map((i) => client.readContract({
-      address: input.contract as Address, abi: ABI, functionName: "nodeKeyAt", args: [input.setId as Hex, BigInt(input.from + i)] })));
+      address: input.contract as Address, abi: ABI, functionName: "nodeKeyAt", args: [input.setId as Hex, BigInt(input.from + i)],
+      blockTag: "finalized" })));
     if (keys.some((k) => BigInt(k) === 0n)) context.cache = false; // not appended at the RPC's head: retry later
     return keys.map((k) => k.toLowerCase());
   } catch (e) {

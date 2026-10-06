@@ -90,20 +90,27 @@ indexer.onEvent(
   { contract: "AnchoredReputation", event: "NodesAdded", fields: { transaction: ["input", "to"] } },
   async ({ event, context }) => {
     const setId = event.params.setId.toLowerCase();
-    const [set, table] = await Promise.all([context.AnchorSet.get(setId), context.SetNode.getWhere({ set_id: { _eq: setId } })]);
-    if (context.isPreload || !set) return;
+    const set = await context.AnchorSet.get(setId);
     const from = Number(event.params.fromIndex);
     const count = Number(event.params.count);
     let nodes: NewNode[] | undefined;
     try {
       if (isDirect(event.transaction.to, event.srcAddress)) nodes = decodeAppendedNodes(event.transaction.input, setId);
     } catch (e) { if (!(e instanceof EncodingError)) throw e; }
-    const nodeCount = Math.max(set.nodeCount ?? 0, from + count);
-    const have = new Set(table.map((n) => n.index));
     // _appendNodes reverts on an existing node (NodeExists): a direct call appends exactly `count` entries, in order
-    if (nodes && nodes.length === count) {
-      nodes.forEach((n, i) => { context.SetNode.set(setNodeRow(setId, from + i, n)); have.add(from + i); });
+    const exact = nodes !== undefined && nodes.length === count;
+    // the common case (complete table, exact direct append right after it) never reads the table: no O(n) per event
+    const clean = exact && set?.nodesComplete === true && from === (set.nodeCount ?? 0);
+    const table = set && !clean ? await context.SetNode.getWhere({ set_id: { _eq: setId } }) : [];
+    if (context.isPreload || !set) return;
+    const nodeCount = Math.max(set.nodeCount ?? 0, from + count);
+    if (exact) nodes!.forEach((n, i) => context.SetNode.set(setNodeRow(setId, from + i, n)));
+    if (clean) {
+      context.AnchorSet.set({ ...set, nodeCount, nodesComplete: true });
+      return;
     }
+    const have = new Set(table.map((n) => n.index));
+    if (exact) nodes!.forEach((_, i) => have.add(from + i));
     // relayed (or undecodable) append, and any older hole: read the immutable keys from the contract
     const missing = holes(have, nodeCount);
     if (missing.length > 0) for (const r of await repairNodes(context, event.srcAddress, setId, missing)) have.add(r.index);

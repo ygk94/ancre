@@ -151,3 +151,33 @@
 - Changement de schéma GraphQL (v3) : le prochain déploiement Cloud réindexe tout (comme à chaque push). Ne pas
   déployer avant la fusion de 02-bis (adresse du contrat) ; `scripts/publish.sh` non lancé.
 - `solver/tests/fixtures/indexer/` **non modifié** (la parité n'en avait pas besoin).
+
+## 2026-10-06 (suite) — `/code-review high` sur ce worktree : 8 constats, 8 traités
+
+Revue lancée sur `/Users/hugo/Projet/ancre-indexer-revue` (diff `main...chantier/indexer-revue`, `indexer/` seulement ;
+le relecteur cite bien les fichiers de ce worktree, AM-02.9 vérifié). Constats de lecture, non exécutés par le relecteur.
+
+1. **(haute) Une arête inventée masquait une omission** (`audit.ts`) : la dilution se jugeait sur le B⁺ engagé brut.
+   Elle se juge maintenant sur le budget qui reste une fois les fautes prouvables prouvées : `max(GRID, dEff − Σ(w −
+   min(w, w_registre⁺)))` (borne X d'ENCODING §7.1). Test : A vouche #1 et #2, la ligne engage #1 + #3 inventée et
+   omet #2 → [FABRICATED #3, DILUTION #2] ; après la preuve de #3, la dilution reste ouverte. Conséquence mesurée sur
+   le vecteur « agent fantôme » : les deux lignes qui perdent leur vraie arête vers #3 ressortent aussi en DILUTION
+   (attentes mises à jour dans `offline` et `audit.test`).
+2. **(haute) Leurres imbriqués** (`calls.ts`) : le plafond s'appliquait avant le filtre `setId`. Le `setId` (1er mot après
+   le sélecteur) est maintenant comparé **avant** tout décodage, sans plafond de succès ; seul le nombre de décodages
+   est borné (1 024). Test : 40 leurres d'un autre set puis le vrai appel → trouvé.
+3. **(moyenne) Garde du `main` de `check.ts`** : `realpathSync` des deux côtés (lien symbolique, `/tmp` sur macOS). Test :
+   lancé par un lien → code 2 (main a tourné), plus de sortie silencieuse en 0.
+4. **(moyenne) SOURCE_MISSING** : les trouvailles d'arête de la ligne portent `proveWallet`. Test dédié.
+5. **(moyenne) Cache de `nodeKeyAt`** : lecture au tag `finalized` ; une clé d'un bloc spéculatif ne peut plus entrer
+   dans le cache (clé nulle tant que non finalisée → pas de cache, réessai).
+6. **(basse) `NodesAdded` en O(n)** : la table n'est plus lue quand la table est complète et l'ajout direct exact
+   (cas courant). Elle ne l'est que s'il y a un trou à réparer.
+7. **(basse) Tags de schéma non UTF-8** : `registerAnchorSet` décodé avec `TagSpec.tag` en `bytes` ; un tag invalide en
+   UTF-8 devient un marqueur `\u0000bytes:0x…` dont `schemaTagHash` redonne le keccak des octets. `computeSetId`
+   réencode les octets exacts. Test dédié.
+8. **(basse) Sélecteurs** précalculés au chargement.
+
+**Vérifications (MESURÉ 06/10)** : `pnpm test` **69 verts, 5 sautés** (les 5 tests HyperSync `PARITY=1`) ;
+`ANCRE_VECTORS=<solver 04-bis>` : `offline` + `common` 9 verts (2 sautés : variantes pré-D48, vecteur à registre réel) ;
+`tsc --noEmit` propre. Mutations : chaque correctif de la revue fait échouer son test quand on le retire.
