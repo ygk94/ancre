@@ -20,12 +20,14 @@ type Feedback {                      # id = agentId-client-feedbackIndex
   feedbackIndex: BigInt!             # 1-based, per (client, agent), all tags
   value: BigInt!                     # exact int128 from the event
   valueDecimals: Int!
-  tag1: String!
-  tag2: String!
+  tag1: String!                      # display text: exact iff tag1Exact (else NUL/surrogates escaped, cut at 1 KiB)
+  tagHash: String!                   # keccak256(tag1 bytes) = indexedTag1 topic: the only tag identity (AM-04.2)
+  tag1Exact: Boolean!                # false: tag1 is NOT the tag (never match it by text; use tagHash)
+  tag2: String!                      # display text (src/lib/text.ts safeText)
   endpoint: String!
   feedbackURI: String!
   feedbackHash: String!
-  triple: String! @index             # client-agentId-tag1 (D14 unit)
+  triple: String! @index             # client-agentId-tagHash (D14 unit): fixed length, no raw tag in a key (LONGTAG, NUL)
   blockNumber: BigInt! @index
   logIndex: Int!
   txHash: String!
@@ -92,6 +94,8 @@ type Agent {                         # id = agentId (decimal)
   transferCount: Int!
   lastTransferBlock: BigInt          # D10 / D35 (TRANSFERRED)
   refEdgeRows: Int!                  # SetEdge rows pointing to this agent (0 = skip recomputation on controller changes)
+  regTx: String                      # tx of the mint: register() emits its MetadataSet(agentWallet) AFTER the ERC-721
+  regPhase: String                   # callback; minted | callback | registered | registeredStale | done (REGCB, identity.ts)
   feedbacks: [Feedback!]! @derivedFrom(field: "agent")
   edgesIn: [SetEdge!]! @derivedFrom(field: "agent")
 }
@@ -112,10 +116,11 @@ type Operator {                      # id = owner-operator
 ############ Layer 3 — normative edges (reference set)
 
 type TripleLatest {                  # D14: latest non-revoked feedback per (client, agent, tag1), every tag
-  id: ID!                            # client-agentId-tag1
+  id: ID!                            # client-agentId-tagHash (never the raw tag: review 06/10, LONGTAG / NUL)
   client: String! @index
   agent: Agent!
-  tag1: String!
+  tag1: String!                      # display text (see Feedback.tag1Exact)
+  tagHash: String!
   feedback: Feedback                 # null when every feedback of the triple is revoked
 }
 
@@ -136,15 +141,16 @@ type AnchorSet {                     # "ref" = reference schema (src/lib/schema_
   # onchain sets only (AnchorSetRegistered + registerAnchorSet calldata); null for "ref"
   anchors: [String!]
   lambdas: [String!]                 # WAD
-  alphaN: Int
-  alphaD: Int
+  alphaN: BigInt                     # uint32 on chain: may exceed Int32 (review 06/10, SW2)
+  alphaD: BigInt
   tagsJson: String                   # [{tag, min, neutral, max, kind}] bounds in WAD: the set's edge schema (D12)
   policyJson: String                 # full Policy struct (theta, rho, m, q, vetoMax, maxAge, ...)
   ownerFallback: Boolean             # D44
   registryVerified: Boolean          # D32
-  decodable: Boolean                 # false = registerAnchorSet not decodable as a direct call (relayed, or params not
-                                     # hashing to setId): no schema, no audit (null for a set seen only through later events)
-  nodesComplete: Boolean             # false once an addNodes / newNodes could not be decoded: later certificates NODES_MISSING
+  decodable: Boolean                 # false = no registerAnchorSet call (direct or nested in the input) hashes to setId:
+                                     # no schema, no audit (null for a set seen only through later events)
+  nodesComplete: Boolean             # false while some index < nodeCount has no SetNode (relayed addNodes whose keys could
+                                     # not be read yet): filled from nodeKeyAt (Effect, src/lib/nodekeys.ts) on the next use
   nodeCount: Int                     # anchors + appended nodes, as seen by the indexer
   registeredBlock: BigInt
   registeredTx: String
@@ -198,16 +204,19 @@ type Discrepancy {                   # one audit finding; id = certificateId-n (
   certificate: Certificate!
   set_id: String! @index
   provenAtBlock: BigInt              # EdgeProven / RowVoided on this row after the certificate: remedied on chain
-  kind: String! @index               # FABRICATED | INFLATED | OVERSTATED_NEG | OMITTED_NEG | WRONG_INDEX | SOURCE | SOURCE_MISSING | UNKNOWN_AGENT | SHAPE
-  proof: String                      # on-chain remedy: proveEdge | proveWallet | refused at submission | none
+  kind: String! @index               # FABRICATED | INFLATED | OVERSTATED_NEG | OMITTED_NEG | DILUTION | DEFLATED | WRONG_INDEX |
+                                     # SOURCE | SOURCE_MISSING | UNKNOWN_AGENT | SHAPE (src/lib/audit.ts)
+  proof: String                      # on-chain remedy: proveEdge | proveWallet | refused at submission | none (...)
   u: Int!
   dst: Int
   client: String
   agentId: String
   wCommitted: Int!
   wRegistry: Int!
-  bCommitted: Int
-  bRegistry: Int
+  bCommitted: BigInt                 # B+ / B- of the row (a declared sPlus is a uint32: SW2)
+  bRegistry: BigInt
+  rowPlus: BigInt                    # DILUTION / DEFLATED: committed positive sum of the row, amended by later proofs
+  rowDeclared: BigInt                # DILUTION / DEFLATED: declared budget (sPlus, else committed sum), amended
   feedbackIndex: BigInt
   registryFeedbackIndex: BigInt
 }

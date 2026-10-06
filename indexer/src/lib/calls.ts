@@ -1,7 +1,11 @@
 // Decoding of the ANCRE contract's calls from the transaction input (P2 gate, chantier 03: a handler reads
-// `transaction.input`). Only DIRECT calls are decodable: through a relayer, a multicall or a Safe, the input is the
-// wrapper's, and the caller gets `undefined` (UNDECODABLE). Pure functions: safe in both handler phases.
-import { decodeFunctionData, encodeAbiParameters, keccak256, type Hex } from "viem";
+// `transaction.input`). A direct call is decoded as is. A call made THROUGH a contract (Safe, Multicall3, a 4337 or
+// EIP-7702 account) carries the inner call as a contiguous ABI `bytes` inside the wrapper's input: `nestedCalls` scans
+// the input for the function selector and decodes every occurrence (review 06/10, OUTERCALL). A nested candidate is
+// only trusted when it provably is the committed data: the set params hash to the event's setId (registerAnchorSet),
+// the rows hash to the event's graphRoot (submitCertificate). Monad serves no call traces (AM-03.3), hence the scan.
+// Pure functions: safe in both handler phases.
+import { decodeFunctionData, encodeAbiParameters, keccak256, toFunctionSelector, type Hex } from "viem";
 import abi from "../../abis/AnchoredReputation.json" with { type: "json" };
 import { decodeNewNodes, type NewNode } from "./certificate.js";
 
@@ -25,13 +29,50 @@ function decode(input: string | undefined, name: string): readonly unknown[] | u
   }
 }
 
+const MAX_NESTED = 16; // candidates tried per transaction (a wrapper rarely holds more than a few inner calls)
+const SELECTOR = (name: string) => toFunctionSelector(
+  (ABI as readonly { type: string; name?: string }[]).find((x) => x.type === "function" && x.name === name) as never).slice(2);
+
+/** Every decodable occurrence of `name`'s calldata in the input, the direct call first. */
+function nestedCalls(input: string | undefined, name: string): (readonly unknown[])[] {
+  if (!input || input.length < 10) return [];
+  const hex = input.slice(2).toLowerCase();
+  const sel = SELECTOR(name);
+  const out: (readonly unknown[])[] = [];
+  let tries = 0; // bounded: a crafted input may repeat the selector thousands of times
+  for (let i = hex.indexOf(sel); i >= 0 && out.length < MAX_NESTED && tries < 4 * MAX_NESTED; i = hex.indexOf(sel, i + 1)) {
+    if (i % 2) continue; // byte-aligned only
+    tries++;
+    const args = decode("0x" + hex.slice(i), name);
+    if (args) out.push(args);
+  }
+  return out;
+}
+
 const str = (x: unknown) => (typeof x === "bigint" ? x.toString() : x);
 const json = (o: Record<string, unknown>) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, Array.isArray(v) ? v.map(str) : str(v)]));
 
-/** registerAnchorSet(SetParams) -> anchors, tags (bounds in WAD), policy. */
+/** registerAnchorSet(SetParams) -> anchors, tags (bounds in WAD), policy. Direct call only. */
 export function decodeSetCall(input: string | undefined): SetCall | undefined {
   const args = decode(input, "registerAnchorSet");
-  if (!args) return undefined;
+  return args ? setCallOf(args) : undefined;
+}
+
+/** The registerAnchorSet call (direct or nested) whose params hash to `setId`. */
+export function findSetCall(input: string | undefined, setId: string): SetCall | undefined {
+  for (const args of nestedCalls(input, "registerAnchorSet")) {
+    const c = setCallOf(args);
+    if (c.setId.toLowerCase() === setId.toLowerCase()) return c;
+  }
+  return undefined;
+}
+
+/** submitCertificate calls (direct or nested) naming `setId`: the caller keeps the one whose rows hash to graphRoot. */
+export function findCertCalls(input: string | undefined, setId: string): CertCall[] {
+  return nestedCalls(input, "submitCertificate").map(certCallOf).filter((c) => c.setId.toLowerCase() === setId.toLowerCase());
+}
+
+function setCallOf(args: readonly unknown[]): SetCall {
   const p = args[0] as {
     anchors: readonly string[]; lambdas: readonly bigint[]; alphaN: number; alphaD: number;
     tags: readonly { tag: string; min: bigint; neutral: bigint; max: bigint; kind: number }[];
@@ -59,9 +100,10 @@ export function decodeAppendedNodes(input: string | undefined, setId: string): N
 /** submitCertificate(setId, nCert, eMax, newNodes, vectors, rows). */
 export function decodeCertCall(input: string | undefined): CertCall | undefined {
   const args = decode(input, "submitCertificate");
-  if (!args) return undefined;
-  return { setId: args[0] as Hex, nCert: Number(args[1]), newNodes: args[3] as Hex, rows: args[5] as Hex };
+  return args ? certCallOf(args) : undefined;
 }
+const certCallOf = (args: readonly unknown[]): CertCall =>
+  ({ setId: args[0] as Hex, nCert: Number(args[1]), newNodes: args[3] as Hex, rows: args[5] as Hex });
 
 // AnchoredReputation.computeSetId: keccak256(abi.encode(anchors, lambdas, alphaN, alphaD, tagSchemaHash, tags, policy)).
 // The handler compares it with the event's setId, so that calldata from a wrapper sharing the selector is never trusted.
