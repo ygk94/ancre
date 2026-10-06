@@ -214,12 +214,13 @@ def cases() -> dict[str, dict]:
                                     "empty row of #40 is dropped (#40 listed without a row), hence other rows bytes, "
                                     "graphRoot and e. MUST revert ProvenRowResubmitted once step 1 is proven, "
                                     "including under REGISTRY_CHANGED (not expressible in a static vector).",
-                             "calldata": second["calldata"], "nCert": second["nCert"],
-                             "expected": {k: second["expected"][k] for k in ("graphRoot", "vectorRoot")}}
+                             "calldata": {**second["calldata"], "newNodes": "0x"},   # nodes exist since step 1
+                             "nCert": second["nCert"],
+                             "expected": {k: second["expected"][k] for k in ("graphRoot", "vectorRoot", "eEff")}}
     first["control"] = {"why": "the honest certificate (no fabricated edge) on the same set must be ACCEPTED after "
                                "the proof",
-                        "calldata": vector("common_C_control", rC, [A1, A2], "control", [],
-                                           registry_verified=False)["calldata"]}
+                        "calldata": {**vector("common_C_control", rC, [A1, A2], "control", [],
+                                              registry_verified=False)["calldata"], "newNodes": "0x"}}
     out["common_C_proven_row_resubmitted"] = first
 
     # ---------------------------------------------------------------- D50: second hop

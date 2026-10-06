@@ -153,3 +153,16 @@ Tests : **155 passed** (MESURÉ).
 **Blocage** : le contrat corrigé de 02-bis **n'est pas commité** (journal 02-bis : 7 tests rouges en local). Le rejeu `simulate.py` contre leur contrat attend leur commit ; je rejoue d'abord contre le contrat de `main`.
 
 **Prochaine étape** : `simulate.py` sur fork (contrat de `main`), puis `/code-review high`.
+
+## 2026-10-06 ~17:30 — E4 (partie fork) : rejeu `simulate.py` contre le contrat de `main` (02-bis n'a pas encore commité)
+
+**Fait** : nouveau scénario `common` dans `simulate.py` (vecteurs communs ; jouets au niveau Submitter-attested avec leur propre setId, puisque leurs registres factices ne sont pas sur le fork ; le vecteur mainnet en Registry-verified). Pour C : soumission, preuve `proveEdge` par le surveillant, resoumission, puis certificat de contrôle. Correctifs du vecteur C : la resoumission ne renvoie pas les nœuds (`newNodes = 0x`, sinon `NodeExists`) et porte son propre eEff (sinon `ResidualTooLarge`).
+
+**Mesures** (MESURÉ, 06/10, `anvil --network monad` fork de rpc1 au bloc 110 994 810, `ETH_RPC_TIMEOUT=900`, contrat de `main`)
+- `--scenarios vectors,violations` (4 min 28 s) → `solver/out/simulation.json` : **9/9 vecteurs ACCEPTÉS**, setId, eEff, graphRoot, vectorRoot, masse et q identiques aux attendus ; chaque copie mutée est rejetée (`NotSubSolution`). `mainnet_slash_anchor` (nouvelles ancres) : 1 039 934 gas. Violations : en Registry-verified, fabriquée et gonflée refusées (`EdgeMismatch`), dilution, négatif omis et double omission acceptés puis prouvés ; en Submitter-attested, les 5 acceptées et prouvées.
+- `--scenarios common` → `solver/out/simulation_common.json` : **sur le contrat actuel, toutes les attaques passent** : `common_A_attack_anchor_copy`, `common_A_mainnet_old_slash_anchor` (1 039 953 gas), `common_R1_address_zero_node`, et **C** (preuve FABRICATED à 280 509 gas, puis resoumission de la même ligne fausse **ACCEPTÉE**). C'est l'état « avant correction » attendu ; le contrat 02-bis doit donner `expect.submission`.
+- `--scenarios service,split` → `solver/out/simulation_service.json` : cycle du service complet (premier certificat, recalcul identique ignoré, graphe qui grandit, censure, front-running `addNodes`, rafraîchissement) et premier certificat découpé avec crash. Un premier passage avait échoué sur un `cast send` sans message après 9 min ; le même `giveFeedback` passe en `eth_call` sur le mainnet (estimation 277 933 gas) et le second passage a réussi : c'est le délai d'attente intermittent cast ↔ anvil déjà noté (AM-INT.11).
+
+**Reste pour E4** : rejouer `vectors,violations,common` contre le contrat de 02-bis dès son commit (commande : `cd solver && .venv/bin/python simulate.py --scenarios vectors,violations,common`, en pointant `build_contract` sur leur branche fusionnée).
+
+**Prochaine étape** : E5 `/code-review high`.

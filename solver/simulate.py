@@ -242,6 +242,52 @@ def scenario_violations(chain: C.Chain, contract: str) -> list[dict]:
     return out
 
 
+def scenario_common(chain: C.Chain, contract: str) -> list[dict]:
+    """Common vectors 02-bis / 04-bis (vectors/common/). The toy registries are not on the fork, so the toys run at the
+    Submitter-attested level (own setId); the mainnet one runs Registry-verified. Against the contract of `main` this
+    records the state BEFORE the D48/R1 fixes (attacks expected to pass); against 02-bis, `expect.submission` holds."""
+    import common_vectors as CV
+    from graph import Feedback, Identity
+    out = []
+    for p in sorted((HERE / "vectors" / "common").glob("*.json")):
+        obj = json.loads(p.read_text())
+        name = p.stem
+        real = name == "common_A_mainnet_old_slash_anchor"
+        cfg = cfg_from_vector(obj, name) if real else cfg_from_vector(
+            obj, "att_" + name, registry_verified=False, submitters=[DEV_ADDR],
+            tag_schema_hash=vector_schema_hash("attested:" + name))
+        row = {"vector": name, "level": "Registry-verified" if real else "Submitter-attested",
+               "expectAfterFix": obj["expect"]["submission"]}
+        try:
+            set_id, _ = register(chain, contract, cfg)
+            start = chain.block_number()
+            r = submit_vector(chain, contract, set_id, obj, cfg)
+            row.update(result=r["result"], reason=r.get("reason"), gasUsed=r.get("gasUsed"))
+            if "resubmission" in obj and r["result"] == "ACCEPTED":      # C: prove the false row, then resubmit
+                reg = obj["registry"]
+                fbs, idx = [], {}
+                for f in reg["feedbacks"]:
+                    k = (f["client"], f["agentId"])
+                    idx[k] = idx.get(k, 0) + 1
+                    fbs.append(Feedback(f["agentId"], f["client"], idx[k], f["value"], f["decimals"], f["tag1"],
+                                        f["tag2"], f["revoked"]))
+                idn = Identity(block=0, owner={a["agentId"]: a["owner"] for a in reg["agents"]},
+                               wallet={a["agentId"]: a["agentWallet"] for a in reg["agents"]})
+                _, nodes, _ = vector_calldata(obj)
+                row["proof"] = _prove_all(chain, contract, cfg, set_id, nodes, fbs, idn, start)["proofs"]
+                again = {**obj, "calldata": obj["resubmission"]["calldata"], "nCert": obj["resubmission"]["nCert"],
+                         "expected": {**obj["expected"], **obj["resubmission"]["expected"]}}
+                r2 = submit_vector(chain, contract, set_id, again, cfg)
+                row["resubmission"] = {"result": r2["result"], "reason": r2.get("reason"),
+                                       "expectAfterFix": obj["expect"]["resubmission"]}
+                ctl = submit_vector(chain, contract, set_id, {**obj, "calldata": obj["control"]["calldata"]}, cfg)
+                row["control"] = {"result": ctl["result"], "reason": ctl.get("reason"), "expectAfterFix": "ACCEPTED"}
+        except Exception as e:                                           # one vector never stops the scenario
+            row.update(result="ERROR", reason=C.revert_reason(str(e)) if isinstance(e, C.ChainError) else str(e)[:300])
+        out.append(row)
+    return out
+
+
 def scenario_service(chain: C.Chain, contract: str) -> list[dict]:
     fbs, idn = R.load_mainnet()
     h1, h2 = R.resolve(R.HONEST1, fbs), R.resolve(R.HONEST2, fbs)
@@ -407,7 +453,7 @@ def main(argv=None):
     ap.add_argument("--fork-url", default="https://rpc1.monad.xyz")
     ap.add_argument("--fork-block", type=int, default=R.BLOCK)
     ap.add_argument("--out", default=str(HERE / "out" / "simulation.json"))
-    ap.add_argument("--scenarios", default="vectors,violations,service,split")
+    ap.add_argument("--scenarios", default="vectors,violations,common,service,split")
     args = ap.parse_args(argv)
     todo = args.scenarios.split(",")
     SCR.mkdir(parents=True, exist_ok=True)
@@ -422,7 +468,7 @@ def main(argv=None):
         report = {"fork": {"url": args.fork_url, "block": args.fork_block, "network": "monad (anvil)"},
                   "contract": contract}
         for name, fn in (("vectors", scenario_vectors), ("violations", scenario_violations),
-                         ("service", scenario_service), ("split", scenario_split)):
+                         ("common", scenario_common), ("service", scenario_service), ("split", scenario_split)):
             if name in todo:
                 report[name] = fn(chain, contract)
     finally:
