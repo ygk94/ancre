@@ -47,7 +47,7 @@
 | D35 | Transfert | `ownerOf` en direct par défaut (strict) ; le cache du router amortit ; mode rapide optionnel | 5B | 0,6 |
 | D36 | Recertification | pas d'incrémental (réparation non locale mesurée) ; budget d'élargissement eLow_max engagé dans la politique, au-delà STALE | 5B | 0,6 |
 | D37 | Vérification | 5 lemmes écrits (L1-L5) ; fuzz Python contre fractions exactes ; test différentiel Foundry ; vecteurs normatifs des 4 violations ; pas de Lean avant le 13/10 | 5B | 0,8 |
-| D38 | Bounties sponsors *(décision de Hugo)* | viser **Envio** (indexeur du chantier 03 construit avec Envio), **MetaMask Agent Wallet Plugin** (chantier 05) et **Mera « One Passkey, Many Keys »** (ancres en passkey, chantiers 02 et 06). Aucun ne passe avant D32 ni avant la démo figée. Critères détaillés non lus (plateforme connectée) | 27/09 | — |
+| D38 | Bounties sponsors *(décision de Hugo ; amendée par D50 et D53 : MetaMask retiré)* | viser **Envio** (indexeur du chantier 03 construit avec Envio), **MetaMask Agent Wallet Plugin** (chantier 05) et **Mera « One Passkey, Many Keys »** (ancres en passkey, chantiers 02 et 06). Aucun ne passe avant D32 ni avant la démo figée. Critères détaillés non lus (plateforme connectée) | 27/09 | — |
 | D39 | Statut ≠ confiance | θ, ρ, m, q, maxAge et eLow_max sont engagés dans le `setId` et appliqués par `isTrusted`. `assess` OK ne veut pas dire « payable » | vagues 1-2 | 0,9 |
 | D40 | Réseau de l'acte 2 *(amende D19, décision de Hugo)* | H-B : ferme et répétitions sur le testnet, une exécution minimale sur le mainnet (≈ 0,9 MON estimé) | vagues 1-2 | 0,7 |
 | D41 | Double garde de paiement | payeur ERC-1271 qui détient les USDC (`isTrusted` dans `isValidSignature`) + plugin `mm` qui appelle `decide()` avant de signer ; Guard Mode n'autorise que le payeur | vagues 1-2 | 0,75 |
@@ -57,6 +57,12 @@
 | D45 | Positionnement | *« A receipt can be true and still come from a farm… »* On ne demande pas si le paiement a eu lieu, on demande si quelqu'un en qui **toi** tu as confiance se porte garant. **Scène de moins de 20 s** : notre ferme sur le testnet se paie vraiment (100 % de reçus vrais), mais sa masse ANCRE est nulle et `isTrusted` refuse dans le payeur. On n'affirme jamais le verdict d'un tiers. Dans le pitch, une diapositive « complementary layers » | 6 | 0,75 |
 | D46 | Kanmani / Sentinel | cité comme exemple d'`edgeFilterId` dans l'ERC, et son constat (73 déclarations fausses sur 85, auto-déclaré) en Motivation ; **aucune dépendance** ; **pas de filtre « reçu vrai » par défaut**, parce qu'il récompense une ferme qui s'auto-paie | 6 | 0,7 |
 | D47 | **Override humain seulement** *(décision de Hugo, 01/10)* | Quand ANCRE refuse, le plugin affiche le verdict et propose un passage en force **réservé à un humain**. Il **paie depuis le wallet personnel de l'humain**, signé dans son extension, jamais depuis l'Agent Wallet ni depuis le payeur. **Un agent ne peut jamais l'exécuter.** **Pas de bascule** entre le wallet de l'agent et le wallet humain. Conditions de la garantie : Agent Wallet en mode server-wallet (pas BYOK), aucun USDC sur l'Agent Wallet, Guard Mode limité au payeur et à l'USDC. Chaque refus et chaque override sont journalisés. | 01/10 | 0,9 |
+| D48 | **Lot de correction 02-bis** (tour 7) | **A** : refus à la soumission de toute ligne d'agent dont la source (le wallet, ou l'owner si VIA_OWNER est activé) est une ancre de l'ensemble ; `proveWallet` invalide une ligne dont le nouveau wallet devient une ancre. **B** : les contrôleurs ne sont rejetés que pour les avis positifs (w > 0), leurs négatifs sont conservés ; une ancre approuvée ou opératrice de l'agent vaut veto. **C** : refus du hash canonique d'une ligne prouvée fausse, y compris sous REGISTRY_CHANGED, avec contrôle de forme canonique. **Renommage** de `isTrusted` en `passesAnchorPolicy`. AM-9.3 (ancien owner qui note juste après le transfert) : assumé et affiché en diagnostic | 7 | 0,85 / 0,75 / 0,7 |
+| D49 | Périmètre face à ARCHITECTURE.md | **Dans la démo** : le poids effectif d'une revue (chantier 07). **Extension de l'ERC et slide** : TrustDomain et VouchBond. **Après le hackathon** : PermissionedRegistry. **Une ligne dans l'ERC** : le registre Validation | 7 | 0,75 |
+| D50 | Positionnement | En avant : **la propagation au-delà d'un saut, avec une borne Sybil et un certificat vérifié on-chain**. Nouvelle scène « 2ᵉ saut » : H1 approuvé par **deux** ancres (sinon le leave-one-out échoue), puis H1 qui approuve H2 | 7 | 0,8 |
+| D51 | Vidéo et réseau | 3 minutes, à partir du storyboard de 2:55, avec le 2ᵉ saut (12 s) ; l'override dans le README, pas dans la vidéo. Acte 2 sur le testnet, plus une exécution minimale sur le mainnet. Snapshot et chiffres recalculés au tournage | 7 | 0,75 |
+| D52 | Plan du 06 au 12/10 | Plan daté dans `docs/chantiers/ROADMAP.md`. **Ordre de coupe** : (1) le code de rotation Mera, (2) le plugin dans la vidéo, (3) l'écran live, (4) la mesure de C. **Jamais coupés** : l'acte 1, la ferme refusée, l'ancre compromise (donc la correction A), le disjoncteur, le 2ᵉ saut, la démo figée, la soumission d'assurance | 7 | 0,75 |
+| D53 | **Bounty MetaMask abandonné** *(confirmé par Hugo le 06/10)* | Le bounty « Best Agent Wallet Plugin » est réservé à la track Onchain Finance & Trading. **On ne le vise plus.** Le plugin `mm ancre` reste dans le produit : il est la garde côté agent, et apparaît 6 s dans la vidéo au plus, ou dans le README seulement. Bounties visés : **Envio et Mera**, plus éventuellement un bounty « All tracks » à choisir (voir MUSTDO) | 06/10 | 0,9 |
 
 ---
 
@@ -1440,3 +1446,29 @@ Sources : `docs/ressources/veille-2026-10-05-hackathon.md`, `veille-2026-10-05-t
 - monagent, un plugin MetaMask, calcule la moyenne naïve.
 - Kanmani passe à 12 agents. ColinkaMir est prêt à soumettre.
 - **Ce qui reste propre à ANCRE : la propagation au-delà d'un saut, avec une borne et un certificat vérifié on-chain.** D'où une scène de démo « 2ᵉ saut » (AM-9.6).
+
+
+---
+
+# Tour 7 — 2026-10-05 — défauts du contrat, périmètre, bounties, plan
+
+Délibération complète en annexe : `docs/conseil/tour7.md`. Décisions renumérotées **D48 à D52** (D-7.1 à D-7.5). Spécification de correction de 02-bis : `tour7.md`, D-7.1.
+
+**Désaccords non résolus**
+1. Veto par approbation : lu en direct (environ 32 k gas, ESTIMÉ) ou posé par preuve ?
+2. Code Mera : couper la rotation ? La porte P4 tranche.
+3. Exécution sur le mainnet : risque de dernière minute, ou preuve exigée par le critère Monad Integration ?
+4. Le plugin dans la vidéo.
+5. La soumission d'assurance accepte-t-elle un lien de dépôt privé ?
+
+| Id | Angle mort | Suite |
+|---|---|---|
+| AM-10.1 | Un DevRel de MetaMask figure parmi les juges de track, pas parmi les juges de bounty | sans objet depuis D53 |
+| AM-10.2 | BlockVision (8 k$) est un prix pour les gagnants de track, pas un bounty | fiche des bounties corrigée |
+| AM-10.3 | La correction B change la règle d'arête normative dans 4 implémentations : contrat, solveur, indexeur, ERC | un seul lot, 02-bis, avec des vecteurs communs |
+| AM-10.4 | Le renommage casse l'ABI de 4 consommateurs : payeur, plugin, indexeur, écran | à faire avant tout déploiement sur le testnet |
+| AM-10.5 | Sans forme canonique stricte, la correction C se contourne | contrôle de forme à la soumission |
+| AM-10.6 | Le 2ᵉ saut échoue au leave-one-out si le maillon intermédiaire n'a qu'une ancre | H1 approuvé par deux ancres |
+| AM-10.7 | Une soumission d'assurance avec un dépôt public exposerait le contournement avant la divulgation | dépôt privé, ou divulgation d'abord |
+| AM-10.8 | Les coûts du veto par approbation et de C ne sont pas mesurés | mesures dans 02-bis |
+| AM-10.9 | **La revue maximale du code (05/10) a été interrompue par la limite d'usage**, avant tout résultat | remplacée par `/code-review high` et `/security-review` dans 02-bis, et sur chaque lot |

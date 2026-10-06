@@ -50,6 +50,10 @@ Ils ne demandent aucune candidature :
 - Dwellir : 3 mois ;
 - Spectrum : 2 mois.
 
+## ⚠️ Mise à jour du 06/10 (D53)
+
+**MetaMask « Best Agent Wallet Plugin » est réservé à la track Onchain Finance & Trading (confirmé par Hugo). Il n'est plus visé.** Bounties visés : Envio et Mera, plus éventuellement un bounty « All tracks » (liste à relever sur la plateforme). **BlockVision (8 k$) est un prix pour les gagnants de track, pas un bounty** (AM-10.2).
+
 ## Décision de Hugo (27/09) → D38
 
 **Bounties visés : Envio (Best Use of Envio), MetaMask (Best Agent Wallet Plugin), Monad Foundation (Mera: One Passkey, Many Keys).** Les critères détaillés restent NON LUS (plateforme derrière une connexion). Chainlink CRE et Nansen ne sont pas visés.
