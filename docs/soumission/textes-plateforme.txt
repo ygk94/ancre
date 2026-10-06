@@ -1,27 +1,67 @@
+==============================================================================
+NOTES POUR HUGO (en français ; tout le reste du fichier est à recopier tel quel)
+==============================================================================
+Mise à jour du 2026-10-06 par la session du chantier 09. Les champs ONE-LINER,
+DESCRIPTION et GO-TO-MARKET ont déjà été saisis sur la plateforme le 05/10 :
+il faut y RECOPIER la version ci-dessous. Différences avec la version du 05/10 :
+
+  DESCRIPTION
+  1. Paragraphe 5 : « stops paying it from the next certificate onward » était
+     FAUX (D33, rapport 05) : le veto est lu en direct dans le registre, le
+     paiement suivant est refusé au bloc suivant, SANS nouveau certificat.
+     Même correction au paragraphe 7 (« once a new certificate lands »).
+  2. Paragraphe 4 : la vérification décrite était l'ancienne (résidu +
+     contraction). Le contrat vérifie t ≤ F(t) composante par composante
+     (sous-solution, D26) : borne inférieure exacte par monotonie.
+  3. isTrusted → passesAnchorPolicy (renommage D48, lot 02-bis). Aussi dans
+     GO-TO-MARKET. ⚠️ À ne recopier qu'une fois 02-bis fusionné.
+  4. Ajout du différenciateur D50 (au-delà d'un saut, borne, certificat) au
+     paragraphe 3, et du 2ᵉ saut réel (#18 → #2, #3) au paragraphe 6.
+  5. Ajout du fait D55 (150/150 noteurs financés par l'owner d'Eve, 11,0 MON)
+     au paragraphe 2, et de la réserve du scan multichaîne (borne basse sous
+     notre schéma, construit sur les tags de Monad).
+  6. Ajout du leave-one-out (une clé d'ancre volée ne fait pas payer).
+
+  Marqueurs : ⟦CHECK: …⟧ = à vérifier ou compléter avant le 12/10, à
+  RETIRER du texte recopié. Aucun passage de ce fichier ne décrit le
+  contournement du garde-fou (78 cas) ni l'EOA d'upgrade : rien à masquer
+  ici en attendant la divulgation.
+
+  Longueurs : la plateforme a une limite non documentée sur le one-liner
+  (erreur 400 vue par un concurrent) ; les autres limites sont inconnues.
+
+  NOUVEAUX CHAMPS (à la fin) : WRITE-UP COURT (profil public), ENVIO, MERA
+  (deux variantes selon la porte P4), ALCHEMY (critères : fiche officielle
+  du 06/10, docs/conseil/bounties-sponsors.md), PROGRESS UPDATE du 12/10.
+==============================================================================
+
+
 BIO / ONE-LINER
 
 Sybil-resistant ERC-8004 reputation a contract can check before paying.
+
+(Alternative, si la limite le permet : "Reader-anchored ERC-8004 reputation that travels beyond one hop, checked by the contract that pays.")
 
 
 DESCRIPTION
 
 ANCRE is a reputation layer for AI agents that a smart contract can read before it pays. It is built on ERC-8004, the standard that gives agents an on-chain identity and lets anyone leave feedback about them. ERC-8004 deliberately leaves one problem open. Anyone can rate any agent, for free, and the standard says in its own text that Sybil attacks are possible. Filtering is left to the reader: calling getSummary without a list of trusted raters simply reverts. The reader is expected to know whom to trust, but is given no tool to work it out. ANCRE is that tool. We do not build another registry or another agent passport. We build the layer the standard hands to the reader.
 
-The problem is not theoretical. We re-read the canonical ERC-8004 registries on Monad mainnet directly on-chain. On 28 September 2026 they held 10,262 agents and 9,283 feedback entries. 83% of all that feedback points to a single agent, Eve-8004, and comes from 7,665 agents created in about 48 hours. Because 117 of those ratings are set to 1e38, Eve's naive average is 1.53 × 10^36. Any application that ranks agents by their average rating puts that agent first. Requiring proof of payment does not help: the farm paid, and the raters were funded by the same owner. A receipt can be true and still come from a farm. We ran the same analysis with Envio HyperSync on seven chains, and the pattern repeats everywhere. Less than 5% of ERC-8004 feedback survives as a usable trust signal, and on Monad only 0.12% does.
+The problem is not theoretical. We re-read the canonical ERC-8004 registries on Monad mainnet directly on-chain. On 28 September 2026 they held 10,262 agents and 9,283 feedback entries. 83% of all that feedback points to a single agent, Eve-8004, and comes from 7,665 agents created in about 48 hours. Because 117 of those ratings are set to 1e38, Eve's naive average is 1.53 × 10^36. Any application that ranks agents by their average rating puts that agent first. Requiring proof of payment does not help: the farm paid, and the raters were funded by the same owner. In a random sample of 150 of Eve's raters, every single one received its first MON from Eve's owner, 11.0 MON each. A receipt can be true and still come from a farm. We ran the same edge rules over seven chains with Envio HyperSync: under our reference schema, less than 5% of ERC-8004 feedback survives as a usable trust edge on any of them, and on Monad only 0.12% does. Since that schema was built from Monad's tags, the figures for other chains are a lower bound, not a verdict.
 
-ANCRE starts from one idea: trust does not exist in the absolute, it exists from someone's point of view. There is no global score. The ERC-8004 authors themselves consider a single global score dangerous, and a post in the standard's discussion thread (ethereum-magicians #309) asked for exactly this approach, without an answer so far. Each reader, whether a company, a DAO or a buyer agent, chooses a small set of anchors it already trusts. ANCRE then computes Personalized PageRank, from the EigenTrust family, starting from those anchors and following the graph of ratings between agents. Trust only flows along ratings given by agents the anchors can reach. A farm of thousands of accounts rating each other therefore receives nothing, unless one of the reader's anchors vouches for it. Two readers can look at the same registry and see two different rankings, and that is intended.
+ANCRE starts from one idea: trust does not exist in the absolute, it exists from someone's point of view. There is no global score. The ERC-8004 authors themselves consider a single global score dangerous, and a post in the standard's discussion thread (ethereum-magicians #309) asked for exactly this approach, without an answer so far. Each reader, whether a company, a DAO or a buyer agent, chooses a small set of anchors it already trusts. ANCRE then computes Personalized PageRank, from the EigenTrust family, starting from those anchors and following the graph of ratings between agents. Trust only flows along ratings given by agents the anchors can reach. A farm of thousands of accounts rating each other therefore receives nothing, unless one of the reader's anchors vouches for it. What sets ANCRE apart from a list of trusted raters is that trust travels beyond one hop, with a formal bound. An agent that none of your anchors rated can still be trusted, because an agent they rated vouches for it, and the trust that can leak into a Sybil group is capped by a known formula. A trusted list tells you whose ratings count. ANCRE tells you whose ratings count because someone you trust vouched for them, and proves it to your contract. Two readers can look at the same registry and see two different rankings, and that is intended.
 
-The computation happens off-chain, but the result is certified on-chain. A solver submits a certificate containing the graph in calldata, the trust vector and an error bound. The AnchoredReputation contract recomputes one PageRank step and checks the residual. Since the PageRank map is a contraction, a small residual guarantees a lower bound on every agent's trust. That bound is classical; what is new is enforcing it inside a contract. At the strongest level, which we call Registry-verified, the contract also re-reads every edge from the live ERC-8004 registry, so a fabricated or inflated rating is rejected at submission. Omitting or diluting edges is still possible, and anyone can prove it on-chain afterwards. We present the guarantee with its level and its limits.
+The computation happens off-chain, but the result is certified on-chain. A solver submits a certificate: the graph in calldata and, for each anchor, a trust vector. The AnchoredReputation contract recomputes one PageRank step and accepts the vector only if no value exceeds its recomputed one. Because the PageRank map is monotone, such a vector is an exact lower bound on every agent's true trust. That property is classical; what is new is enforcing it inside the contract that pays. At the strongest level, which we call Registry-verified, the contract also re-reads every edge from the live ERC-8004 registry, so a fabricated or inflated rating is rejected at submission. Omitting or diluting edges is still possible, and anyone can prove it on-chain afterwards, which widens the certificate's bounds. We present the guarantee with its level and its limits.
 
-The certified score is then used where it matters: at payment time. TrustGatedPayer is a smart account (ERC-1271) that holds the USDC used to pay other agents over x402. Its signature check calls isTrusted on the ANCRE contract. If the provider is below the reader's threshold, or if one of the anchors has vetoed it, the payment cannot settle. The refusal comes from the contract, not from an interface that could be bypassed. When an anchor flags a provider that went bad, every payer relying on those anchors stops paying it from the next certificate onward. We also wrote a plugin for the MetaMask Agent Wallet, mm ancre, which checks trust before the agent signs anything. If ANCRE refuses, only a human can force the payment, from their own wallet, and the agent has no path to do it alone.
+The certified score is then used where it matters: at payment time. TrustGatedPayer is a smart account (ERC-1271) that holds the USDC used to pay other agents over x402. Its signature check calls passesAnchorPolicy on the ANCRE contract, which applies the policy committed in the reader's anchor set. Trust is computed leaving out the largest single anchor, so one stolen anchor key is never enough to make the payer pay. If the provider is below the reader's threshold, or if one of the anchors has vetoed it, the payment cannot settle. The refusal comes from the contract, not from an interface that could be bypassed. A veto is read live from the registry: when an anchor flags a provider that went bad, every payer relying on that anchor refuses the very next payment, one block later, without waiting for a new certificate. We also wrote a plugin for the MetaMask Agent Wallet, mm ancre, which checks trust before the agent signs anything. If ANCRE refuses, only a human can force the payment, from their own wallet, and the agent has no path to do it alone.
 
-On the real Monad registry, with two anchors, Eve-8004 ends up with a trust mass of exactly 0, compared with its naive average of 1.53e36. The few honest ratings that remain form a short chain from the anchors to agent #18 and then to agents #2 and #3, which receive a positive, certified score. That honest graph is very small today, so ANCRE answers "unknown" for most agents. This is the correct answer, and the positive side of our demo relies on our own agent traffic.
+On the real Monad registry, with two anchors, Eve-8004 ends up with a trust mass of exactly 0, compared with its naive average of 1.53e36. The few honest ratings that remain form a short chain: both anchors rate agent #18, and #18's wallet rates agents #2 and #3, which receive a positive, certified score at the second hop, although no anchor ever rated them. That honest graph is very small today, so ANCRE answers "unknown" for most agents. This is the correct answer, and the positive side of our demo relies on our own agent traffic. ⟦CHECK: chiffres à recalculer après 02-bis et 04-bis (snapshot rafraîchi)⟧
 
-Monad is what makes this practical. Blocks come every 0.3 seconds (we measured 0.302 s over 1,000 blocks), so once a new certificate lands, a veto stops payments from the very next block. We recertify on every change of the graph rather than on every block. In our fork tests, it took 390 ms from a graph change to the on-chain receipt. The Registry-verified certificate for the demo graph costs 14.97 million gas and fits in a single transaction. The trust check adds about 183,000 gas per payment. The canonical ERC-8004 registries are deployed on both Monad mainnet and testnet, so we work against the real ones. The standard we propose stays chain-agnostic, since ERC-8004 runs on more than 40 chains, but Monad is where its strongest verification level becomes routine.
+Monad is what makes this practical. Blocks come every 0.3 seconds (we measured 0.302 s over 1,000 blocks), so a veto stops payments one block after it is posted. We recertify on every change of the graph rather than on every block. In our fork tests, it took 390 ms from a graph change to the on-chain receipt. The Registry-verified certificate for a 300-edge demo graph costs 14.97 million gas and fits in a single transaction; for the real mainnet graph it costs about one million gas. The trust check adds about 183,000 gas per payment, and refusing an unknown agent costs 29,000 gas. The canonical ERC-8004 registries are deployed on both Monad mainnet and testnet, so we work against the real ones. The standard we propose stays chain-agnostic, since ERC-8004 runs on more than 40 chains, but Monad is where its strongest verification level becomes routine. ⟦CHECK: regas après 02-bis ; « more than 40 chains » vient du CLAUDE.md (non resourcé ici, à vérifier ou retirer)⟧
 
-The project includes the verifier and payer contracts in Solidity, tested with Foundry against forks of Monad mainnet and testnet. It also includes the PageRank solver and certification service in Python, an Envio HyperIndex indexer running on Envio Cloud for Monad mainnet, Monad testnet and Optimism, and the MetaMask Agent Wallet plugin. Alongside the code, we wrote a draft ERC, "Anchored Reputation for Trustless Agents", with test vectors and an independent verifier. ANCRE is meant to be its reference implementation.
+The project includes the verifier and payer contracts in Solidity, tested with Foundry against forks of Monad mainnet and testnet. It also includes the PageRank solver and certification service in Python, an Envio HyperIndex indexer running on Envio Cloud for Monad mainnet, Monad testnet and Optimism, and the MetaMask Agent Wallet plugin. Alchemy webhooks trigger recertification when the graph changes, and Alchemy's Transfers API explains a score by showing where a rater's funds came from. ⟦CHECK: phrase Alchemy à garder seulement si l'intégration D55 est livrée⟧ Alongside the code, we wrote a draft ERC, "Anchored Reputation for Trustless Agents", with test vectors and an independent verifier. ANCRE is meant to be its reference implementation.
 
-We credit the prior work we build on. OpenRank (Karma3) already prototyped verifying a PageRank fixed point on-chain. trustgraphs computes anchored PageRank with zero-knowledge proofs, on EAS rather than ERC-8004. monad-agent-trust studies payment provenance on the same Monad data; that work is complementary, and in our standard it can be plugged in as an additional filter on edges. What ANCRE brings is the combination: anchors chosen by the reader, unmodified ERC-8004 as the data source, certification at the speed of the chain, and a score read by the paying contract itself.
+We credit the prior work we build on. OpenRank (Karma3) already prototyped verifying a PageRank fixed point on-chain. trustgraphs computes anchored PageRank with zero-knowledge proofs, on EAS rather than ERC-8004. monad-agent-trust studies payment provenance on the same Monad data; that work is complementary, and in our standard it can be plugged in as an additional filter on edges. What ANCRE brings is the combination: anchors chosen by the reader, trust that propagates beyond one hop with a Sybil bound, unmodified ERC-8004 as the data source, certification at the speed of the chain, and a score read by the paying contract itself.
 
 The project was built with heavy use of an AI coding agent (Claude Code), as disclosed in the README. Every number in this description comes from a script in the repository and can be re-run.
 
@@ -32,14 +72,87 @@ Our first users are the people who lose money when an agent's reputation lies: a
 
 Adoption starts with the standard, not with a sales pitch. ANCRE is the reference implementation of a draft ERC, "Anchored Reputation for Trustless Agents". After the hackathon we will open the pull request on ethereum/ERCs and answer the post in the ERC-8004 discussion thread that asked for reputation relative to reader-chosen anchors. That thread is where the builders of agent infrastructure already gather, so the standard brings us our first integrators. Because the interface is chain-agnostic and ERC-8004 is deployed on more than 40 chains, every integration we win on Monad can be reused elsewhere, while Monad remains the chain where certification is fast and cheap enough to run on every graph change.
 
-We then go where payments are decided. The trust check is one call, isTrusted, and our payer contract wraps it around an x402 payment, so an agent can adopt ANCRE without changing how it pays. We will publish the payer as a drop-in contract, keep the Envio indexer open source, and offer a read API that returns every score together with its certificate, so that nobody has to trust us to use it. Our first target partners are the teams already working on the same data: the Monad x402 facilitator, ERC-8004 explorers such as 8004scan, and the projects that check payment receipts or payment provenance. In our standard, their signals plug in as edge filters, so they gain from ANCRE instead of competing with it.
+We then go where payments are decided. The trust check is one call, passesAnchorPolicy, and our payer contract wraps it around an x402 payment, so an agent can adopt ANCRE without changing how it pays. We will publish the payer as a drop-in contract, keep the Envio indexer open source, and offer a read API that returns every score together with its certificate, so that nobody has to trust us to use it. Our first target partners are the teams already working on the same data: the Monad x402 facilitator, ERC-8004 explorers such as 8004scan, and the projects that check payment receipts or payment provenance. In our standard, their signals plug in as edge filters, so they gain from ANCRE instead of competing with it.
 
 Cold start is the real challenge, and we plan for it. A trust graph is only useful once honest agents rate each other, and the honest graph on Monad is tiny today. We will seed it with a few public anchor sets whose members and rules are published, and with design partners: teams that run several agents and are willing to rate the providers they actually pay. Every certified payment they make adds an honest edge, so each new partner makes the graph more useful for the next one. Companies get the same product for their own perimeter: a private anchor set turns any public registry into their own trust domain, with no private infrastructure to run.
 
 The business model follows the cost. Reading a score is free for everyone. The owner of an anchor set pays for its certification, which on Monad costs little enough to repeat on every change of the graph, and we will charge a fee for operating that service, acting as a reputation oracle whose every answer can be verified on-chain. We will measure success by the number of anchor sets certified, the number of payments that go through a trust check, and the number of honest edges in the graph, rather than by the number of agents registered.
 
 
-PROGRESS UPDATE
+==============================================================================
+CHAMPS NOUVEAUX (06/10)
+==============================================================================
+
+
+WRITE-UP COURT (profil public, ~150 mots)
+
+ANCRE: reader-anchored, Sybil-bounded reputation for ERC-8004 agents, checked by the contract that pays.
+ERC-8004 lets anyone rate any agent for free and leaves Sybil filtering to the reader, without giving the reader a tool. On Monad mainnet (28 Sep 2026), 83% of the 9,283 ratings come from one farm; its target's naive average is 1.53 × 10^36. ANCRE computes personalized PageRank from anchors the reader chooses, so trust travels beyond one hop but cannot leak into a Sybil group beyond a formal bound. A contract accepts the result only as a provable lower bound, re-reading every edge from the registry. A payer contract (ERC-1271, x402) refuses to pay an agent that fails the reader's policy, and an anchor's veto stops the very next payment. On the real registry, the farm's trust is exactly 0. ANCRE is the reference implementation of a chain-agnostic draft ERC. Prior art credited: OpenRank, trustgraphs.
+
+
+------------------------------------------------------------------------------
+BOUNTY ENVIO — Best Use of Envio
+------------------------------------------------------------------------------
+(Critères de la fiche, 27/09 : profondeur d'usage — multichain, schéma non trivial, entités dérivées, HyperSync pour l'analytique ; produit qui marche ; originalité ; qualité. Livrables : dépôt public avec config.yaml, schema.graphql, handlers ; un consommateur ; une démo courte.)
+
+Envio is ANCRE's data layer, not an add-on.
+
+1. One HyperIndex indexer, three chains. It runs on Envio Cloud and follows the ERC-8004 registries on Monad mainnet, Monad testnet and Optimism. Agent ids are only unique per chain, so each chain is indexed separately and the cross-chain view is built at query time. Identity (owners, agent wallets, operators) is rebuilt from events alone, never from historical eth_calls, and a consistency script checks it against the chain head.
+
+2. Derived entities that carry ANCRE's rules. The schema keeps an append-only history, a current state rebuilt from events, and a layer of normative trust edges (RefEdge): the latest non-revoked rating per rater, agent and tag, with every rejection typed (measurement tag, out of bounds, controller of the target…). These are exactly the rules of our Python solver. A parity test compares the two on the real history of all three chains: zero differences (5 Oct 2026). The solver builds its graph straight from the indexer's GraphQL.
+
+3. Auditing every certificate. A handler decodes each ANCRE certificate from the transaction calldata and compares it with the registry state the indexer holds. A fabricated, inflated, diluted or omitted edge becomes a Discrepancy entity with the proof ready to submit on-chain; a per-set health entity feeds the demo screen. ⟦CHECK: handler CertificateSubmitted livré ? (attendait l'ABI finale de 02-bis)⟧
+
+4. HyperSync analytics across seven chains. A survival scan replays the same edge rules over the ERC-8004 deployments on Monad, Monad testnet, Ethereum, Base, Arbitrum, Optimism and Polygon: under our reference schema, less than 5% of feedback ever becomes a trust edge, 0.12% on Monad. HyperSync reads Monad's full history in about 17 seconds.
+
+Links: indexer repository ⟦CHECK: https://github.com/ygk94/ancre-indexer, public⟧ · GraphQL endpoint ⟦CHECK⟧ · demo ⟦CHECK: horodatage dans la vidéo ou vidéo séparée⟧.
+
+
+------------------------------------------------------------------------------
+BOUNTY MERA — One Passkey, Many Keys (Monad Foundation)
+------------------------------------------------------------------------------
+(Critères de la fiche, 27/09 : nouveauté, loin du « passkey wallet » ; usage correct des primitives, sels cloisonnés, rien de sensible persisté ; test multi-appareils EN LIVE. Exclu : signer des transactions depuis un compte wallet.)
+(Choisir la variante selon la porte P4 — prototype sur 2 appareils, 06-E3 — et l'état de 02-E8. Ordre de coupe D52 : la rotation est la première chose coupée.)
+
+VARIANTE A — rotation livrée (P4 passée, AnchorRegistry déployé)
+
+In ANCRE, an anchor is a rater that a reader trusts to start with, and an anchor's veto stops payments. That makes an anchor key valuable to steal: with it, a thief can veto honest providers. We use Mera's PRF output so that one passkey derives a chain of pre-rotated anchor keys, one salt per epoch. The anchor commits on-chain the digest of its next key. When the current key is compromised, the next key is derived on a second device from the same passkey, and a single signature (rotateBySig), checked by the contract against the committed digest, makes it current. Nothing is stored anywhere: every key can be rebuilt from the passkey alone, and the salts never overlap.
+
+Live, in the demo: a stolen anchor key slashes an honest provider, and the payer refuses it at the next block. On an iPhone, Face ID derives the epoch-2 key and rotates. At the next block, the stolen veto no longer counts and the provider is paid again, without recertifying anything. A second salt family seals the evidence behind a veto in a Mera secret vault, referenced from the feedback and committed by its hash, and reopened on another device.
+
+The derived keys are role identities for an anchor, without funds; the passkey is never used as a wallet.
+
+VARIANTE B — dossier de veto seul (P4 échouée ou rotation coupée)
+
+In ANCRE, an anchor's veto stops every payer that trusts it, at the next block. A veto is a public rating, but the evidence behind it often cannot be public. We use Mera to seal it: the anchor's passkey derives a vault key, the evidence is encrypted in a Mera secret vault, the vault is referenced from the feedback, and the feedback's hash commits the plaintext. On appeal, the anchor reopens the vault on a second device with the same passkey, and anyone can check on screen that the revealed evidence matches the hash posted on-chain. No secret is stored on disk or on a server, and the passkey never signs a transaction.
+
+⟦CHECK: nom exact du rpId / domaine HTTPS, appareils utilisés, horodatage de la scène dans la vidéo⟧
+
+
+------------------------------------------------------------------------------
+BOUNTY ALCHEMY — Best Projects using Alchemy
+------------------------------------------------------------------------------
+(Fiche officielle copiée par Hugo le 06/10 : projet fonctionnel déployé sur Monad, intégration SIGNIFICATIVE d'au moins un service Alchemy. Critères : qualité de l'intégration, exécution technique, utilité et innovation. Demandé : une description de l'intégration ; vidéo OPTIONNELLE de 2 minutes au plus. Plan : D55, docs/ressources/alchemy.md. ⚠️ Au 06/10, l'intégration n'est PAS codée : le texte ci-dessous décrit D55 et ne doit être recopié qu'une fois livrée, mesures comprises.)
+
+ANCRE uses Alchemy in two places where it changes what the product does.
+
+1. Alchemy Webhooks drive recertification. A certificate must be refreshed whenever the trust graph changes, never on a timer and never on every block. A webhook on the ERC-8004 Reputation and Identity registries (new ratings, revocations, wallet changes, transfers) and on the ANCRE contract (new certificates, proofs) pushes each event to our certifier and our watcher. A rating from an agent inside the certified support triggers a new certificate; a new certificate triggers its audit. Measured delay from the on-chain event to the webhook: ⟦CHECK: mesure⟧, at commit state ⟦CHECK: Proposed / Finalized⟧.
+
+2. Alchemy's Transfers API explains a score. When ANCRE gives Eve-8004 a trust of zero, the screen shows why, from the chain itself: alchemy_getAssetTransfers on the raters' first funding transactions. In a random sample of 150 of Eve's 7,665 raters, every one received its first MON from the owner of the agent they rated, 11.0 MON each. ANCRE reached zero without needing to know it; the Transfers API shows the judge that the zero matches reality.
+
+We also read Monad's full event history through rpc1.monad.xyz, which Alchemy serves. ⟦CHECK: app Alchemy avec clé (plus défendable qu'un point d'accès public) ; lien de la vidéo de 2 min si faite⟧
+
+
+------------------------------------------------------------------------------
+PROGRESS UPDATE — version du 12/10 (à compléter le jour même)
+------------------------------------------------------------------------------
+
+As of 12 October, ANCRE runs on Monad ⟦CHECK: testnet / testnet and mainnet⟧ next to the canonical ERC-8004 registries. The verifier contract is deployed at ⟦CHECK: address⟧ and the trust-gated payer at ⟦CHECK: address⟧. Certificates are Registry-verified: every edge is re-read from the registry at submission. A real x402 payment through the Monad facilitator ⟦CHECK: settled / was refused⟧ under the payer's trust check. The demo runs a Sybil farm that really pays its target and gets zero trust, a stolen anchor key that cannot make the payer pay, an anchor veto that stops the next payment one block later, and an honest provider trusted at the second hop. The Envio indexer audits every certificate on Envio Cloud ⟦CHECK⟧. The draft ERC is ready for the ethereum/ERCs pull request after the hackathon. One limit we state openly: the honest graph on mainnet is still tiny, so the positive part of the demo uses our own agent traffic.
+
+
+------------------------------------------------------------------------------
+PROGRESS UPDATE — version envoyée le 05/10 (archive, ne plus recopier)
+------------------------------------------------------------------------------
 
 As of 5 October, the core of ANCRE is built and tested end to end on forks of Monad mainnet and testnet, against the real ERC-8004 registries. The verifier contract accepts certificates checked edge by edge against the registry, and the trust-gated payer refuses x402 payments to agents below threshold. The PageRank solver produces certificates that the contract accepts with identical results. The Envio indexer is live on Envio Cloud for Monad mainnet, Monad testnet and Optimism and matches the solver exactly. The MetaMask Agent Wallet plugin works in the real mm client, with an override that only a human can use. The draft ERC is written and passes the official linter.
 

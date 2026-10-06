@@ -1,270 +1,333 @@
-# ANCRE — Anchored Reputation for Trustless Agents
+# ANCRE — anchored reputation for ERC-8004 agents, checked by the contract that pays
 
-> Reader-anchored, Sybil-resistant, on-chain-certified aggregation of **ERC-8004** agent feedback — readable by contracts before they pay.
->
-> Built for **Monad Metropolis** (track 04 — Trust, Identity & AI Infra, submissions close **2026-10-13**). Reference implementation of a proposed ERC.
+> **A receipt can be true and still come from a farm.** ANCRE doesn't ask whether a payment happened. It asks whether anyone **you** trust vouches for the agent, possibly through someone they vouched for, and your contract reads the answer before it pays.
 
-*Research snapshot: 2026-09-21/23. Every number below was measured, not assumed. Unverified items are labelled.*
+ANCRE is a reputation layer for AI agents registered under [ERC-8004](https://eips.ethereum.org/EIPS/eip-8004). Each reader picks a few **anchors** it already trusts. ANCRE propagates trust from those anchors through the ERC-8004 feedback graph (personalized PageRank), publishes a **certificate** that an on-chain contract verifies, and lets a payer contract refuse to pay an agent that the reader's anchors do not reach, or that one of them has vetoed.
+
+It is the reference implementation of a draft ERC, *Anchored Reputation for Trustless Agents* ([`docs/erc/anchored-reputation.md`](docs/erc/anchored-reputation.md)).
+
+| | |
+|---|---|
+| Hackathon | Monad Metropolis, track 04 — Trust, Identity & AI Infra |
+| Network | Monad mainnet (143) and testnet (10143), next to the canonical ERC-8004 registries |
+| Certificate level used in the demo | **Registry-verified** (every edge re-read from the registry at submission) |
+| Status at submission | **[TBD: contracts deployed on testnet / mainnet — see §7]** |
+
+**How to read the numbers.** Every figure below links to the file that produced it, with its date and one of four labels: **MEASURED** (output of a script or test in this repository, or an on-chain read we made), **DOC** (official documentation), **ESTIMATED**, **UNVERIFIED**.
+
+---
+
+## Contents
+
+1. [The problem, measured on Monad mainnet](#1-the-problem-measured-on-monad-mainnet)
+2. [What ANCRE adds: trust beyond one hop, with a bound and a certificate](#2-what-ancre-adds)
+3. [How it works](#3-how-it-works)
+4. [Architecture](#4-architecture)
+5. [Replay act 1 in five minutes](#5-replay-act-1-in-five-minutes)
+6. [Run the tests](#6-run-the-tests)
+7. [Deployed addresses](#7-deployed-addresses)
+8. [Gas measurements](#8-gas-measurements)
+9. [Honest limits](#9-honest-limits)
+10. [Why Monad](#10-why-monad)
+11. [Prior art and complementary projects](#11-prior-art-and-complementary-projects)
+12. [Repository map](#12-repository-map)
+13. [AI tool disclosure](#13-ai-tool-disclosure)
+14. [Licenses](#14-licenses)
 
 ---
 
 ## 1. The problem, measured on Monad mainnet
 
-ERC-8004 registries are live on **Monad mainnet (chainId 143)**, both at version `2.0.0`, and **absent from the testnet** (verified via `eth_getCode` + `getVersion()`):
+ERC-8004 lets anyone rate any agent, for free. The standard says so itself, and leaves Sybil filtering to the reader: `getSummary` **reverts** unless the caller supplies the list of raters it trusts. The reader is expected to know whom to trust, and is given no tool to work it out.
 
-- IdentityRegistry `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`
-- ReputationRegistry `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`
+We re-read the canonical registries on Monad mainnet directly on-chain (never through a third-party API, which mis-reports decimals on 24 entries — `solver/out/mainnet.md`).
 
-| Measurement (2026-09-21) | Value |
-|---|---|
-| Agents registered on Monad | **10,171** |
-| Feedback entries | **9,188**, about **84 agents** only |
-| Share coming from a single farm | **83 %** — 7,665 `monad://Spawn-8004` agents, registered on 16–17 Feb 2026 at ~300/hour, each rating `monad://Eve-8004` (#182) at 100 |
-| Entries at `1e38` (max `int128` range used) | **117**, all on Eve-8004 |
-| Naive mean of Eve-8004 | **1.5 × 10³⁶** |
-| Agents #9 / #87 | 518 / 508 entries, **each from one single wallet** (tag `elo`, values ≈1,600) |
-| Mixed units in one registry | 0–100 scores, Elo ≈1,600, ±1 votes, `1e38` |
-| Useful graph | only **36 edges** where the rater is itself a rated agent |
-| Revoked entries | 0 |
-
-Data source: `https://www.8004scan.io/api/v1/{feedbacks,agents}?chain_id=143` (no key; `offset` pagination for feedback, `cursor` for agents). ⚠️ This is 8004scan's index, not a direct log read — **cross-check with HyperSync on day 1**.
-
-### What the standard itself says
-- `getSummary(agentId, [], ...)` **reverts** (tested on mainnet): *"clientAddresses MUST be provided (non-empty); results without filtering by clientAddresses are subject to Sybil/spam attacks"*.
-- *"Sybil attacks are possible… We expect many players to build reputation systems"*.
-- There is **no `feedbackAuth`** in v2.0.0: anyone can rate any agent, for free, without the agent's consent. The only guard, `!isAuthorizedOrOwner(msg.sender, agentId)`, blocks the owner but not a second wallet.
-- The off-chain feedback file has an optional `proofOfPayment {fromAddress, toAddress, chainId, txHash}`, and **nothing verifies it**.
-
-**The standard delegates Sybil filtering to the reader and gives the reader no tool to do it.** That is the gap.
-
-External corroboration: arXiv 2606.26028 reports coordinated Sybil behaviour among **73.5 % (Ethereum), 59.2 % (BSC), 90.6 % (Base)** of raters.
-
----
-
-## 2. Prior art (measured 2026-09-21)
-
-| Project | What it does | State | Delta with ANCRE |
-|---|---|---|---|
-| **ColinkaMir/monad-agent-trust** ⚠️ | Payment provenance on **Monad, same dataset**: did the rater pay, and did the agent owner fund the rater? Finds **16 clean entries out of 9,188** | ★0, created 2026-09-18, pushed daily | Heuristics, no graph algorithm, not contract-readable → **use as an edge filter, do not compete** |
-| **Pfand**, **Agent Veil** | EigenTrust / TrustRank over 8004, **off-chain** | ★0 / ★15 | Nothing verifiable on-chain |
-| **RNWY**, **TrustLayer** | Multi-chain scoring, signed oracle on Base / daily heuristics | ★0 | Operator trust, daily refresh |
-| **AInima-Collective/trustgraphs** | Seeded PageRank **proven in ZK (SP1)**, verified on-chain | ★8, Sepolia | Built on **EAS, not 8004**; their own notes refuse to claim "proven" while completeness of an external registry is unsolved |
-| **OpenRank PoC** (Karma3) | EigenTrust iteration verification + Merkle challenge | archived 2025 | ⚠️ **Fixed-point verification is not a new idea** — do not pitch it as one |
-| **zk-eigentrust** | Halo2 circuit | archived 2023, 4 neighbours max | Unusable at scale |
-| **Reputation-Slasher**, **Veylux** | Staked/slashable reviews, SybilRank | ★1 | Different mechanism |
-
-**No ERC covers aggregation.** Checked in `ethereum/ERCs`: neighbouring agent ERCs are about other things (8033 councils, 8122 minimal registry, 8126 verification, 8217 NFT bindings, 8257 tools, 8273 attestations, 8354 ZK verdicts). Three "reputation" PRs were closed unmerged (#1757, #1631, #1229).
-
-**Open and unanswered:** ethereum-magicians thread #25098 (390 posts), **post #309 (2026-07-23)** asks for reputation relative to *reader-chosen anchors*, citing "personalised PageRank and EigenTrust's pre-trusted peers". No author replied. Repo issues #99 (x402-backed feedback), #90 (capital-backed disputes), #78 (link to ERC-8183): nothing shipped.
-
-### What is genuinely new here
-1. **Reader-relative trust, readable by a contract**: `trustOf(agentId, anchorSetId)`.
-2. **Certification at chain cadence** — everything else refreshes daily; a negative signal from an anchor propagates in **~0.6 s**.
-3. **An exposed error bound**, not just a score.
-4. **Trust as a payment condition**: the router refuses below threshold. *The refusal comes from the contract, not the app.*
-
----
-
-## 3. Mechanism
-
-**Personalized PageRank (the EigenTrust family)** — the only classical scheme with *both* a formal Sybil bound and a **one-pass certificate**.
-
-- Fixed point: `t = (1 − α)·Cᵀt + α·p`, where `p` is the reader's anchor distribution.
-- **Sybil bound**: mass entering a Sybil region only crosses attack edges — `π(S) ≤ ((1−α)/α)·Σ π(u)·c_uv` (Cheng & Friedman 2005: only anchored, asymmetric functions can be Sybil-resistant). A farm of 7,665 mutually-rating accounts receives **nothing** unless an anchor trusts it.
-- **Certificate**: `F` is a contraction, so `‖t − t*‖₁ ≤ ‖t − F(t)‖₁ / α`. Verifying = **one** sparse matrix–vector product, O(edges).
-- **Linearity in `p`**: precompute one vector per anchor; any anchor set is a combination, no recomputation.
-
-**Graph construction from 8004** (the registry graph is bipartite wallet→agent):
-- node = agent; edge `A → B` if a controller (ERC-721 owner or `agentWallet`) of A rated B;
-- weight = value **normalized per tag** (declared scale), times an optional provenance filter (drop the edge if the rater was funded by the rated agent's region — ColinkaMir's signal);
-- `FeedbackRevoked` removes the edge; feedback from accounts controlling no node and not anchored **carries zero weight**. That is the core Sybil property.
-
-```
-NewFeedback / FeedbackRevoked  (ReputationRegistry 0x8004BAa1…)
-        │  indexer (Envio HyperSync — public getLogs is capped at 100 blocks)
-        ▼
- off-chain solver: PPR per anchor ──► publish(epoch, edges in calldata, t, root) + bond
-        ▼
- AnchoredReputation.sol : recompute keccak(edges), check residual ≤ ε, store t per anchor set
-        │                 ▲ challenge: readFeedback(agent, client, idx) proves an omitted edge → slash
-        ▼
- trustOf(agentId, anchorSetId) ──► TrustGatedRouter (x402 `upto`, USDC) / any third-party contract
-```
-
----
-
-## 4. Feasibility numbers
-
-Gas estimates below are **estimates, not benchmarks** — replace with `forge test --gas-report` (Foundry ≥ 1.8, `network = "monad"`) on day 1.
-
-- Edge as `(uint32 i, uint32 j, uint64 w)` = 16 bytes calldata ≈ 256 gas, plus arithmetic ⇒ **~350–400 gas/edge**.
-- **30M gas/tx ⇒ ~60–75k edges per tx**; the **real 9,188-entry graph fits in one tx** (~3.7M gas), ≈ **0.37 MON** at the 100 gwei floor.
-- ⚠️ Reading feedback from the registry's **storage** is impractical (~20k gas/edge under MIP-8: 8,100 per cold page) → **calldata is mandatory**, and the link back to the registry is an optimistic challenge.
-
-**What Monad actually changes**
-- ❌ Not "recompute every block forever": 3.7M gas × 288k blocks/day is not viable. Recompute **on graph change** — that is what makes a negative signal sub-second.
-- ✅ **Optimistic challenge windows in seconds, not days** (watchers are bots; finality ~0.6 s).
-- ✅ **Several anchor columns per update**: 20 anchors × 1,000 edges ≈ 8M gas, trivial inside a 150M block.
-
-**Payments** (Dwork–Naor 1992: make the cost land in someone's pocket instead of a radiator) — verified live:
-- Monad x402 facilitator `https://x402-facilitator.molandak.org/supported` → v2, `exact` + `upto`, `eip155:143` and `eip155:10143`
-- native USDC `0x754704Bc059F8C67012fEd69BC8A327a5aafb603` (6 decimals), `@x402/evm ≥ 2.22.0`
-- ⚠️ **Payment alone fails**: the Eve farm paid, and the owner had funded the raters. Payment weights an edge; it never replaces anchoring.
-
-**Monad gotchas to code from day 1**: you pay the gas *limit*, not gas used (set it tight) · epochs in `block.number`, not `timestamp` (3–4 blocks share a second) · never draw anchors/auditors from `prevrandao` (leader knows it) · 10 MON reserve balance per account (matters when spawning a demo farm) · **registries are mainnet-only** → deploy your own 8004 registries on testnet for development, read mainnet read-only · `eth_getLogs` ≤ 100 blocks.
-
----
-
-## 5. The demo — "trust circuit breaker"
-
-A buyer agent pays provider agents per call over x402 `upto`, through a `TrustGatedRouter`.
-
-1. **Tonight's real Monad registry.** Naive ranking puts Eve-8004 first (7,665 reviews, mean 1.5e36). ANCRE puts it at zero. *No synthetic data — that is mainnet.*
-2. **Live attack.** Spawn a Sybil farm rating a malicious provider. The naive leaderboard explodes on screen; the ANCRE score does not move; the router **refuses to pay**.
-3. **Live betrayal.** An honest provider starts returning garbage. **One** anchor rates it negatively → at the next block, **every other agent's router stops paying it**. On-screen counter: losses bounded to N calls / X ms.
-4. **Relativity.** Two readers with different anchors see two different rankings **of the same registry** — the visible answer to #309.
-
-Optional: the router charges a price **inversely proportional to trust** — unknowns pay, trusted agents pass nearly free.
-
-> **Pitch:** *ERC-8004 says its own reputation is Sybil-attackable and leaves filtering to the reader. On Monad mainnet, 83 % of all feedback comes from one farm of 7,665 fake agents. We give the reader the tool the standard promised: reputation relative to their anchors, certified on-chain, readable by a contract before it pays.*
-
----
-
-## 6. Known weaknesses (say them before the jury does)
-
-1. **Fixed-point verification already exists** (OpenRank PoC). The novelty is the combination: reader anchors + contract-readable + Monad cadence + 8004 graph.
-2. **The real graph is too thin to rank honest agents** — 36 useful edges. ANCRE kills the farm but says "unknown" for almost everyone. The positive demo needs our own agent traffic; that is also the message: *today, 99 % of Monad's agent reputation is worthless.*
-3. **Completeness is optimistic, not proven** — no registry hook (see §7 ask).
-4. **Anchor choice is political.** That is the thesis: the reader chooses. Ship transparent default sets.
-5. **ColinkaMir is active on the same dataset.** Position as complementary; consider reaching out.
-6. **Identity/reputation themes convert poorly in demo-vote formats** (×0.77 in the Monad Blitz dataset). Without the live attack + circuit breaker, this is a slide, not a project.
-
----
-
-## 7. The proposed ERC — full draft
-
-Chain-agnostic on purpose: ERC-8004 sits at identical addresses on 40+ chains, and a chain-specific standard would read as a local hack. **Monad is where the strongest conformance level becomes cheap**, not a clause in the text.
-
-| | Ethereum L1 / slow L2s | Monad |
+| Fact | Value | Status and source |
 |---|---|---|
-| Interface, tags, certificate | identical | identical |
-| Achievable level | `Optimistic` in practice | **`Verified` on every graph change** |
-| Freshness (`block.number − epoch`) | minutes to hours | **1–2 blocks, < 1 s** |
-| Challenge window | hours/days | seconds |
+| Registries | Identity `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`, Reputation `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`, version 2.0.0 | MEASURED, `cast`, 2026-09-27 |
+| Agents / feedback entries | **10,262 / 9,283** at block 108,835,675 | MEASURED, 2026-09-28, [`solver/out/mainnet.md`](solver/out/mainnet.md) (snapshot in `solver/data/`) **[TBD: refreshed snapshot, lot 04-bis]** |
+| Feedback pointing to one agent, Eve-8004 (#182) | **7,665 (83 %)**, from agents registered on 16–17 Feb 2026 at about 300 per hour | MEASURED, `solver/out/mainnet.md` |
+| Entries set to `1e38` | **117**, all on Eve-8004 | MEASURED, same file |
+| Naive average of Eve-8004 | **1.526 × 10³⁶** (`getSummary(182, all 7,665 clients)`) | MEASURED live, block 110,993,179, 2026-10-06 (commands in §5) |
+| `getSummary(182, [], "", "")` | reverts: `clientAddresses required` | MEASURED live, 2026-10-06 |
+| Feedback that survives as a usable trust edge | **11 edges out of 9,283 entries (0.12 %)** under the reference schema | MEASURED, `solver/out/mainnet.md` §0; `indexer` survival scan |
 
-Closest EVM competitor is Base (150 Mgas/s, ~200 ms Flashblocks preconfirmations) — but a preconfirmation is a single sequencer's promise, and for a standard about *not* trusting operators, building `Verified` on that is self-defeating. Monad: 500 Mgas/s, ~0.6 s BFT finality, ~200 validators. Watch Denim (Base, 200 ms canonical blocks, targeting Nov 2026), ZKsync Atlas, and Monad's own Cadence (100 ms) — the edge is real today, not permanent.
+Any application that ranks agents by average rating puts Eve-8004 first. Requiring proof of payment does not fix it: the farm paid, and the raters' funds came from the same owner. We checked a random sample of 150 of Eve's raters: each one received its first MON from Eve's owner, always 11.0 MON (MEASURED, 2026-10-06, Alchemy Transfers API on `rpc1.monad.xyz`; `docs/ressources/alchemy.md` **[TBD: commit the script and its JSON output]**).
 
-<details>
-<summary><b>ERC draft (working text, 2026-09-21)</b></summary>
+<!-- DISCLOSURE-GATE:start — keep only once the ERC-8004 maintainers have been notified (decision D29) -->
+The registry's self-rating guard checks the agent's owner and operators, not its `agentWallet`: agent #8317 received 78 ratings from its own agent wallet, all accepted by the registry. ANCRE drops all 78 (MEASURED, `solver/out/mainnet.md` §c).
+<!-- DISCLOSURE-GATE:end -->
 
-```
-eip: TBD
-title: Anchored Reputation for Trustless Agents
-description: Reader-anchored, certifiable aggregation of ERC-8004 feedback, readable by contracts
-author: TBD
-discussions-to: https://ethereum-magicians.org/t/erc-8004-trustless-agents/25098
-status: Draft
-type: Standards Track
-category: ERC
-created: 2026-09-21
-requires: 8004
-```
+**The same pattern on other chains.** We ran the same edge rules over seven ERC-8004 deployments with Envio HyperSync (MEASURED, 2026-09-28, [`indexer/analytics/survival_scan.py`](indexer/analytics/survival_scan.py), report `docs/chantiers/rapports/03.md` §3):
 
-### Abstract
-ERC-8004 records feedback about agents but explicitly leaves aggregation and Sybil filtering to readers: `getSummary` requires a caller-supplied list of `clientAddresses`, and the specification states that "Sybil attacks are possible". This ERC standardizes the missing layer in three parts: **tag schemas** giving feedback values a declared scale; an **aggregator interface** returning a score relative to reader-chosen anchors, with an error bound and an observation block; and a **certificate format** with two conformance levels, `Verified` (fixed point checked on-chain) and `Optimistic` (bonded and challengeable). The standard is chain-agnostic; freshness is an explicit, reader-checkable property of every result.
+| Chain | Agents | Feedback | Edges kept | Survival |
+|---|---|---|---|---|
+| Monad 143 | 10,262 | 9,283 | 11 | 0.12 % |
+| Monad testnet | 1,949 | 1,862 | 28 | 1.5 % |
+| Arbitrum | 1,545 | 498 | 22 | 4.4 % |
+| Optimism | 545 | 334 | 10 | 3.0 % |
+| Polygon | 680 | 508 | 10 | 2.0 % |
+| Ethereum | 51,586 | 17,682 | 519 | 2.9 % |
+| Base | 97,351 | 531,500 | 9,857 | 1.9 % |
 
-### Specification
-RFC 2119 / RFC 8174 keywords apply.
-
-**1. Definitions.** *Registry*: an ERC-8004 Identity Registry and its Reputation Registry, identified by `(chainId, identityRegistry)`. *Node*: an agent `(registry, agentId)` or an anchor address. *Controller*: the ERC-721 owner and, if set, `agentWallet`, as of the epoch. *Anchor set*: sorted, de-duplicated nodes; `anchorSetId = keccak256(abi.encode(nodes))`. *Epoch*: block number up to which feedback was observed. Fixed-point unit: `1e18`.
-
-**2. Tag schemas.**
-```solidity
-struct TagSchema { string tag; int256 min; int256 max; uint8 decimals; bool higherIsBetter; }
-```
-Normalization: rescale `value` to `decimals`; if outside `[min, max]` the feedback MUST be **discarded** (aggregators MUST NOT clamp); else `x = (v − min)·1e18/(max − min)`, inverted if `!higherIsBetter`. Feedback whose `tag1` has no schema in the certificate's schema set MUST be ignored. A schema set is committed as `schemaRoot` (Merkle root of `keccak256(abi.encode(TagSchema))`, leaves sorted by `keccak256(bytes(tag))`). Optional shared registry:
-```solidity
-interface ITagSchemaRegistry {
-    event TagSchemaRegistered(bytes32 indexed schemaId, address indexed registrant, TagSchema schema);
-    /// schemaId = keccak256(abi.encode(registrant, schema.tag))
-    function registerTagSchema(TagSchema calldata schema) external returns (bytes32 schemaId);
-    function tagSchema(bytes32 schemaId) external view returns (TagSchema memory);
-}
-```
-Keying by `(registrant, tag)` prevents tag squatting; the choice is visible in `schemaRoot`.
-
-**3. Graph construction.** For every non-revoked feedback with index ≤ the committed last index, from `clientAddress` about agent `B`, and for every node `A` controlled by `clientAddress` (or `A = clientAddress` if it is an anchor address), add `x` to `w(A → B)`. Self-edges MUST be excluded. Feedback from addresses controlling no node and not anchored creates no edge. Extra edge filters (e.g. payment provenance) MUST be reflected in the `algorithm` identifier.
-
-**4. Algorithm `PPR-v1`** (MUST be supported). With `C` row-normalized and `p` uniform over the anchor set, `t` (entries in `1e18`, `Σt = 1e18`) is the unique fixed point of `F(t) = (1 − α)·Cᵀt + α·p`; dangling mass goes to `p`; `α ∈ (0, 1e18)` is committed. `F` is a contraction of factor `(1 − α)` in L1, so `r = ‖t − F(t)‖₁ ⇒ ‖t − t*‖₁ ≤ r/α`. Implementations MUST add `nnz(C)` units to `r` for fixed-point rounding. `trustOf` MUST return `score = t_i·N` (so `1e18` = uniform baseline) and `errorBound = (r/α)·N`; consumers SHOULD use `score − errorBound`.
-
-**5. Certificate.**
-```solidity
-enum Level { Optimistic, Verified }
-struct Certificate {
-    uint256 chainId; address reputationRegistry; uint64 epoch;
-    bytes32 feedbackRoot;   // Merkle root of edge leaves keccak256(abi.encode(from,to,weight)), sorted by (from,to)
-    bytes32 lastIndexRoot;  // (agentId, client, lastIndex) observed at epoch
-    bytes32 schemaRoot; bytes32 algorithm; uint64 alpha;
-    uint32  nodeCount; bytes32 scoresRoot; uint256 residual; Level level;
-}
-```
-`Verified`: the contract received the full edge list and `t` in calldata, recomputed `feedbackRoot` and checked `residual` in the same transaction. `Optimistic`: posted with a bond; during a window of `W` blocks anyone MAY challenge — *omission* (a non-revoked feedback with index ≤ committed `lastIndex`, absent from `feedbackRoot`), *fabrication* (an edge the registry does not support), or *residual* (a row of `F(t)` disagreeing beyond `residual`, proven by Merkle proofs). A successful challenge MUST slash the bond and invalidate the certificate.
-
-**6. Aggregator interface.**
-```solidity
-interface IAnchoredReputation {
-    event AnchorSetRegistered(bytes32 indexed anchorSetId, bytes32[] nodes);
-    event CertificatePublished(bytes32 indexed anchorSetId, uint64 indexed epoch, Certificate cert);
-    /// nodes: keccak256(abi.encode(chainId, identityRegistry, agentId)) or bytes32(uint256(uint160(addr)))
-    function registerAnchorSet(bytes32[] calldata nodes) external returns (bytes32 anchorSetId);
-    function trustOf(uint256 agentId, bytes32 anchorSetId)
-        external view returns (uint256 score, uint256 errorBound, uint64 epoch, Level level);
-    function certificate(bytes32 anchorSetId) external view returns (Certificate memory);
-    function supportsInterface(bytes4 interfaceId) external view returns (bool); // ERC-165
-}
-```
-`trustOf` MUST revert without a valid certificate, and MUST NOT serve a certificate still inside its challenge window unless `level == Verified`. Consumers SHOULD enforce `block.number − epoch ≤ maxAge` and a minimum level; this ERC deliberately fixes no `maxAge`.
-
-### Rationale
-Only anchored, asymmetric functions can be Sybil-resistant (Cheng & Friedman 2005); reader-chosen anchors also answer the "no single score" objection raised by ERC-8004 contributors. Among EigenTrust (2003), Advogato (1999), SybilGuard/SybilLimit and SybilRank, PPR alone has both a formal bound and a one-pass certificate (Advogato's max-flow certificate is binary; SybilRank needs `log n` early-stopped iterations). PPR is linear in `p`, so anchor sets compose. Two levels keep one text across fast and slow chains. Discarding rather than clamping stops a single `1e38` from reaching the top of the scale. Prior art: OpenRank PoC (iteration verification with fraud proofs), trustgraphs (ZK seeded PageRank over EAS).
-
-### Backwards Compatibility
-No ERC-8004 change required. **Requested for a future revision**: record `block.number` per feedback, or a cumulative per-agent counter — without it, feedback from a `(agentId, client)` pair first seen near the epoch cannot be proven to predate it, so `Optimistic` omission proofs are incomplete.
-
-### Security Considerations
-Anchor capture (use several independent anchors; leakage is bounded by the anchor's out-weight) · completeness gap (above) · stale reads (consumers MUST check `epoch`) · controller changes between epochs · **payment is not honesty** (self-funded rings observed on-chain) · fixed-point rounding (the `nnz(C)` term) · gas: `Verified` is O(edges); implementations MUST bound calldata per tx and MAY split verification across transactions.
-
-### Copyright
-CC0.
-</details>
-
-**Before submitting the ERC:** fill `author`; publish the reference implementation; re-check the maths (the `score = t·N` and `errorBound = (r/α)·N` conventions and the edge weighting are design choices, not settled).
+> **Caveat.** The reference tag schema was built from Monad's tags, and an unknown tag never creates an edge. Outside Monad, these figures are a **lower bound under our schema**, not a verdict on those chains.
 
 ---
 
-## 8. Plan (3 weeks to 2026-10-13)
+## 2. What ANCRE adds
 
-| Week | Deliverable |
-|---|---|
-| **W1 (Sep 22–28)** | 8004 indexer (HyperSync) + PPR solver + per-tag normalization + mainnet snapshot · `AnchoredReputation.sol` + **real gas report** |
-| **W2 (Sep 29–Oct 5)** | Own 8004 registries on testnet · `TrustGatedRouter` + x402 `upto` via the Monad facilitator · omission challenge · Sybil-farm script |
-| **W3 (Oct 6–12)** | Live demo screen (`monadLogs`): naive vs ANCRE, circuit breaker · **mainnet (143)** deploy · video · project profile · **ERC draft published** (PR to `ethereum/ERCs` + reply to thread post #309) |
+A list of trusted raters, which ERC-8004 already accepts, tells you **whose ratings count**. ANCRE tells you whose ratings count **because someone you trust vouched for them**, and proves it to your contract. Three properties together:
 
-**Sponsor bounties (updated 2026-10-05):** Envio 1k$ (indexer, live on Envio Cloud). The MetaMask Agent Wallet bounty is restricted to track 01 and is **not** targeted; the `mm ancre` plugin stays in the repo as an optional client-side guard. Other bounties: to be decided.
+1. **Trust propagates beyond one hop.** An agent that none of your anchors rated directly can still earn trust, if an agent your anchors rated vouches for it. A one-hop list would call it unknown.
+2. **A formal Sybil bound.** Trust enters a group of accounts only through ratings given by accounts that already hold trust. A farm of thousands of agents rating each other receives nothing unless someone the anchors reach vouches for it. The bound is the classical one for personalized PageRank: π(S) ≤ ((1−α)/α) · Σ_{u∉S} π(u) · C(u, S).
+3. **A certificate checked on-chain.** The trust vector is computed off-chain, but the contract only accepts it if it is a provable lower bound of the true value (§3.2). At the Registry-verified level, the contract also re-reads every edge from the live ERC-8004 registry.
+
+On the real Monad registry, with two independent anchors (`0x0730…`, `0xf7d5…`), α = 1/3 (MEASURED, `solver/out/mainnet.md` §a and §d, **[TBD: recompute after lots 02-bis and 04-bis]**):
+
+| Agent | Naive view | ANCRE |
+|---|---|---|
+| Eve-8004 (#182) | average 1.526 × 10³⁶ | **trust mass 0** on the whole 7,666-agent farm region |
+| #18 | — | 0.222 per anchor, robust trust 0.111 (rated by both anchors) |
+| #2, #3 | — | 0.074 per anchor (**second hop**: rated by #18's wallet, not by any anchor) |
+| #4 | — | trust 0, distrust 0.148 (a `slash −100` from #18's wallet dominates a later `+1`) |
+
+That honest graph is tiny: ANCRE answers "unknown" for almost every agent on mainnet today, which is the correct answer. The positive side of our demo uses our own agent traffic (§5, act 2).
+
+ANCRE is relative to the reader, by design. A reader who picks two farm wallets as anchors gets the farm's view (t(#182) = 0.222, MEASURED, same file, control case). There is no global score.
 
 ---
 
-## 9. Data
+## 3. How it works
 
-`data/` is **not** in this repo yet. Reproduce with the endpoints in §1; the 2026-09-21 snapshot (`fb.json`, 9,188 entries; `agents.json`, 10,171 agents) lives in the research vault under `2 - EVM/Monad (L1)/Hackathons/_data-metropolis/`.
+### 3.1 From feedback to a graph
 
-## 10. Product & build kit
+- **Nodes** are ERC-8004 agents. A rating from address `c` to agent `j` becomes an edge from every agent whose `agentWallet` is `c` (row copy for shared wallets, D20), or from an address node if `c` controls no agent.
+- **One edge per (rater, agent, tag)**: the latest non-revoked entry, then the most negative across the tags of the set's filter (a negative dominates).
+- **Tags are declared in a schema** committed in the anchor set. Only tags of kind `endorsement` create edges. `measurement` tags (liveness, uptime, risk scans) never do. Without this rule, an automated risk-screening service that pings every agent leaks **34.6 %** of its trust into the farm; with it, **0** (MEASURED, `solver/out/mainnet.md` §b).
+- **Values outside the declared bounds are rejected, not clipped.** Otherwise a `1e38` lands at the top of the scale.
+- An agent's controllers (owner, operators, wallet) cannot endorse it. Their negative ratings still count.
+- Normative rules R1–R8: [`solver/FORMAT.md`](solver/FORMAT.md). The indexer re-implements them in TypeScript and matches the solver exactly on three chains (MEASURED, 2026-10-05, `docs/chantiers/rapports/03.md`).
 
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** — product architecture: one engine, four surfaces (issue with vouching, import, private trust domain, weighted reviews), contracts, six flows, scope ladder, demo script. **Draft, not frozen.**
-- Presentation page: `docs/product-map.html`
+### 3.2 The certificate
 
-Backend workstreams, prompts and boundaries: **[BACKEND-KIT.md](BACKEND-KIT.md)** (laid-out version: `docs/backend-kit.html`). Three parallel workstreams — `indexer/`, `solver/`, `contracts/` — connected by frozen files in `spec/`.
+For each anchor `a`, the solver iterates `t ← F(t) = (1−α)·Cᵀt + α·e_a` from zero, with the contract's own rounding. The contract accepts the column only if **t ≤ F(t) coordinate by coordinate**. Because `F` is monotone, any such sub-solution is below the true fixed point: every published trust value is an exact **lower bound**, with no error term to trust. This is a classical property of PageRank; what is new is enforcing it inside the contract that pays. Proofs and lemmas: [`contracts/PROOFS.md`](contracts/PROOFS.md).
 
-## 11. Status
+Two verification levels (decision D32), named in every set and on screen:
 
-Research and specification complete; **no code written yet**. Next action: `AnchoredReputation.sol` with a real gas report, to replace the estimates in §4.
+- **Registry-verified**: at submission, the contract re-reads each committed edge in the ERC-8004 registry (latest index of the tag, rater's wallet, target's controllers). A fabricated or inflated edge is **refused**. Anyone may submit.
+- **Submitter-attested**: only the submitters listed in the set may submit. Any deviation from the registry, fabrication included, can be proven afterwards.
+
+At both levels, an omitted or diluted edge can be proven by anyone with `proveEdge` / `proveWallet`. A proof widens the certificate's bounds; it never moves funds (no slashing, because the registry does not store the block of a rating, so "this rating existed before the certificate" cannot be proven).
+
+### 3.3 The policy, and the payer
+
+An anchor set is content-addressed: its `setId` commits the anchors, the tag schema, α (1/3 recommended) and the whole payment policy — threshold θ, distrust ratio, minimum anchors `m`, veto quorum, maximum age, transfer mode. The single question a contract asks is:
+
+```solidity
+bool ok = anchoredReputation.passesAnchorPolicy(agentId, setId);
+```
+
+`passesAnchorPolicy` (named `isTrusted` before lot 02-bis, decision D48) never reverts, and returns true only if:
+
+- **leave-one-out trust** clears θ: the largest single anchor's contribution is removed, so **no single stolen anchor key can make the payer pay** (m = 2);
+- the agent's distrust stays below the committed ratio;
+- **no anchor has vetoed it**: the anchor's latest feedback on the agent is read **live from the registry**, so a veto stops the very next payment, without recertification;
+- the certificate is fresh, the registry has not been upgraded since (`REGISTRY_CHANGED`), and the agent has not changed owner (`TRANSFERRED`).
+
+[`TrustGatedPayer`](contracts/src/TrustGatedPayer.sol) is an ERC-1271 smart account that holds the USDC used to pay other agents over x402 (`exact` via EIP-3009, `upto` via Permit2). Its `isValidSignature` calls `passesAnchorPolicy`: if the provider fails, the signature is invalid and the payment cannot settle. **The refusal comes from the contract, not from an interface that could be bypassed.** Flow, messages and refusal reasons: [`contracts/PAYER.md`](contracts/PAYER.md).
+
+### 3.4 Agent-side guard and human-only override
+
+The `mm ancre` plugin for the MetaMask Agent Wallet ([`plugin/`](plugin/)) checks the same policy before the agent signs anything (`check`, `inspect`, `pay`). When ANCRE refuses, the plugin shows the verdict and offers an override **reserved to a human**: it pays from the human's own wallet, signed in their browser extension, never from the agent wallet nor from the payer. The command requires an interactive terminal and has no access to the agent wallet's executor; 17 tests check that no code path lets an agent run it. Every refusal and override is logged. This guard is a convenience on the client side; the hard guarantee is the payer contract.
+
+---
+
+## 4. Architecture
+
+```
+ ERC-8004 registries (Monad 143 / 10143)       NewFeedback · FeedbackRevoked · MetadataSet · Transfer · Upgraded
+        │                                       │
+        │                    ┌──────────────────┴───────────────────┐
+        │                    │ indexer/  Envio HyperIndex + HyperSync │  edges (R1–R8), survival scan,
+        │                    │ Monad 143, 10143, Optimism             │  certificate audit
+        │                    └──────────────────┬───────────────────┘
+        │                                       ▼
+        │                    solver/  PPR per anchor, from zero ──► certifier (submit on every graph change)
+        │                                       │                      watcher (audit, proofs)
+        │                                       ▼
+        └──── re-read every edge ──► contracts/AnchoredReputation.sol
+                                         │ submitCertificate · proveEdge · proveWallet · assess
+                                         ▼
+                              passesAnchorPolicy(agentId, setId)
+                                 │                         │
+                 contracts/TrustGatedPayer.sol      plugin/ mm ancre (agent-side check,
+                 ERC-1271, holds USDC, x402          human-only override)
+```
+
+| Component | What it is | Tests (MEASURED, 2026-10-06 on this commit unless stated) |
+|---|---|---|
+| [`contracts/`](contracts/) | `AnchoredReputation` (verifier, v1) and `TrustGatedPayer` (ERC-1271 payer), Solidity 0.8.28, Foundry ≥ 1.8 with `network = "monad"` | **147 passing**, including forks of Monad mainnet and testnet against the real registries |
+| [`solver/`](solver/) | Edge rules, PPR solver, certificate encoder (`ancre-cert-v1`), certifier service, watcher, Python | **135 passing** |
+| [`indexer/`](indexer/) | Envio HyperIndex indexer, three chains, parity with the solver | 28 passing (2026-10-05, reported by the indexer session; not re-run here) |
+| [`plugin/`](plugin/) | `mm ancre` plugin for the MetaMask Agent Wallet | 48 passing (2026-10-01, `docs/chantiers/rapports/05.md`) |
+| [`docs/erc/`](docs/erc/) | Draft ERC, 15 test vectors, an independent verifier (`verify.py`, Python standard library only) | `eipw` lint: 0 errors; `verify.py`: 0 failures (2026-10-01) |
+
+The certificate is a single transaction sent directly from an account (not through a relayer or multicall), so the indexer can decode it from calldata and audit it.
+
+---
+
+## 5. Replay act 1 in five minutes
+
+Act 1 is the measurement on the real registry. You need Python 3 (tested with 3.14) and, for the live part, [Foundry](https://book.getfoundry.sh/) (`cast`).
+
+**Offline, from the versioned snapshot** (about one second once installed; MEASURED from a fresh virtual environment, 2026-10-06):
+
+```bash
+git clone https://github.com/ygk94/ancre.git && cd ancre/solver
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/python run_mainnet.py      # rewrites and prints out/mainnet.md
+```
+
+It prints, for the snapshot of 9,283 entries: the edges that survive the schema (§0), Eve-8004 naive versus ANCRE (§a), the risk-screening leak with and without the measurement rule (§b), the honest chain and the second hop (§d), and the `slash` that dominates a later `+1` (§e).
+
+**Live, on Monad mainnet** (read-only; `rpc1.monad.xyz` accepts long argument lists and full-history log queries):
+
+```bash
+R=0x8004BAa17C55a88189AE136b182e5fdA19dE9b63; RPC=https://rpc1.monad.xyz
+# the standard refuses to average without a list of trusted raters
+cast call $R "getSummary(uint256,address[],string,string)(uint64,int128,uint8)" 182 "[]" "" "" --rpc-url $RPC
+# → execution reverted: clientAddresses required
+# the naive answer: average over every rater of Eve-8004
+C=$(cast call $R "getClients(uint256)(address[])" 182 --rpc-url $RPC)
+cast call $R "getSummary(uint256,address[],string,string)(uint64,int128,uint8)" 182 "$C" "" "" --rpc-url $RPC
+# → 7665, 1526418786692759295499021526418786791 [1.526e36], 0      (block 110,993,179, 2026-10-06)
+```
+
+**Then on-chain** **[TBD: once deployed, §7]**: `passesAnchorPolicy(182, <demo setId>)` on our contract returns `false`, for 29,231 gas.
+
+**Act 2** is our own traffic: honest providers, a scripted Sybil farm that pays its target for real, an anchor whose key is stolen, an anchor that vetoes a provider, and the second hop. Runbook: **[TBD: `demo/RUNBOOK.md`, lot 06]**. Transaction hashes: **[TBD]**.
+
+---
+
+## 6. Run the tests
+
+```bash
+cd contracts && forge test                     # 147 tests; fork tests need network access
+cd solver && .venv/bin/python -m pytest -q tests
+cd indexer && pnpm install && pnpm test
+cd plugin && npm install && npm test
+python3 docs/erc/assets/erc-0000/verify.py    # independent check of the ERC test vectors
+```
+
+Gas report: `cd contracts && forge test --match-contract "GasTest|RegistryBenchTest" -vv`.
+
+---
+
+## 7. Deployed addresses
+
+| Contract | Monad testnet (10143) | Monad mainnet (143) |
+|---|---|---|
+| `AnchoredReputation` | **[TBD]** | **[TBD]** |
+| `TrustGatedPayer` | **[TBD]** | **[TBD]** |
+| Demo anchor set (`setId`) | **[TBD]** | **[TBD]** |
+| ERC-8004 Identity (canonical, not ours) | `0x8004A818BFB912233c491871b3d84c89A494BD9e` | `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` |
+| ERC-8004 Reputation (canonical, not ours) | `0x8004B663056A597Dffe9eCcC1965A193B7388713` | `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63` |
+| Indexer GraphQL (Envio Cloud) | **[TBD]** | |
+
+Source verification: **[TBD: MonadVision / Sourcify links]**.
+
+---
+
+## 8. Gas measurements
+
+Foundry 1.8.3, solc 0.8.28 via-IR, `network = "monad"`, forks against the real registries. MON amounts at 102 gwei (MEASURED gas price, 2026-09-28). Source: [`contracts/GAS.md`](contracts/GAS.md) and [`contracts/PAYER.md`](contracts/PAYER.md). **[TBD: re-measure after lot 02-bis.]**
+
+| Operation | Gas | ≈ MON | Status |
+|---|---|---|---|
+| Demo certificate, 300 edges, 100 nodes, 3 anchors, **Registry-verified** | 14,974,802 | 1.53 | MEASURED 2026-10-01 |
+| Same, Submitter-attested | 1,351,917 | 0.14 | MEASURED 2026-10-01 |
+| Real mainnet graph (6 nodes, 5 edges), Registry-verified, first certificate | 1,028,760 | 0.10 | MEASURED 2026-10-01, fork of mainnet |
+| Register an anchor set (4 tags) | 423,614 | 0.04 | MEASURED 2026-10-01 |
+| `passesAnchorPolicy` on an unknown agent (a farm is refused) | 29,231 | 0.003 | MEASURED 2026-10-01 |
+| `assess`, no veto, strict transfer check | 80,609 | | MEASURED 2026-09-28 |
+| `assess` with live veto | 139,055 – 165,888 | | MEASURED 2026-09-28 |
+| x402 settlement through `TrustGatedPayer`, `exact` | 327,909 (EOA baseline 144,605) | 0.033 | MEASURED 2026-10-01 |
+| x402 settlement through `TrustGatedPayer`, `upto` | 385,876 | 0.039 | MEASURED 2026-10-01 |
+| A proof (`proveEdge`, omission, dilution, fabrication) | 258,685 – 304,293 | ≈ 0.03 | MEASURED 2026-10-01 |
+| Deployment (simulation) | 8,804,333 | 0.90 | MEASURED 2026-09-28 |
+
+- A Registry-verified certificate costs about 45 k gas per edge re-read; the 30 M transaction limit (DOC) caps it at about 630 edges with 3 anchors (CALCULATED, `docs/chantiers/rapports/02.md` §3).
+- The trust check adds about 183 k gas to an x402 payment, paid by the facilitator: 2.3 times an ordinary transfer.
+- Recomputation to on-chain receipt: 157 to 390 ms on a local fork, measured with the earlier v0 contract (MEASURED 2026-09-28, `docs/chantiers/rapports/04.md`). **[TBD: testnet latency.]**
+
+---
+
+## 9. Honest limits
+
+- **Registry-verified does not close omission or dilution.** The registry has no index by rater, so the contract cannot check that a row is complete. A certificate that leaves out edges, or under-declares a row's total, is accepted and only corrected once someone proves the gap. The lower bound holds once every gap has been proven, not before. We never call the certificate "unforgeable" (`contracts/PROOFS.md`, "Guarantees").
+- **An open set needs a watcher.** On a set where anyone may submit, a diluted certificate can replace an honest one until it is proven wrong. For the judging period, our watcher audits every certificate **[TBD: watcher running, lot 04-E5]**; a set owner can also restrict submission to attested submitters.
+- **The honest graph on mainnet is tiny.** Eleven edges survive. ANCRE kills the farm but says "unknown" for nearly everyone. It does not rank honest agents on today's data.
+- **Relative to the reader.** ANCRE protects a reader from anchors it did not choose, not from its own choice of anchors.
+- **Fail-closed liveness.** If nobody recertifies, payments stop after the set's maximum age. ANCRE becomes a liveness dependency of every payer that uses it.
+- **The registries are upgradeable proxies.** The certificate commits the registry version; after an upgrade, the status becomes `REGISTRY_CHANGED` and payments stop until recertification (tested against the pending upstream v2.1.0 on a fork, `contracts/test/Upgrade.t.sol`).
+- **A live veto is the anchor's latest rating.** Any later rating by the same anchor on the same agent lifts the live veto; only the certified veto bit remains. Anchors must re-post a veto rather than rate the agent again.
+- **Recertification, not every block.** We recompute on every change of the graph, not on every block.
+- **A former owner can rate an agent right after transferring it.** The rule set accepts it (the alternative was unverifiable on-chain); the screen shows it as a diagnostic.
+- **The contract is 33,527 bytes.** It fits Monad's 128 KB limit (DOC) but not Ethereum's 24 KB (EIP-170). The ERC's reference implementation will need splitting before it targets Ethereum.
+- **The x402 facilitator path is tested on forks**, with a facilitator emulated after the open-source `x402-rs`. **[TBD: result of the real testnet settlement through `x402-facilitator.molandak.org` (test T1).]**
+
+---
+
+## 10. Why Monad
+
+ANCRE runs next to the canonical ERC-8004 registries on Monad, where we measured the farm it defeats. The registries exist on both mainnet and testnet, so every test and the act-2 rehearsals run against the real contracts. Three properties of the chain make the design practical rather than theoretical:
+
+1. **Short blocks.** We measured 0.302 s per block over 1,000 blocks (MEASURED, 2026-09-27; the documentation says 300 ms). An anchor's veto is read live, so the next payment, one block later, is refused.
+2. **Cheap contiguous storage (MIP-8).** Trust vectors are stored as contiguous arrays, so any contract reads a decision without a proof, for 29 k gas when the agent is unknown and 80–166 k when it has trust.
+3. **Large, cheap transactions, and a 128 KB code limit.** Re-reading every edge from the registry costs 15 M gas for a 300-edge graph and still fits in one transaction; on the real mainnet graph a certificate costs about 0.1 MON. That makes the strongest verification level routine, and lets us recertify on every graph change.
+
+The standard itself is chain-agnostic, since ERC-8004 is deployed on many chains; Monad is where its strongest level is cheap enough to run continuously.
+
+---
+
+## 11. Prior art and complementary projects
+
+- **OpenRank (Karma3)** already prototyped verifying an EigenTrust fixed point on-chain. We do not claim that idea.
+- **trustgraphs** (AInima-Collective) computes anchored PageRank with zero-knowledge proofs, on EAS rather than ERC-8004.
+- Personalized PageRank and its Sybil bound are classical (EigenTrust's pre-trusted peers; Cheng and Friedman, 2005). What ANCRE adds is the combination: anchors chosen by the reader, unmodified ERC-8004 as the data source, an on-chain certificate re-read against the registry, and the score read by the paying contract itself.
+- A post in the ERC-8004 discussion thread (ethereum-magicians #25098, post #309) asked for reputation relative to reader-chosen anchors.
+
+**Complementary layers.** Several projects answer other questions about the same agents: whether a cited payment really happened (receipts), where a rater's funds came from (payment provenance), whether a task was validated, whether an action fits a policy. ANCRE answers a different one: does someone **you** trust vouch for this agent, directly or transitively? In the draft ERC, such signals plug in as optional edge filters (`edgeFilterId`). We do not enable a "receipt is real" filter by default, because a farm that pays itself would pass it.
+
+---
+
+## 12. Repository map
+
+```
+contracts/   AnchoredReputation.sol, TrustGatedPayer.sol; ENCODING.md (format v1), PROOFS.md, GAS.md, PAYER.md
+solver/      graph.py (edge rules), ppr.py (certificate), certifier.py, watcher.py, run_mainnet.py, data/ (snapshot)
+indexer/     Envio HyperIndex: config.yaml, schema.graphql, src/, analytics/ (survival scan)
+plugin/      mm ancre: src/, skills/ancre/SKILL.md, DEMO.md
+docs/erc/    draft ERC, test vectors, verify.py
+docs/        design notes and decision log (D1–D55), in French
+```
+
+Research before the first commit (a private notes vault on ERC-8004, Monad and reputation algorithms, from early September 2026) is summarized in `docs/` and is identified as such; all code in this repository was written during the hackathon.
+
+---
+
+## 13. AI tool disclosure
+
+This project was built with heavy use of an AI coding agent, **Claude Code** (Anthropic). The agent drafted most of the research notes; the design-review "council" documents in `docs/conseil/`, where five expert voices are **simulated by a single model** (their independence is a writing discipline, not a guarantee); the PPR solver and its tests; the verifier and payer contracts, their tests and gas measurements; the Envio indexer; the MetaMask plugin; the draft ERC; and this README.
+
+The human team set the goals, took every design decision recorded in the decision log (D1–D55 in `docs/conseil/CR-conseil.md`), chose what to measure, and reviewed **[TO FILL by the team: which parts were reviewed line by line — e.g. contract logic, certificate verification, payer — and which parts only at the level of tests and runs]**.
+
+Every number in this README was produced by a script or test in this repository, or by an on-chain read whose command is given, and can be re-run. AI-generated text was checked against those outputs.
+
+---
+
+## 14. Licenses
+
+- Code (`contracts/`, `solver/`, `indexer/`, `plugin/`): **[TBD: MIT or Apache-2.0, decision pending — see `LICENSE`]**.
+- The draft ERC text (`docs/erc/anchored-reputation.md`): **CC0-1.0**, as required by EIP-1.
+- Dependencies keep their own licenses: `forge-std` (MIT / Apache-2.0); the MetaMask Agent Wallet SDK is a peer dependency and is not vendored.

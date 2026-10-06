@@ -3,6 +3,16 @@
 > Un moteur, quatre surfaces. Le moteur est le certificat de confiance vérifié on-chain (voir README §3 et §7). Les quatre surfaces sont : émettre, importer, domaine fermé, revues.
 > Version du 2026-09-26. Front exclu du découpage back (voir BACKEND-KIT.md), mais décrit ici parce que le produit doit se tenir en entier.
 
+> ⚠️ **Document antérieur aux tours 1 à 7 du conseil (06/10).** Il reste la vision produit, mais plusieurs parties sont **remplacées** (réconciliation : `docs/conseil/CR-conseil.md`, section « Réconciliation avec ARCHITECTURE.md et BACKEND-KIT.md ») :
+> - `trustOf → score = t·N` et `minScore` → part de masse en WAD et `passesAnchorPolicy(agentId, setId)`, politique engagée dans le `setId` (D1, D39, D48) ;
+> - niveaux Verified / Optimistic, caution et slashing → Registry-verified / Submitter-attested, preuves qui élargissent les bornes, sans slashing (D6, D32) ;
+> - `TagSchemaRegistry` global → schéma engagé par ensemble (D12) ;
+> - `TrustGatedRouter` → `TrustGatedPayer`, ERC-1271 (D41) ;
+> - « registres absents du testnet » → faux, ils y sont (vérifié le 27/09) ;
+> - disjoncteur par certificat republié → veto lu en direct dans le registre, refus au bloc suivant (D33) ;
+> - `TrustDomain` et `VouchBond` → extension de l'ERC et diapositive ; `PermissionedRegistry` → après le hackathon (D49).
+> Le README (en anglais) décrit l'état livré.
+
 ---
 
 ## 0. Le principe qui gouverne tout le reste
