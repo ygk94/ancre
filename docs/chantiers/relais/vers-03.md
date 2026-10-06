@@ -22,3 +22,32 @@
 
 - **Écran 07 : la Transfers API d'Alchemy explique le score.** Exemple : « les 7 665 noteurs d'Eve ont reçu leur premier MON du propriétaire d'Eve ». C'est MESURÉ sur un échantillon de 150, toujours 11,0 MON depuis `0x97cD…0996`. Voir `docs/ressources/alchemy.md`. La clé d'API vient de Hugo.
 - `monadLogs` reste plus rapide que les webhooks pour le direct à l'écran.
+
+
+## Relais du 06/10 (soir) : revue maximale complète
+
+Source : `docs/revue/revue-max-2026-10-06-complete.md`. **SW2, NUL et LONGTAG arrêtent l'indexeur pour de bon avec une seule transaction sans permission** : à corriger **avant** de brancher l'indexeur sur l'adresse du contrat déployé (MUSTDO), puisque SW2 devient exploitable à ce moment-là. DEC18 touche aussi `rules.ts`.
+
+### Haute
+
+- **SW2** (`indexer/src/handlers/ancre.ts:50`, CONFIRMÉ) : Un `registerAnchorSet` avec alphaD ≥ 2^31 arrête l'indexeur sur les trois chaînes
+- **NUL** (`indexer/src/handlers/reputation.ts:16`, CONFIRMÉ) : Les NUL de `tag1` : collision d'identifiants (arrêt) et tags fantômes
+- **LONGTAG** (`indexer/src/handlers/reputation.ts:28`, CONFIRMÉ) : Un `tag1` de plus de 2 704 octets arrête l'indexeur sur les trois chaînes
+
+### Moyenne
+
+- **OUTERCALL** (`indexer/src/handlers/ancre.ts:76`, CONFIRMÉ) : Nouveaux handlers : un `addNodes` relayé laisse un trou définitif dans la table de l'indexeur
+- **REGCB** (`indexer/src/handlers/identity.ts:47`, CONFIRMÉ) : `register()` émet le wallet après le callback ERC-721 : l'indexeur garde un wallet que le registre n'a plus
+- **SW1** (`indexer/src/lib/audit.ts:124`, CONFIRMÉ) : Audit en direct : une dilution est signalée sur la mauvaise arête, et la vraie preuve ne ferme rien
+
+### Faible
+
+- **K22** (`indexer/scripts/check.ts:56`, CONFIRMÉ) : `check.ts` s'arrête sur une page courte au lieu d'une page vide
+- **CHECKCOV** (`indexer/scripts/check.ts:99`, CONFIRMÉ) : `check.ts` ne vérifie que ce que l'indexeur a déjà vu
+- **PUBLISH** (`indexer/scripts/publish.sh:12`, CONFIRMÉ) : `publish.sh` : la garde avant `rsync --delete` accepte un sous-dossier du clone, `.git` compris
+- **DECODE** (`indexer/src/lib/certificate.ts:71`, CONFIRMÉ) : `decodeRows` plus strict que le contrat sur les sources nulles (plantage déjà corrigé)
+
+### Nettoyage
+
+- **QUOTA** (`indexer/scripts/publish.sh:6`, CONFIRMÉ) : `publish.sh` : quota fournisseur sans source ni date
+- **SEQ** (`indexer/src/lib/state.ts:97`, CONFIRMÉ) : `recomputeEdgesInto` : un `await` séquentiel par arête entrante

@@ -1,0 +1,132 @@
+{
+  "version": 1,
+  "mode": "fork",
+  "chainId": 10143,
+  "operator": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+  "runId": "run-20261006T121308Z",
+  "agents": {
+    "provider-1 (demo)": {
+      "agentId": "2022",
+      "owner": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+      "wallet": "0x06b8FaFf5E9D268060cFcA3b18AC0A41b9a53783",
+      "role": "provider"
+    },
+    "provider-2 (demo)": {
+      "agentId": "2023",
+      "owner": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
+      "wallet": "0xe4eb8f7f3cb89a93Af6fd4cd07BeE263Fb8828fd",
+      "role": "provider"
+    }
+  },
+  "done": {
+    "0.fund-mon": {
+      "block": 68682352,
+      "at": "2026-10-06T12:13:11.861Z"
+    },
+    "0.deploy-ancre": {
+      "block": 68682353,
+      "at": "2026-10-06T12:13:12.145Z"
+    },
+    "0.anchor-set": {
+      "block": 68682354,
+      "at": "2026-10-06T12:13:12.473Z"
+    },
+    "0.register:provider-1 (demo)": {
+      "block": 68682355,
+      "at": "2026-10-06T12:13:12.926Z"
+    },
+    "0.wallet:provider-1 (demo)": {
+      "block": 68682356,
+      "at": "2026-10-06T12:13:13.108Z"
+    },
+    "0.register:provider-2 (demo)": {
+      "block": 68682357,
+      "at": "2026-10-06T12:13:13.588Z"
+    },
+    "0.wallet:provider-2 (demo)": {
+      "block": 68682358,
+      "at": "2026-10-06T12:13:13.703Z"
+    },
+    "0.deploy-payer": {
+      "block": 68682359,
+      "at": "2026-10-06T12:13:13.841Z"
+    },
+    "0.fund-payer": {
+      "block": 68682360,
+      "at": "2026-10-06T12:13:14.094Z"
+    },
+    "0.cert": {
+      "block": 68682361,
+      "at": "2026-10-06T12:13:14.793Z",
+      "value": {
+        "action": "certified",
+        "block": 68682361
+      }
+    },
+    "scene-0": {
+      "block": 68682361,
+      "at": "2026-10-06T12:13:14.995Z"
+    }
+  },
+  "notes": {},
+  "ancre": "0x554f82Ec824c4312FD040FD425880d3B2441ecf1",
+  "setId": "0x676454745e544979a0d5be56a8a898b8cb50932b07dd035f3e2d8ef2d999a2fb",
+  "set": {
+    "anchors": [
+      "0x730184ca0b0088c0be0b01df7cb8f0f69947d786",
+      "0x7b10023a69fa1cd4be6c2b5db094f81789bc33d3",
+      "0xa21c6caba03065ee83f90efbbb4d2fb17e3a9a8b"
+    ],
+    "lambdas": [
+      "333333333333333333",
+      "333333333333333333",
+      "333333333333333334"
+    ],
+    "alphaN": 1,
+    "alphaD": 3,
+    "minAnchors": 2,
+    "tagSchemaHash": "0x98f7b42fe5b6195397f4d6e7f9643dd7e7527f11965a047067d03ba9288138e0",
+    "tags": [
+      {
+        "tag": "vouch",
+        "min": "0",
+        "neutral": "0",
+        "max": "100000000000000000000",
+        "kind": 0
+      },
+      {
+        "tag": "review",
+        "min": "-1000000000000000000",
+        "neutral": "0",
+        "max": "1000000000000000000",
+        "kind": 0
+      },
+      {
+        "tag": "slash",
+        "min": "-100000000000000000000",
+        "neutral": "0",
+        "max": "0",
+        "kind": 0
+      }
+    ],
+    "policy": {
+      "theta": 10000000000000000,
+      "rhoN": 1,
+      "rhoD": 2,
+      "minAnchors": 2,
+      "vetoQuorum": 1,
+      "vetoMax": -1,
+      "maxAge": 288000,
+      "minRefresh": 288000,
+      "slackRefresh": 0,
+      "eLowMax": 10000000000000000,
+      "strictTransfer": true,
+      "registryVerified": true,
+      "ownerFallback": false,
+      "submitters": [
+        "0x3b839dd0c12014444cc9dceb2c4586da74b3bee1"
+      ]
+    }
+  },
+  "payer": "0x2906B1885b902bb0b74373F95E0a67bc2854268d"
+}
