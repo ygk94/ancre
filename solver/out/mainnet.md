@@ -1,16 +1,16 @@
-# ANCRE — acte 1 sur le mainnet (9 283 avis, règles D20 et D44)
+# ANCRE — acte 1 sur le mainnet (9291 avis au bloc 110994810, règles D20, D44 et D48)
 
-Commande : `cd solver && .venv/bin/python run_mainnet.py`. Données : snapshot versionné `data/` (9283 avis relus on-chain, identité au bloc 108835675, 10262 agents, 178 wallets partagés, 71 agents à agentWallet nul, 32 opérateurs actifs, 0 getApproved non nuls). α = 1/3, m = 2, λ uniformes. Certificat par itération entière depuis 0 (D26). Tous les chiffres ci-dessous sont MESURÉS par ce script.
+Commande : `cd solver && .venv/bin/python run_mainnet.py`. Données : snapshot versionné `data/` (9291 avis relus on-chain, identité au bloc 110994810, 10281 agents, 178 wallets partagés, 73 agents à agentWallet nul, 32 opérateurs actifs, 0 getApproved non nuls). α = 1/3, m = 2, λ uniformes. Certificat par itération entière depuis 0 (D26). Tous les chiffres ci-dessous sont MESURÉS par ce script.
 
 Contrôle 8004scan (snapshot du 21/09, 9188 avis) : 9188 clés communes ; **24 avis où 8004scan diffère (valeur/décimales)** : {('uptime', 0, 2): 20, ('fast', 0, 2): 2, ('helpful', 0, 2): 2} (tag1, décimales 8004scan, décimales on-chain).
 
 ## 0. Ce qui survit au schéma de référence (registre entier)
-- D20, filtre `core` (3 tags) : **5 arêtes** (couples), lignes portées {'agent': 1, 'addr': 2}, arêtes portées par des nœuds-agents : 3 ; compteurs {'avis_lus': 9283, 'hors_filtre_ou_schema': 9277, 'aretes_couple': 5, 'ligne_wallet': 1, 'emetteur_adresse': 2}
-- D20, filtre `reference` (8 tags) : **11 arêtes** (couples), lignes portées {'agent': 1, 'addr': 3}, arêtes portées par des nœuds-agents : 3 ; compteurs {'avis_lus': 9283, 'hors_filtre_ou_schema': 9236, 'aretes_couple': 11, 'emetteur_agents_non_notes': 3, 'ligne_wallet': 1, 'emetteur_adresse': 3}
-- D20, filtre `execution-market-8` (8 tags) : **10 arêtes** (couples), lignes portées {}, arêtes portées par des nœuds-agents : 0 ; compteurs {'avis_lus': 9283, 'hors_filtre_ou_schema': 9199, 'aretes_couple': 10, 'emetteur_agents_non_notes': 1, 'emetteur_adresse': 0}
-- D20 + D44 (repli owner), filtre `core` (3 tags) : **5 arêtes** (couples), lignes portées {'agent': 1, 'addr': 2}, arêtes portées par des nœuds-agents : 3 ; compteurs {'avis_lus': 9283, 'hors_filtre_ou_schema': 9277, 'aretes_couple': 5, 'ligne_wallet': 1, 'emetteur_adresse': 2}
-- D20 + D44 (repli owner), filtre `reference` (8 tags) : **11 arêtes** (couples), lignes portées {'agent': 1, 'addr': 3}, arêtes portées par des nœuds-agents : 3 ; compteurs {'avis_lus': 9283, 'hors_filtre_ou_schema': 9236, 'aretes_couple': 11, 'emetteur_agents_non_notes': 3, 'ligne_wallet': 1, 'emetteur_adresse': 3}
-- D20 + D44 (repli owner), filtre `execution-market-8` (8 tags) : **10 arêtes** (couples), lignes portées {}, arêtes portées par des nœuds-agents : 0 ; compteurs {'avis_lus': 9283, 'hors_filtre_ou_schema': 9199, 'aretes_couple': 10, 'emetteur_agents_non_notes': 1, 'emetteur_adresse': 0}
+- D20, filtre `core` (3 tags) : **5 arêtes** (couples), lignes portées {'agent': 1, 'addr': 2}, arêtes portées par des nœuds-agents : 3 ; compteurs {'avis_lus': 9291, 'hors_filtre_ou_schema': 9285, 'aretes_couple': 5, 'ligne_wallet': 1, 'emetteur_adresse': 2}
+- D20, filtre `reference` (8 tags) : **11 arêtes** (couples), lignes portées {'agent': 1, 'addr': 3}, arêtes portées par des nœuds-agents : 3 ; compteurs {'avis_lus': 9291, 'hors_filtre_ou_schema': 9244, 'aretes_couple': 11, 'emetteur_agents_non_notes': 3, 'ligne_wallet': 1, 'emetteur_adresse': 3}
+- D20, filtre `execution-market-8` (8 tags) : **10 arêtes** (couples), lignes portées {}, arêtes portées par des nœuds-agents : 0 ; compteurs {'avis_lus': 9291, 'hors_filtre_ou_schema': 9207, 'aretes_couple': 10, 'emetteur_agents_non_notes': 1, 'emetteur_adresse': 0}
+- D20 + D44 (repli owner), filtre `core` (3 tags) : **5 arêtes** (couples), lignes portées {'agent': 1, 'addr': 2}, arêtes portées par des nœuds-agents : 3 ; compteurs {'avis_lus': 9291, 'hors_filtre_ou_schema': 9285, 'aretes_couple': 5, 'ligne_wallet': 1, 'emetteur_adresse': 2}
+- D20 + D44 (repli owner), filtre `reference` (8 tags) : **11 arêtes** (couples), lignes portées {'agent': 1, 'addr': 3}, arêtes portées par des nœuds-agents : 3 ; compteurs {'avis_lus': 9291, 'hors_filtre_ou_schema': 9244, 'aretes_couple': 11, 'emetteur_agents_non_notes': 3, 'ligne_wallet': 1, 'emetteur_adresse': 3}
+- D20 + D44 (repli owner), filtre `execution-market-8` (8 tags) : **10 arêtes** (couples), lignes portées {}, arêtes portées par des nœuds-agents : 0 ; compteurs {'avis_lus': 9291, 'hors_filtre_ou_schema': 9207, 'aretes_couple': 10, 'emetteur_agents_non_notes': 1, 'emetteur_adresse': 0}
 - tags endorsement du schéma : 15 (TAGS_MAX = 16, D24).
 
 ## (a) Eve-8004 (#182) : moyenne naïve contre ANCRE
@@ -34,8 +34,8 @@ Contrôle 8004scan (snapshot du 21/09, 9188 avis) : 9188 clés communes ; **24 a
 
 ## (c) #8317 : les 78 auto-notations sont-elles rejetées ?
 - avis reçus par #8317 : 78, noteurs {'0x44985413': 78} ; owner = 0x656df648, agentWallet = 0x44985413.
-- schéma référence (trade_execution = measurement) : arêtes vers #8317 = **0** ; compteurs {'avis_lus': 9283, 'hors_filtre_ou_schema': 9205, 'rejet_measurement_D15': 78, 'aretes_couple': 0, 'emetteur_adresse': 0} ; rejets R6 : []
-- schéma stress (trade_execution = endorsement) : arêtes vers #8317 = **1** ; compteurs {'avis_lus': 9283, 'hors_filtre_ou_schema': 9205, 'negatif_controleur_garde_agentWallet': 1, 'aretes_couple': 1, 'boucle_ignoree': 1, 'ligne_wallet': 1, 'emetteur_adresse': 0} ; rejets R6 : []
+- schéma référence (trade_execution = measurement) : arêtes vers #8317 = **0** ; compteurs {'avis_lus': 9291, 'hors_filtre_ou_schema': 9213, 'rejet_measurement_D15': 78, 'aretes_couple': 0, 'emetteur_adresse': 0} ; rejets R6 : []
+- schéma stress (trade_execution = endorsement) : arêtes vers #8317 = **1** ; compteurs {'avis_lus': 9291, 'hors_filtre_ou_schema': 9213, 'negatif_controleur_garde_agentWallet': 1, 'aretes_couple': 1, 'boucle_ignoree': 1, 'ligne_wallet': 1, 'emetteur_adresse': 0} ; rejets R6 : []
 
 ## (d) La chaîne honnête 0x0730… / 0xf7d5… → #18 → {#2, #3, #4}
 - 0xea0b21fb est owner **et agentWallet** de [18, 22, 23]. Sous D20, chacun de ces agents qui est noté porte une copie de la ligne de 0xea0b, avec sa propre masse.
@@ -141,19 +141,32 @@ Itérations depuis 0 jusqu'au point fixe entier : 4.
 
 ## (f) Repli owner (D44) sur le graphe d'execution.market
 - schéma étendu (hypothèse de mesure, NON normatif) : les 11 tag1 execution.market en endorsement [0, 50, 100] ; filtre des 8 tags de la mesure du tour 6 (`nv/impact.py`).
-- sous D44, **48 couples sur 49 ont un agent émetteur** (le « 48 » du tour 6) ; 37 sont portés par un agent noté. Les 11 autres partent d'agents que personne ne note : masse nulle, donc aucune ligne à certifier (D20).
-- D20, ancres honnêtes {0x0730, 0xf7d5} : couples = 49, arêtes portées par des nœuds-agents = **0** (lignes via owner : 0), agents t > 0 = 0, masse sur le cluster EM (19 agents) = ['0', '0'], itérations = 2.
-- D20, ancres 2 noteurs EM {0x3aebb73a, 0xaf95b213} : couples = 49, arêtes portées par des nœuds-agents = **0** (lignes via owner : 0), agents t > 0 = 8, masse sur le cluster EM (19 agents) = ['0.222222', '0.222222'], itérations = 3.
-- D20 + D44 (repli owner), ancres honnêtes {0x0730, 0xf7d5} : couples = 49, arêtes portées par des nœuds-agents = **37** (lignes via owner : 12), agents t > 0 = 0, masse sur le cluster EM (19 agents) = ['0', '0'], itérations = 2.
-- D20 + D44 (repli owner), ancres 2 noteurs EM {0x3aebb73a, 0xaf95b213} : couples = 49, arêtes portées par des nœuds-agents = **25** (lignes via owner : 10), agents t > 0 = 11, masse sur le cluster EM (19 agents) = ['0.479437', '0.445518'], itérations = 78.
+- sous D44, **51 couples sur 51 ont un agent émetteur** (le « 48 » du tour 6) ; 42 sont portés par un agent noté. Les 9 autres partent d'agents que personne ne note : masse nulle, donc aucune ligne à certifier (D20).
+- D20, ancres honnêtes {0x0730, 0xf7d5} : couples = 51, arêtes portées par des nœuds-agents = **0** (lignes via owner : 0), agents t > 0 = 0, masse sur le cluster EM (20 agents) = ['0', '0'], itérations = 2.
+- D20, ancres 2 noteurs EM {0x3aebb73a, 0xaf95b213} : couples = 51, arêtes portées par des nœuds-agents = **0** (lignes via owner : 0), agents t > 0 = 8, masse sur le cluster EM (20 agents) = ['0.222222', '0.222222'], itérations = 3.
+- D20 + D44 (repli owner), ancres honnêtes {0x0730, 0xf7d5} : couples = 51, arêtes portées par des nœuds-agents = **42** (lignes via owner : 14), agents t > 0 = 0, masse sur le cluster EM (20 agents) = ['0', '0'], itérations = 2.
+- D20 + D44 (repli owner), ancres 2 noteurs EM {0x3aebb73a, 0xaf95b213} : couples = 51, arêtes portées par des nœuds-agents = **30** (lignes via owner : 12), agents t > 0 = 12, masse sur le cluster EM (20 agents) = ['0.484001', '0.445644'], itérations = 76.
+
+## (g) Tour 7 (D48) : règles A et B, diagnostic AM-9.3, avis récents
+- part de la ferme : 7665 avis vers #182 sur 9291, soit **82.50 %** (clients distincts de #182 : 7665).
+- avis postérieurs au bloc 108 835 675 (relus par `readAllFeedback`, `data/mainnet-110994810.refresh.json`) : **8** : bloc 108878432 0x945659f0→#10188 requester_rating:knowledge_access=90; bloc 108878568 0x5975442e→#10262 requester_rating:knowledge_access=90; bloc 109332841 0x49472ef9→#10255 tab=100; bloc 109332855 0x49472ef9→#10255 tab=100; bloc 109379905 0x49472ef9→#10255 tab=100; bloc 110475270 0x49472ef9→#10255 tab=100; bloc 110493175 0x49472ef9→#10255 tab=100; bloc 110872159 0x77a55a49→#10280 agenttrace-outcome=100.
+  - schéma référence, filtre reference, D44 : couples récents qui deviennent des arêtes = **0** []
+  - schéma stress, tous les tags, D44 : couples récents qui deviennent des arêtes = **4** [('0x49472ef9', 10255, 10000), ('0x5975442e', 10262, 9000), ('0x77a55a49', 10280, 10000), ('0x945659f0', 10188, 9000)]
+  - schéma execution.market (em_schema), D44 : couples récents qui deviennent des arêtes = **2** [('0x5975442e', 10262, 8000), ('0x945659f0', 10188, 8000)]
+- règle B (schéma référence, filtre reference) : négatifs de contrôleurs gardés = 0 ; couples en plus par rapport à l'ancienne R6 = [].
+- règle B (schéma stress, FARM_FILTER + trade_execution) : négatifs de contrôleurs gardés = {'negatif_controleur_garde_agentWallet': 1} ; couples en plus par rapport à l'ancienne R6 = [('0x44985413', 8317, -10000)].
+- règle A, ancres {0xea0b, 0x07305360} (ancien vecteur de démo) : agents sourcés par une ancre (aucune ligne) = [18] ; #4 t = ['0', '0'], trustRobust = 0, distrust = 0.111111; #2 t = ['0', '0.111111'], trustRobust = 0, distrust = 0 ; e = [444444444444444456, 12] wei.
+- règle A, ancres {0x07305360, 0x794c94f1} (nouveau vecteur de démo) : agents sourcés par une ancre (aucune ligne) = [] ; #4 t = ['0', '0.222222'], trustRobust = 0, distrust = 0.0740741; #2 t = ['0.0740741', '0'], trustRobust = 0, distrust = 0 ; e = [15, 15] wei.
+- AM-9.3, schéma référence : couples retenus dont le client est un ANCIEN owner de la cible = **4** ; 0x794c94f1→#4 (w = 10000, blocs inconnus); 0x10304054→#10180 (w = 8400, blocs inconnus); 0x10304054→#10181 (w = 9000, blocs inconnus); 0x10304054→#10182 (w = 9000, blocs inconnus). Affiché, sans effet sur l'arête (D48).
+- AM-9.3, schéma stress (le tag `tab` de #10255 propage) : couples retenus dont le client est un ANCIEN owner de la cible = **1** ; 0x49472ef9→#10255 (w = 10000, transfert au bloc 109331923, premier avis après le transfert au bloc 109332841 : **918 blocs après**, ≈ 4.6 min à 0,302 s/bloc). Affiché, sans effet sur l'arête (D48).
 
 ## Mesures annexes
-- triplets (client, agent, tag1) où « dernier valide » ≠ « dernier puis rejet » (schéma stress) : **0** sur 7871.
+- triplets (client, agent, tag1) où « dernier valide » ≠ « dernier puis rejet » (schéma stress) : **0** sur 7875.
 - triplets (client, agent, tag1) où « dernier valide » ≠ « dernier puis rejet » (schéma référence) : **0** sur 7822.
 - couples retenus qu'aurait rejetés l'ancienne règle « ancien owner » (supprimée, D20), filtre execution-market-8 : **9**, noteurs {'0x10304054': 9}.
-- couples (client, agent) où le client a été agentWallet de la cible mais n'est plus contrôleur : **10**.
+- couples (client, agent) où le client a été agentWallet de la cible mais n'est plus contrôleur : **11**.
 - couples avec > 32 avis : **5** (sans objet depuis D21 : MAX_SCAN supprimé).
-- agents sur un wallet partagé : 1773 ; noteurs dont le wallet est partagé : 3 (91 avis) ; noteurs sans agent (wallet) : 38.
+- agents sur un wallet partagé : 1783 ; noteurs dont le wallet est partagé : 3 (91 avis) ; noteurs sans agent (wallet) : 39.
 
 ### Support mainnet en fonction de α (ancres 0x0730/0xf7d5, filtre reference)
 - D20, α = 1/4 : support (t > 0) = 5 nœuds, arêtes fournies = 5, e = [20, 20] wei, itérations = 4

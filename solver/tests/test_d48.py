@@ -116,13 +116,13 @@ def test_am93_past_controller_reported_not_rejected():
         {"ev": "Transfer", "block": 100, "li": 1, "agent": 1, "frm": ZERO, "to": P},
         {"ev": "Transfer", "block": 1000, "li": 0, "agent": 1, "frm": P, "to": NEW},
     ], 0, 2000)
-    f = Feedback(agent_id=1, client=P, index=1, value=100, decimals=0, tag1="vouch", tag2="", revoked=False,
-                 block=1917)
-    g = build_graph([f], idn, schema(), FILT, [H1])
+    mk = lambda i, b: Feedback(agent_id=1, client=P, index=i, value=100, decimals=0, tag1="vouch", tag2="",
+                               revoked=False, block=b)
+    g = build_graph([mk(1, 1917), mk(2, 5000)], idn, schema(), FILT, [H1])
     assert g.pairs[(P, 1)].q == GRID                                    # no effect on the edge
     assert g.diagnostics == [{"kind": "pastOwner", "client": P, "agentId": 1, "w": GRID, "tag1": "vouch",
-                              "feedbackIndex": 1, "feedbackBlock": 1917, "transferBlock": 1000,
-                              "blocksAfterTransfer": 917}]
+                              "feedbackIndex": 2, "feedbackBlock": 5000, "transferBlock": 1000,
+                              "firstFeedbackAfterTransfer": 1917, "blocksAfterTransfer": 917}]
     # the block of the transfer survives the identity.json round trip
     assert load_identity_json(identity_to_json(idn)).past_owner_until == {1: {P: 1000}}
 

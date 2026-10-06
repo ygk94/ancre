@@ -567,7 +567,7 @@ def main():
 
     g = build_graph(fbs, idn, ref, core, [h1, h2])
     dump("mainnet_honest_d20", g, certify(g, Fraction(1, 3)), ref, core,
-         "Acte 1 (d), 9 283 avis, bloc 108 835 675 : ancres 0x0730/0xf7d5, filtre core, D20. #18 porte la copie de la "
+         f"Acte 1 (d), {len(fbs)} avis, bloc {idn.block} : ancres 0x0730/0xf7d5, filtre core, D20. #18 porte la copie de la "
          "ligne de 0xea0b (wallet de #18, #22, #23) : #2 et #3 reçoivent de la masse, #4 de la méfiance (slash).")
     g = build_graph(fbs, idn, ref, reference, [h1, q4])
     dump("mainnet_slash_anchor", g, certify(g, Fraction(1, 3)), ref, reference,

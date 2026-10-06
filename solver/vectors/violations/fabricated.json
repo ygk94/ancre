@@ -3,7 +3,7 @@
  "label": "violation_fabricated",
  "notes": "D37 normative violation vector (mainnet_slash_anchor, anchors 0x0730 / 0x794c, D48-A). committed edge with no registry feedback: readFeedback(4, 0x0730, 7) does not exist",
  "alignedWith": "contracts/ENCODING.md unified v1 (2026-10-01), AnchoredReputation v1 (integration 02+04)",
- "identityBlock": 108835675,
+ "identityBlock": 110994810,
  "set": {
   "anchors": [
    "0x0730536018541c5149a049d35528a76c2c8f1e6b",

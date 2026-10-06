@@ -5,6 +5,7 @@ pipeline (fixture/GraphQL shape, block filter, identity replay, parity diff), no
 dump of the indexer in solver/tests/fixtures/indexer/ (one <Entity>.json per entity, block in BLOCK) to test it.
 """
 import json
+from dataclasses import replace
 import sys
 from pathlib import Path
 
@@ -33,8 +34,11 @@ def test_stub_roundtrip_identity_and_feedbacks(stub, tmp_path):
     fbs, idn, _, d = stub
     files = FI.export(FI.FixtureSource(d), R.BLOCK, tmp_path)
     fb2 = load_feedbacks_onchain(files["feedbacks"])
-    assert sorted(fb2, key=lambda f: (f.agent_id, f.client, f.index)) == \
-        sorted(fbs, key=lambda f: (f.agent_id, f.client, f.index))
+    nob = lambda l: sorted((replace(f, block=0) for f in l), key=lambda f: (f.agent_id, f.client, f.index))
+    assert nob(fb2) == nob(fbs)                     # the stub dates unknown blocks at 3 (blocks: next test)
+    assert all(f2.block == f.block for f, f2 in zip(sorted(fbs, key=lambda f: (f.agent_id, f.client, f.index)),
+                                                    sorted(fb2, key=lambda f: (f.agent_id, f.client, f.index)))
+               if f.block)
     id2 = load_identity_json(files["identity"])
     assert id2.owner == idn.owner and id2.wallet == idn.wallet
     assert id2.approved == idn.approved and id2.operators == idn.operators
@@ -66,7 +70,7 @@ def test_block_filter_and_revocation(tmp_path):
     (tmp_path / "Feedback.json").write_text(json.dumps(rows))
     src = FI.FixtureSource(tmp_path, 143)
     assert FI.feedbacks_file(src, 20)["feedbacks"] == [{"a": 1, "c": "0xa", "i": 1, "v": "100", "d": 0, "t1": "vouch",
-                                                        "t2": "", "r": False}]
+                                                        "t2": "", "r": False, "b": 10}]
     at50 = FI.feedbacks_file(src, 50)["feedbacks"]
     assert [f["r"] for f in at50] == [True, False]
 
@@ -104,7 +108,7 @@ def test_graphql_source_keyset_pagination(stub, monkeypatch):
     """GraphQLSource against a local fake Hasura: pages of PAGE rows ordered by id, id_gt cursor, block filter."""
     import http.server
     import threading
-    _, _, _, d = stub
+    fbs, _, _, d = stub
     fx = FI.FixtureSource(d)
     seen = []
 
@@ -139,7 +143,7 @@ def test_graphql_source_keyset_pagination(stub, monkeypatch):
     try:
         src = FI.GraphQLSource(f"http://127.0.0.1:{srv.server_port}/v1/graphql", 143)
         got = src.rows("Feedback", R.BLOCK)
-        assert [r["id"] for r in got] == [r["id"] for r in fx.rows("Feedback", R.BLOCK)] and len(got) == 9283
+        assert [r["id"] for r in got] == [r["id"] for r in fx.rows("Feedback", R.BLOCK)] and len(got) == len(fbs)
         assert len(seen) == 15                              # 14 pages capped at 700 rows + 1 empty page
         assert src.head() == R.BLOCK
         with pytest.raises(RuntimeError):

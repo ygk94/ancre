@@ -33,8 +33,9 @@ Only rated agents are agent nodes: an agent nobody rates has no incoming edge, i
 
 **AM-9.3 diagnostic (D48, shown, no effect).** `build_graph` reports in `Graph.diagnostics` every retained pair whose
 client is a past owner (or a past agentWallet) of the target and not a current controller: `{kind: pastOwner |
-pastWallet, client, agentId, w, tag1, feedbackIndex, feedbackBlock, transferBlock, blocksAfterTransfer}` ("past
-controller, N blocks after the transfer"). The transfer block comes from `Identity.past_owner_until` (identity.json
+pastWallet, client, agentId, w, tag1, feedbackIndex, feedbackBlock, transferBlock, firstFeedbackAfterTransfer,
+blocksAfterTransfer}` ("past controller, N blocks after the transfer", N measured on the FIRST feedback of the pair
+after the transfer, any tag). The transfer block comes from `Identity.past_owner_until` (identity.json
 `pastOwnerUntil`, optional); the feedback block from the snapshot (`b`), when known. Real case: #10255 (`out/mainnet.md`).
 
 `TRANSFERRED` freeze of outgoing edges (D44): no solver action. A certificate is a snapshot computed with the current owner and wallet; freezing the outgoing mass of a transferred agent between two certificates is a read-side rule of the contract (02-E6).

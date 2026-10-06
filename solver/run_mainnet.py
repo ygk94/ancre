@@ -1,11 +1,12 @@
-"""ANCRE — acte 1 de la démo (D19) sur le mainnet : 9 283 avis, état au bloc 108 835 675 (règles D20, D44).
+"""ANCRE — acte 1 de la démo (D19) sur le mainnet : 9 291 avis, état au bloc 110 994 810 (règles D20, D44, D48).
 
 Usage :
   .venv/bin/python run_mainnet.py            # écrit out/mainnet.md et l'affiche
   .venv/bin/python run_mainnet.py --tags     # inventaire des tag1 et couverture du schéma de référence
 
 Entrées :
-  data/mainnet-108835675.{feedbacks,identity}.json.gz  snapshot versionné, relu on-chain (provenance : snapshot.py)
+  data/mainnet-110994810.{feedbacks,identity}.json.gz  snapshot versionné, relu on-chain (provenance : snapshot.py
+                                                       jusqu'au bloc 108 835 675, puis refresh.py, AM-9.2)
   FB  snapshot 8004scan du 21/09 (vault, lecture seule), seulement pour mesurer ses erreurs de décimales (AM-R4.2)
 """
 from __future__ import annotations
@@ -29,13 +30,13 @@ VAULT = Path("/Users/hugo/Projet/dataBlockchain/2 - EVM/Monad (L1)/Hackathons/_d
 SCR = Path(os.environ.get("ANCRE_SCRATCH", "/private/tmp/claude-501/-Users-hugo-Projet-ancre/"
                                          "d7aaa033-3225-48a1-9564-a90ffb1f1a63/scratchpad"))
 FB = VAULT / "fb.json"
-BLOCK = 108_835_675
+BLOCK = 110_994_810
 FB_ONCHAIN = HERE / "data" / f"mainnet-{BLOCK}.feedbacks.json.gz"
 IDENTITY = HERE / "data" / f"mainnet-{BLOCK}.identity.json.gz"
 
 
 def load_mainnet():
-    """(feedbacks, identity) du snapshot versionné : 9 283 avis, identité au bloc 108 835 675."""
+    """(feedbacks, identity) du snapshot versionné (9 291 avis, identité au bloc 110 994 810)."""
     return load_feedbacks_onchain(FB_ONCHAIN), load_identity_json(IDENTITY)
 
 SCANNER = "0xa06f907f"          # préfixes, résolus en adresses complètes plus bas
@@ -181,7 +182,7 @@ def main():
     h1, h2, ea0b = resolve(HONEST1, fbs), resolve(HONEST2, fbs), resolve(EA0B, fbs)
     w2a = idn.wallet_to_agents()
 
-    P("# ANCRE — acte 1 sur le mainnet (9 283 avis, règles D20 et D44)")
+    P(f"# ANCRE — acte 1 sur le mainnet ({len(fbs)} avis au bloc {idn.block}, règles D20, D44 et D48)")
     P(f"\nCommande : `cd solver && .venv/bin/python run_mainnet.py`. Données : snapshot versionné `data/` ({len(fbs)} avis "
       f"relus on-chain, identité au bloc {idn.block}, {len(idn.owner)} agents, "
       f"{sum(1 for v in w2a.values() if len(v) > 1)} wallets partagés, "
@@ -338,6 +339,49 @@ def main():
             P(f"- {vlbl}, ancres {anc_lbl} : couples = {len(g.pairs)}, arêtes portées par des nœuds-agents = "
               f"**{from_agents}** (lignes via owner : {g.log.get('ligne_owner', 0)}), agents t > 0 = {pos}, "
               f"masse sur le cluster EM ({len(cluster)} agents) = {[fmt(x) for x in m]}, itérations = {cert.iterations}.")
+
+    # ------------------------------------------------------------------ (g) D48
+    P("\n## (g) Tour 7 (D48) : règles A et B, diagnostic AM-9.3, avis récents")
+    P(f"- part de la ferme : {len(eve_fb)} avis vers #182 sur {len(fbs)}, soit **{100 * len(eve_fb) / len(fbs):.2f} %** "
+      f"(clients distincts de #182 : {len(farm_clients)}).")
+    recent = sorted((f for f in fbs if f.block > 108_835_675), key=lambda f: (f.block, f.index))
+    P(f"- avis postérieurs au bloc 108 835 675 (relus par `readAllFeedback`, `data/mainnet-{BLOCK}.refresh.json`) : "
+      f"**{len(recent)}** : " + "; ".join(f"bloc {f.block} {f.client[:10]}→#{f.agent_id} {f.tag1}={f.value}"
+                                          for f in recent) + ".")
+    for lbl, sch, filt in (("référence, filtre reference", ref, filters["reference"]),
+                           ("stress, tous les tags", stress, sorted({f.tag1 for f in recent})),
+                           ("execution.market (em_schema)", *em_schema(fbs, raw_ref))):
+        g = build_graph(fbs, idn, sch, filt, [], owner_fallback=True)
+        new_pairs = sorted({(f.client, f.agent_id) for f in recent} & set(g.pairs))
+        P(f"  - schéma {lbl}, D44 : couples récents qui deviennent des arêtes = **{len(new_pairs)}** "
+          f"{[(c[:10], a, g.pairs[(c, a)].q) for c, a in new_pairs]}")
+    for lbl, sch, filt in (("référence, filtre reference", ref, filters["reference"]),
+                           ("stress, FARM_FILTER + trade_execution", stress, FARM_FILTER + ["trade_execution"])):
+        new = build_graph(fbs, idn, sch, filt, [])
+        old = build_graph(fbs, idn, sch, filt, [], reject_controllers="any")
+        kept = {k: v for k, v in new.log.items() if k.startswith("negatif_controleur_garde")}
+        P(f"- règle B (schéma {lbl}) : négatifs de contrôleurs gardés = {kept or 0} ; couples en plus par rapport à "
+          f"l'ancienne R6 = {sorted((c[:10], a, new.pairs[(c, a)].q) for c, a in set(new.pairs) - set(old.pairs))}.")
+    for anc_lbl, anc in (("{0xea0b, 0x07305360} (ancien vecteur de démo)", [ea0b, h1]),
+                         ("{0x07305360, 0x794c94f1} (nouveau vecteur de démo)", [h1, resolve(QUALITY4, fbs)])):
+        g, cert, inv = run(fbs, idn, ref, filters["reference"], anc)
+        srcd = sorted(g.nodes[u][1] for u in g.anchor_sourced)
+        r4 = node_report(g, cert, inv, [(AGENT, 4), (AGENT, 2)])
+        P(f"- règle A, ancres {anc_lbl} : agents sourcés par une ancre (aucune ligne) = {srcd} ; "
+          + "; ".join(f"#{k[1]} t = {[fmt(x) for x in r['t']] if r else 0}, trustRobust = "
+                      f"{fmt(r['robust']) if r else 0}, distrust = {fmt(r['d']) if r else 0}" for k, r in r4)
+          + f" ; e = {cert.e} wei.")
+    for lbl, sch, filt in (("référence", ref, filters["reference"]),
+                           ("stress (le tag `tab` de #10255 propage)", stress, sorted({f.tag1 for f in recent}))):
+        g = build_graph(fbs, idn, sch, filt, [])
+        dg = [d for d in g.diagnostics if d["kind"] == "pastOwner"]
+        P(f"- AM-9.3, schéma {lbl} : couples retenus dont le client est un ANCIEN owner de la cible = **{len(dg)}** ; "
+          + "; ".join(f"{d['client'][:10]}→#{d['agentId']} (w = {d['w']}, transfert au bloc {d['transferBlock']}, "
+                      f"premier avis après le transfert au bloc {d['firstFeedbackAfterTransfer']} : "
+                      f"**{d['blocksAfterTransfer']} blocs après**, ≈ {d['blocksAfterTransfer'] * 0.302 / 60:.1f} min "
+                      "à 0,302 s/bloc)" if d["blocksAfterTransfer"] is not None else
+                      f"{d['client'][:10]}→#{d['agentId']} (w = {d['w']}, blocs inconnus)" for d in dg[:8])
+          + ". Affiché, sans effet sur l'arête (D48).")
 
     # ------------------------------------------------------------------ angles morts mesurés
     P("\n## Mesures annexes")

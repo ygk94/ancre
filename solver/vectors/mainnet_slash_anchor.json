@@ -3,7 +3,7 @@
  "label": "mainnet_slash_anchor",
  "notes": "Acte 1 (e), D48-A : ancres {0x0730, 0x794c} (aucune n'est le wallet d'un agent ; l'ancien choix {0xea0b, 0x0730} faisait de l'ancre le wallet de #18, AM-08.A). D14 : l'arête 0xea0b->#4 vaut -10000 (slash), le review +1 ne l'efface pas ; elle est portée par la copie de #18 (D20), massif dans la colonne 0x0730. #4 reçoit l'approbation `quality` de 0x794c (une colonne) et la méfiance du slash.",
  "alignedWith": "contracts/ENCODING.md unified v1 (2026-10-01), AnchoredReputation v1 (integration 02+04)",
- "identityBlock": 108835675,
+ "identityBlock": 110994810,
  "set": {
   "anchors": [
    "0x0730536018541c5149a049d35528a76c2c8f1e6b",

@@ -9,6 +9,8 @@ Provenance (all on-chain, never 8004scan, AM-R4.2):
   - no ReputationRegistry nor IdentityRegistry log between 108 576 698 and 108 835 675 (eth_getLogs, 28/09),
     so the state is valid at 108 835 675.
 Usage: .venv/bin/python snapshot.py   (needs the scratchpads; the output is committed)
+Superseded as the CURRENT snapshot on 06/10 by refresh.py (AM-9.2), which rolls this one forward from the chain:
+data/mainnet-110994810.* (9 291 feedbacks). This file stays the provenance of the 108 835 675 base.
 """
 import gzip
 import json

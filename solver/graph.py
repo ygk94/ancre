@@ -99,13 +99,14 @@ def load_feedbacks(path: str | Path) -> list[Feedback]:
 
 
 def load_feedbacks_onchain(path: str | Path) -> list[Feedback]:
-    """Relecture on-chain (readAllFeedback, includeRevoked = true) : {"block", "feedbacks": [{a, c, i, v, d, t1, t2, r}]}.
+    """Relecture on-chain (readAllFeedback, includeRevoked = true) : {"block", "feedbacks": [{a, c, i, v, d, t1, t2, r[, b]}]}
+    (b = bloc du log NewFeedback, quand il est connu ; il ne sert qu'au diagnostic AM-9.3).
     Source à préférer : 8004scan écrit valueDecimals = 0 pour 24 avis qui ont 2 décimales on-chain (AM-R4.2)."""
     p = Path(path)
     with (gzip.open if p.suffix == ".gz" else open)(p, "rt") as fh:
         raw = json.load(fh)
     return [Feedback(agent_id=int(x["a"]), client=x["c"].lower(), index=int(x["i"]), value=int(x["v"]),
-                     decimals=int(x["d"]), tag1=x["t1"], tag2=x["t2"], revoked=bool(x["r"]))
+                     decimals=int(x["d"]), tag1=x["t1"], tag2=x["t2"], revoked=bool(x["r"]), block=int(x.get("b") or 0))
             for x in raw["feedbacks"]]
 
 
@@ -520,10 +521,13 @@ def combine_pairs(feedbacks: list[Feedback], identity: Identity, schema: dict[st
                     "pastWallet" if c in identity.past_wallets.get(a, ()) else None)
             if kind:
                 tb = identity.past_owner_until.get(a, {}).get(c) if kind == "pastOwner" else None
-                fb = f.block or None
+                after = [x.block for x in feedbacks if x.client == c and x.agent_id == a and x.block
+                         and tb is not None and x.block >= tb]
+                first = min(after) if after else None
                 diagnostics.append({"kind": kind, "client": c, "agentId": a, "w": q, "tag1": f.tag1,
-                                    "feedbackIndex": f.index, "feedbackBlock": fb, "transferBlock": tb,
-                                    "blocksAfterTransfer": fb - tb if fb and tb else None})
+                                    "feedbackIndex": f.index, "feedbackBlock": f.block or None, "transferBlock": tb,
+                                    "firstFeedbackAfterTransfer": first,
+                                    "blocksAfterTransfer": first - tb if first is not None else None})
     log["aretes_couple"] = len(out)
     return out
 

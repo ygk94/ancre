@@ -58,3 +58,28 @@
 **Écarts** : la régénération de `mainnet_slash_anchor` (prévue en E3) est faite ici, parce que la règle A rendait l'ancien vecteur invalide pour le surveillant (5 tests rouges sans elle).
 
 **Prochaine étape** : E2, snapshot rafraîchi depuis la chaîne.
+
+## 2026-10-06 ~13:15 — E2 : snapshot rafraîchi depuis la chaîne (AM-9.2), acte 1 recalculé
+
+**Fait**
+- `solver/refresh.py` (nouveau) : `eth_getLogs` sur rpc1 (Reputation : NewFeedback, FeedbackRevoked, Upgraded ; Identity : Transfer, Approval, ApprovalForAll, MetadataSet, Registered, Upgraded) sur (108 835 675, H], puis **relecture complète par `readAllFeedback(agent, [], "", "", true)` au bloc H** de chaque agent touché, dont la liste remplace celle du snapshot (valeurs, décimales, tags, révocations tels que stockés ; les logs ne servent qu'à dater). Contrôle croisé log ↔ registre sur chaque nouvel avis. Identité roulée par `replay_identity_events`. Refus si un `Upgraded` apparaît (D17).
+- Nouveau snapshot versionné `solver/data/mainnet-110994810.{feedbacks,identity}.json.gz` + `mainnet-110994810.refresh.json` (provenance, liste des avis). L'ancien est gardé (base de la provenance).
+- `run_mainnet.BLOCK = 110 994 810` ; acte 1 recalculé (`out/mainnet.md`), nouvelle section **(g) D48** ; les blocs des avis (`b`) sont chargés et exportés par `from_indexer` (diagnostic AM-9.3).
+
+**Mesures** (MESURÉ le 06/10 à 08:50 UTC, `cd solver && .venv/bin/python refresh.py --to-block 110994810`, 3,6 s, 10 appels `eth_getLogs` + 4 `cast call`)
+- **8 nouveaux avis** (la veille du 05/10 en comptait 7 : +1 au bloc 110 872 159, `0x77a5…` → #10280, `agenttrace-outcome` = 100), **0 révocation, 0 `Upgraded`**. Identité : 21 Transfer, 19 Registered, 22 MetadataSet ; 10 281 agents.
+- **Total : 9 291 avis** au bloc 110 994 810 (le « 9 290, NON VÉRIFIÉ » du tour 7 est remplacé). **Part de la ferme : 7 665 / 9 291 = 82,50 %** (7 665 clients distincts vers #182).
+- Arêtes nouvelles au **schéma de référence : 0** (les tags `requester_rating:knowledge_access`, `tab` et `agenttrace-outcome` n'y sont pas). En schéma stress : 4 couples ; en schéma execution.market d'essai : 2 (#10188, #10262, w = 8000). **L'acte 1 ne change pas** : chaîne honnête #18 → {#2, #3}, slash de #4, Eve à 0, fuite du scanner, #8317 — mêmes valeurs (`out/mainnet.md` §a-§e).
+- **AM-9.3 sur données réelles** : `0x4947…` transfère #10255 au bloc 109 331 923 et le note **918 blocs plus tard** (bloc 109 332 841, ≈ 4,6 min à 0,302 s/bloc), 5 avis `tab` = 100. Visible seulement si `tab` propage (schéma stress) ; affiché, sans effet.
+- **Constat** : 0x794c (nouvelle ancre de `mainnet_slash_anchor`) est un **ancien owner de #4** (diagnostic AM-9.3, bloc de transfert inconnu : il précède l'historique daté du snapshot). Il note #4 `quality` = 100. Ce n'est pas un contrôleur courant, donc l'arête est légale sous D20 ; mais ce n'est pas une ancre « exemplaire ». Le vecteur reste un vecteur de test ; la démo positive (acte 2) se fait sur notre trafic.
+
+**Décisions**
+- Relecture **par agent touché** et remplacement de toute sa liste, plutôt qu'un ajout des seuls nouveaux logs : une révocation ou un avis manqué sur cet agent est rattrapé, et ce qui entre dans le snapshot est ce que le registre stocke (règle « readAllFeedback, jamais 8004scan »).
+- Diagnostic AM-9.3 daté sur le **premier** avis du couple après le transfert (918 blocs), pas sur l'avis décisif de la combinaison (le 5ᵉ, 1 161 252 blocs après).
+- `refresh.py` envoie un User-Agent explicite : rpc1 renvoie **HTTP 403** à l'User-Agent par défaut de urllib (MESURÉ).
+
+**Tests** : `.venv/bin/python -m pytest -q tests` → **146 passed** (MESURÉ). Vecteurs mainnet régénérés sur le nouveau snapshot (`mainnet_em_d44` : 14 nœuds, 38 arêtes, 76 itérations ; les autres inchangés en contenu).
+
+**INTERFACE** : `onchain_feedbacks.json` gagne le champ optionnel `b` (bloc du NewFeedback) ; `from_indexer` l'exporte depuis `Feedback.blockNumber`.
+
+**Prochaine étape** : intégration Alchemy (D55), puis E3.
