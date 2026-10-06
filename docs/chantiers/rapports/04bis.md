@@ -14,7 +14,7 @@
 | E4 | Renommage solveur `is_trusted` → `passes_anchor_policy` ; scénario `common` dans `simulate.py` ; rejeu fork contre le contrat de `main` | ✅ côté solveur ; ⏳ rejeu contre 02-bis (pas encore commité) |
 | E5 | `/code-review high` sur ce worktree | voir §6 |
 
-Tests : **174 verts** (`cd solver && .venv/bin/python -m pytest -q tests`), contre 135 au démarrage.
+Tests : **195 verts** (07/10, après la revue maximale complète) (`cd solver && .venv/bin/python -m pytest -q tests`), contre 135 au démarrage.
 
 ## 2. Mesures
 
@@ -81,6 +81,14 @@ Tests : **174 verts** (`cd solver && .venv/bin/python -m pytest -q tests`), cont
 | 9 | Signatures d'events et clients JSON-RPC dupliqués (`refresh`, `alchemy_hook`) | **corrigé** : topics dérivés de `certifier.REGISTRY_EVENTS`, un seul client (`refresh.Rpc`) |
 | 10 | Chiffres tiers non sourcés (relances Alchemy « 10 min », plafond « 10 k logs ») | **corrigé** : DOC datée / source et NON MESURÉ |
 
+
+## 6 bis. Revue maximale complète du 06/10 (relais `revue-vers-04bis.md`), traitée le 07/10
+
+- **Hauts, tous corrigés avec un test de non-régression qui échouait avant correction** : TBL (table lue par `nodeKeyAt`), STUCK (titulaire prouvé : variante distincte valide), THIRD (le certificateur réagit à l'état du contrat), L3 (négatifs contrôlés après la masse), W1 (dilution cumulée par ligne), AMENDS (amendements reconstruits depuis `EdgeProven`, vérifiés contre `rowStateOf`).
+- **AM-06.1** : mot de passe du keystore passé à cast comme fichier 0600 (Foundry ≥ 1.8).
+- **Moyens corrigés** : A1d, NODES600, LOGS, CHKREG, GASCAP, DIES, STALE, DEFER, W6, W7, SWALLOW, BREAK, ONCE ; HEADREG résolu par TBL. **Non fait** : ARGV (PLAUSIBLE, Linux).
+- **Faibles triviaux** : SIGNER, MSG, DEC18, DEC28, CNT. Reste après la soumission : REGADDR, SRCLESS, SYNROWS, DEAD, K27, MERKLE.
+- Détail et mesures : journal 04bis, entrées du 07/10.
 
 ## 7. Questions pour Hugo
 

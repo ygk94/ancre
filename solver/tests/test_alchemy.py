@@ -132,13 +132,13 @@ def test_webhook_drives_the_real_certifier_dry():
     assert d.handle(A.parse_payload(p)[1], "webhook", 111_000_000)["relevant"] == 0 and runs == []
     p["event"]["data"]["block"]["logs"] = [mk(ea0b, 2)]
     res = d.handle(A.parse_payload(p)[1], "webhook", 111_000_000)
-    assert res["relevant"] == 1 and runs[0]["action"] == "planned" and runs[0]["txs"] == ["submitCertificate"]
+    assert res["relevant"] == 1 and runs[0]["action"] == "planned" and runs[0]["txs"][-1] == "submitCertificate"
 
 
 def test_graphql_query_covers_every_trigger():
     q = A.graphql_query(10143, "0x" + "ab" * 20)
     for k in ("NewFeedback", "FeedbackRevoked", "Transfer", "MetadataSet", "Approval", "ApprovalForAll", "Upgraded",
-              "CertificateSubmitted"):
+              "CertificateSubmitted", "EdgeProven", "RowVoided"):
         assert A.TOPICS[k] in q
     assert A.REGISTRIES[10143][0] in q and A.REGISTRIES[10143][1] in q and "0x" + "ab" * 20 in q
     assert A.TOPICS["NewFeedback"] == "0x6a4a61743519c9d648a14e6493f47dbe3ff1aa29e7785c96c8326a205e58febc"

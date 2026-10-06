@@ -72,6 +72,10 @@ def topic(sig: str) -> str:
 # event kind -> topic0, from the signatures the polling loop already uses (one source of truth)
 TOPICS = {k: topic(s) for k, s in C.REGISTRY_EVENTS.items()}
 TOPICS["CertificateSubmitted"] = topic(C.CERT_SUBMITTED)
+# review THIRD / ONCE: the contract's own proof events wake the certifier and the watcher too
+TOPICS["EdgeProven"] = topic("EdgeProven(bytes32 indexed,uint256 indexed,uint256 indexed,int256,int256,uint256,uint256)")
+TOPICS["RowVoided"] = topic("RowVoided(bytes32 indexed,uint256 indexed,uint256,uint256)")
+CONTRACT_KINDS = ("CertificateSubmitted", "EdgeProven", "RowVoided")
 KIND_OF = {v: k for k, v in TOPICS.items()}
 
 
@@ -91,7 +95,7 @@ def graphql_query(chain: int, ancre: str | None = None) -> str:
     ident, rep = REGISTRIES[chain]
     addrs = [ident, rep] + ([ancre] if ancre else [])
     t0 = [TOPICS[k] for k in ("NewFeedback", "FeedbackRevoked", "Transfer", "MetadataSet", "Approval",
-                              "ApprovalForAll", "Upgraded")] + ([TOPICS["CertificateSubmitted"]] if ancre else [])
+                              "ApprovalForAll", "Upgraded")] + ([TOPICS[k] for k in CONTRACT_KINDS] if ancre else [])
     return ("{\n  block {\n    number\n    hash\n    timestamp\n"
             f"    logs(filter: {{addresses: {json.dumps(addrs)}, topics: [{json.dumps(t0)}]}}) {{\n"
             "      index\n      topics\n      data\n      account { address }\n"
@@ -129,7 +133,7 @@ def log_to_event(address: str, topics: list[str], block: int, tx: str, log_index
         ev["agentId"] = int(topics[3], 16)
     elif kind == "MetadataSet":
         ev["agentId"] = int(topics[1], 16)
-    elif kind == "CertificateSubmitted":
+    elif kind in CONTRACT_KINDS:
         ev["setId"] = topics[1].lower()
     return ev
 
@@ -186,8 +190,8 @@ class Dispatcher:
             with self.lock:
                 fresh = [e for e in events if (e["tx"], e["logIndex"]) not in self.seen]
             sup = self.support_of() if self.support_of else None
-            rel = [e for e in fresh if e["kind"] != "CertificateSubmitted" and (sup is None or C.relevant(e, sup))]
-            aud = [e for e in fresh if e["kind"] == "CertificateSubmitted" and
+            rel = [e for e in fresh if e["kind"] not in CONTRACT_KINDS and (sup is None or C.relevant(e, sup))]
+            aud = [e for e in fresh if e["kind"] in CONTRACT_KINDS and
                    (self.set_id is None or e.get("setId") == self.set_id.lower())]
             res = {"source": source, "block": block, "events": len(events), "fresh": len(fresh),
                    "duplicates": len(events) - len(fresh), "relevant": len(rel), "certificates": len(aud)}
@@ -380,8 +384,7 @@ def build_service(a, journal: C.Journal) -> tuple[Dispatcher, C.Certifier | None
         from graph import load_feedbacks_onchain, load_identity_json
         import watcher as Wt
         cfg = C.SetConfig.load(a.set_config)
-        signer = C.Signer(a.sender, "keystore", a.keystore, a.password_env) if a.send else (
-            C.Signer(a.sender) if a.sender else None)
+        signer = C.Signer.build(a.sender, a.keystore if a.send else None, a.password_env)
         chain = C.Chain(a.rpc, signer)
         svc = C.Certifier(cfg, chain, a.ancre, a.set_id, Path(a.state), journal)
         load = lambda: (load_feedbacks_onchain(Path(a.data) / "onchain_feedbacks.json"),
@@ -397,8 +400,12 @@ def build_service(a, journal: C.Journal) -> tuple[Dispatcher, C.Certifier | None
         def audit(frm, to):
             fbs, idn = load()
             nodes = C.chain_table(chain, a.ancre, a.set_id, cfg.anchors)
-            return [e.get("action") for e in Wt.watch_once(chain, a.ancre, cfg, a.set_id, nodes, fbs, idn, journal,
-                                                           frm, to, send=a.send and signer is not None)]
+            out = [e.get("action") for e in Wt.watch_once(chain, a.ancre, cfg, a.set_id, nodes, fbs, idn, journal,
+                                                          frm, to, send=a.send and signer is not None)]
+            if svc.contract_changed(C.OnChain.read(chain, a.ancre, a.set_id)):   # review THIRD: a third party moved
+                out.append(svc.run_once(fbs, idn, reason="alchemy: contract state changed", block=to,
+                                        dry=not a.send).get("action"))
+            return out
         d.on_recertify, d.on_audit, d.support_of = recertify, audit, (lambda: svc.support)
     return d, svc
 

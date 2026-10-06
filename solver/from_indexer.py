@@ -175,9 +175,12 @@ def export(src, block: int, out: Path, set_id: str = "ref") -> dict[str, Path]:
     out.mkdir(parents=True, exist_ok=True)
     files = {"feedbacks": out / "onchain_feedbacks.json", "identity": out / "identity.json",
              "set_edges": out / "set_edges.json"}
-    files["feedbacks"].write_text(json.dumps(feedbacks_file(src, block)))
-    files["identity"].write_text(json.dumps(identity_file(src, block)))
-    files["set_edges"].write_text(json.dumps(set_edges_file(src, set_id)))
+    import os
+    for k, obj in (("feedbacks", feedbacks_file(src, block)), ("identity", identity_file(src, block)),
+                   ("set_edges", set_edges_file(src, set_id))):
+        tmp = files[k].with_suffix(".tmp")              # review DIES: readers never see a half-written export
+        tmp.write_text(json.dumps(obj))
+        os.replace(tmp, files[k])
     return files
 
 

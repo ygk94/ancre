@@ -204,3 +204,37 @@ Tests : **155 passed** (MESURÉ).
 - Résidu TBL : un `submitCertificate` **relayé** (multisig, 4337) reste « undecodable » pour le surveillant ; il faudrait une trace d'appels, que le RPC public d'Alchemy refuse (`debug_traceTransaction`, `docs/ressources/alchemy.md` §1.1). STUCK côté contrat (REFUSED-first pour un titulaire STALE) relève de 02-bis.
 
 **Prochaine étape** : constats moyens (NODES600, LOGS, CHKREG, DEFER, STALE, DIES, W7, BREAK, SWALLOW, ONCE, A1d, GASCAP, ARGV, HEADREG).
+
+## 2026-10-07 — Revue maximale complète : constats MOYENS (et 3 faibles triviaux)
+
+| Id | Correction | Test (`tests/test_review_max_04bis.py`) |
+|---|---|---|
+| **NODES600** | `add_nodes_per_tx` 600 → **450** (v1 : ≈ 45,9 k gas/nœud, GAS.md 01/10 ; 450 × 45,9 k × 1,075 < 25 M) | `test_nodes600_…` |
+| **LOGS** | `Chain.logs` découpe en 100 blocs (`cast logs --query-size 100`) sur `rpc.monad.xyz` et `testnet-rpc.monad.xyz` ; la table ne lit plus de logs depuis le bloc 0 (TBL) ; stdout dans `ChainError` (AM-06.1) | `test_logs_…` |
+| **CHKREG** | sur `Upgraded` (et `--send`) : `checkRegistry(setId)` ; `registry_changed` fait partie de l'état surveillé (`contract_changed`) : recertification | `test_chkreg_…` |
+| **GASCAP** | `submitCertificate` au-dessus du plafond : nouveau calcul avec troncature croissante (`truncate_levels` 1e12, 1e14, 1e16 WAD : lignes des nœuds les plus légers retirées, t reste une borne inférieure) | `test_gascap_…` |
+| **DIES** | certificateur et surveillant : tête et export lus **dans** le `try` ; `--once` rend 1 sur un tour en échec ; `from_indexer.export` écrit en fichier temporaire + `os.replace` | (code) |
+| **STALE** | si l'export est en retard sur les events (`identity.block` < bloc de l'event) : `data_behind`, la fenêtre n'avance pas | (code ; le webhook avait déjà ce comportement) |
+| **DEFER** | une soumission différée par la règle de remplacement pose `retry_at = head + wait` ; la boucle relance à ce bloc | `test_defer_…` |
+| **A1d** | set ouvert : les nouveaux nœuds ne partent **jamais** dans `submitCertificate` ; `addNodes` seul, puis soumission au tour suivant sur la table relue (`nodes_added`) | `test_plan_splits_…` (assertion A1d) ; fork : cycle du service OK |
+| **W7** | nouveau constat OVERSTATED_NEG (w < q < 0), prouvé par `proveEdge` | `test_w7_…` |
+| **W6** | (traité avec les hauts) | — |
+| **SWALLOW** | une erreur de transport sur `tx_input` remonte (fenêtre gardée) ; « undecodable » réservé à un input récupéré mais indécodable | `test_swallow_…` |
+| **BREAK** | une estimation qui revert (sauf `BadProof(5)`/`(23)`) ne bloque plus la ligne : les preuves suivantes sont tentées | `test_break_…` |
+| **ONCE** | `watch_once(reaudit=True)` : le certificat **courant** est réaudité à chaque tour contre des données fraîches ; les preuves déjà posées sont sautées (AMENDS) | `test_once_…` |
+| **D55** | le webhook s'abonne aussi à `EdgeProven` et `RowVoided` du contrat ; un changement d'état du contrat relance le certificateur (THIRD, ONCE) | tests Alchemy mis à jour |
+| **SIGNER** (faible) | `Signer.build` partout | `test_am061_…` |
+| **MSG** (faible) | message du plafond : « ~600 arêtes par 15 M » (GAS.md) au lieu du chiffre v0 | — |
+| **DEC18**, **DEC28**, **CNT** (faibles) | `quantize` ignore `valueDecimals > 18` (comme le contrat) ; `dec_to_wad` en précision 100 ; commentaire sourcé | `test_dec18_and_dec28` |
+| **HEADREG** | résolu par TBL (plus de reconstruction par logs, donc plus de « node table gap ») | — |
+| **K24**, **K23** | déjà faits le 06/10 (E1) | — |
+
+**Non traités** : **ARGV** (PLAUSIBLE, Linux seulement ; il faudrait signer hors de cast) ; résidu de TBL (`submitCertificate` relayé indécodable sans trace d'appels) ; **REGADDR**, **SRCLESS**, **SYNROWS**, **DEAD**, **K27**, **MERKLE** (faible ou nettoyage, après la soumission).
+
+**Vérification AM-INT.2** : les 9 nouveaux tests des constats moyens, lancés sur le code d'avant correction (`git stash`), **échouent tous les 9**.
+
+**Mesures** (MESURÉ, 07/10)
+- `.venv/bin/python -m pytest -q tests` → **195 passed**.
+- Fork (bloc 110 994 810, contrat de `main`) : `service,split` → `out/simulation_service.json`. Sur set ouvert, chaque certificat avec de nouveaux nœuds passe en deux tours (`nodesAddedFirst`). Le certificat de croissance est en place avant la tentative de censure, qui est maintenant **refusée** (`NotBetter`) ; front-running `addNodes`, rafraîchissement par l'âge et premier certificat découpé (3 `addNodes` de 450 au plus, 3 `reserveCapacity`) OK.
+
+**INTERFACE** : pour 07 et le pilote, un set ouvert produit une action de journal `nodes_added` avant `certified` ; constat OVERSTATED_NEG dans les audits ; webhook Alchemy élargi aux events de preuve du contrat.

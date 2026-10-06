@@ -82,8 +82,13 @@ def test_plan_splits_large_first_certificate(mainnet):
                                    "submitCertificate"]
     assert [t.args[1] for t in txs if t.fn == "reserveCapacity"] == ["4", "6"]
     assert txs[-1].args[3] == "0x"                                          # nodes already added
-    small = C.plan(honest_cfg(fbs), "0x" + "00" * 32, al, X.encode(al.cert, al.nodes, idn), 0, 16)
+    att = honest_cfg(fbs)
+    att.submitters = ["0x" + "f3" * 20]                                     # attested: small case stays inline
+    small = C.plan(att, "0x" + "00" * 32, al, X.encode(al.cert, al.nodes, idn), 0, 16)
     assert [t.fn for t in small] == ["submitCertificate"] and small[0].args[3] == "0x" + al.new_nodes.hex()
+    # review A1d: on an OPEN set new nodes never ride inline (a third-party addNodes would shift the indices)
+    opn = C.plan(honest_cfg(fbs), "0x" + "00" * 32, al, X.encode(al.cert, al.nodes, idn), 0, 16)
+    assert [t.fn for t in opn][0] == "addNodes" and opn[-1].fn == "submitCertificate" and opn[-1].args[3] == "0x"
 
 
 def test_triggers_ignore_zero_mass_clients(mainnet):

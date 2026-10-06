@@ -196,8 +196,7 @@ def test_quantize_rules():
     assert quantize(1, 6, S["vouch"]) == 0                      # 1e-6/100 -> 0 (grille 1e-4)
     assert quantize(40, 0, S["starred"]) == -2000               # sous le neutre : négatif
     assert quantize(77777, 3, S["starred"]) == 5555             # 77,777 -> 0,55554 -> 5555
-    with pytest.raises(ValueError):
-        quantize(1, 19, S["vouch"])
+    assert quantize(1, 19, S["vouch"]) is None                  # review DEC18: ignored, as by the contract
 
 
 def ident(owner, wallet, **kw):

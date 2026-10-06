@@ -326,7 +326,11 @@ class TagSpec:
 
 
 def dec_to_wad(s) -> int:
-    d = Decimal(str(s)) * WAD
+    """Exact: the default Decimal context has 28 digits, which ROUNDS a bound like 1e38 x 1e18 (review DEC28)."""
+    from decimal import localcontext
+    with localcontext() as ctx:
+        ctx.prec = 100
+        d = Decimal(str(s)) * WAD
     if d != d.to_integral_value():
         raise ValueError(f"borne non représentable en WAD : {s}")
     return int(d)
@@ -358,8 +362,8 @@ def quantize(value: int, decimals: int, spec: TagSpec) -> int | None:
     w = (v - neutre)/(max - neutre) si v >= neutre, sinon -(neutre - v)/(neutre - min) ;
     q = troncature vers zéro de w * 1e4. Comparaison aux bornes en valeur exacte avant arrondi.
     """
-    if abs(value) > VALUE_ABS_MAX:
-        return None
+    if abs(value) > VALUE_ABS_MAX or not 0 <= decimals <= 18:
+        return None                                     # review DEC18: the contract ignores the tag, it does not revert
     v = value_to_wad(value, decimals)
     if v < spec.min_wad or v > spec.max_wad:
         return None

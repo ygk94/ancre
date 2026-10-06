@@ -61,7 +61,9 @@ class GasPolicy:
     margin_abs: int = 5_000          # between estimate and inclusion; a fork cannot measure that drift
     tx_cap: int = 25_000_000         # never send a transaction above this limit
     inline_nodes_max: int = 100      # new nodes carried by submitCertificate itself (29.1 k/node, GAS.md)
-    add_nodes_per_tx: int = 600      # ~17.5 M per full addNodes chunk
+    add_nodes_per_tx: int = 450      # review NODES600: addNodes costs ~45.9 k/node in v1 (GAS.md, MEASURED 01/10):
+    #                                  450 x 45.9 k = 20.7 M, x 1.075 + margin = 22.2 M < tx_cap (600 gave 29.6 M)
+    truncate_levels: tuple = (0, 10**12, 10**14, 10**16)   # review GASCAP: rows of nodes of mass <= level dropped
     reserve_slots_per_tx: int = 800  # 17.5 k per 0→x slot (GAS.md): ~14 M per reserveCapacity chunk
 
     def limit(self, estimate: int) -> int:
@@ -242,10 +244,16 @@ class Signer:
         return {"ETH_PASSWORD": self._path()}
 
 
+PUBLIC_RANGE_100 = ("rpc.monad.xyz", "testnet-rpc.monad.xyz")   # eth_getLogs <= 100 blocks (CLAUDE.md §7, MEASURED)
+
+
 class Chain:
-    def __init__(self, rpc: str, signer: Signer | None = None, cast: str | None = None):
+    def __init__(self, rpc: str, signer: Signer | None = None, cast: str | None = None, log_chunk: int | None = None):
         self.rpc, self.signer = rpc, signer
         self.cast = cast or os.path.expanduser("~/.foundry/bin/cast")
+        # review LOGS: split eth_getLogs on the public RPCs (range limited to 100 blocks, error -32614)
+        self.log_chunk = log_chunk if log_chunk is not None else (
+            100 if any(h in rpc for h in PUBLIC_RANGE_100) and "rpc1" not in rpc else 0)
 
     def _run(self, sub: str, *args: str, sign: bool = False) -> str:
         """`cast <sub> --rpc-url RPC [signer options] <args>`. Callers pass their options before the positionals
@@ -291,8 +299,9 @@ class Chain:
 
     def logs(self, address: str, event_sig: str, from_block: int, *topics: str,
              to_block: int | str = "latest") -> list[dict]:
+        chunk = ["--query-size", str(self.log_chunk)] if self.log_chunk else []
         out = self._run("logs", "--address", address, "--from-block", str(from_block), "--to-block", str(to_block),
-                        "--json", event_sig, *topics)
+                        *chunk, "--json", event_sig, *topics)
         return json.loads(out) if out else []
 
     def eth_call(self, to: str, data: str) -> str:
@@ -469,7 +478,8 @@ def relevant(ev: dict, sup: Support) -> bool:
     if k in ("MetadataSet", "Transfer", "Approval"):
         return int(ev["agentId"]) in sup.agents
     if k == "ApprovalForAll":
-        return True                     # operator of an owner: rare (32 on the mainnet), cheap to recompute
+        return True                     # operator of an owner: rare (32 active operators on the mainnet, MEASURED
+        #                                 06/10 in out/mainnet.md, snapshot 110 994 810), cheap to recompute
     return False
 
 
@@ -494,6 +504,9 @@ def plan(cfg: SetConfig, set_id: str, al: Aligned, enc: dict, reserved_nodes: in
     stride = al.cert.k + 3
     unreserved_slots = max(0, (n + 3) // 4 - (reserved_nodes + 3) // 4) * stride
     large = len(al.appended) > cfg.gas.inline_nodes_max or unreserved_slots > cfg.gas.reserve_slots_per_tx
+    open_set = not cfg.submitters
+    if open_set and al.appended:      # review A1d: inline newNodes land at the CURRENT nodeCount; a third-party
+        large = True                  # addNodes in between shifts every index. Add them in their own transactions
     txs: list[Tx] = []
     inline = al.new_nodes
     if large:
@@ -630,7 +643,7 @@ class Certifier:
     def contract_changed(self, oc: "OnChain") -> bool:
         """Review THIRD: the certificate or its proofs changed on chain since our last look (a third-party certificate,
         a proof that widened the incumbent, a RowVoided): recompute now instead of waiting for the age refresh."""
-        cur = (oc.graph_root, oc.vector_root, oc.e_low_eff, oc.e_eff)
+        cur = (oc.graph_root, oc.vector_root, oc.e_low_eff, oc.e_eff, oc.registry_changed)   # + CHKREG
         changed = self.last_seen is not None and cur != self.last_seen
         self.last_seen = cur
         return changed
@@ -642,10 +655,10 @@ class Certifier:
         self._table_block = head
         return self._table
 
-    def compute(self, fbs, idn: Identity, table: list[NodeKey], prev_ncert: int):
+    def compute(self, fbs, idn: Identity, table: list[NodeKey], prev_ncert: int, truncate_below: int = 0):
         g = build_graph(fbs, idn, self.cfg.schema(), self.cfg.filter_tags, self.cfg.anchors,
                         owner_fallback=self.cfg.owner_fallback)
-        cert = certify(g, self.cfg.alpha, lambdas=self.cfg.lambdas)
+        cert = certify(g, self.cfg.alpha, lambdas=self.cfg.lambdas, truncate_below=truncate_below)
         al = align(g, cert, table, prev_ncert)
         enc = encode(al.cert, al.nodes, idn)
         self.support = Support.of(g, cert)
@@ -659,21 +672,25 @@ class Certifier:
     def due_refresh(self, oc: OnChain, head: int) -> bool:
         return oc.cert_block > 0 and head - oc.cert_block > self.cfg.max_age - self.cfg.refresh_lead
 
-    def run_once(self, fbs, idn: Identity, *, reason: str, block: int | None = None, dry: bool = False) -> dict:
+    def run_once(self, fbs, idn: Identity, *, reason: str, block: int | None = None, dry: bool = False,
+                 _level: int = 0) -> dict:
         t0 = time.perf_counter()
+        self.retry_at = None
         if self.chain is None or dry:
             table, oc, head = anchor_table(self.cfg.anchors), None, None
         else:
             head = self.chain.block_number()
             table = self.table(head)
             oc = OnChain.read(self.chain, self.contract, self.set_id)
-        g, al, enc = self.compute(fbs, idn, table, oc.n_cert if oc else 0)
+        trunc = self.cfg.gas.truncate_levels[_level]
+        g, al, enc = self.compute(fbs, idn, table, oc.n_cert if oc else 0, trunc)
         gr, vr = "0x" + enc["graphRoot"].hex(), "0x" + enc["vectorRoot"].hex()
         e_max = e_eff(al.cert)
         q_new, mass_new, d_new = quality(al.cert)
         base = dict(set=self.cfg.name, reason=reason, block=block, nCert=al.cert.n, rows=len(al.cert.rows),
                     newNodes=len(al.appended), eEff=e_max, qEff=q_new, mass=mass_new, iterations=al.cert.iterations,
-                    graphRoot=gr, computeMs=round((time.perf_counter() - t0) * 1000, 1))
+                    graphRoot=gr, computeMs=round((time.perf_counter() - t0) * 1000, 1),
+                    **({"truncateBelow": trunc} if trunc else {}))
         reserved = max(self.state.reserved, oc.n_cert if oc else 0)
         txs = plan(self.cfg, self.set_id, al, enc, reserved, e_max)
         if oc is None:
@@ -698,16 +715,24 @@ class Certifier:
             same = False
         wait = replacement_wait(oc, head, q_new, mass_new, self.cfg, d_new, same)
         if wait:                                        # the contract would revert NotBetter: do not pay for it
+            self.retry_at = head + wait                 # review DEFER: the loop retries at that block
             return self.journal.log(action="deferred_replacement_rule", waitBlocks=wait, qCur=oc.q_cur,
                                     massCur=oc.mass, eLowCur=oc.e_low_eff, head=head, **base)
         self.check_submitter()
+        split = not self.cfg.submitters and bool(al.appended)
+        if split:                                       # open set: the nodes go alone, never with the certificate
+            txs = [t for t in txs if t.fn != "submitCertificate"]
         last = None
         for tx in txs:
             est = self.chain.estimate(self.contract, tx.sig, *tx.args)
             lim = self.cfg.gas.limit(est)
             if lim > self.cfg.gas.tx_cap:
-                raise RuntimeError(f"{tx.fn}: gas limit {lim} > cap {self.cfg.gas.tx_cap} (GAS.md: an update breaks "
-                                   "around 12 k edges at k = 3; beyond, the verification must be split)")
+                if tx.fn == "submitCertificate" and _level + 1 < len(self.cfg.gas.truncate_levels):
+                    # review GASCAP: drop the rows of the lightest nodes (truncation margin, t stays a lower bound)
+                    self.journal.log(action="gas_cap_truncate", gasLimit=lim, nextLevel=_level + 1, **base)
+                    return self.run_once(fbs, idn, reason=reason, block=block, dry=dry, _level=_level + 1)
+                raise RuntimeError(f"{tx.fn}: gas limit {lim} > cap {self.cfg.gas.tx_cap} (review MSG: a Registry-"
+                                   "verified update re-reads every edge, ~600 edges per 15 M, contracts/GAS.md)")
             rc = self.chain.send(self.contract, tx.sig, *tx.args, gas_limit=lim)
             ok = rc["ok"]
             last = self.journal.log(action=tx.fn, note=tx.note, estimate=est, gasLimit=lim,
@@ -719,6 +744,10 @@ class Certifier:
             self.state.save(self.state_path)            # progress is on chain; the cache follows every step
             if not ok:
                 raise ChainError(f"{tx.fn} reverted: {rc.get('transactionHash')}")
+        if split:                                       # review A1d: submit next round, on the RE-READ table
+            self.state.save(self.state_path)
+            self.retry_at = head
+            return self.journal.log(action="nodes_added", txs=len(txs), **base)
         self.state.reserved = max(self.state.reserved, al.cert.n)
         self.state.save(self.state_path)
         self.contract_changed(OnChain.read(self.chain, self.contract, self.set_id))   # our own change is not news
@@ -784,32 +813,46 @@ def main(argv=None):
     ap.add_argument("--once", action="store_true")
     a = ap.parse_args(argv)
     cfg = SetConfig.load(a.set_config)
-    signer = Signer(a.sender, "keystore", a.keystore, a.password_env) if a.send else (
-        Signer(a.sender) if a.sender else None)
+    signer = Signer.build(a.sender, a.keystore if a.send else None, a.password_env)
     chain = Chain(a.rpc, signer)
     jr = Journal(Path(a.journal))
     svc = Certifier(cfg, chain, a.contract, a.set_id, Path(a.state), jr)
+    svc.retry_at = None
     load = lambda: (load_feedbacks_onchain(Path(a.data) / "onchain_feedbacks.json"),
                     load_identity_json(Path(a.data) / "identity.json"))
-    frm, first = a.from_block, True
+    frm, first, head, failed = a.from_block, True, None, False
     while True:
-        head = chain.block_number()
-        try:
+        try:                                            # review DIES: everything inside, a 429 never kills the loop
+            head = chain.block_number()
             evs = [] if first else [e for e in registry_events(chain, a.identity, a.reputation, frm, head)
                                     if svc.support is None or relevant(e, svc.support)]
+            if any(e["kind"] == "Upgraded" for e in evs) and a.send:
+                # review CHKREG: nobody else calls checkRegistry; it flags REGISTRY_CHANGED, then we recertify
+                rc = chain.send(a.contract, "checkRegistry(bytes32)", a.set_id, gas_limit=300_000)
+                jr.log(action="checkRegistry", set=cfg.name, tx=rc.get("transactionHash"), status=rc["ok"])
             oc = OnChain.read(chain, a.contract, a.set_id)
             due = svc.due_refresh(oc, head)
-            moved = svc.contract_changed(oc)            # review THIRD: a third-party certificate or a proof
-            if first or evs or due or moved:
+            moved = svc.contract_changed(oc)            # review THIRD / CHKREG: a third-party move, REGISTRY_CHANGED
+            retry = svc.retry_at is not None and head >= svc.retry_at          # review DEFER / A1d
+            if first or evs or due or moved or retry:
                 fbs, idn = load()
+                behind = max((e["block"] for e in evs), default=0)
+                if idn.block < behind:                  # review STALE: the export lags the events: keep the window
+                    jr.log(action="data_behind", set=cfg.name, dataBlock=idn.block, eventBlock=behind)
+                    failed = True
+                    if a.once:
+                        return 1
+                    time.sleep(a.interval)
+                    continue
                 svc.run_once(fbs, idn, reason="start" if first else (
-                    f"{len(evs)} relevant event(s)" if evs else "contract state changed" if moved else "refresh"),
-                    block=head, dry=not a.send)
-            frm, first = head + 1, False
+                    f"{len(evs)} relevant event(s)" if evs else "contract state changed" if moved else
+                    "retry (replacement rule / nodes added)" if retry else "refresh"), block=head, dry=not a.send)
+            frm, first, failed = head + 1, False, False
         except Exception as e:                          # journal, keep the window, retry next round
+            failed = True
             jr.log(action="error", set=cfg.name, error=str(e)[:500], fromBlock=frm, head=head)
         if a.once:
-            return 0
+            return 1 if failed else 0
         time.sleep(a.interval)
 
 

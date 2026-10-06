@@ -5,6 +5,7 @@ the discrepancies, classified by what they break (D32, tour 4 spec), each with t
   FABRICATED        committed edge with no registry edge (or a pair rejected by R6)   -> breaks t <= t* (V5)   proveEdge (v)
   INFLATED          committed w > registry w                                            -> breaks t or d (V6)   proveEdge (v)
   SIGN_FLIP         committed w < 0 < registry w                                        -> invented distrust    proveEdge
+  OVERSTATED_NEG    committed w < registry q < 0 (review W7): B⁻ inflated, siblings' distrust divided  proveEdge
   DEFLATED          0 < committed w < registry w, committed S⁺ > GRID                   -> siblings inflated    proveEdge
   OMITTED_NEGATIVE  registry negative edge absent from a provided row                  -> breaks d (V13)       proveEdge (i)
   DILUTION          registry positive edge absent, committed S⁺ + q above max(GRID, sPlus) -> breaks t (V4)    proveEdge (i)
@@ -52,8 +53,10 @@ class Discrepancy:
 PROVE_EDGE_SIG = "proveEdge(bytes32,(uint256,bytes,bytes32[]),(uint256,bytes,bytes32[]),bytes,uint256)"
 PROVE_WALLET_SIG = "proveWallet(bytes32,(uint256,bytes,bytes32[]),(uint256,bytes,bytes32[]),bytes)"
 # proof order on one row: distrust first (V13), then what inflates trust, then dilution and deflation
-PRIORITY = {"SOURCE": -1, "OMITTED_NEGATIVE": 0, "FABRICATED": 1, "INFLATED": 1, "SIGN_FLIP": 2, "DILUTION": 3,
-            "DEFLATED": 4}
+PRIORITY = {"SOURCE": -1, "OMITTED_NEGATIVE": 0, "FABRICATED": 1, "INFLATED": 1, "SIGN_FLIP": 2,
+            "OVERSTATED_NEG": 2, "DILUTION": 3, "DEFLATED": 4}
+# a failed proof that leaves the row unchanged must not stop the row (review BREAK), except these
+ROW_FATAL = ("BadProof(5)", "BadProof(23)")
 
 
 def _ref(pos: int, slices, leaves) -> dict:
@@ -132,6 +135,8 @@ def audit(rows_hex: str, nodes: list, fbs, idn: Identity, cfg: C.SetConfig) -> l
                 disc("INFLATED", dst, a, w, pe.q, fi)
             elif pe.q > 0 > w:
                 disc("SIGN_FLIP", dst, a, w, pe.q, fi)
+            elif w < pe.q < 0:                         # review W7: a slash committed too negative inflates B⁻ and
+                disc("OVERSTATED_NEG", dst, a, w, pe.q, fi)   # divides the distrust of the row's other negatives
             elif 0 < w < pe.q:
                 if s_plus - w + pe.q > b_plus:
                     disc("DEFLATED", dst, a, w, pe.q, fi)
@@ -278,29 +283,44 @@ def chain_amends(chain: C.Chain, contract: str, set_id: str, rows_hex: str, node
 
 def decode_submission(chain: C.Chain, tx_hash: str) -> dict:
     """submitCertificate arguments of a transaction (direct call only; a call through a multisig is undecodable)."""
-    out = chain.decode(C.SUBMIT_SIG, chain.tx_input(tx_hash))
+    return decode_input(chain, chain.tx_input(tx_hash))
+
+
+def decode_input(chain: C.Chain, inp: str) -> dict:
+    if inp[:10] != C._selector(C.SUBMIT_SIG):
+        raise ValueError("not a direct submitCertificate call")
+    out = chain.decode(C.SUBMIT_SIG, inp)
     return {"setId": out[0], "nCert": int(out[1].split()[0]), "eMax": int(out[2].split()[0]), "newNodes": out[3],
             "vectors": out[4], "rows": out[5]}
 
 
 def watch_once(chain: C.Chain, contract: str, cfg: C.SetConfig, set_id: str, nodes: list, fbs, idn: Identity,
-               journal: C.Journal, from_block: int, to_block: int | None = None, *, send: bool = False) -> list[dict]:
+               journal: C.Journal, from_block: int, to_block: int | None = None, *, send: bool = False,
+               reaudit: bool = True) -> list[dict]:
     """One polling round over (from_block, to_block]: only the CURRENT certificate of the set is audited (a
     replaced one can no longer be proven: its graphRoot is gone). Every error is journaled, never fatal: the
     round goes on and the caller advances from_block. The discrepancies of a row are proven in priority order
     (source, negative, fabrication/inflation, dilution), chaining the amendments after each success."""
     to_block = to_block if to_block is not None else chain.block_number()
     logs = chain.logs(contract, C.CERT_SUBMITTED, from_block, set_id, to_block=to_block)
-    current = C.OnChain.read(chain, contract, set_id).graph_root
+    oc = C.OnChain.read(chain, contract, set_id)
+    current = oc.graph_root
+    root_of = lambda lg: "0x" + lg["data"][2 + 64:2 + 128].lower()
+    if reaudit and oc.cert_block and not any(root_of(lg) == current for lg in logs):
+        # review ONCE: the CURRENT certificate is re-audited every round against fresh data (revocations, softened
+        # feedbacks, controller or wallet changes after its submission); proofs already on chain are skipped (AMENDS)
+        logs = logs + [lg for lg in chain.logs(contract, C.CERT_SUBMITTED, oc.cert_block, set_id,
+                                               to_block=oc.cert_block) if root_of(lg) == current]
     events = []
     for lg in logs:
-        root = "0x" + lg["data"][2 + 64:2 + 128].lower()
+        root = root_of(lg)
         if root != current:
             events.append(journal.log(action="skip_replaced", set=cfg.name, tx=lg["transactionHash"]))
             continue
+        inp = chain.tx_input(lg["transactionHash"])     # review SWALLOW: a transport error RAISES (window kept)
         try:
-            sub = decode_submission(chain, lg["transactionHash"])
-        except Exception as e:                          # multisig / router: not decodable
+            sub = decode_input(chain, inp)
+        except Exception as e:                          # multisig / router: the input itself is not decodable
             events.append(journal.log(action="undecodable", set=cfg.name, tx=lg["transactionHash"], error=str(e)[:300]))
             continue
         disc = audit(sub["rows"], nodes, fbs, idn, cfg)
@@ -332,6 +352,8 @@ def watch_once(chain: C.Chain, contract: str, cfg: C.SetConfig, set_id: str, nod
                     r = {"kind": d.kind, "agentJ": d.agent_id, "u": u, "status": "error",
                          "error": C.revert_reason(str(e))}
                 ev["proofs"].append(r)
+                if r.get("status") == "error" and not any(f in r.get("error", "") for f in ROW_FATAL):
+                    continue                            # review BREAK: a reverted estimate changed nothing on chain
                 if r.get("status") is not True or d.kind == "SOURCE":
                     break                               # later proofs of this row depend on this one (or it is void)
                 amends = amend(amends, d)
@@ -376,21 +398,21 @@ def main(argv=None):
     ap.add_argument("--once", action="store_true")
     a = ap.parse_args(argv)
     cfg = C.SetConfig.load(a.set_config)
-    signer = C.Signer(a.sender, "keystore", a.keystore, a.password_env) if a.sender and a.keystore else \
-        (C.Signer(a.sender) if a.sender else None)
+    signer = C.Signer.build(a.sender, a.keystore, a.password_env)
     chain = C.Chain(a.rpc, signer)
     jr = C.Journal(Path(a.journal))
     frm = a.from_block
     table, table_block = None, -1                       # append-only node table, synced incrementally
+    head = None
     while True:
-        if a.data:
-            fbs = load_feedbacks_onchain(Path(a.data) / "onchain_feedbacks.json")
-            idn = load_identity_json(Path(a.data) / "identity.json")
-        else:
-            import run_mainnet as R
-            fbs, idn = R.load_mainnet()
-        head = chain.block_number()
-        try:
+        try:                                            # review DIES: reading the export and the head inside the try
+            if a.data:
+                fbs = load_feedbacks_onchain(Path(a.data) / "onchain_feedbacks.json")
+                idn = load_identity_json(Path(a.data) / "identity.json")
+            else:
+                import run_mainnet as R
+                fbs, idn = R.load_mainnet()
+            head = chain.block_number()
             nodes = C.chain_table(chain, a.contract, a.set_id, cfg.anchors, table_block + 1, head, table)
             table, table_block = nodes, head
             watch_once(chain, a.contract, cfg, a.set_id, nodes, fbs, idn, jr, frm, head,
@@ -400,6 +422,8 @@ def main(argv=None):
                 jr.log(action="alert", set=cfg.name, alert=alert, head=head)
         except Exception as e:                          # never die: journal and retry the same window next round
             jr.log(action="error", set=cfg.name, error=str(e)[:500], fromBlock=frm, head=head)
+            if a.once:
+                return 1                                # review DIES: --once reports the failed round
             time.sleep(a.interval)
             continue
         frm = head + 1                                  # logs were read up to head exactly: no double processing

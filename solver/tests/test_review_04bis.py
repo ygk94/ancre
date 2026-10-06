@@ -86,5 +86,5 @@ def test_get_logs_halves_a_refused_range():
 def test_refresh_topics_are_the_polling_loop_topics():
     assert F.T["NewFeedback"] == A.TOPICS["NewFeedback"] == \
         "0x6a4a61743519c9d648a14e6493f47dbe3ff1aa29e7785c96c8326a205e58febc"
-    assert all(F.T[k] == A.TOPICS[k] for k in A.TOPICS if k != "CertificateSubmitted")
+    assert all(F.T[k] == A.TOPICS[k] for k in A.TOPICS if k not in A.CONTRACT_KINDS)
     assert F.T["Registered"] == "0x" + keccak(b"Registered(uint256,string,address)").hex()

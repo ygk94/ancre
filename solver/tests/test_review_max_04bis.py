@@ -251,3 +251,171 @@ def test_am061_cast_error_on_stdout_is_not_lost(tmp_path):
     fake.chmod(0o755)
     with pytest.raises(C.ChainError, match="wrong password"):
         C.Chain("http://x", cast=str(fake)).block_number()
+
+
+# ============================================================================= MEDIUM findings
+def test_nodes600_chunks_fit_under_the_cap():
+    g = C.GasPolicy()
+    assert g.add_nodes_per_tx == 450 and g.limit(450 * 45_900) < g.tx_cap      # v1: ~45.9 k/node (GAS.md 01/10)
+    assert g.limit(600 * 45_900) > g.tx_cap                                    # the old default broke
+
+
+def test_logs_split_on_public_rpcs(tmp_path):
+    fake = tmp_path / "cast"
+    fake.write_text('#!/bin/sh\necho "$@" > "' + str(tmp_path / "argv") + '"\necho "[]"\n')
+    fake.chmod(0o755)
+    C.Chain("https://rpc.monad.xyz", cast=str(fake)).logs("0xc", "E()", 0)
+    assert "--query-size 100" in (tmp_path / "argv").read_text()
+    C.Chain("https://rpc1.monad.xyz", cast=str(fake)).logs("0xc", "E()", 0)
+    assert "--query-size" not in (tmp_path / "argv").read_text()                 # full-history RPC: one query
+
+
+def test_chkreg_registry_changed_is_a_trigger():
+    svc = C.Certifier.__new__(C.Certifier)
+    svc.last_seen = None
+    svc.contract_changed(C.OnChain(1, 10, "0xa", "0xv", 6, False))
+    assert svc.contract_changed(C.OnChain(1, 10, "0xa", "0xv", 6, True))       # checkRegistry flagged it
+
+
+class GasChain(FakeChain):
+    """Empty table and no certificate yet; the first submitCertificate estimate is above the cap."""
+
+    def __init__(self, table):
+        super().__init__(("0\n0\n0\n0x0\n0x0\n0x0\n0\n0\nfalse", "0\n0\n0\nfalse"), table)
+        self.estimates = []
+
+    def estimate(self, to, sig, *args):
+        self.estimates.append(sig)
+        return 30_000_000 if len(self.estimates) == 1 else 100_000
+
+
+def test_gascap_falls_back_to_truncation(tmp_path):
+    fbs, idn = R.load_mainnet()
+    raw = json.load(open(HERE / "schema_reference.json"))
+    cfg = C.SetConfig(name="s", anchors=[R.resolve(R.HONEST1, fbs), R.resolve(R.HONEST2, fbs)],
+                      lambdas=[5 * 10**17] * 2, alphaN=1, alphaD=3, filter_tags=raw["filters"]["core"],
+                      submitters=["0x" + "f3" * 20], registry_verified=False)
+    ch = GasChain(C.anchor_table(cfg.anchors))
+    jr = tmp_path / "j.jsonl"
+    r = C.Certifier(cfg, ch, "0xc", cfg.set_id, tmp_path / "s.json", C.Journal(jr)).run_once(fbs, idn, reason="t")
+    acts = [json.loads(l)["action"] for l in jr.read_text().splitlines()]
+    assert "gas_cap_truncate" in acts and r["action"] == "certified" and r.get("truncateBelow") == 10**12
+
+
+def test_defer_sets_a_retry_block(tmp_path):
+    fbs, idn = R.load_mainnet()
+    raw = json.load(open(HERE / "schema_reference.json"))
+    cfg = C.SetConfig(name="s", anchors=[R.resolve(R.HONEST1, fbs), R.resolve(R.HONEST2, fbs)],
+                      lambdas=[5 * 10**17] * 2, alphaN=1, alphaD=3, filter_tags=raw["filters"]["core"])
+    svc0 = C.Certifier(cfg, None, "0xc", cfg.set_id, tmp_path / "s0.json", C.Journal(None))
+    g, al, enc = svc0.compute(fbs, idn, C.anchor_table(cfg.anchors), 0)
+    from export import quality
+    q, mass, d = quality(al.cert)
+    # incumbent: young (age 100 < minRefresh 600), MORE mass than ours -> NotBetter, wait until minRefresh
+    cert_view = f"999900\n10\n0\n0xdead\n0xbeef\n0x0\n{al.cert.n}\n1\nfalse"
+    ch = FakeChain((cert_view, f"{mass + 10**17}\n0\n{d}\nfalse"), al.nodes)
+    svc = C.Certifier(cfg, ch, "0xc", cfg.set_id, tmp_path / "s.json", C.Journal(None))
+    r = svc.run_once(fbs, idn, reason="t")
+    assert r["action"] == "deferred_replacement_rule" and svc.retry_at == 1_000_000 + r["waitBlocks"]
+
+
+def test_w7_overstated_negative_is_provable():
+    from types import SimpleNamespace
+    from export import encode
+    A = "0x" + "a1" * 20
+    idn = ident(owner={2: "0x" + "b2" * 20, 3: "0x" + "b3" * 20}, wallet={2: "0x" + "c2" * 20, 3: "0x" + "c3" * 20})
+    fbs = [fb(2, A, 1, -100, "slash"), fb(3, A, 1, -1, "slash")]               # registry: #2 -10000, #3 -100
+    sch, filt = schema(), ["vouch", "review", "slash"]
+    g = build_graph(fbs, idn, sch, filt, [A])
+    from graph import Edge
+    ua = g.index[(ANCHOR, A)]
+    g.rows[ua] = [Edge(e.dst, -GRID, e.client, e.agent_id, e.tag1, e.feedback_index) for e in g.rows[ua]]
+    cert = certify(g, Fraction(1, 3))
+    nodes = [g.nodes[i] for i in cert.node_map]
+    cfg = SimpleNamespace(schema=lambda: sch, filter_tags=filt, anchors=[A], owner_fallback=False)
+    disc = Wt.audit("0x" + encode(cert, nodes, idn)["rows"].hex(), nodes, fbs, idn, cfg)
+    ov = [d for d in disc if d.kind == "OVERSTATED_NEG"]
+    assert len(ov) == 1 and ov[0].agent_id == 3 and ov[0].provable and ov[0].proof["fn"] == "proveEdge"
+
+
+class WatchChain:
+    """watch_once inputs: one CertificateSubmitted (current root) in the window or only at certBlock."""
+
+    def __init__(self, root, in_window=True, tx_error=False):
+        self.root, self.in_window, self.tx_error = root, in_window, tx_error
+        self.signer = None
+
+    def block_number(self):
+        return 200
+
+    def logs(self, contract, sig, frm, *topics, to_block="latest"):
+        if sig != C.CERT_SUBMITTED:
+            return []
+        lg = {"data": "0x" + "00" * 32 + self.root[2:] + "00" * 32 * 6, "transactionHash": "0xaa",
+              "blockNumber": hex(100), "logIndex": "0x0"}
+        return [lg] if (self.in_window or frm == 100) else []
+
+    def call(self, to, sig, *a):
+        return f"100\n1\n0\n{self.root}\n0xv\n0x0\n6\n1\nfalse" if sig == C.CERT_VIEW else "0\n0\n0\nfalse"
+
+    def tx_input(self, h):
+        if self.tx_error:
+            raise C.ChainError("HTTP 502")
+        return "0x" + C._selector(C.SUBMIT_SIG)[2:] + "00"
+
+
+def _dilution_setup(monkeypatch, tmp_path):
+    import simulate as S
+    monkeypatch.setattr(S, "SCR", tmp_path)
+    fbs, idn = R.load_mainnet()
+    obj = json.loads((HERE / "vectors" / "violations" / "dilution.json").read_text())
+    cert, nodes, enc = S.vector_calldata(obj)
+    monkeypatch.setattr(Wt, "decode_input", lambda chain, inp: {"rows": "0x" + enc["rows"].hex()})
+    return fbs, idn, nodes, S.cfg_from_vector(obj, "dil"), "0x" + enc["graphRoot"].hex()
+
+
+def test_once_current_certificate_is_reaudited_every_round(monkeypatch, tmp_path):
+    fbs, idn, nodes, cfg, root = _dilution_setup(monkeypatch, tmp_path)
+    ev = Wt.watch_once(WatchChain(root, in_window=False), "0xc", cfg, cfg.set_id, nodes, fbs, idn,
+                       C.Journal(None), 150, 200)
+    assert [e["action"] for e in ev] == ["audit"] and any(d["kind"] == "DILUTION" for d in ev[0]["discrepancies"])
+    assert Wt.watch_once(WatchChain(root, in_window=False), "0xc", cfg, cfg.set_id, nodes, fbs, idn,
+                         C.Journal(None), 150, 200, reaudit=False) == []      # the old behaviour
+
+
+def test_swallow_transport_error_keeps_the_window(monkeypatch, tmp_path):
+    fbs, idn, nodes, cfg, root = _dilution_setup(monkeypatch, tmp_path)
+    with pytest.raises(C.ChainError):                                           # the caller keeps from_block
+        Wt.watch_once(WatchChain(root, tx_error=True), "0xc", cfg, cfg.set_id, nodes, fbs, idn, C.Journal(None), 90)
+
+
+def test_break_a_reverted_estimate_does_not_stop_the_row(monkeypatch, tmp_path):
+    fbs, idn, nodes, cfg, root = _dilution_setup(monkeypatch, tmp_path)
+    # two provable discrepancies on one row: the first estimate reverts NothingToProve (stale export)
+    real_audit = Wt.audit
+
+    def audit2(*a, **k):
+        out = real_audit(*a, **k)
+        d = next(x for x in out if x.kind == "DILUTION")
+        fake = Wt.Discrepancy("FABRICATED", d.u, None, d.client, 999, GRID, 0, provable=True,
+                              proof={**d.proof, "agentJ": 999})
+        return out + [fake]
+    monkeypatch.setattr(Wt, "audit", audit2)
+    seen = []
+
+    def prove(chain, contract, set_id, d, gas, amends=(), send=False):
+        seen.append(d.kind)
+        if d.kind == "FABRICATED":
+            raise C.ChainError('data: "' + C._selector("NothingToProve()") + '"')
+        return {"kind": d.kind, "status": True}
+    monkeypatch.setattr(Wt, "prove", prove)
+    Wt.watch_once(WatchChain(root), "0xc", cfg, cfg.set_id, nodes, fbs, idn, C.Journal(None), 90)
+    assert seen == ["FABRICATED", "DILUTION"]                                  # before: stopped after FABRICATED
+
+
+# ============================================================================= LOW (trivial)
+def test_dec18_and_dec28():
+    from graph import TagSpec, dec_to_wad, quantize
+    spec = TagSpec(0, 50 * 10**18, 100 * 10**18, "endorsement")
+    assert quantize(100, 19, spec) is None                      # was: ValueError (stops the certifier)
+    assert dec_to_wad("123456789012345678901234567890.5") == 123456789012345678901234567890500000000000000000

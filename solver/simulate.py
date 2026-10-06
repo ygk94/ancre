@@ -279,6 +279,15 @@ def scenario_common(chain: C.Chain, contract: str) -> list[dict]:
     return out
 
 
+def _run(svc: C.Certifier, *args, **kw) -> dict:
+    """run_once as the service loop does it: on an open set new nodes go first (review A1d), the certificate follows
+    at the next round, on the re-read table."""
+    r = svc.run_once(*args, **kw)
+    if r.get("action") == "nodes_added":
+        r = {**svc.run_once(*args, **kw), "nodesAddedFirst": r["newNodes"]}
+    return r
+
+
 def scenario_service(chain: C.Chain, contract: str) -> list[dict]:
     fbs, idn = R.load_mainnet()
     h1, h2 = R.resolve(R.HONEST1, fbs), R.resolve(R.HONEST2, fbs)
@@ -293,8 +302,8 @@ def scenario_service(chain: C.Chain, contract: str) -> list[dict]:
     jr = SCR / "journal_service.jsonl"
     jr.unlink(missing_ok=True)
     svc = C.Certifier(cfg, chain, contract, set_id, st, C.Journal(jr))
-    out = [reg, svc.run_once(fbs, idn, reason="first certificate")]
-    out.append(svc.run_once(fbs, idn, reason="recompute, nothing changed"))
+    out = [reg, _run(svc, fbs, idn, reason="first certificate")]
+    out.append(_run(svc, fbs, idn, reason="recompute, nothing changed"))
     # growing graph (AM-04.1): a new vouch from anchor 0x0730 to #22 (a support client), written in the fork's registry
     other = C.Chain(chain.rpc, C.Signer(OTHER_ADDR))
     rc = C.Chain(chain.rpc, C.Signer(h1)).send(REPUTATION, "giveFeedback(uint256,int128,uint8,string,string,string,"
@@ -306,11 +315,11 @@ def scenario_service(chain: C.Chain, contract: str) -> list[dict]:
                    tag2="", revoked=False)
     out.append({"trigger": "NewFeedback 0x0730 -> #22",
                 "relevant": C.relevant({"kind": "NewFeedback", "client": h1, "agentId": 22}, svc.support)})
-    r = svc.run_once(fbs + [ev1], idn, reason="growing graph: new feedback by an anchor (AM-04.1)")
+    r = _run(svc, fbs + [ev1], idn, reason="growing graph: new feedback by an anchor (AM-04.1)")
     out.append(r)
     if r["action"] == "deferred_replacement_rule":        # wait out the window on the fork, then retry
         chain._run("rpc", "anvil_mine", hex(r["waitBlocks"]))
-        out.append(svc.run_once(fbs + [ev1], idn, reason="retry after the wait"))
+        out.append(_run(svc, fbs + [ev1], idn, reason="retry after the wait"))
     # a third party resubmits the previous graph (without the new endorsement of #22). In this graph that omission
     # is a DILUTION (0x0730's row has S+ >= GRID): same mass, q = 0, so the replacement rule cannot see it (AM-02.2).
     # The defense loop: the watcher proves it (proveEdge), which credits eLow, and the honest service replaces at once.
@@ -326,7 +335,7 @@ def scenario_service(chain: C.Chain, contract: str) -> list[dict]:
                     "watcher": [d["kind"] for e in ev for d in e.get("discrepancies", [])],
                     "proofs": [{k: p.get(k) for k in ("kind", "fn", "status", "gasUsed")} for e in ev
                                for p in e.get("proofs", [])], "eLowEffAfter": oc.e_low_eff, "massCur": oc.mass})
-        out.append(svc.run_once(fbs + [ev1], idn, reason="honest certificate after the dilution proof"))
+        out.append(_run(svc, fbs + [ev1], idn, reason="honest certificate after the dilution proof"))
     # a feedback by the scanner (zero mass in this set): the trigger filter ignores it
     sc = R.resolve(R.SCANNER, fbs)
     out.append({"trigger": "NewFeedback scanner -> #2", "relevant": C.relevant(
@@ -343,10 +352,10 @@ def scenario_service(chain: C.Chain, contract: str) -> list[dict]:
                                           "0x" + "00" * 32, gas_limit=1_000_000)
     ev2 = Feedback(agent_id=23, client=h2, index=_last_index(chain, 23, h2), value=100, decimals=0, tag1="vouch",
                    tag2="", revoked=False)
-    out.append(svc.run_once(fbs + [ev1, ev2], idn, reason="after a third-party addNodes"))
+    out.append(_run(svc, fbs + [ev1, ev2], idn, reason="after a third-party addNodes"))
     # nothing changes for maxAge − refreshLead blocks: the identical graph is republished (refresh)
     chain._run("rpc", "anvil_mine", hex(cfg.max_age - cfg.refresh_lead + 1))
-    out.append(svc.run_once(fbs + [ev1, ev2], idn, reason="age refresh, identical graph"))
+    out.append(_run(svc, fbs + [ev1, ev2], idn, reason="age refresh, identical graph"))
     out.append({"journal": [json.loads(l) for l in jr.read_text().splitlines()]})
     return out
 
