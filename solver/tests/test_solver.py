@@ -232,9 +232,13 @@ def test_graph_rules_d14_d15_d20():
     assert g.pairs[(PO, 1)].q == GRID and (PO, ADDR) in by_client     # D20: no past-owner rejection
     assert (B, 1) in g.pairs and not any(e.client == B for _, e in g.edges())
     assert g.log["emetteur_agents_non_notes"] == 1                    # B's agents #2, #3 have no mass
-    assert (E, AGENT) in by_client and (E, ANCHOR) in by_client       # anchor node distinct from agent node #4
-    assert g.nodes[[u for u, e in g.edges() if e.client == E and g.nodes[u][0] == AGENT][0]] == (AGENT, 4)
-    assert by_client[(E, AGENT)].q == 5000
+    # D48-A: E is an anchor AND the wallet of #4: the anchor row is carried by the anchor node only, #4 carries none
+    assert (E, ANCHOR) in by_client and (E, AGENT) not in by_client
+    assert by_client[(E, ANCHOR)].q == 5000
+    u4 = g.index[(AGENT, 4)]
+    assert g.anchor_sourced == {u4} and u4 not in g.rows and u4 not in g.row_src
+    c = certify(g, Fraction(1, 3))
+    assert u4 in c.node_map and c.node_map.index(u4) not in c.rows      # listed (massive), no row, not even empty
     assert g.log["rejet_measurement_D15"] == 1
     assert sum(v for k, v in g.log.items() if k.startswith("rejet_controleur")) == 3
     # alternative selection: latest VALID -> the C = 100 edge comes back

@@ -200,15 +200,16 @@ def _prove_all(chain, contract, cfg, set_id, nodes, fbs, idn, start) -> dict:
 
 
 def two_omissions_vector(fbs, idn) -> dict:
-    """The anchor row of 0xea0b with BOTH its slash (#4) and its vouch (#2) omitted: two proofs on one row, the
-    second one chained with the amendments of the first (review E5, finding 7)."""
+    """#18's copy of 0xea0b's row (D20) with BOTH its slash (#4) and its vouch (#2) omitted: two proofs on one row,
+    the second one chained with the amendments of the first (review E5, finding 7). Anchors 0x0730 / 0xf7d5: no
+    anchor is an agent's wallet (D48-A)."""
     from graph import build_graph, load_schema
     from ppr import certify
     raw = json.load(open(HERE / "schema_reference.json"))
     ref, core = load_schema(raw), raw["filters"]["core"]
-    ea0b, h1 = R.resolve(R.EA0B, fbs), R.resolve(R.HONEST1, fbs)
-    g = copy.deepcopy(build_graph(fbs, idn, ref, core, [ea0b, h1]))
-    ua, n2, n4 = g.index[(ANCHOR, ea0b)], g.index[(AGENT, 2)], g.index[(AGENT, 4)]
+    h1, h2 = R.resolve(R.HONEST1, fbs), R.resolve(R.HONEST2, fbs)
+    g = copy.deepcopy(build_graph(fbs, idn, ref, core, [h1, h2]))
+    ua, n2, n4 = g.index[(AGENT, 18)], g.index[(AGENT, 2)], g.index[(AGENT, 4)]
     g.rows[ua] = [e for e in g.rows[ua] if e.dst not in (n2, n4)]
     return export_certificate(g, certify(g, Fraction(1, 3)), idn, schema=ref, filter_tags=core, label="two_omissions",
                               policy=reference_policy(2, registry_verified=True),

@@ -8,7 +8,7 @@ the discrepancies, classified by what they break (D32, tour 4 spec), each with t
   DEFLATED          0 < committed w < registry w, committed S⁺ > GRID                   -> siblings inflated    proveEdge
   OMITTED_NEGATIVE  registry negative edge absent from a provided row                  -> breaks d (V13)       proveEdge (i)
   DILUTION          registry positive edge absent, committed S⁺ + q above max(GRID, sPlus) -> breaks t (V4)    proveEdge (i)
-  SOURCE            agent row whose committed source is not src(j) (R7)                 -> whole row wrong      proveWallet (iv)
+  SOURCE            agent row whose committed source is not src(j) (R7), or is an anchor (D48-A) -> whole row wrong  proveWallet (iv)
   (INFO) OMITTED_POSITIVE without dilution, DEFLATED_HARMLESS: t stays a lower bound; proving them would only widen
   eUp (the distrust side) of an honest set, so the bot reports them and never proves them.
 
@@ -71,6 +71,7 @@ def audit(rows_hex: str, nodes: list, fbs, idn: Identity, cfg: C.SetConfig) -> l
     alias copies included: a fact on a shared wallet is proven once per copy (AM-02.5)."""
     g = build_graph(fbs, idn, cfg.schema(), cfg.filter_tags, cfg.anchors, owner_fallback=cfg.owner_fallback)
     pairs = g.pairs
+    anchors = {a.lower() for a in cfg.anchors}
     rejected = g.r6_pairs
     by_client: dict[str, dict[int, object]] = {}
     for (c, a), pe in pairs.items():
@@ -89,7 +90,9 @@ def audit(rows_hex: str, nodes: list, fbs, idn: Identity, cfg: C.SetConfig) -> l
         if kind == AGENT:
             want = idn.source_of(int(val), cfg.owner_fallback)
             have = (src, "owner" if via_owner else "wallet") if src is not None else (None, "")
-            if have != want:                           # the row's client changed: void it (the edges are moot)
+            # the row's client changed, or it is now an anchor of the set (D48-A: such a row must not exist):
+            # void it (the edges are moot)
+            if have != want or (src is not None and src.lower() in anchors):
                 out.append(Discrepancy("SOURCE", u, None, str(src), int(val), None, None, provable=True,
                                        proof={"fn": "proveWallet", "r": r, "src": srow, "committed": have,
                                               "registry": want}))

@@ -146,15 +146,13 @@ def identity_file(src, block: int) -> dict:
             continue
         a = int(r["agent_id"])
         if kind == "owner":
-            idn.apply_transfer(a, r["from"], r["to"])
+            idn.apply_transfer(a, r["from"], r["to"], int(r["blockNumber"]))
             idn.wallet.setdefault(a, ZERO)
         elif kind == "wallet":
             idn.apply_wallet(a, r["wallet"])
         else:
             idn.apply_approval(a, r["approved"])
-    for a, s in idn.past_owners.items():                  # past holders, excluding the current owner
-        s.discard(idn.owner.get(a))
-    return identity_to_json(idn)
+    return identity_to_json(idn)                          # apply_transfer keeps the current owner out of past owners
 
 
 def set_edges_file(src, set_id: str = "ref") -> list[dict]:

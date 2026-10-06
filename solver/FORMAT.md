@@ -1,6 +1,7 @@
 # Certificate format `ancre-cert-v1` (unified) and normative edge rules
 
-> Owner: solver. Updated **2026-10-01** by the integration session 02 + 04 (branch `chantier/integration-02-04`).
+> Owner: solver. Updated **2026-10-01** by the integration session 02 + 04 (branch `chantier/integration-02-04`),
+> then **2026-10-06** by chantier 04-bis (D48: rule B in R6, rule A in R8, AM-9.3 diagnostic; vectors regenerated).
 > **Single source for the binary layout, the integer arithmetic, the replacement rule and the proofs:
 > `contracts/ENCODING.md` (unified v1).** This file holds what ENCODING.md does not: the edge rules R1-R8 (what an
 > edge is, reference for the indexer), the JSON vector fields, and the solver's own policy. Where both files speak
@@ -23,12 +24,18 @@ The indexer ports them; `tests/test_indexer_parity.py` compares the pair edges `
 | R3 | D14 | Per `(client, agent, tag1)`: the non-revoked feedback with the **highest `feedbackIndex`**. If that feedback is out of bounds, the tag yields nothing (**no fallback** to an older feedback: "latest then reject"). |
 | R4 | D18 | `x = value·10^(18−dec)` exact; `x ∉ [min, max]` ⇒ rejected (never clamped); `x > n ⇒ w = ⌊(x−n)·10⁴/(max−n)⌋`; `x < n ⇒ w = −⌊(n−x)·10⁴/(n−min)⌋`; `x = n ⇒ 0`. (Floor of a non-negative quotient; in TypeScript use `bigint` on non-negative operands only.) |
 | R5 | D14 | Per `(client, agent)`: `w = min` over the filter's tags if some `w < 0`, else `max`. **Ties between tags of equal weight: the feedback with the HIGHEST `feedbackIndex` decides** (unified v1, F-6; the contract stores only tag hashes and keeps the first one met scanning from the last index down). Ties only change `decidingTag`/`feedbackIndex`, never `w`. `w = 0` ⇒ no edge. MEASURED on `mainnet_em_d44`: 7 edges change index with this rule. |
-| R6 | D20 | Reject the pair if `client` is a **current** controller of the agent at the certificate block: `ownerOf`, `agentWallet`, `getApproved`, or an operator approved-for-all by the owner. **The "past owner" rule of D16 is removed** (AM-4.2, AM-6.4). |
+| R6 | D20, **D48-B** | If `client` is a **current** controller of the agent at the certificate block (`ownerOf`, `agentWallet`, `getApproved`, or an operator approved-for-all by the owner), the pair is rejected **only if its R5-combined weight is positive** (self-endorsement). **A negative combined weight of a controller is kept** (AM-08.B: otherwise an owner silences a critic or an anchor with `setApprovalForAll`, then the registry guard stops them from rating). The test is on the sign of the R5 combination, not per tag. **The "past owner" rule of D16 is removed** (AM-4.2, AM-6.4); a past controller who rates after the transfer is only **reported** (AM-9.3 diagnostic, below). |
 | R7 | D20, D44 | **Emitter resolution.** `src(j) = agentWallet(j)` if non-zero; else `ownerOf(j)` **if the owner fallback is on (D44)**; else none. **The wallet always wins.** `A(c) = {j : src(j) = c}`. **Row copy**: every agent `j ∈ A(c)` that is a graph node carries the row of `c` (all pair edges of client `c`), each with its own mass. A client with `A(c) = ∅` is an **address node**. |
-| R8 | D9 | The anchor row (edges of the anchor address) is carried by the anchor node, in addition to any agent copy. An anchor address never also becomes an address node. |
+| R8 | D9, **D48-A** | The anchor row (edges of the anchor address) is carried by the anchor node **only**. **An agent whose source `src(j)` (R7: wallet, or owner under D44) is an anchor of the set carries no row at all, not even an empty one** (AM-08.A: its copy would import the mass of the other columns into a row the anchor controls, and defeat the leave-one-out). It is listed without a row (absorbing; it pays the truncation margin on eUp only, t stays a lower bound). The contract refuses any agent row whose source is an anchor (`AnchorAsSource`), and `proveWallet` voids a row whose new source is an anchor. An anchor address never also becomes an address node. |
 
 Graph nodes, canonical order: anchors (addresses strictly increasing), **rated** agents (agentId increasing), address nodes (increasing).
 Only rated agents are agent nodes: an agent nobody rates has no incoming edge, is not an anchor, so its mass is 0 and its copy would carry nothing (D20). **Owner fallback (D44)** is behind the flag `owner_fallback`, **default OFF** pending Hugo's confirmation; it is part of the edge rule, so a set commits it in its policy (`policy.ownerFallback`, ENCODING §1) and the contract refuses VIA_OWNER rows on a set without it.
+
+**AM-9.3 diagnostic (D48, shown, no effect).** `build_graph` reports in `Graph.diagnostics` every retained pair whose
+client is a past owner (or a past agentWallet) of the target and not a current controller: `{kind: pastOwner |
+pastWallet, client, agentId, w, tag1, feedbackIndex, feedbackBlock, transferBlock, blocksAfterTransfer}` ("past
+controller, N blocks after the transfer"). The transfer block comes from `Identity.past_owner_until` (identity.json
+`pastOwnerUntil`, optional); the feedback block from the snapshot (`b`), when known. Real case: #10255 (`out/mainnet.md`).
 
 `TRANSFERRED` freeze of outgoing edges (D44): no solver action. A certificate is a snapshot computed with the current owner and wallet; freezing the outgoing mass of a transferred agent between two certificates is a read-side rule of the contract (02-E6).
 
@@ -105,14 +112,17 @@ truncated** (D21, raises). These are the ENCODING §3.2 rules seen from the solv
 | I-7 | v0 encoding removed (`encode(..., version=)`) | the R5 contract is superseded |
 | I-8 | `expected.distrustMass`; a row without recorded source is `NotEncodable`; anchors sorted WITH their lambdas (`make_set_block`, shared by export and certifier) | code review 01/10 |
 
-## 5. Vectors (01/10, MEASURED by `export.py`; all ACCEPTED by the contract, `SolverVectors.t.sol` and `simulate.py`)
+## 5. Vectors (06/10, MEASURED by `export.py`; mainnet vectors on the 108 835 675 snapshot until E2 of 04-bis)
+
+> 06/10 (04-bis, D48): `mainnet_slash_anchor` changed anchors and `mainnet_em_d44` changed filter and lost two rows
+> (rule A through VIA_OWNER). Contract replay against the 02-bis contract: see `docs/chantiers/journal/04bis.md`.
 
 | vector | nCert | edges | rows | alias | iterations | e (wei) | level | shows |
 |---|---|---|---|---|---|---|---|---|
 | mainnet_honest_d20 | 6 | 5 | 5 | 0 | 4 | [15, 15] | Registry-verified | D20 restores the honest chain (#18 carries 0xea0b's row) |
-| mainnet_slash_anchor | 6 | 7 | 5 | 0 | 4 | [18, 18] | Registry-verified | D14 slash; anchor row + agent copy of the same client (D9 + D20) |
+| mainnet_slash_anchor | 6 | 5 | 6 | 0 | 4 | [15, 15] | Registry-verified | **anchors {0x0730, 0x794c}, none is an agent's wallet (D48-A; the old {0xea0b, 0x0730} made the anchor the wallet of #18, AM-08.A)**. D14 slash 0xea0b → #4 carried by #18's copy (D20); #4 also has the `quality` endorsement of 0x794c (one column): t = 0.222 in one column, trustRobust 0, distrust 0.074 |
 | mainnet_scanner_preD15 | 35 | 58 | 34 | 0 | 4 | [174, 174] | Registry-verified | leak without D15 |
-| mainnet_em_d44 | 13 | 48 | 13 | 0 | 99 | [147, 147] | Registry-verified, ownerFallback | VIA_OWNER rows (execution.market workers, agentWallet = 0); 33-byte tag `requester_rating:knowledge_access` (AM-04.2) |
+| mainnet_em_d44 | 13 | 36 | 11 | 0 | 78 | [1.84e17, 2.04e17] | Registry-verified, ownerFallback | VIA_OWNER rows (9, execution.market workers, agentWallet = 0); 33-byte tag `requester_rating:knowledge_access` (AM-04.2). **Rule A through the owner (real data)**: the two anchors own #10184 and #10181, which are massive and carry NO row (truncation margin: the large e, distrust side only). Filter = the 8 tags of the tour-6 measurement, shared with `run_mainnet.em_schema` (review 05/10) |
 | toy_alias_owner_rowmax | 264 | 268 | 264 | 1 | 4 | [2.2e15, 801] | attested, ownerFallback | alias, VIA_OWNER, wallet-wins, ROW_MAX cap with sPlus |
 | toy_alpha_1_{4,3,2} | 5 | 7 | 5 | 0 | 45 / 39 / 32 | [28,28] / [21,21] / [14,14] | attested | α per set |
 | toy_truncated | 5 | 6 | 4 | 0 | 41 | [3.9e16, 18] | attested | truncated node margin |
@@ -122,19 +132,24 @@ The large `e[0]` of `toy_alias_owner_rowmax` is the declared-omission margin of 
 ## 6. Violation vectors (D37) — `vectors/violations/*.json`
 
 Arithmetically valid certificates (they pass `verify`, t ≤ y) whose committed graph is **not dominated** by the
-registry, built on the real `mainnet_slash_anchor` graph, each with its own Registry-verified setId. MEASURED on the
+registry, built on the real `mainnet_slash_anchor` graph (anchors 0x0730 / 0x794c since 06/10), each with its own
+Registry-verified setId. MEASURED on the
 contract (01/10): Registry-verified **refuses fabricated and inflated at submission** (`EdgeMismatch`) and accepts
 dilution and omitted_negative (completeness is not checkable on-chain); the watcher proves them (`proveEdge`).
 Submitter-attested accepts all four and the watcher proves all four, proof (v) included (`simulate.py`, scenario B). Extra JSON block `violation`: `kind`, `graphNode {u, dst}`,
 `wRegistry`, `wCommitted`, `feedbackIndex`, `affects` (`t` = Σλt of dst, `d` = distrust of dst), `honestValue`,
-`committedValue` (WAD, MEASURED 28/09).
+`committedValue` (WAD, MEASURED 06/10).
 
 | kind | what is wrong | honest → committed |
 |---|---|---|
-| fabricated (V5) | 0x0730 → #4 (+10000, index 7) with no feedback | t(#4) 0 → 0.0556 |
-| dilution (V4) | #18 → #3 omitted, sPlus not declared | t(#2) 0.0926 → 0.1296 |
-| inflated (V6) | #18 → #4 slash committed as −1 | d(#4) 0.1852 → 0.1111 |
-| omitted_negative (V13) | the slash 0xea0b → #4 omitted (anchor row and copy) | d(#4) 0.1852 → 0 |
+| fabricated (V5) | 0x0730 → #4 (+10000, index 7) with no feedback | Σλt(#4) 0.1111 → 0.1667 |
+| dilution (V4) | #18 → #3 omitted, sPlus not declared | Σλt(#2) 0.0370 → 0.0741 |
+| inflated (V6) | #18 → #4 slash committed as −1 | d(#4) 0.0741 → 0.0000074 |
+| omitted_negative (V13) | the slash 0xea0b → #4 omitted from #18's copy (no anchor row carries it any more, D48-A) | d(#4) 0.0741 → 0 |
+
+The certified veto bit (anchor row negative) is exercised by the toy common vectors of 04-bis (§8), not by these:
+on the mainnet the only useful negative is posted by 0xea0b, which cannot be an anchor without being an agent's
+wallet (D48-A).
 
 ## 7. Indexer interface (chantier 03 → 04), `from_indexer.py`
 
@@ -145,7 +160,9 @@ Read side of `docs/ressources/design-indexeur-envio.md` §5/§7. **To be relayed
 - **Head check.** The export refuses a block the indexer has not processed: it reads `chain_metadata(where: {chain_id: {_eq: C}}) { latest_processed_block }` (Envio table, field names NON VÉRIFIÉ against a live endpoint) and fails if head < B. A fixture declares its block in `BLOCK`.
 - **Pagination** stops on an empty page (a server-side row cap below 1 000 must not truncate silently).
 - `value` MUST be the exact int128 as a decimal string (never `1.00E+38`); addresses lowercase.
-- **Identity replay** in `(blockNumber, logIndex)` order: an `OwnerChange` clears the approval; the registry's own `MetadataSet(agentWallet, "")` at transfer MUST be indexed as a `WalletChange` to `0x0` (MEASURED 72/72, design §5).
-- **SetEdge semantics expected by the parity test.** One row per `(set, client, agent)`: retained iff `rejected == null` and `w != 0`; `w`, `decidingTag`, `feedbackIndex` = R3-R5 (**tie rule changed on 01/10: highest feedbackIndex**, §0 R5; the TypeScript string-order risk AM-04.12 is gone). `OUT_OF_BOUNDS` is a **per-tag** outcome in R3: a pair is `OUT_OF_BOUNDS` only if no tag of the filter yields a weight; one out-of-bounds tag next to a valid tag still gives an edge. `CONTROLLER_*` = R6 on **current** controllers (no past-owner reason). The emitter (R7) is **not** part of SetEdge: the solver resolves it.
+- **Identity replay** in `(blockNumber, logIndex)` order: an `OwnerChange` clears the approval and removes the new
+  holder from the past owners (A → B → A leaves `pastOwners = {B}`; `pastOwnerUntil` keeps the block of each past
+  holder's last transfer out, AM-9.3); the registry's own `MetadataSet(agentWallet, "")` at transfer MUST be indexed as a `WalletChange` to `0x0` (MEASURED 72/72, design §5).
+- **SetEdge semantics expected by the parity test.** One row per `(set, client, agent)`: retained iff `rejected == null` and `w != 0`; `w`, `decidingTag`, `feedbackIndex` = R3-R5 (**tie rule changed on 01/10: highest feedbackIndex**, §0 R5; the TypeScript string-order risk AM-04.12 is gone). `OUT_OF_BOUNDS` is a **per-tag** outcome in R3: a pair is `OUT_OF_BOUNDS` only if no tag of the filter yields a weight; one out-of-bounds tag next to a valid tag still gives an edge. `CONTROLLER_*` = R6 on **current** controllers (no past-owner reason), **and only when the combined weight is positive (D48-B, 06/10): a controller's negative pair is retained** (`rejected == null`, w < 0). The emitter (R7) is **not** part of SetEdge: the solver resolves it.
 - **When parity is meaningful**: SetEdge is current state only, so compare at the indexer's head (or with the indexer stopped at B).
 - **Handing over a dump from another machine**: one `<Entity>.json` per entity (list of rows, GraphQL shape) plus a `BLOCK` file, in `solver/tests/fixtures/indexer/`; `test_parity_real_indexer_dump` then runs automatically. CLI: `.venv/bin/python from_indexer.py --fixture DIR --block B --out OUT --parity` (exit code 1 on any difference).

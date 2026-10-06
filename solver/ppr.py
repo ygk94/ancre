@@ -311,7 +311,8 @@ def certify(g: Graph, alpha: Fraction, *, lambdas: list[int] | None = None, trun
     """Sub-solution certificate (D26, D32), by integer power iteration from 0 on the committed graph.
 
     1. Committed rows: the full row of every node (ROW_MAX-capped, cap_row), with sPlus = TRUE positive sum.
-       An absorbing node gets an empty row (FORMAT: otherwise it pays the truncation margin).
+       An absorbing node gets an empty row (FORMAT: otherwise it pays the truncation margin), except an agent whose
+       source is an anchor (D48-A), which gets none.
     2. Iterate from 0 on the committed graph -> t (exact integer fixed point, a sub-solution).
     3. Optional truncation: rows of nodes whose mass stays <= truncate_below everywhere are dropped (anchors
        never), and the iteration is redone from 0 on that smaller graph (F only decreases, t stays a lower bound).
@@ -328,8 +329,10 @@ def certify(g: Graph, alpha: Fraction, *, lambdas: list[int] | None = None, trun
         lambdas = [WAD // k] * k
         lambdas[0] += WAD - sum(lambdas)
     anchors = set(g.anchors)
+    # an agent whose source is an anchor (D48-A) gets NO row, not even an empty one (the contract refuses any agent
+    # row sourced by an anchor): it is listed without a row and pays the truncation margin (eUp side only)
     committed = {u: cap_row([(e.dst, e.q, e.feedback_index) for e in g.rows.get(u, [])], is_anchor=u in anchors)
-                 for u in range(g.n)}
+                 for u in range(g.n) if u not in g.anchor_sourced}
     splus = {u: g.splus(u) for u in range(g.n)}
     t, iters = power_from_zero(g.n, g.anchors, aN, aD, committed, splus, lambdas, max_iter)
     if truncate_below > 0:

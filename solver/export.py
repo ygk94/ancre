@@ -494,7 +494,6 @@ def violation_vectors(fbs, idn, schema, filt, anchors, outdir: Path) -> list[Pat
     honest = certify(g0, Fraction(1, 3))
     n18, n2, n3, n4 = (g0.index[(AGENT, j)] for j in (18, 2, 3, 4))
     a0730 = g0.index[(ANCHOR, "0x0730536018541c5149a049d35528a76c2c8f1e6b")]
-    aea0b = g0.index[(ANCHOR, "0xea0b21fb2441464f4920ce3e34d478235605816b")]
 
     def value(c, gi, what):
         ci = c.node_map.index(gi) if gi in c.node_map else None
@@ -507,11 +506,10 @@ def violation_vectors(fbs, idn, schema, filt, anchors, outdir: Path) -> list[Pat
     g.rows[a0730] = sorted(g.rows[a0730] + [Edge(n4, GRID, g0.nodes[a0730][1], 4, "vouch", 7)], key=lambda e: e.dst)
     cases.append(("fabricated", g, a0730, n4, None, GRID, 7, "t", "committed edge with no registry feedback: "
                   "readFeedback(4, 0x0730, 7) does not exist"))
-    g = copy.deepcopy(g0)                                      # V13 omitted negative: the slash disappears everywhere
-    for u in (aea0b, n18):
-        g.rows[u] = [e for e in g.rows[u] if e.dst != n4]
-    cases.append(("omitted_negative", g, aea0b, n4, -GRID, None, 1, "d", "the anchor's slash (index 1) is omitted: "
-                  "distrust of #4 falls to 0 and the certified veto bit is disarmed (V13)"))
+    g = copy.deepcopy(g0)                                      # V13 omitted negative: the slash copied by #18 (D20)
+    g.rows[n18] = [e for e in g.rows[n18] if e.dst != n4]
+    cases.append(("omitted_negative", g, n18, n4, -GRID, None, 1, "d", "0xea0b's slash (index 1), carried by #18's "
+                  "copy of the row (D20), is omitted: distrust of #4 falls to 0 (V13)"))
     g = copy.deepcopy(g0)                                      # V6 inflation: slash -10000 committed as -1
     g.rows[n18] = [Edge(e.dst, -1, e.client, e.agent_id, e.tag1, e.feedback_index) if e.dst == n4 else e
                    for e in g.rows[n18]]
@@ -525,7 +523,7 @@ def violation_vectors(fbs, idn, schema, filt, anchors, outdir: Path) -> list[Pat
     for kind, g, u, dst, w_reg, w_com, fi, what, why in cases:
         c = certify(g, Fraction(1, 3))
         obj = export_certificate(g, c, idn, schema=schema, filter_tags=filt, label=f"violation_{kind}",
-                                 notes="D37 normative violation vector (mainnet_slash_anchor). " + why,
+                                 notes="D37 normative violation vector (mainnet_slash_anchor, anchors 0x0730 / 0x794c, D48-A). " + why,
                                  policy=reference_policy(2, registry_verified=True),
                                  tag_schema_hash=vector_schema_hash(f"violation_{kind}"))
         obj["violation"] = {"kind": kind, "graphNode": {"u": g.nodes[u][1], "dst": g.nodes[dst][1]},
@@ -551,7 +549,10 @@ def main():
     ref = load_schema(raw)
     core = raw["filters"]["core"]
     h1, h2 = R.resolve(R.HONEST1, fbs), R.resolve(R.HONEST2, fbs)
-    ea0b, sc = R.resolve(R.EA0B, fbs), R.resolve(R.SCANNER, fbs)
+    q4, sc = R.resolve(R.QUALITY4, fbs), R.resolve(R.SCANNER, fbs)
+    reference = raw["filters"]["reference"]
+    w2a = idn.wallet_to_agents()
+    assert not any(a in w2a for a in (h1, q4)), "D48-A: no anchor of a demo vector may be an agent's wallet"
     written = []
 
     def dump(name, g, cert, schema, filt, notes, idn_=idn, *, verified=True, fallback=False):
@@ -568,19 +569,18 @@ def main():
     dump("mainnet_honest_d20", g, certify(g, Fraction(1, 3)), ref, core,
          "Acte 1 (d), 9 283 avis, bloc 108 835 675 : ancres 0x0730/0xf7d5, filtre core, D20. #18 porte la copie de la "
          "ligne de 0xea0b (wallet de #18, #22, #23) : #2 et #3 reçoivent de la masse, #4 de la méfiance (slash).")
-    g = build_graph(fbs, idn, ref, core, [ea0b, h1])
-    dump("mainnet_slash_anchor", g, certify(g, Fraction(1, 3)), ref, core,
-         "Acte 1 (e) : ancres {0xea0b, 0x0730}, D14 : l'arête 0xea0b->#4 vaut -10000 (slash), le review +1 ne l'efface "
-         "pas. La ligne de 0xea0b est portée par le nœud-ancre ET par la copie de #18 (D9 + D20).")
-    pre = {t: TagSpec(s.min_wad, s.neutral_wad, s.max_wad, "endorsement") for t, s in ref.items()}
-    filt = ["trust", "liveness", "eve", "plague", "vouch", "review", "slash"]
-    g = build_graph(fbs, idn, pre, filt, [sc, h1])
-    dump("mainnet_scanner_preD15", g, certify(g, Fraction(1, 3)), pre, filt,
+    g = build_graph(fbs, idn, ref, reference, [h1, q4])
+    dump("mainnet_slash_anchor", g, certify(g, Fraction(1, 3)), ref, reference,
+         "Acte 1 (e), D48-A : ancres {0x0730, 0x794c} (aucune n'est le wallet d'un agent ; l'ancien choix {0xea0b, "
+         "0x0730} faisait de l'ancre le wallet de #18, AM-08.A). D14 : l'arête 0xea0b->#4 vaut -10000 (slash), le "
+         "review +1 ne l'efface pas ; elle est portée par la copie de #18 (D20), massif dans la colonne 0x0730. #4 "
+         "reçoit l'approbation `quality` de 0x794c (une colonne) et la méfiance du slash.")
+    pre = R.schema_variant(ref, "pre_d15")
+    g = build_graph(fbs, idn, pre, R.FARM_FILTER, [sc, h1])
+    dump("mainnet_scanner_preD15", g, certify(g, Fraction(1, 3)), pre, R.FARM_FILTER,
          "Acte 1 (b) SANS D15 (schéma modifié : tout propage) : fuite du scanner vers la ferme. Grand certificat.")
-    em = sorted({f.tag1 for f in fbs if f.tag1.split(":")[0] in ("executor_rating", "requester_rating")})
-    ext = {t: TagSpec(0, 50 * WAD, 100 * WAD, "endorsement") for t in em}
-    efilt = [t for t in em if not t.endswith("verification")]
-    a1, a2 = R.resolve("0x3aebb73a", fbs), R.resolve("0xaf95b213", fbs)
+    ext, efilt = R.em_schema(fbs, raw)
+    a1, a2 = (R.resolve(x, fbs) for x in R.EM_RATERS)
     g = build_graph(fbs, idn, ext, efilt, [a1, a2], owner_fallback=True)
     dump("mainnet_em_d44", g, certify(g, Fraction(1, 3)), ext, efilt,
          "D44 (repli owner, drapeau en attente de Hugo) : execution.market, schéma d'essai (tags executor/requester en "
@@ -593,7 +593,7 @@ def main():
          "Jouet R7 : wallet partagé W (#1, #2 : ligne alias), repli owner (#3 VIA_OWNER ; #4 a un wallet, qui "
          "l'emporte), ligne de #6 à 300 arêtes plafonnée à ROW_MAX = 256 avec sPlus déclaré.", idn_=idn_t,
          verified=False, fallback=True)
-    violation_vectors(fbs, idn, ref, core, [ea0b, h1], outdir / "violations")
+    violation_vectors(fbs, idn, ref, reference, [h1, q4], outdir / "violations")
     A1, A2 = "0x" + "11" * 20, "0x" + "22" * 20
     toy, toy_idn = _toy_graph({(ANCHOR, A1): [(1, 10000, 1), (2, 5000, 1)], (AGENT, 1): [(2, 3333, 2), (3, -10000, 1)],
                       (AGENT, 2): [(1, 7777, 1), (3, 2500, 4)], (AGENT, 3): [(1, 1, 1)]},

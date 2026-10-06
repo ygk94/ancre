@@ -35,7 +35,7 @@ Contrôle 8004scan (snapshot du 21/09, 9188 avis) : 9188 clés communes ; **24 a
 ## (c) #8317 : les 78 auto-notations sont-elles rejetées ?
 - avis reçus par #8317 : 78, noteurs {'0x44985413': 78} ; owner = 0x656df648, agentWallet = 0x44985413.
 - schéma référence (trade_execution = measurement) : arêtes vers #8317 = **0** ; compteurs {'avis_lus': 9283, 'hors_filtre_ou_schema': 9205, 'rejet_measurement_D15': 78, 'aretes_couple': 0, 'emetteur_adresse': 0} ; rejets R6 : []
-- schéma stress (trade_execution = endorsement) : arêtes vers #8317 = **0** ; compteurs {'avis_lus': 9283, 'hors_filtre_ou_schema': 9205, 'rejet_controleur_agentWallet': 1, 'aretes_couple': 0, 'emetteur_adresse': 0} ; rejets R6 : [{'raison': 'controleur_agentWallet', 'client': '0x449854134593bcb92c1244cfb382b5ab6254eead', 'agent': 8317, 'avis': 1}]
+- schéma stress (trade_execution = endorsement) : arêtes vers #8317 = **1** ; compteurs {'avis_lus': 9283, 'hors_filtre_ou_schema': 9205, 'negatif_controleur_garde_agentWallet': 1, 'aretes_couple': 1, 'boucle_ignoree': 1, 'ligne_wallet': 1, 'emetteur_adresse': 0} ; rejets R6 : []
 
 ## (d) La chaîne honnête 0x0730… / 0xf7d5… → #18 → {#2, #3, #4}
 - 0xea0b21fb est owner **et agentWallet** de [18, 22, 23]. Sous D20, chacun de ces agents qui est noté porte une copie de la ligne de 0xea0b, avec sa propre masse.
@@ -134,10 +134,10 @@ Itérations depuis 0 jusqu'au point fixe entier : 4.
 - avis du couple : [(1, 'slash', -100), (2, 'review', 1)]
 - règle du tour 2 (dernier avis du couple) : arête 0xea0b→#4 = (10000, 'review', 2)
   - ancres {0x07305360, 0xf7d5543d} : #4 → t = ['0.0493827', '0.0493827'], trustRobust = 0.0246914, distrust = 0
-  - ancres {0xea0b, 0x07305360} : #4 → t = ['0.0493827', '0.0740741'], trustRobust = 0.0246914, distrust = 0
+  - ancres {0xea0b, 0x07305360} : #4 → t = ['0', '0.0740741'], trustRobust = 0, distrust = 0
 - D14 (dernier par tag1 + dominance du négatif) : arête 0xea0b→#4 = (-10000, 'slash', 1)
   - ancres {0x07305360, 0xf7d5543d} : #4 → t = ['0', '0'], trustRobust = 0, distrust = 0.148148
-  - ancres {0xea0b, 0x07305360} : #4 → t = ['0', '0'], trustRobust = 0, distrust = 0.185185
+  - ancres {0xea0b, 0x07305360} : #4 → t = ['0', '0'], trustRobust = 0, distrust = 0.111111
 
 ## (f) Repli owner (D44) sur le graphe d'execution.market
 - schéma étendu (hypothèse de mesure, NON normatif) : les 11 tag1 execution.market en endorsement [0, 50, 100] ; filtre des 8 tags de la mesure du tour 6 (`nv/impact.py`).
@@ -145,7 +145,7 @@ Itérations depuis 0 jusqu'au point fixe entier : 4.
 - D20, ancres honnêtes {0x0730, 0xf7d5} : couples = 49, arêtes portées par des nœuds-agents = **0** (lignes via owner : 0), agents t > 0 = 0, masse sur le cluster EM (19 agents) = ['0', '0'], itérations = 2.
 - D20, ancres 2 noteurs EM {0x3aebb73a, 0xaf95b213} : couples = 49, arêtes portées par des nœuds-agents = **0** (lignes via owner : 0), agents t > 0 = 8, masse sur le cluster EM (19 agents) = ['0.222222', '0.222222'], itérations = 3.
 - D20 + D44 (repli owner), ancres honnêtes {0x0730, 0xf7d5} : couples = 49, arêtes portées par des nœuds-agents = **37** (lignes via owner : 12), agents t > 0 = 0, masse sur le cluster EM (19 agents) = ['0', '0'], itérations = 2.
-- D20 + D44 (repli owner), ancres 2 noteurs EM {0x3aebb73a, 0xaf95b213} : couples = 49, arêtes portées par des nœuds-agents = **37** (lignes via owner : 12), agents t > 0 = 11, masse sur le cluster EM (19 agents) = ['0.658177', '0.644009'], itérations = 99.
+- D20 + D44 (repli owner), ancres 2 noteurs EM {0x3aebb73a, 0xaf95b213} : couples = 49, arêtes portées par des nœuds-agents = **25** (lignes via owner : 10), agents t > 0 = 11, masse sur le cluster EM (19 agents) = ['0.479437', '0.445518'], itérations = 78.
 
 ## Mesures annexes
 - triplets (client, agent, tag1) où « dernier valide » ≠ « dernier puis rejet » (schéma stress) : **0** sur 7871.

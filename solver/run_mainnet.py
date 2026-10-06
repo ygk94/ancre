@@ -42,6 +42,9 @@ SCANNER = "0xa06f907f"          # préfixes, résolus en adresses complètes plu
 SCANNER2 = "0xc71a15fc"
 HONEST1, HONEST2 = "0x07305360", "0xf7d5543d"
 EA0B = "0xea0b21fb"
+QUALITY4 = "0x794c94f1"         # address node (no agent): `quality` 100 on #4. Anchor of the slash vector (D48-A)
+EM_RATERS = ("0x3aebb73a", "0xaf95b213")   # two execution.market raters (anchors of the D44 measurement)
+FARM_FILTER = ["trust", "liveness", "eve", "plague", "vouch", "review", "slash"]
 EVE = 182
 ALPHA = Fraction(1, 3)          # D2
 
@@ -78,6 +81,20 @@ def stress_schema(fbs) -> dict[str, TagSpec]:
     résistance Sybil vient des ancres et non du schéma. Ce n'est PAS une recommandation."""
     tags = {f.tag1 for f in fbs if f.tag1}
     return {t: TagSpec(dec_to_wad(-100), 0, dec_to_wad(100), "endorsement") for t in tags}
+
+
+def em_schema(fbs, raw_ref: dict) -> tuple[dict[str, TagSpec], list[str]]:
+    """Trial schema of the D44 measurement (tour 6, `nv/impact.py`; NOT normative): every execution.market tag1 as an
+    endorsement on [0, 50, 100], added to the reference schema; filter = the 8 tags of the tour-6 measurement.
+    Shared by the act-1 report (f) and the `mainnet_em_d44` vector (export.py), so that both measure the same thing."""
+    em_tags = sorted({f.tag1 for f in fbs if f.tag1.split(":")[0] in ("executor_rating", "requester_rating",
+                                                                       "buyer_rating", "seller_rating")})
+    ext = json.loads(json.dumps(raw_ref))
+    for t in em_tags:
+        ext["tags"].setdefault(t, {"min": "0", "neutral": "50", "max": "100", "kind": "endorsement"})
+    em_filter = [t for t in em_tags if t not in ("seller_rating:data_collection", "requester_rating:verification",
+                                                  "executor_rating:verification")]
+    return load_schema(ext), em_filter
 
 
 def run(fbs, idn, schema, filt, anchors, alpha=ALPHA, **kw):
@@ -202,7 +219,7 @@ def main():
            {a for a, o in idn.owner.items() if o in farm_clients}
     P(f"- Région ferme S = #182 ∪ agents dont l'owner ou le wallet a noté #182 : **{len(farm)} agents**.")
     stress = stress_schema(fbs)
-    ffarm = ["eve", "plague", "vouch", "review", "slash", "trust", "liveness"]
+    ffarm = FARM_FILTER
     for vlbl, kw in VARIANTS:
         for lbl, sch in (("référence", ref), ("stress (tout tag = endorsement [-100,0,100])", stress)):
             g, cert, inv = run(fbs, idn, sch, ffarm, [h1, h2], **kw)
@@ -224,7 +241,7 @@ def main():
     sc_t = Counter(f.agent_id in farm for f in sc_fb)
     P(f"- le scanner a posté {len(sc_fb)} avis sur {len({f.agent_id for f in sc_fb})} agents "
       f"(tags {dict(Counter(f.tag1 for f in sc_fb))}) ; {sc_t[True]} avis visent la région S.")
-    fb_filter = ["trust", "liveness", "eve", "plague", "vouch", "review", "slash"]
+    fb_filter = FARM_FILTER
     cases = [("sans D15 (trust, liveness, eve propagent)", schema_variant(ref, "pre_d15")),
              ("avec D15 (schéma de référence)", ref)]
     for anc_lbl, anc in (("{scanner}", [scanner]), ("{scanner, 0x07305360}", [scanner, h1]),
@@ -295,12 +312,7 @@ def main():
     em_new = [f for f in fbs if f.tag1.split(":")[0] in ("executor_rating", "requester_rating", "buyer_rating",
                                                            "seller_rating")]
     em_tags = sorted({f.tag1 for f in em_new})
-    ext = json.loads(json.dumps(raw_ref))
-    for t in em_tags:
-        ext["tags"].setdefault(t, {"min": "0", "neutral": "50", "max": "100", "kind": "endorsement"})
-    ext_s = load_schema(ext)
-    em_filter = [t for t in em_tags if t not in ("seller_rating:data_collection", "requester_rating:verification",
-                                                  "executor_rating:verification")]
+    ext_s, em_filter = em_schema(fbs, raw_ref)
     P(f"- schéma étendu (hypothèse de mesure, NON normatif) : les {len(em_tags)} tag1 execution.market en endorsement "
       f"[0, 50, 100] ; filtre des {len(em_filter)} tags de la mesure du tour 6 (`nv/impact.py`).")
     g44 = build_graph(fbs, idn, ext_s, em_filter, [], owner_fallback=True)
@@ -316,7 +328,7 @@ def main():
       "personne ne note : masse nulle, donc aucune ligne à certifier (D20).")
     em_clients = {f.client for f in em_new}
     cluster = {f.agent_id for f in em_new} | {a for a, o in idn.owner.items() if o in em_clients}
-    a1, a2 = resolve("0x3aebb73a", fbs), resolve("0xaf95b213", fbs)
+    a1, a2 = (resolve(x, fbs) for x in EM_RATERS)
     for vlbl, kw in VARIANTS:
         for anc_lbl, anc in (("honnêtes {0x0730, 0xf7d5}", [h1, h2]), ("2 noteurs EM {0x3aebb73a, 0xaf95b213}", [a1, a2])):
             g, cert, inv = run(fbs, idn, ext_s, em_filter, anc, **kw)
