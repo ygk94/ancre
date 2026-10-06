@@ -167,6 +167,17 @@ contract SolverVectorsTest is AncreBase {
         }
     }
 
+    /// AM-08.14 (02-bis): in the demo vector of 01/10, agent #18 (node 5) has the anchor 0xea0b as agentWallet:
+    /// its row is the anchor's row copied (D20), which voids m >= 2. The corrected contract refuses it.
+    function test_A_mainnetSlashAnchorRefused() public {
+        _fork();
+        string memory j = _load("mainnet_slash_anchor");
+        AnchoredReputation.SetParams memory p = _params(j);
+        Outcome memory o = _submit(j, p, false);
+        assertFalse(o.ok, "anchor as the source of an agent row: must be refused");
+        assertEq(o.ret, abi.encodeWithSelector(bytes4(keccak256("AnchorAsSource(uint256)")), 5));
+    }
+
     /// D37 at Registry-verified: fabrication and inflation refused at submission; dilution and the omitted
     /// negative accepted (completeness is not checkable on-chain), proven later by the watcher.
     function test_solverViolationVectors_registryVerified() public {

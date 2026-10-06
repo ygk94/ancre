@@ -2,11 +2,17 @@
 pragma solidity ^0.8.28;
 
 /// Minimal ERC-8004 IdentityRegistry mock mirroring v2.0.0 semantics that ANCRE relies on:
-/// agentWallet = owner at mint, cleared (0) on transfer; isAuthorizedOrOwner = owner or operator.
+/// agentWallet = owner at mint, cleared (0) on transfer; isAuthorizedOrOwner = owner, operator or approved
+/// (OpenZeppelin _isAuthorized). A nonexistent agent reverts with ERC721NonexistentToken(uint256) in ownerOf,
+/// getApproved and isAuthorizedOrOwner, and getAgentWallet returns 0: measured on the real v2.0.0 registry
+/// (Monad mainnet, agent 99 999 999, 2026-10-06).
 contract MockIdentity {
+    error ERC721NonexistentToken(uint256 tokenId);
+
     mapping(uint256 => address) public owners;
     mapping(uint256 => address) public wallets;
     mapping(address => mapping(address => bool)) public operators;
+    mapping(uint256 => address) public approvals;
     string public version = "2.0.0";
 
     function mint(uint256 id, address owner) external {
@@ -17,6 +23,11 @@ contract MockIdentity {
     function transfer(uint256 id, address to) external {
         owners[id] = to;
         wallets[id] = address(0);
+        approvals[id] = address(0);
+    }
+
+    function approve(uint256 id, address who) external {
+        approvals[id] = who;
     }
 
     function setWallet(uint256 id, address w) external {
@@ -32,9 +43,21 @@ contract MockIdentity {
     }
 
     function ownerOf(uint256 id) external view returns (address) {
-        address o = owners[id];
-        require(o != address(0), "ERC721NonexistentToken");
-        return o;
+        return _owned(id);
+    }
+
+    function getApproved(uint256 id) external view returns (address) {
+        _owned(id);
+        return approvals[id];
+    }
+
+    function isApprovedForAll(address owner, address op) external view returns (bool) {
+        return operators[owner][op];
+    }
+
+    function _owned(uint256 id) internal view returns (address o) {
+        o = owners[id];
+        if (o == address(0)) revert ERC721NonexistentToken(id);
     }
 
     function getAgentWallet(uint256 id) external view returns (address) {
@@ -42,9 +65,8 @@ contract MockIdentity {
     }
 
     function isAuthorizedOrOwner(address spender, uint256 id) external view returns (bool) {
-        address o = owners[id];
-        require(o != address(0), "ERC721NonexistentToken");
-        return spender == o || operators[o][spender];
+        address o = _owned(id);
+        return spender == o || operators[o][spender] || approvals[id] == spender;
     }
 
     function getVersion() external view returns (string memory) {
