@@ -72,7 +72,11 @@ export async function readAgent(
     trustLow: a.trustLow.toString(),
     e: a.e.toString(),
     certBlock: Number(a.certBlock),
-    decide: d ? (REASON[d[0]] ?? String(d[0])) : rd.status === "rejected" ? "reverted" : null,
+    decide: d
+      ? (REASON[d[0]] ?? String(d[0]))
+      : rd.status === "rejected"
+        ? /revert/i.test(String((rd.reason as Error)?.message ?? rd.reason)) ? "reverted" : "unavailable"
+        : null,
     ms: Math.round(performance.now() - t0),
   };
 }

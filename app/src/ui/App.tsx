@@ -22,7 +22,9 @@ export function App() {
     const on = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "SELECT" || tag === "INPUT") return;
-      // a focused button would also react to Space/arrows: take the key away from it
+      const ours = e.key === " " || e.key === "ArrowLeft" || e.key === "ArrowRight" || /^[1-6]$/.test(e.key);
+      if (!ours) return; // Tab, Enter… keep their default behaviour
+      // a focused button would also react to Space/arrows: take these keys away from it
       if (tag === "BUTTON") (e.target as HTMLElement).blur();
       if (e.key === "ArrowRight") demo.controls.step(1);
       else if (e.key === "ArrowLeft") demo.controls.step(-1);

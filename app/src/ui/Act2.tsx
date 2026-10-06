@@ -21,9 +21,13 @@ export function Act2({ demo }: { demo: Demo }) {
   const focusId = pinned && s.agents[pinned] ? pinned : s.focus;
   const agent = focusId ? s.agents[focusId] : null;
   const currentScene = s.scenes.at(-1)?.n ?? null;
-  const { heads, info } = useHeads(demo.mode === "live" ? wsForRun(s) : null);
-  // finality gating only when this screen actually tracks the chain's commit states
-  const gate: HeadsState | null = demo.mode === "live" && info.connected ? heads : null;
+  const clockOverride = new URLSearchParams(location.search).get("clock") === "testnet";
+  const wsUrl = demo.mode === "live" ? (clockOverride ? (NETWORKS.testnet.wss ?? null) : wsForRun(s)) : null;
+  const { heads, info } = useHeads(wsUrl, s.header?.network.mode === "fork");
+  // Finality gating fails CLOSED in live mode: no verdict until this screen has seen its block Finalized (a
+  // disconnected feed shows "awaiting finality", never a speculative verdict). Off with ?clock=testnet, whose
+  // heights are not the run's, and in replay (the log holds no speculative state, EVENTS.md §3.1).
+  const gate: HeadsState | null = wsUrl && !clockOverride ? heads : null;
 
   return (
     <div className="act2">
@@ -222,13 +226,21 @@ function AgentPanel({ s, a, gate, reread }: { s: ScreenState; a: AgentState; gat
           </div>
           <Meter massPct={c.trustLowPct} thetaPct={c.thetaPct} />
           <div className="stats four">
+            <Stat
+              label="raw mass Σλt"
+              value={`${pct(c.trust)}${c.trust === "0" ? "" : " %"}`}
+              foot={BigInt(c.trust) >= BigInt(c.theta) && c.trustLow === "0" ? "over θ, but from one anchor only" : `distrust ${pct(c.distrust)} %`}
+            />
             <Stat label="status" value={c.status} foot={c.status === "VETOED" ? `${c.vetoCount} anchor veto · tag ${c.triggerTagName ?? "?"}` : "assess()"} />
             <Stat label="error bound e" value={bound(c.e)} foot="certificate, upper" />
-            <Stat label="distrust" value={`${pct(c.distrust)} %`} foot="one hop" />
             <Stat label="certificate" value={fresh === null ? "none" : `${fresh} blk`} foot={c.certBlock ? `old · cert block ${int(c.certBlock)}` : "NO_CERT"} />
           </div>
           {pay && gate && stateOf(gate, pay.block) !== "Finalized" ? (
-            <Verdict pay={null} title="AWAITING FINALITY" why={`payment evaluated at block ${int(pay.block)}: ${stateOf(gate, pay.block) ?? "not seen yet"}; the verdict shows once the block is Finalized`} />
+            <Verdict
+              pay={null}
+              title="AWAITING FINALITY"
+              why={`payment evaluated at block ${int(pay.block)}: ${stateOf(gate, pay.block) ?? "not seen yet by this screen"}; the verdict shows once the block is Finalized`}
+            />
           ) : pay ? (
             <Verdict
               pay={pay.decision === "PAID"}
@@ -396,8 +408,6 @@ function groupBursts(rows: FeedRow[]): Burst[] {
 
 /** WebSocket of the run's chain: Monad testnet (monadNewHeads) or the anvil fork (newHeads). Frozen: none. */
 function wsForRun(s: ScreenState): string | null {
-  // ?clock=testnet: check the testnet WebSocket before filming, whatever the run (live mode only)
-  if (new URLSearchParams(location.search).get("clock") === "testnet") return NETWORKS.testnet.wss ?? null;
   const n = s.header?.network;
   if (!n) return null;
   if (n.mode === "testnet") return NETWORKS.testnet.wss ?? null;
@@ -433,6 +443,7 @@ function ChainClock({ heads, info }: { heads: HeadsState; info: HeadsSource }) {
         </span>
       )}
       {info.method === "newHeads" && <span className="muted">anvil: a block is final when mined</span>}
+      {!info.connected && info.error && <span className="muted">{info.error} · verdicts wait for finality</span>}
     </div>
   );
 }

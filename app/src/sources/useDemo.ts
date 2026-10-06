@@ -59,7 +59,12 @@ export function useDemo() {
         setCursor(Number.isFinite(at) ? Math.max(0, Math.min(ls.length - 1, at)) : 0);
         setLoadError(null);
       })
-      .catch((e) => !stale && setLoadError(`${file}: ${(e as Error).message}`));
+      .catch((e) => {
+        if (stale) return;
+        setLoadError(`${file}: ${(e as Error).message}`);
+        setLines([]); // never show the previous run under the new selection
+        setCursor(0);
+      });
     return () => {
       stale = true;
     };

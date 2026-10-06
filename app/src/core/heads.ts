@@ -12,10 +12,18 @@ export type HeadsState = {
   finalized: number; // highest Finalized (or Verified) number
   dropped: number; // speculative proposals purged
   latencies: { voted: number[]; finalized: number[] }; // ms from Proposed, local arrival clock, last 64
+  finalHash: Map<number, string>; // hash finalized at each recent height: a late proposal of another hash is dropped
 };
 export type HeadMsg = { t: number; raw: { number: string; hash: string; commitState?: string } };
 
-export const initialHeads = (): HeadsState => ({ blocks: new Map(), head: 0, finalized: 0, dropped: 0, latencies: { voted: [], finalized: [] } });
+export const initialHeads = (): HeadsState => ({
+  blocks: new Map(),
+  head: 0,
+  finalized: 0,
+  dropped: 0,
+  latencies: { voted: [], finalized: [] },
+  finalHash: new Map(),
+});
 const push = (a: number[], x: number) => [...a, Math.round(x)].slice(-64);
 
 export function reduceHead(s: HeadsState, m: HeadMsg): HeadsState {
@@ -23,6 +31,8 @@ export function reduceHead(s: HeadsState, m: HeadMsg): HeadsState {
   // plain `newHeads` (anvil) has no commitState: an anvil block is final when mined
   const state = (m.raw.commitState ?? "Finalized") as CommitState;
   if (!(state in RANK)) return s;
+  const fh = s.finalHash.get(n);
+  if (fh !== undefined && fh !== m.raw.hash) return { ...s, dropped: s.dropped + 1 }; // late state of a losing proposal
   const key = `${n}:${m.raw.hash}`;
   const prev = s.blocks.get(key);
   if (prev && RANK[prev.state] >= RANK[state]) return s; // duplicate or late lower state
@@ -32,14 +42,16 @@ export function reduceHead(s: HeadsState, m: HeadMsg): HeadsState {
   const latencies = { ...s.latencies };
   if (b.t.Proposed !== undefined && state === "Voted") latencies.voted = push(latencies.voted, m.t - b.t.Proposed);
   if (b.t.Proposed !== undefined && state === "Finalized") latencies.finalized = push(latencies.finalized, m.t - b.t.Proposed);
-  let { dropped, finalized } = s;
+  let { dropped, finalized, finalHash } = s;
   if (RANK[state] >= RANK.Finalized) {
     for (const [k, o] of blocks) if (o.number === n && o.hash !== m.raw.hash) (blocks.delete(k), dropped++);
     finalized = Math.max(finalized, n);
+    finalHash = new Map(finalHash).set(n, m.raw.hash);
+    if (finalHash.size > 400) for (const h of finalHash.keys()) if (h < n - 300) finalHash.delete(h);
   }
   // keep a bounded window
   if (blocks.size > 400) for (const [k, o] of blocks) if (o.number < n - 300) blocks.delete(k);
-  return { blocks, head: Math.max(s.head, n), finalized, dropped, latencies };
+  return { blocks, head: Math.max(s.head, n), finalized, dropped, latencies, finalHash };
 }
 
 /** Commit state of a block number as far as this screen knows (null = not seen). */

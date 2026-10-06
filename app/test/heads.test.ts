@@ -34,3 +34,13 @@ describe("block commit states", () => {
     expect(stateOf(s, 14)).toBeNull();
   });
 });
+
+describe("late states of a losing proposal", () => {
+  it("are dropped, not re-inserted, after the height is finalized", () => {
+    let s = initialHeads();
+    s = reduceHead(s, h(0, 20, "0xwin", "Finalized"));
+    s = reduceHead(s, h(10, 20, "0xlose", "Proposed"));
+    expect([...s.blocks.values()].map((b) => b.hash)).toEqual(["0xwin"]);
+    expect(s.dropped).toBe(1);
+  });
+});
