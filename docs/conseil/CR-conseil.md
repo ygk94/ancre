@@ -1534,7 +1534,7 @@ Ordre de fusion : 02-bis, puis 04-bis, plugin-revue et indexer-revue. Tests rela
 | Partie | Résultat | Commande |
 |---|---|---|
 | Contrat | **197/197** (8 tests en fork d'abord en échec sur des HTTP 429 de `rpc1.monad.xyz`, verts en relance un par un) | `ETH_RPC_TIMEOUT=900 forge test`, puis `forge test --rerun --threads 1` |
-| Solveur | **195/195** | `solver/.venv/bin/python -m pytest -q` |
+| Solveur | **195/195**, puis **213/213** après les relais et ERROR_SIGS | `solver/.venv/bin/python -m pytest -q` |
 | Plugin | **76/76** | `cd plugin && npm test` |
 | Indexeur | **75 verts, 7 sautés** (tests HyperSync, faute de `ENVIO_API_TOKEN`) | `npx -y pnpm@9 test` |
 | Écran | typecheck et 11/11 | `cd app && npx tsc -b && npm test` |
@@ -1548,15 +1548,15 @@ Constats traités, par lot (le détail est dans les rapports `02bis.md` §8, `04
 Ajouts du pilote pendant la fusion :
 - **AM-PIL.3** : `contracts/test/Fork.t.sol` ne compilait pas en build propre (stack too deep sous via-IR). Les « 197 verts » de 02-bis venaient d'artefacts en cache. Corrigé en découpant la fonction (`_eaRow3`, `_setOwnerFps`). **Leçon : un rapport de tests doit venir d'un `forge clean` ou d'un clone neuf.**
 - L'écran affichait encore `isTrusted` : renommé en `passesAnchorPolicy`.
-- **AM-PIL.4** : `simulate.py` (vecteurs, violations et vecteurs communs sur fork) contre le contrat de 02-bis :
-  - la plupart des scénarios revertent `BadNodes`, parce que le harnais passe les nœuds en ligne sur un set ouvert, ce que A1d refuse désormais ;
-  - un `AnchorAsSource`, à confirmer comme refus attendu ;
-  - un `ProvenRowResubmitted` sur la resoumission du scénario C.
-
-  Le service `certifier.py` n'est pas touché : il passe déjà par `addNodes`. **Correction du harnais en cours** (`chantier/simulate-02bis`).
-- **Relais de l'indexeur vers le solveur**, en cours (`chantier/solver-relais`) :
-  - REGCB, à porter dans `graph.py` ;
-  - `tag1Exact` dans `from_indexer.py`.
+- **AM-PIL.4, la démo et le harnais sur le contrat de 02-bis** :
+  - **Démo** : le champ `Assessment.trusted` a été renommé `passesPolicy`. La démo lisait encore `trusted` et échouait dès la scène 0. Corrigé dans `demo/lib/ancre.ts`. L'écran décode le champ par position, il n'est pas touché. Résultat : `ACT 2 PASS` en fork (8 scènes), et l'état figé régénéré passe en `--frozen`.
+  - **Harnais `simulate.py`** : il passait les nœuds en ligne sur un set ouvert (`BadNodes`, refusé depuis A1d). Il fait maintenant `addNodes` d'abord, et vérifie chaque refus attendu sur la bonne erreur : `AnchorAsSource`, `ProvenRowResubmitted`. Résultat : **27/27** (MESURÉ). Les scénarios `service` et `split` passent sans transaction en échec.
+  - **Le service `certifier.py` n'était pas en cause** : il passe déjà par `addNodes`. Il décode maintenant les 3 nouvelles erreurs par leur nom, avec un test qui vérifie que toutes les erreurs de l'ABI sont couvertes.
+  - **Le gas des preuves a augmenté d'environ 80 k (+26 à +29 %) avec 02-bis** : chiffres dans `contracts/GAS.md`.
+- **Relais de l'indexeur portés dans le solveur** (`chantier/solver-relais`, fusionné, 17 tests de plus, **213 verts**) :
+  - **REGCB** : rejoué dans `graph.py`. Mesuré sur le mainnet entre les blocs 108 835 675 et 110 994 810 : 19 enregistrements, aucun touché.
+  - **Identité d'un tag = son hash keccak (R1 bis dans `FORMAT.md`)**, au lieu d'exclure les avis `tag1Exact = false`. L'exclusion n'était pas sûre : un tag de plus de 1 Kio forme des arêtes on-chain.
+  - **Effet de bord voulu** : `from_indexer` exige désormais le schéma v3 de l'indexeur. Il faut donc redéployer sur Envio Cloud, et ne jamais certifier à partir d'un dump antérieur au v3.
 
 **Ce qui reste ouvert après la revue** :
 - **À trancher par Hugo ou le conseil** :

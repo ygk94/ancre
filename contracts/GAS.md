@@ -77,6 +77,19 @@ Ces chiffres comprennent les nouveaux nœuds du premier certificat (`newNodes` :
 | `proveEdge` (v), gonflement au niveau Submitter-attested | 285 182 |
 | `proveEdge`, dilution par un tiers dans le cycle du service (avant la revue ; depuis, refusée à la soumission par D) | 294 388 |
 
+**Après 02-bis (MESURÉ le 06/10, `solver/simulate.py --scenarios vectors,violations,common`, fork anvil de rpc1.monad.xyz au bloc 110 994 810)** : chaque preuve coûte **environ 80 k gas de plus (+26 à +29 %)**.
+
+| Preuve | Gas |
+|---|---|
+| dilution | 392 502 |
+| omission du négatif | 364 641 |
+| deux omissions sur la même ligne | 361 691, puis 340 800 |
+| fabrication (Submitter-attested) | 359 885 |
+| gonflement (Submitter-attested) | 365 713 |
+| `proveEdge` du vecteur commun C | 358 798 |
+
+L'attribution de ce surcoût aux contrôles de faits de 02-bis (`_checkFacts`, écriture du fait prouvé) est ESTIMÉE, pas isolée.
+
 ### Découpage d'un premier certificat (1 237 nœuds, ≈ 3 700 arêtes, k = 2, Submitter-attested)
 
 `addNodes` : 22,96 M pour 500 nœuds (≈ 45,9 k par nœud) ; `reserveCapacity` : 10,38 M pour 480 nœuds (≈ 17,3 k par slot, stride k + 3) ; certificat : 14,25 M (le v0 mesurait 7,94 M). MESURÉ, `simulate.py`, scénario D.
