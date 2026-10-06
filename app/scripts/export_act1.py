@@ -22,15 +22,16 @@ sys.path.insert(0, str(SOLVER))
 
 import run_mainnet as rm  # noqa: E402
 from graph import AGENT, WAD, load_schema  # noqa: E402
-from ppr import contributions, distrust, e_eff, trust_robust  # noqa: E402
+from ppr import contributions, distrust, e_eff, is_trusted, trust_robust  # noqa: E402
 
 OUT = HERE.parent / "src" / "data" / "act1.json"
 ALPHA = rm.ALPHA
 M = 2
 THETA = WAD // 50  # 2 %: the theta committed by the chantier 06 demo set (header.set.theta), used as a policy illustration
-RHO_N, RHO_D = 1, 2  # contract defaults in solver/ppr.is_trusted
+RHO_N, RHO_D = 1, 2  # solver/ppr.is_trusted defaults (the pay bit itself comes from is_trusted)
 
-# Agents the screen features (ids on Monad 143). Labels are names published in the registry / 8004scan.
+# Agents the screen features (ids on Monad 143), in display order. The ONE list: written to act1.json["featured"],
+# read by scripts/snapshot-8004scan.mjs and by the screen.
 FEATURED = [182, 4, 8317, 18, 2, 3, 9, 87, 19, 10279, 10278]
 
 
@@ -48,30 +49,34 @@ def node_stats(g, cert, inv, agent_id: int):
             "trustRobust": wad_str(trust_robust(c, M)), "distrust": wad_str(distrust(cert, ci))}
 
 
-def verdict(st, eeff: int) -> dict:
+def verdict(cert, ci, st) -> dict:
+    """Pay bit from the reference solver (ppr.is_trusted, D26 reading); the detail is display text only."""
+    if cert.k < M:
+        return {"pay": False, "reason": "UNTRUSTED", "detail": f"one anchor: leave-one-out (m = {M}) leaves 0"}
+    if ci is not None and is_trusted(cert, ci, theta=THETA, m=M, rhoN=RHO_N, rhoD=RHO_D):
+        return {"pay": True, "reason": "OK", "detail": "trustLow >= theta, distrust within rho"}
     tl = int(st["trustRobust"])
-    du = int(st["distrust"]) + eeff
-    if tl < THETA:
-        if tl:
-            detail = "leave-one-out mass below theta"
-        elif int(st["trust"]):
-            detail = "reached by one anchor only: leave-one-out mass 0"
-        else:
-            detail = "unknown to these anchors (mass 0)"
-        return {"pay": False, "reason": "UNTRUSTED", "detail": detail}
-    if RHO_D * du > RHO_N * tl:
-        return {"pay": False, "reason": "UNTRUSTED", "detail": "distrust too high"}
-    return {"pay": True, "reason": "OK", "detail": "trustLow >= theta, distrust within rho"}
+    if tl >= THETA:
+        detail = "distrust too high"
+    elif tl:
+        detail = "leave-one-out mass below theta"
+    elif int(st["trust"]):
+        detail = "reached by one anchor only: leave-one-out mass 0"
+    elif int(st["distrust"]):
+        detail = f"slashed by a trusted rater: distrust {int(st['distrust']) / WAD:.2%}, no mass"
+    else:
+        detail = "unknown to these anchors (mass 0)"
+    return {"pay": False, "reason": "UNTRUSTED", "detail": detail}
 
 
-def lens(lid, title, blurb, fbs, idn, schema, filt, anchors, anchor_labels, farm, w2a, _schema_name="", **kw):
+def lens(lid, title, blurb, fbs, idn, schema, filt, anchors, anchor_labels, farm, _schema_name="", **kw):
     g, cert, inv = rm.run(fbs, idn, schema, filt, anchors, **kw)
     eeff = e_eff(cert)
     agents = {}
     for a in FEATURED:
         st = node_stats(g, cert, inv, a)
-        st["verdict"] = verdict(st, eeff) if len(anchors) >= M else {"pay": False, "reason": "UNTRUSTED",
-                                                                    "detail": f"one anchor: leave-one-out (m = {M}) leaves 0"}
+        gi = g.index.get((AGENT, a))
+        st["verdict"] = verdict(cert, inv.get(gi) if gi is not None else None, st)
         agents[str(a)] = st
     ranking = []
     for ci, gi in enumerate(cert.node_map):
@@ -83,8 +88,7 @@ def lens(lid, title, blurb, fbs, idn, schema, filt, anchors, anchor_labels, farm
             continue
         st = {"agentId": str(key), "trust": wad_str(sum(c)), "trustRobust": wad_str(trust_robust(c, M)),
               "distrust": wad_str(distrust(cert, ci))}
-        st["verdict"] = verdict(st, eeff) if len(anchors) >= M else {"pay": False, "reason": "UNTRUSTED",
-                                                                    "detail": f"one anchor: leave-one-out (m = {M}) leaves 0"}
+        st["verdict"] = verdict(cert, ci, st)
         ranking.append(st)
     ranking.sort(key=lambda r: (-int(r["trustRobust"]), -int(r["trust"]), int(r["agentId"])))
     mass = rm.mass_in(g, cert, inv, farm)
@@ -132,22 +136,22 @@ def main():
     lenses = [
         lens("independent", "Two independent raters",
              "Anchors: two addresses outside the farm that rated the one honest chain (#18 -> #2, #3). Reference schema (D15).",
-             fbs, idn, ref, filters["reference"], [h1, h2], ["0x0730…", "0xf7d5…"], farm, w2a,
+             fbs, idn, ref, filters["reference"], [h1, h2], ["0x0730…", "0xf7d5…"], farm,
              _schema_name="reference"),
         lens("screener-as-trust", "A risk screener read as trust",
              "Anchor: an automated risk-screening service (score 85 = 'risk low, unverified'). Its measurements are "
              "read as endorsements, as if D15 did not exist: the mass leaks into the farm region.",
              fbs, idn, rm.schema_variant(ref, "pre_d15"), fb_filter, [scanner],
-             [scanner[:6] + "…" + scanner[-4:]], farm, w2a, _schema_name="no-D15 (measurements propagate)"),
+             [scanner[:6] + "…" + scanner[-4:]], farm, _schema_name="no-D15 (measurements propagate)"),
         lens("screener-d15", "Same screener, schema D15",
              "Same single anchor, reference schema: measurements never create edges (D15). The leak is zero.",
-             fbs, idn, ref, fb_filter, [scanner], [scanner[:6] + "…" + scanner[-4:]], farm, w2a,
+             fbs, idn, ref, fb_filter, [scanner], [scanner[:6] + "…" + scanner[-4:]], farm,
              _schema_name="reference"),
         lens("inside-farm", "A reader who anchors inside the farm",
              "Anchors: two wallets of the farm itself, every tag read as an endorsement. ANCRE is relative to the "
              "reader's anchors: it does not protect a reader who trusts the farm.",
              fbs, idn, rm.stress_schema(fbs), ffarm, farm_anchors,
-             [a[:6] + "…" + a[-4:] for a in farm_anchors], farm, w2a, _schema_name="stress (every tag = endorsement)"),
+             [a[:6] + "…" + a[-4:] for a in farm_anchors], farm, _schema_name="stress (every tag = endorsement)"),
     ]
 
     # #8317: what the registry accepted vs what ANCRE keeps (reference schema)
@@ -163,6 +167,7 @@ def main():
         "command": "cd app && ../solver/.venv/bin/python scripts/export_act1.py",
         "solverCommit": rev,
         "chainId": 143,
+        "featured": [str(a) for a in FEATURED],
         "snapshotBlock": idn.block,
         "snapshotFeedbacks": len(fbs),
         "snapshotAgents": len(idn.owner),

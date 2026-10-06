@@ -1,10 +1,10 @@
 // Act 2: our own traffic (chantier 06 scenes), live or replayed through the same reducer.
 // Left: the focused agent in two columns. Right: the payer's decisions and the breaker latency.
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SCENE_TITLES, type AgentState, type FeedRow, type ScreenState } from "../core/demo";
-import { bound, int, pct, short } from "../lib/format";
-import { NETWORKS } from "../config/networks";
-import { readAgent, rpcForRun, type OnchainRead } from "../sources/chain";
+import { bound, int, pct, pctU, short } from "../lib/format";
+import { NETWORKS, endpointsForRun } from "../config/networks";
+import { readAgent, type OnchainRead } from "../sources/chain";
 import { median, stateOf, type HeadsState } from "../core/heads";
 import { useHeads, type HeadsSource } from "../sources/useHeads";
 import type { useDemo } from "../sources/useDemo";
@@ -22,22 +22,24 @@ export function Act2({ demo }: { demo: Demo }) {
   const agent = focusId ? s.agents[focusId] : null;
   const currentScene = s.scenes.at(-1)?.n ?? null;
   const clockOverride = new URLSearchParams(location.search).get("clock") === "testnet";
-  const wsUrl = demo.mode === "live" ? (clockOverride ? (NETWORKS.testnet.wss ?? null) : wsForRun(s)) : null;
+  const run = s.header ? endpointsForRun(s.header.network) : null;
+  const wsUrl = demo.mode === "live" ? (clockOverride ? NETWORKS.testnet.ws : (run?.ws ?? null)) : null;
   const { heads, info } = useHeads(wsUrl, s.header?.network.mode === "fork");
   // Finality gating fails CLOSED in live mode: no verdict until this screen has seen its block Finalized (a
   // disconnected feed shows "awaiting finality", never a speculative verdict). Off with ?clock=testnet, whose
   // heights are not the run's, and in replay (the log holds no speculative state, EVENTS.md §3.1).
   const gate: HeadsState | null = wsUrl && !clockOverride ? heads : null;
+  const notes = [...s.warnings, ...(demo.source.kind === "replay" && demo.source.error ? [demo.source.error] : [])];
+  const chips = useMemo(
+    () => Object.values(s.agents).sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role) || Number(a.agentId) - Number(b.agentId)),
+    [s.agents],
+  );
 
   return (
     <div className="act2">
       <section className="main">
         <SourceBar demo={demo} />
-        {(s.warnings.length > 0 || (demo.source.kind === "replay" && demo.source.error)) && (
-          <div className="banner">
-            {[...s.warnings, ...(demo.source.kind === "replay" && demo.source.error ? [demo.source.error] : [])].join(" · ")}
-          </div>
-        )}
+        {notes.length > 0 && <div className="banner">{notes.join(" · ")}</div>}
         <div className="scenes">
           {[1, 2, 3, 4, 5, 6].map((n) => {
             const sc = s.scenes.find((x) => x.n === n);
@@ -57,9 +59,7 @@ export function Act2({ demo }: { demo: Demo }) {
         </div>
         {demo.mode === "live" && <ChainClock heads={heads} info={info} />}
         <div className="chips">
-          {Object.values(s.agents)
-            .sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role) || Number(a.agentId) - Number(b.agentId))
-            .map((a) => (
+          {chips.map((a) => (
               <button
                 key={a.agentId}
                 className="chip"
@@ -68,7 +68,7 @@ export function Act2({ demo }: { demo: Demo }) {
                 title={pinned === a.agentId ? "pinned: click to follow the action again" : "pin this agent"}
               >
                 <span className="mark" style={{ background: ROLE_COLOUR[a.role] ?? "#c3c2b7" }} />
-                {a.label.replace(" (demo)", "")} #{a.agentId}
+                {a.label} #{a.agentId}
                 {pinned === a.agentId ? " 📌" : ""}
               </button>
             ))}
@@ -178,13 +178,15 @@ function AgentPanel({ s, a, gate, reread }: { s: ScreenState; a: AgentState; gat
   const fresh = c.certBlock ? a.block - c.certBlock : null;
   const onchain = useOnchain(s, a, reread);
   const pay = a.lastPayment;
+  // null = not gated (replay, or no chain feed for this run); otherwise the block's state as seen by this screen
+  const payState = pay && gate ? (stateOf(gate, pay.block) ?? "not seen yet by this screen") : null;
   return (
     <>
       <div className="agent-head">
         <Avatar id={a.agentId} name={a.label} />
         <div>
           <h1>
-            {a.label.replace(" (demo)", "")} <span className="muted">#{a.agentId}</span>
+            {a.label} <span className="muted">#{a.agentId}</span>
           </h1>
           <div className="sub">
             role: {a.role} · state read at block {int(a.block)} (event #{a.seq}) · demo agent registered by chantier 06
@@ -218,8 +220,7 @@ function AgentPanel({ s, a, gate, reread }: { s: ScreenState; a: AgentState; gat
           <h2>What your contract sees</h2>
           <div className="hero">
             <div className="value num" style={{ color: c.trustLow !== "0" ? "#cfe2fb" : undefined }}>
-              {pct(c.trustLow)}
-              <span className="unit">{c.trustLow === "0" ? "" : " %"}</span>
+              {pctU(c.trustLow)}
             </div>
             <Spark points={a.history.map((p) => p.trustLowPct)} color="#3987e5" width={180} height={48} />
             <div className="label">ANCRE mass under the reader's {set.anchors.length} anchors, leave-one-out (m = {set.minAnchors}), lower bound</div>
@@ -228,18 +229,18 @@ function AgentPanel({ s, a, gate, reread }: { s: ScreenState; a: AgentState; gat
           <div className="stats four">
             <Stat
               label="raw mass Σλt"
-              value={`${pct(c.trust)}${c.trust === "0" ? "" : " %"}`}
-              foot={BigInt(c.trust) >= BigInt(c.theta) && c.trustLow === "0" ? "over θ, but from one anchor only" : `distrust ${pct(c.distrust)} %`}
+              value={pctU(c.trust)}
+              foot={BigInt(c.trust) >= BigInt(c.theta) && c.trustLow === "0" ? "over θ, but from one anchor only" : `distrust ${pctU(c.distrust)}`}
             />
             <Stat label="status" value={c.status} foot={c.status === "VETOED" ? `${c.vetoCount} anchor veto · tag ${c.triggerTagName ?? "?"}` : "assess()"} />
             <Stat label="error bound e" value={bound(c.e)} foot="certificate, upper" />
             <Stat label="certificate" value={fresh === null ? "none" : `${fresh} blk`} foot={c.certBlock ? `old · cert block ${int(c.certBlock)}` : "NO_CERT"} />
           </div>
-          {pay && gate && stateOf(gate, pay.block) !== "Finalized" ? (
+          {pay && payState !== null && payState !== "Finalized" ? (
             <Verdict
               pay={null}
               title="AWAITING FINALITY"
-              why={`payment evaluated at block ${int(pay.block)}: ${stateOf(gate, pay.block) ?? "not seen yet by this screen"}; the verdict shows once the block is Finalized`}
+              why={`payment evaluated at block ${int(pay.block)}: ${payState}; the verdict shows once the block is Finalized`}
             />
           ) : pay ? (
             <Verdict
@@ -247,7 +248,7 @@ function AgentPanel({ s, a, gate, reread }: { s: ScreenState; a: AgentState; gat
               title={pay.decision === "PAID" ? "PAID" : "REFUSED"}
               why={
                 pay.decision === "PAID"
-                  ? `${(Number(pay.amount) / 1e6).toFixed(2)} USDC settled at block ${int(pay.block)} · isValidSignature accepted`
+                  ? `${Number(pay.amount) / 1e6} USDC settled at block ${int(pay.block)} · isValidSignature accepted`
                   : `${pay.reason}${pay.explain?.status && pay.explain.status !== "OK" ? ` (ANCRE ${pay.explain.status}${c.triggerTagName ? `, tag ${c.triggerTagName}` : ""})` : ""} · refused by the payer contract at ${pay.stage}, block ${int(pay.block)}`
               }
             />
@@ -278,7 +279,7 @@ function useOnchain(s: ScreenState, a: AgentState, enabled: boolean): ReadState 
   const [st, setSt] = useState<ReadState | null>(null);
   useEffect(() => {
     // replay never re-reads: a fork RPC running now may hold another run's state at the same blocks
-    const rpc = enabled ? rpcForRun(h.network, NETWORKS.fork.http) : null;
+    const rpc = enabled ? (endpointsForRun(h.network)?.http ?? null) : null;
     if (!rpc || !h.set || !h.contracts) {
       setSt({ key, r: null, error: enabled ? `no RPC for a ${h.network.mode} run` : "replay" });
       return;
@@ -354,21 +355,20 @@ function Latency({ s }: { s: ScreenState }) {
 }
 
 function Feed({ rows, s, gate, onPick }: { rows: FeedRow[]; s: ScreenState; gate: HeadsState | null; onPick: (id: string) => void }) {
-  const shown = groupBursts(rows).slice(-40).reverse();
+  const shown = useMemo(() => rows.slice(-40).reverse(), [rows]);
   return (
     <div className="feed">
       {shown.length === 0 && <div className="muted">No payment or rating yet.</div>}
       {shown.map((r) => {
-        const isSlash = r.kind === "feedback" && /slash/.test(r.detail ?? "");
         const st = gate ? stateOf(gate, r.block) : null;
         const pending = gate !== null && st !== "Finalized" && r.verdict !== null;
-        const cls = r.verdict === "PAID" ? "paid" : r.verdict === "REFUSED" ? "refused" : r.verdict === "REJECTED" ? "rejected" : isSlash ? "slash" : "";
+        const cls = r.verdict === "PAID" ? "paid" : r.verdict === "REFUSED" ? "refused" : r.verdict === "REJECTED" ? "rejected" : r.negative ? "slash" : "";
         return (
           <div key={r.seq} className={`row ${cls}`} onClick={() => r.agentId && onPick(r.agentId)} style={{ cursor: r.agentId ? "pointer" : "default" }}>
             <div className="blk">
               blk {int(r.block)}
               {r.count > 1 ? `…${int(r.lastBlock)}` : ""}
-              {gate && <StateMark st={stateOf(gate, r.block)} />}
+              {gate && <StateMark st={st} />}
               <br />
               scene {r.scene}
             </div>
@@ -379,9 +379,7 @@ function Feed({ rows, s, gate, onPick }: { rows: FeedRow[]; s: ScreenState; gate
                   {r.verdict === "PAID" ? "✓ PAID" : r.verdict === "REFUSED" ? `⛔ REFUSED · ${r.reason}` : `✗ REJECTED · ${r.reason}`}{" "}
                 </span>
               )}
-              <span className="lbl">
-                {r.count > 1 ? `${r.count} ratings “${r.detail}” inside the farm (${r.firstLabel} … ${r.label})` : r.verdict ? r.label.replace(/: (PAID|REFUSED.*)$/, "") : r.label}
-              </span>
+              <span className="lbl">{r.text}</span>
               {r.detail && r.verdict !== "PAID" && r.count === 1 && <div className="muted" style={{ fontSize: 12.5 }}>{r.detail}</div>}
             </div>
           </div>
@@ -392,28 +390,6 @@ function Feed({ rows, s, gate, onPick }: { rows: FeedRow[]; s: ScreenState; gate
   );
 }
 
-type Burst = FeedRow & { count: number; lastBlock: number; firstLabel: string };
-
-/** Consecutive ratings of the same scene with the same tag and value (the farm's ring) collapse into one row. */
-function groupBursts(rows: FeedRow[]): Burst[] {
-  const out: Burst[] = [];
-  for (const r of rows) {
-    const prev = out.at(-1);
-    if (prev && r.kind === "feedback" && prev.kind === "feedback" && prev.scene === r.scene && prev.detail === r.detail && /^\d\.farm:/.test(r.step) && /^\d\.farm:/.test(prev.step)) {
-      out[out.length - 1] = { ...r, seq: prev.seq, block: prev.block, count: prev.count + 1, lastBlock: r.block, firstLabel: prev.firstLabel };
-    } else out.push({ ...r, count: 1, lastBlock: r.block, firstLabel: r.label.split(" gives ")[0] });
-  }
-  return out;
-}
-
-/** WebSocket of the run's chain: Monad testnet (monadNewHeads) or the anvil fork (newHeads). Frozen: none. */
-function wsForRun(s: ScreenState): string | null {
-  const n = s.header?.network;
-  if (!n) return null;
-  if (n.mode === "testnet") return NETWORKS.testnet.wss ?? null;
-  if (n.mode === "fork") return NETWORKS.fork.http.replace(/^http/, "ws");
-  return null;
-}
 
 const MARK: Record<string, string> = { Proposed: "○", Voted: "◐", Finalized: "■", Verified: "■" };
 function StateMark({ st }: { st: string | null }) {

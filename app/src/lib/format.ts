@@ -13,12 +13,8 @@ export function pct(wad: string | bigint | null | undefined, digits = 2): string
   return `${s.slice(0, -digits)}.${s.slice(-digits)}`;
 }
 
-/** WAD (share of the anchors' mass) as a plain fraction, e.g. 0.1111 */
-export function share(wad: string | bigint, digits = 4): string {
-  const x = BigInt(wad);
-  if (x === 0n) return "0";
-  return (Number(x) / 1e18).toFixed(digits);
-}
+/** pct() with its unit, except for an exact 0 (shown bare: "0", never "0 %") */
+export const pctU = (wad: string | bigint) => `${pct(wad)}${BigInt(wad) === 0n ? "" : " %"}`;
 
 /** Tiny WAD amounts (error bounds): show in wei when below 1e-6 %. */
 export function bound(wad: string | bigint | null | undefined): string {

@@ -1,14 +1,13 @@
 // Copy chantier 06 event logs (demo/out/run-*.json, format ancre-demo-events-v1) into public/runs/ for the
-// offline replay, and write public/runs/index.json. Source directory, first that exists:
-//   $ANCRE_RUNS_DIR · ../demo (this repo, once chantier 06 is merged) · ../../ancre-06/demo (sibling worktree)
+// offline replay, and write public/runs/index.json. Source directory: scripts/runs-dir.mjs.
 // Usage: node scripts/sync-runs.mjs [file.json ...]   (default: sample/run-fork.json + out/latest.json)
 import { copyFileSync, existsSync, readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
+import { runsDir, runsDirs } from "./runs-dir.mjs";
 
 const here = new URL("..", import.meta.url).pathname;
-const candidates = [process.env.ANCRE_RUNS_DIR, join(here, "../demo"), join(here, "../../ancre-06/demo")].filter(Boolean);
-const src = candidates.find((d) => existsSync(join(d, "EVENTS.md")) || existsSync(join(d, "out")));
-if (!src) throw new Error(`no chantier 06 demo dir found in ${candidates.join(", ")}`);
+const src = runsDir(here);
+if (!src) throw new Error(`no chantier 06 demo dir found in ${runsDirs(here).join(", ")}`);
 const files = process.argv.slice(2).length
   ? process.argv.slice(2).map((f) => resolve(f))
   : [join(src, "sample/run-fork.json"), join(src, "out/latest.json")].filter(existsSync);

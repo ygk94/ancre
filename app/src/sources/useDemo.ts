@@ -7,7 +7,7 @@ export type RunInfo = { file: string; runId: string; mode: string; chainId: numb
 export type Pacing = "recorded" | "presenter";
 export type Source =
   | { kind: "replay"; run: RunInfo | null; cursor: number; total: number; playing: boolean; speed: number; pacing: Pacing; at: Header | DemoEvent | null; error: string | null }
-  | { kind: "live"; ok: boolean; error: string | null; polls: number; lastChangeMs: number | null };
+  | { kind: "live"; ok: boolean; error: string | null };
 
 const params = () => new URLSearchParams(location.search);
 const base = import.meta.env.BASE_URL;
@@ -25,7 +25,7 @@ export function useDemo() {
   const [speed, setSpeed] = useState(Number(p.get("speed") ?? 1));
   const [pacing, setPacing] = useState<Pacing>(p.get("pacing") === "recorded" ? "recorded" : "presenter");
   const [live, setLive] = useState<ScreenState>(initialScreen);
-  const [liveInfo, setLiveInfo] = useState({ ok: false, error: null as string | null, polls: 0, lastChangeMs: null as number | null });
+  const [liveInfo, setLiveInfo] = useState({ ok: false, error: null as string | null });
 
   // ---------------------------------------------------------------- replay
   useEffect(() => {
@@ -107,15 +107,15 @@ export function useDemo() {
         const r = await fetch(`${base}live/latest.json`, { cache: "no-store" });
         if (!r.ok) throw new Error(r.status === 404 ? "no demo/out/latest.json yet (start a chantier 06 run)" : `HTTP ${r.status}`);
         const t = await r.text();
-        const changed = t !== lastText;
-        if (changed) {
+        if (t !== lastText) {
           lastText = t;
           const ls = parseRun(t);
           setLive((s) => ls.reduce(reduce, s));
         }
-        setLiveInfo((i) => ({ ok: true, error: null, polls: i.polls + 1, lastChangeMs: changed ? Date.now() : i.lastChangeMs }));
+        setLiveInfo((i) => (i.ok ? i : { ok: true, error: null })); // same object when nothing changed: no re-render
       } catch (e) {
-        setLiveInfo((i) => ({ ...i, ok: false, error: String((e as Error).message ?? e), polls: i.polls + 1 }));
+        const error = String((e as Error).message ?? e);
+        setLiveInfo((i) => (!i.ok && i.error === error ? i : { ok: false, error }));
       }
       if (!stop) window.setTimeout(tick, POLL_MS);
     };
@@ -141,13 +141,9 @@ export function useDemo() {
     [lines],
   );
 
-  return {
-    screen,
-    source,
-    runs,
-    setRunFile,
-    mode,
-    setMode,
-    controls: { step, jumpScene, setPlaying, setSpeed, setPacing, restart: () => setCursor(0), end: () => setCursor(lines.length - 1) },
-  };
+  const controls = useMemo(
+    () => ({ step, jumpScene, setPlaying, setSpeed, setPacing, restart: () => setCursor(0) }),
+    [step, jumpScene],
+  );
+  return { screen, source, runs, setRunFile, mode, setMode, controls };
 }

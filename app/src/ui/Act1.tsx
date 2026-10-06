@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import act1 from "../data/act1.json";
 import scan from "../data/scan-snapshot.json";
 import { agentRegistryView, chainHead, type AgentRegistryView, type ChainHead } from "../lib/envio";
-import { bound, fmtDate, int, pct, short } from "../lib/format";
+import { bound, fmtDate, int, pct, pctU, short } from "../lib/format";
 import { Avatar, BigNum, Meter, Stat, Verdict } from "./common";
 
 type Lens = (typeof act1.lenses)[number];
@@ -24,7 +24,7 @@ export const agentName = (id: string) => {
 // Captions: counts come from the solver snapshot (act1.registry, block act1.snapshotBlock), never typed by hand;
 // the explorer column next to them shows the live count, so a drift is visible, not hidden.
 const farmShare = Math.round((act1.farm.eveFeedbacks / act1.snapshotFeedbacks) * 100);
-const ORDER = ["182", "8317", "4", "18", "2", "3", "9", "87", "19", "10279", "10278"];
+const ORDER: string[] = act1.featured; // one list, written by scripts/export_act1.py, read by snapshot-8004scan.mjs
 const oneWallet = (id: string) => {
   const r = registry[id];
   return r && r.clients === 1 && r.feedbacks > 1 ? `${int(r.feedbacks)} ratings from a single wallet` : null;
@@ -51,7 +51,6 @@ export function lensAgent(lens: Lens, id: string): LensAgent {
   return { inSupport: false, trust: "0", trustRobust: "0", distrust: "0", verdict: { pay: false, reason: "UNTRUSTED", detail: "unknown to these anchors (mass 0)" } };
 }
 
-const pctU = (w: string) => `${pct(w)}${w === "0" ? "" : " %"}`;
 
 export function Act1({ onHead }: { onHead: (h: ChainHead | null) => void }) {
   const [sel, setSel] = useState("182");
@@ -60,20 +59,28 @@ export function Act1({ onHead }: { onHead: (h: ChainHead | null) => void }) {
   const [view, setView] = useState<"agent" | "board">("agent");
   const [reg, setReg] = useState<Record<string, AgentRegistryView | "error">>({});
 
+  // requests are shared (lib/envio memo): an unmounted view just ignores the answer instead of aborting it
   useEffect(() => {
-    const ac = new AbortController();
-    chainHead(143, ac.signal).then(onHead, () => onHead(null));
-    return () => ac.abort();
+    let dead = false;
+    chainHead(143).then(
+      (h) => !dead && onHead(h),
+      () => !dead && onHead(null),
+    );
+    return () => {
+      dead = true;
+    };
   }, [onHead]);
 
   useEffect(() => {
     if (reg[sel]) return;
-    const ac = new AbortController();
-    agentRegistryView(143, sel, ac.signal).then(
-      (v) => setReg((r) => ({ ...r, [sel]: v })),
-      (e) => !ac.signal.aborted && (console.warn(e), setReg((r) => ({ ...r, [sel]: "error" }))),
+    let dead = false;
+    agentRegistryView(143, sel).then(
+      (v) => !dead && setReg((r) => ({ ...r, [sel]: v })),
+      (e) => !dead && (console.warn(e), setReg((r) => ({ ...r, [sel]: "error" }))),
     );
-    return () => ac.abort();
+    return () => {
+      dead = true;
+    };
   }, [sel, reg]);
 
   const lens = act1.lenses.find((l) => l.id === lensId)! as Lens;
@@ -236,8 +243,7 @@ function ContractColumn({ id, lens }: { id: string; lens: Lens }) {
       <h2>What your contract sees</h2>
       <div className="hero">
         <div className="value num" style={{ color: massPct > 0 ? "#cfe2fb" : undefined }}>
-          {pct(a.trustRobust)}
-          <span className="unit">{a.trustRobust === "0" ? "" : " %"}</span>
+          {pctU(a.trustRobust)}
         </div>
         <div className="label">
           ANCRE mass under your anchors, leave-one-out (m = {lens.m}){a.inSupport ? "" : " · unreachable from them: unknown"}
@@ -286,7 +292,7 @@ function Ranking({ lens, sel, onSel }: { lens: Lens; sel: string; onSel: (id: st
               <tr key={a.agentId} className={a.agentId === sel ? "hl" : ""} onClick={() => onSel(a.agentId)}>
                 <td className="r">{i + 1}</td>
                 <td>
-                  {a.name.replace(/^monad:\/\//, "")} <span className="muted">#{a.agentId}</span>
+                  {agentName(a.agentId)} <span className="muted">#{a.agentId}</span>
                 </td>
                 <td className="muted num">{int(a.total_feedbacks)} ratings</td>
                 <td className="v">{a.total_score.toFixed(2)}</td>
@@ -313,7 +319,7 @@ function Ranking({ lens, sel, onSel }: { lens: Lens; sel: string; onSel: (id: st
                 <td>
                   {agentName(r.agentId)} <span className="muted">#{r.agentId}</span>
                 </td>
-                <td className="muted num">{r.distrust !== "0" ? `distrust ${pct(r.distrust)} %` : `raw ${pctU(r.trust)}`}</td>
+                <td className="muted num">{r.distrust !== "0" ? `distrust ${pctU(r.distrust)}` : `raw ${pctU(r.trust)}`}</td>
                 <td className="v">{pctU(r.trustRobust)}</td>
               </tr>
             ))}

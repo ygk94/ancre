@@ -2,14 +2,13 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
+import { runsDirs } from "./scripts/runs-dir.mjs";
 
 // Live act 2 in dev: serve the chantier 06 event log (demo/out/latest.json, rewritten atomically after every
 // event) at /live/latest.json. Dev-server only: a static build has no live source and starts in replay.
-// Directory, first that exists: $ANCRE_RUNS_DIR · ../demo · ../../ancre-06/demo.
+// Directories: scripts/runs-dir.mjs.
 function liveRuns(): Plugin {
-  const dirs = [process.env.ANCRE_RUNS_DIR, join(__dirname, "../demo"), join(__dirname, "../../ancre-06/demo")].filter(
-    Boolean,
-  ) as string[];
+  const dirs = runsDirs(__dirname);
   return {
     name: "ancre-live-runs",
     configureServer(server) {

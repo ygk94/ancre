@@ -2,8 +2,21 @@
  "format": "ancre-screen-act1-v1",
  "status": "COMPUTED by the reference solver (not deployed on mainnet), reproducible",
  "command": "cd app && ../solver/.venv/bin/python scripts/export_act1.py",
- "solverCommit": "ac1a4d3",
+ "solverCommit": "fe3d554",
  "chainId": 143,
+ "featured": [
+  "182",
+  "4",
+  "8317",
+  "18",
+  "2",
+  "3",
+  "9",
+  "87",
+  "19",
+  "10279",
+  "10278"
+ ],
  "snapshotBlock": 108835675,
  "snapshotFeedbacks": 9283,
  "snapshotAgents": 10262,
@@ -197,7 +210,7 @@
      "verdict": {
       "pay": false,
       "reason": "UNTRUSTED",
-      "detail": "unknown to these anchors (mass 0)"
+      "detail": "slashed by a trusted rater: distrust 14.81%, no mass"
      }
     },
     "8317": {
@@ -378,7 +391,7 @@
      "verdict": {
       "pay": false,
       "reason": "UNTRUSTED",
-      "detail": "unknown to these anchors (mass 0)"
+      "detail": "slashed by a trusted rater: distrust 14.81%, no mass"
      }
     }
    ]

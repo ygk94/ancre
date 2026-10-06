@@ -17,6 +17,8 @@ export function App() {
   const demo = useDemo();
 
   // presenter keys in act 2 replay: ← → step, space play/pause, 1-6 jump to a scene
+  const { controls } = demo;
+  const playing = demo.source.kind === "replay" && demo.source.playing;
   useEffect(() => {
     if (tab !== "act2" || demo.mode !== "replay") return;
     const on = (e: KeyboardEvent) => {
@@ -26,14 +28,14 @@ export function App() {
       if (!ours) return; // Tab, Enter… keep their default behaviour
       // a focused button would also react to Space/arrows: take these keys away from it
       if (tag === "BUTTON") (e.target as HTMLElement).blur();
-      if (e.key === "ArrowRight") demo.controls.step(1);
-      else if (e.key === "ArrowLeft") demo.controls.step(-1);
-      else if (e.key === " ") (e.preventDefault(), demo.controls.setPlaying(!(demo.source.kind === "replay" && demo.source.playing)));
-      else if (/^[1-6]$/.test(e.key)) demo.controls.jumpScene(Number(e.key));
+      if (e.key === "ArrowRight") controls.step(1);
+      else if (e.key === "ArrowLeft") controls.step(-1);
+      else if (e.key === " ") (e.preventDefault(), controls.setPlaying(!playing));
+      else if (/^[1-6]$/.test(e.key)) controls.jumpScene(Number(e.key));
     };
     window.addEventListener("keydown", on);
     return () => window.removeEventListener("keydown", on);
-  }, [tab, demo]);
+  }, [tab, demo.mode, controls, playing]);
 
   return (
     <div className="app">

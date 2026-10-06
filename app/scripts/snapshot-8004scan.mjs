@@ -5,11 +5,12 @@
 // Usage (from app/):  node scripts/snapshot-8004scan.mjs   ->  src/data/scan-snapshot.json
 // Fields kept verbatim from the API: token_id, name, total_score, total_feedbacks, average_score, created_at.
 // 8004scan's score formula is not documented: the screen quotes these numbers, it never re-derives them.
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 
 const API = "https://8004scan.io/api/v1/agents";
 const CHAIN = 143;
-const FEATURED = [182, 4, 8317, 18, 2, 3, 9, 87, 19, 10279, 10278];
+// the featured agents: one list, written by scripts/export_act1.py
+const FEATURED = JSON.parse(readFileSync(new URL("../src/data/act1.json", import.meta.url), "utf8")).featured.map(Number);
 const TOP = 25;
 
 const pick = (i) => ({
