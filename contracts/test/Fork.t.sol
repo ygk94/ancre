@@ -63,12 +63,21 @@ contract ForkTest is AncreBase {
         if (omitEdgeTo3) {
             gg.addRow(1, address(0), _two(2, 4), _twoW(10_000, -10_000));
         } else {
-            uint256[] memory d = new uint256[](3);
-            (d[0], d[1], d[2]) = (2, 3, 4);
-            int256[] memory w = new int256[](3);
-            (w[0], w[1], w[2]) = (10_000, 10_000, -10_000);
+            (uint256[] memory d, int256[] memory w) = _eaRow3();
             gg.addRow(1, address(0), d, w);
         }
+        _setOwnerFps(gg);
+    }
+
+    /// EA's full row (#2 +1, #3 +1, #4 -1); own frame (via-IR stack depth)
+    function _eaRow3() internal pure returns (uint256[] memory d, int256[] memory w) {
+        d = new uint256[](3);
+        (d[0], d[1], d[2]) = (2, 3, 4);
+        w = new int256[](3);
+        (w[0], w[1], w[2]) = (10_000, 10_000, -10_000);
+    }
+
+    function _setOwnerFps(CertLib.Graph memory gg) internal view {
         for (uint256 i = 2; i <= 4; ++i) {
             gg.ownerFp[i] = ar.ownerFingerprint(IIdentityRegistry8004(ID).ownerOf(i));
         }
