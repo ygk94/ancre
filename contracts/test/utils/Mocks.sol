@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CC0-1.0
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
 /// Minimal ERC-8004 IdentityRegistry mock mirroring v2.0.0 semantics that ANCRE relies on:

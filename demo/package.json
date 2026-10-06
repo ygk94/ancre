@@ -1,6 +1,7 @@
 {
   "name": "ancre-demo-act2",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "description": "ANCRE act 2: Sybil farm and demo scenes on a fork of Monad testnet (or the real testnet)",
   "engines": { "node": ">=23.8" },

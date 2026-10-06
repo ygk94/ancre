@@ -29,25 +29,22 @@
    - **`rpId` de Mera = `ancre-xyz.netlify.app`**, définitif : ne plus renommer le site.
    - **Protection d'accès Netlify active (401)** : la garder jusqu'à la mise en public.
    - Le webhook Alchemy n'ira **pas** sur Netlify : il doit arriver là où tourne le certificateur (tunnel pour la démo ; hôte du 13 au 27/10 à décider).
-5. [ ] **Trancher la divulgation aux auteurs d'ERC-8004 (D29).**
-   - Le dépôt passe public le 12/10, et il décrit le contournement du garde-fou et l'EOA d'upgrade.
-   - Deux options : envoyer le brouillon (c) de `docs/erc/drafts/` avant le 12/10 (recommandé), ou retirer ces passages de la version publique.
 6. [x] **Modale « Rules & Guidelines »** ✅ 07/10. Les règles v3.0 sont résumées dans `docs/ressources/regles-metropolis-v3.md` ; elles ajoutent les points 6a et 6b.
-6a. [ ] **Choisir la licence : MIT recommandé** (OSI obligatoire, §7.2).
-   - Aujourd'hui, 20 fichiers `.sol` sont en CC0, qui n'est **pas** une licence OSI, et il n'y a aucun fichier `LICENSE`.
-   - Le plugin et l'indexeur sont déjà en MIT. L'ERC reste en CC0.
-   - Dis « MIT » et je fais le changement.
-6b. [ ] **Vérifier ton contrat de travail (§4.3).**
-   - Tu dois confirmer que ta participation ne viole aucun accord avec un employeur, clause de cession des inventions comprise.
-   - **117 des 201 commits sont signés avec une adresse professionnelle** (`@employer`), et 6 avec `@former-employer`.
-   - L'historique est obligatoire (§4.1), donc on ne peut pas publier un dépôt sans historique. Si tu préfères, je peux réécrire l'auteur de ces commits vers ton adresse perso avant la mise en public. Les dates et le contenu ne changent pas, mais les hashes changent.
-   - C'est à toi de juger ; je ne donne pas d'avis juridique.
+6a. [x] **Licence : MIT** ✅ 07/10. Fichier `LICENSE` à la racine, en-têtes SPDX des contrats passés en MIT, README §14 à jour. L'ERC reste en CC0.
+6b. [x] **Identité des commits : ton adresse perso** ✅ 07/10.
+   - Ce dépôt commite désormais en `Hugo Thomas <hugo.thomas.perso@gmail.com>` (`git config`, valable dans tous les worktrees).
+   - **Sur l'autre machine**, tape la même chose : `git config user.email hugo.thomas.perso@gmail.com`.
+   - L'historique **public** passera entièrement sous cette identité au moment de la publication : clone filtré avec un mailmap, procédure `docs/soumission/publication-checklist.md` §4, qui garde les dates d'origine. Le dépôt de travail n'est pas réécrit, donc pas de force-push et rien de cassé sur l'autre machine.
+   - Ce qui reste à toi seul : relire la clause de cession des inventions de ton contrat (§4.3 des règles).
 7. [x] **Compte Alchemy gratuit (D54, D55).** ✅ 07/10 : Monad testnet et Monad mainnet sont activés, et la clé d'API est dans `solver/.env` (ignoré par git, droits 600).
    - Vérifié par `eth_chainId` : le testnet répond `0x279f` (10143) et le mainnet `0x8f` (143).
    - **Reste à faire le 08/10** : le jeton Notify, la clé de signature et l'URL du webhook (voir le point 4 de ce jour-là).
 
 ## 🟠 Mar 07/10 : les tests réels sur le testnet
 
+0. [ ] **Divulgation aux auteurs d'ERC-8004 (D29) : tu l'envoies aujourd'hui** (décidé le 07/10). Il faut qu'elle parte avant la mise en public du dépôt.
+   - Le dépôt passe public le 12/10, et il décrit le contournement du garde-fou et l'EOA d'upgrade.
+   - Brouillon (c) prêt dans `docs/erc/drafts/`. Dis-moi quand c'est parti : je débloque la publication (bloc DISCLOSURE-GATE du README).
 1. [ ] **Répéter l'acte 2 sur fork, sans aucune transaction réelle.**
    - Le contrat corrigé passe déjà en fork : 8/8, mesuré le 06/10.
    - Avant de lancer : `git pull`, puis `cd contracts && forge build`.

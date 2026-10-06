@@ -328,6 +328,6 @@ Every number in this README was produced by a script or test in this repository,
 
 ## 14. Licenses
 
-- Code (`contracts/`, `solver/`, `indexer/`, `plugin/`): **[TBD: MIT or Apache-2.0, decision pending — see `LICENSE`]**.
+- Code (`contracts/`, `solver/`, `indexer/`, `plugin/`, `app/`, `demo/`): **MIT**, see [`LICENSE`](LICENSE).
 - The draft ERC text (`docs/erc/anchored-reputation.md`): **CC0-1.0**, as required by EIP-1.
 - Dependencies keep their own licenses: `forge-std` (MIT / Apache-2.0); the MetaMask Agent Wallet SDK is a peer dependency and is not vendored.

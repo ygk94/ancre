@@ -10,11 +10,11 @@
 
 | # | Décision | Options | Ma recommandation, et pourquoi |
 |---|---|---|---|
-| **P1** | Licence du code | MIT ou Apache-2.0 | **MIT.** 7 fichiers Solidity (le payeur et ses tests), le plugin et l'indexeur sont **déjà** en MIT : un seul changement d'en-tête (17 fichiers CC0) au lieu de 24 + 2 `package.json`. Apache-2.0 n'apporte que la clause de brevets, qui ne protège personne ici (pas de brevet en jeu, pas d'entreprise contributrice). L'ERC reste en **CC0** (exigé par EIP-1) |
+| **P1** | Licence du code | MIT ou Apache-2.0 | ✅ **Tranché par Hugo le 07/10 : MIT** (`LICENSE` racine, SPDX passés en MIT, README §14). **MIT.** 7 fichiers Solidity (le payeur et ses tests), le plugin et l'indexeur sont **déjà** en MIT : un seul changement d'en-tête (17 fichiers CC0) au lieu de 24 + 2 `package.json`. Apache-2.0 n'apporte que la clause de brevets, qui ne protège personne ici (pas de brevet en jeu, pas d'entreprise contributrice). L'ERC reste en **CC0** (exigé par EIP-1) |
 | **P2** | Divulgation aux auteurs d'ERC-8004 (D29) | (a) envoyer le brouillon (c) **avant** la mise en public ; (b) ne pas divulguer et retirer les passages du §2.1 de la version publique | **(a), au plus tard le 10/10**, pour laisser 24-48 h avant le 12/10. Les faits sont lisibles on-chain par n'importe qui ; ce qui compte est qu'ils l'apprennent par nous et pas par le dépôt. Le §2.1 liste ce qui dépend de cette décision |
 | **P3** | Historique public | (A) rendre public `ygk94/ancre` tel quel ; (B) nouveau dépôt public, historique **filtré** (chemins privés retirés, auteurs unifiés) ; (C) nouveau dépôt, un seul commit | **(B).** Détail et commandes au §4 |
 | **P4** | Ce qui reste privé | voir le tableau du §3 | Garder privés `mustdo/`, `docs/conseil/`, `docs/chantiers/`, `docs/ressources/veille-*`, `docs/revue/`, `CLAUDE.md` ; nettoyer `ANCRE.md` ou le garder privé |
-| **P5** | Identité des commits publics | une seule identité, laquelle ? | Une identité **personnelle** et stable (le compte `ygk94`, avec l'adresse `noreply` de GitHub par exemple). Voir §2.3 : l'historique actuel mélange **5 identités**, dont l'adresse d'un employeur |
+| **P5** | Identité des commits publics | une seule identité, laquelle ? | ✅ **Tranché par Hugo le 07/10 : `Hugo Thomas <hugo.thomas.perso@gmail.com>`**, pour l'historique public (mailmap §4) et pour les commits à venir (`git config user.email` du dépôt, fait le 07/10). | Une identité **personnelle** et stable (le compte `ygk94`, avec l'adresse `noreply` de GitHub par exemple). Voir §2.3 : l'historique actuel mélange **5 identités**, dont l'adresse d'un employeur |
 | **P6** | `ancre-indexer` | même traitement que le dépôt principal ? | Oui : vérifier son historique avec les mêmes commandes (§7) avant de le rendre public. Il a été poussé depuis l'autre machine |
 
 ---
@@ -22,7 +22,7 @@
 ## 1. Licences
 
 **État mesuré (06/10)**
-- `contracts/` : **17 fichiers** en `SPDX-License-Identifier: CC0-1.0`, **7** en `MIT`.
+- `contracts/` : **17 fichiers** en `SPDX-License-Identifier: MIT`, **7** en `MIT`.
   - CC0 : `src/AnchoredReputation.sol`, `src/interfaces/IERC8004.sol`, `script/Deploy.s.sol`, et 14 tests (`AnchoredReputation`, `Base`, `Diff`, `Fork`, `Fuzz`, `Gas`, `Profile`, `RegistryBench`, `SolverVectors`, `ToolingProbe`, `Upgrade`, `Verified`, `utils/CertLib`, `utils/Mocks`).
   - MIT : `src/TrustGatedPayer.sol`, `script/t1/T1.s.sol`, `script/t1/T1Oracle.sol`, `test/TrustGatedPayer*.t.sol`, `test/utils/PayerBase.sol`, `test/utils/MockUSDC3009.sol`.
 - `plugin/package.json` et `indexer/package.json` : `"license": "MIT"`. `indexer/LICENSE` existe (MIT). **Aucun `LICENSE` à la racine.**
@@ -32,7 +32,7 @@
 
 **À faire (par une session de code ou par Hugo, pas par le 09 : `contracts/` est hors de mon périmètre)**
 1. Créer `LICENSE` à la racine (texte MIT ou Apache-2.0, titulaire et année : 🧑).
-2. Remplacer `CC0-1.0` par l'identifiant choisi dans les 17 en-têtes : `grep -rl "CC0-1.0" contracts/src contracts/test contracts/script | xargs sed -i '' 's/SPDX-License-Identifier: CC0-1.0/SPDX-License-Identifier: MIT/'`.
+2. Remplacer `CC0-1.0` par l'identifiant choisi dans les 17 en-têtes : `grep -rl "CC0-1.0" contracts/src contracts/test contracts/script | xargs sed -i '' 's/SPDX-License-Identifier: MIT/SPDX-License-Identifier: MIT/'`.
 3. Ajouter un fichier `LICENSE` (ou une ligne dans le README de `docs/erc/`) qui dit que **le texte de l'ERC** reste en CC0.
 4. Si Apache-2.0 : changer aussi les 7 en-têtes MIT et les deux `package.json`, et ajouter un `NOTICE`.
 5. Relancer `forge build` (les SPDX ne changent pas le bytecode des contrats déployés, mais la vérification de source compare le fichier exact : **changer la licence avant le déploiement final**).
@@ -156,11 +156,11 @@ docs/soumission/figures/
 .gitignore
 EOF
 cat > ../mailmap.txt <<'EOF'
-<IDENTITÉ CHOISIE> <hugo.thomas.perso@gmail.com>
-<IDENTITÉ CHOISIE> <hugo.thomas.perso@gmail.com>
-<IDENTITÉ CHOISIE> <hugo.thomas.perso@gmail.com>
-<IDENTITÉ CHOISIE> <hugo.thomas.perso@gmail.com>
-<IDENTITÉ CHOISIE> <hugo.thomas.perso@gmail.com>
+Hugo Thomas <hugo.thomas.perso@gmail.com> <hugo.thomas.perso@gmail.com>
+Hugo Thomas <hugo.thomas.perso@gmail.com> <hugo.thomas.perso@gmail.com>
+Hugo Thomas <hugo.thomas.perso@gmail.com> <hugo.thomas.perso@gmail.com>
+Hugo Thomas <hugo.thomas.perso@gmail.com> <hugo.thomas.perso@gmail.com>
+Hugo Thomas <hugo.thomas.perso@gmail.com> <hugo.thomas.perso@gmail.com>
 EOF
 git filter-repo --paths-from-file ../keep.txt --mailmap ../mailmap.txt
 # puis les vérifications du §7 sur ce clone, puis seulement : git remote add origin … && git push

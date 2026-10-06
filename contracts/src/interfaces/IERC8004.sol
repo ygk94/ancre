@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CC0-1.0
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
 /// Subset of the ERC-8004 v2.0.0 IdentityRegistry used by ANCRE (verified on Monad mainnet, 2026-09-27; the two
