@@ -8,6 +8,13 @@
 
 ## 🔴 Cette semaine, parce que ça bloque d'autres chantiers
 
+- [ ] **06/10, suite de ta réponse** :
+  - **Bounty Alchemy (D54)** : colle-moi la fiche officielle d'Alchemy depuis la plateforme (critères, livrables).
+  - **Modale des règles** : tu es en train de la récupérer.
+  - **Divulgation aux auteurs d'ERC-8004** : le dépôt passe public le 12/10. Or il contient la description du contournement du garde-fou et de l'EOA d'upgrade. **Le brouillon (c) de `docs/erc/drafts/` doit donc partir avant le 12/10**, ou ces passages doivent être retirés de la version publique. À trancher.
+  - **Keystore de démo** : à créer avec la commande donnée dans la conversation, puis à alimenter au faucet (au moins 15 MON et 1 USDC de testnet).
+  - **Domaine HTTPS pour Mera** : choisir le nom d'hôte, définitif, puisque le passkey y sera lié.
+
 - [ ] **📅 Ton plan jour par jour (tour 7, D52)** :
   - **Lun 06/10** :
     - inscription et projet (track 04, bounties Envio et Mera) ;

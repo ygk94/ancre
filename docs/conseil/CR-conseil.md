@@ -63,6 +63,7 @@
 | D51 | Vidéo et réseau | 3 minutes, à partir du storyboard de 2:55, avec le 2ᵉ saut (12 s) ; l'override dans le README, pas dans la vidéo. Acte 2 sur le testnet, plus une exécution minimale sur le mainnet. Snapshot et chiffres recalculés au tournage | 7 | 0,75 |
 | D52 | Plan du 06 au 12/10 | Plan daté dans `docs/chantiers/ROADMAP.md`. **Ordre de coupe** : (1) le code de rotation Mera, (2) le plugin dans la vidéo, (3) l'écran live, (4) la mesure de C. **Jamais coupés** : l'acte 1, la ferme refusée, l'ancre compromise (donc la correction A), le disjoncteur, le 2ᵉ saut, la démo figée, la soumission d'assurance | 7 | 0,75 |
 | D53 | **Bounty MetaMask abandonné** *(décidée par Hugo le 05/10 ; notée « D48 » par la session de l'autre machine, renumérotée D53 ici pour éviter la collision avec le lot 02-bis)* | Le bounty « Best Agent Wallet Plugin » est réservé à la track Onchain Finance & Trading. **On ne le vise plus.** Le plugin `mm ancre` reste dans le produit : il est la garde côté agent, et apparaît 6 s dans la vidéo au plus, ou dans le README seulement. Bounties visés : **Envio et Mera**, plus éventuellement un bounty « All tracks » à choisir (voir MUSTDO) | 06/10 | 0,9 |
+| D54 | **Troisième bounty : Alchemy** *(décision de Hugo, 06/10)* | Bounties visés : **Envio, Mera et Alchemy** (« Best Projects using Alchemy », 1 k$ en crédits). Alchemy remplace MetaMask. Le plugin MetaMask est **gardé s'il marche**, hors bounty. **La fiche officielle d'Alchemy reste à récupérer**, critères compris | 06/10 | — |
 
 ---
 
