@@ -30,14 +30,14 @@
 | G-1 | read function | `isTrusted(agentId, setId)`, `Assessment.trusted` | **`passesAnchorPolicy(agentId, setId)`, `Assessment.passesPolicy`** (AM-9.5) |
 | G-2 | anchor as a source (AM-08.A) | allowed | **`AnchorAsSource(u)`**: no row with SRC ∈ anchors (wallet or VIA_OWNER owner), both levels (§3.2) |
 | G-3 | controller edge rule (AM-08.B) | rejected whatever the sign | **w > 0 rejected, w < 0 KEPT** (§3.4); approved / operator anchor = veto (§6, `proveApproval` §7.4) |
-| G-4 | proven row resubmitted (AM-08.C, R2) | raw (vectorRoot, graphRoot) equality, open sets only, skipped under REGISTRY_CHANGED | **`ProvenRowResubmitted(u)`**: `provenFalse[setId][rowHash]` on the DECODED row, both levels, every state (§3.5) |
+| G-4 | proven row resubmitted (AM-08.C, R2) | raw (vectorRoot, graphRoot) equality, open sets only, skipped under REGISTRY_CHANGED | **`ProvenRowResubmitted(u)`**: proven edge and source FACTS checked on every later row, both levels, every state (§3.5) |
 | G-5 | canonical form (R4) | SRC bit tested by value; SPLUS ≥ S⁺ | **`NotCanonical(row)`**: SRC ⇒ src ≠ 0; SPLUS ⇒ sPlus > S⁺ (strict); alias ⇒ `ref` is an agent row |
 | G-6 | node table (R1) | `address(0)` node accepted | **refused (`BadNodes`)**; the second pass must end where the first ended (`BadRows(6)`) |
 | G-7 | anchor fingerprint (R5) | unchecked | **`ownerFp = 0` for anchors, both levels** (`EdgeMismatch(2^256−1, a)`); `dryRun` runs every check without registry reads |
 | G-8 | registry failures (R6) | a revert = a burnt agent | **only `ERC721NonexistentToken(uint256)` means "does not exist"**; any other failure: proofs revert `RegistryUnreadable`, `assess` returns `REGISTRY_CHANGED` |
 | G-9 | strict transfer (R7) | live `ownerOf` iff trust ≠ 0 | **iff some t^(a) > 0** (mass) |
 | G-10 | proof amounts (R3) | incremental, budget floor max(GRID, sPlus) kept | **cumulative bounds against the committed row**, budget follows the committed edges (§7.1) |
-| G-11 | submission path (AM-03.3) | — | **`submitCertificate` MUST be called directly by an EOA** (no relay, multicall or Safe): the indexer audits certificates from the transaction calldata (no traces on Monad) |
+| G-11 | submission path (AM-03.3) | — | **open sets: `msg.sender == tx.origin`** (`NotSubmitter`): the rows must be auditable from the transaction calldata (no traces on Monad), or omissions could never be proven. Attested sets: listed submitters, any path |
 
 The solver mirrors G-2, G-3 and G-5 (04-bis: R6 for w < 0, rows of anchors-as-sources dropped); the indexer (`edges.ts`) and the ERC (§3.3) take G-3. Joint vectors: `solver/vectors/common/*.json`, replayed by `test/CommonVectors.t.sol`.
 
@@ -171,20 +171,28 @@ Not checkable (no per-client index): that a row is complete, and that a declared
 The contract parses the rows twice (the arithmetic pass, then this one); the second pass MUST end exactly at the end of
 `rows` (`BadRows(6)`, R1).
 
-### 3.5 Proven rows (D48-C)
+### 3.5 Proven facts (D48-C, revised after the code review of 06/10)
 
+A first version hashed the whole decoded row; the review showed that a content tweak (sPlus = S⁺ + 1, one small
+positive edge dropped) gave a new hash and let an omission come back. The contract now stores the **facts** the proofs
+establish, which no encoding can change:
 ```
-content(row) = keccak256( client:32 ‖ sPlus:32 (0 if absent) ‖ for each edge: (dst << 16 | uint16(w)):32 )
-               (an alias has the content of its ref; the feedbackIndex is NOT included, W does not matter)
-rowHash(u, hdr, content) = keccak256(abi.encode(u, VIA_OWNER bit of hdr, content))      (public: rowHash)
+edge fact   (setId, client, agentJ) -> w      set by proveEdge: the D14 weight read NOW (D48-B controller rule)
+source fact (setId, keccak(u, src, VIA_OWNER bit))   set by proveWallet: the source claim of node u is false
 ```
-`proveEdge` and `proveWallet` set `provenFalse[setId][rowHash]` (public mapping) for the row they prove. Every later
-submission to the set, at both levels and whatever its state (REGISTRY_CHANGED included), reverts
-`ProvenRowResubmitted(u)` if one of its rows has a proven hash. The lookups are skipped while no row of the set was
-ever proven (`provenRows = 0`): an honest set never pays them. The decoded form makes re-encoding useless (another W,
-another feedbackIndex, an alias instead of a copy, other vectors, other rows elsewhere). Known limit (AM-02bis.3): a row
-proven false that becomes true again (a revocation resurrects the older feedback) cannot be recommitted identically in
-this set; the certifier drops the row (truncation margin) or, if it has positive edges, declares an sPlus.
+At every later submission to the set, at both levels and whatever its state (REGISTRY_CHANGED included), reverts
+`ProvenRowResubmitted(u)`:
+- an agent row whose (u, src, via) is a source fact;
+- a row of client c that does not carry exactly the proven weight w to agentJ, for every edge fact of c (an alias is
+  checked on its ref's edges): absent edge = 0; facts on u's own agent are skipped (no row has a self-loop); a proven
+  POSITIVE edge may be left out only under a declared sPlus ≥ S⁺ + w (a declared omission).
+
+The lookups are skipped while the set has no fact (`facts = 0`): an honest set never pays them. Liveness when the
+registry changes again after a proof: `refreshFact(setId, client, agentJ)` re-reads the edge and updates the fact,
+`clearSourceFact(setId, u, src, via)` clears a source claim that holds again (both permissionless: they only store a
+registry reading). Views: `edgeFact(setId, client, agentJ)`, `provenSource(setId, sourceHash(u, src, hdr))`.
+`proveEdge` refuses an edge to the row's own agent (`BadProof(27)`): with D48-B, a wallet's negative feedback on its own
+agent could otherwise be proven on every certificate, forever.
 
 ## 4. Exact integer arithmetic (what the contract recomputes)
 ```
@@ -224,7 +232,7 @@ x = neutral ⇒ w = 0
 Submitter-attested sets: a listed submitter always replaces (D27). Open (Registry-verified) sets: a new certificate is
 accepted iff
 ```
-REFUSED first (02-bis, §3.5, before this rule and under every state): any row of the newcomer already proven false
+REFUSED first (02-bis, §3.5, before this rule and under every state): any row of the newcomer that contradicts a proven fact
          (this replaces the raw-root comparison of 01/10, which re-encoding and REGISTRY_CHANGED bypassed: AM-08.16, R2)
 then accepted iff:
 no certificate | registryChanged | age > maxAge | eLowEff_cur > eLowMax
@@ -281,7 +289,7 @@ Permissionless, the prover pays; on the current certificate (`certNonce`).
   `RegistryUnreadable`** (R6: an upgrade that exceeds the 120 000 gas per call must not read as burnt agents). It
   compares `wNew` with `wOld` (amended, else committed, else 0). `wNew = wOld` ⇒ `NothingToProve`. The row's source
   must still hold (§3.4 reads, else `BadProof(25)`: use `proveWallet`); a source-less agent row has no edge to prove
-  (`BadProof(7)`). The proven row is marked `provenFalse` (§3.5).
+  (`BadProof(7)`), and no edge to the row's own agent (`BadProof(27)`). The proof records the edge fact (§3.5).
 - Covers (i) OMISSION with or without dilution, (ii) STALE, (iii) REVOKED, a new controller, (v) FABRICATION / INFLATION.
 - **Amount (02-bis, R3): cumulative bounds of the amended row A against the COMMITTED row C⁰**, billed beyond what the
   row already paid (`RowState` keeps the largest bound per side). With the amendment list after this proof, entries
@@ -311,7 +319,7 @@ freezes the OUTGOING edges of a transferred agent, D44), owner of a VIA_OWNER ro
 (D44 (iv-a)), or a source-less row's agent got a wallet (a burnt agent's source-less row has nothing to prove). `src`:
 for an alias, its committed source row (Merkle path), as in `proveEdge`. Billed: eLow += the not-yet-billed part of the
 committed positive mass `⌈WAD·S⁰/B⁰⌉` (of the source row for an alias); eUp += (1 − prepaid⁺) not yet billed on the
-positive side + the rest of 1 on the negative side. The row becomes void and is marked `provenFalse` (§3.5). A new
+positive side + the rest of 1 on the negative side. The row becomes void and its source claim becomes a fact (§3.5). A new
 wallet that is an anchor is covered (the source changed; the next certificate cannot carry the row: `AnchorAsSource`).
 A registry failure other than `ERC721NonexistentToken` reverts `RegistryUnreadable` (R6).
 

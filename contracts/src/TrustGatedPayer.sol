@@ -215,7 +215,8 @@ contract TrustGatedPayer {
 
     // ================================================================== ERC-1271
     /// @notice Called in STATICCALL by the USDC (EIP-3009) or Permit2 during settlement. Never reverts.
-    /// Cheapest checks first; ANCRE (29 k to 170 k gas) last; no Assessment is built on this path.
+    /// Cheapest checks first; ANCRE last (passesAnchorPolicy: 28 882 gas for a cheap refusal, about 182 k
+    /// with the strict veto by approval at k = 3; MEASURED on a mainnet fork, 2026-10-06, GAS.md §02-bis); no Assessment is built on this path.
     function isValidSignature(bytes32 hash, bytes calldata blob) external view returns (bytes4) {
         Payment memory p = _parse(hash, blob);
         if (p.parse != Reason.OK) return INVALID;

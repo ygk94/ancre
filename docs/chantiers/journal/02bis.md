@@ -121,3 +121,36 @@ Mock d'identité étendu : `getApproved`, `isApprovedForAll`, `approve`, `isAuth
 - Les vecteurs de `main` ne passent plus `SolverVectors` sans `ANCRE_VECTORS` : ce sera réglé quand le pilote aura fusionné 04-bis.
 
 **Prochaine étape** : E7, `/code-review high` puis `/security-review` sur tout `contracts/src`.
+
+## 2026-10-06 (soir) — E7 (1/2) : `/code-review high` sur tout `contracts/src` de ce worktree
+
+**Fait.** La revue a porté sur `/Users/hugo/Projet/ancre-02bis/contracts/src` (chemin absolu passé en argument, AM-02.9), fichiers entiers et pas seulement le diff. 8 constats ; tous sont traités.
+
+| # | Constat | Suite |
+|---|---|---|
+| 1 | **C se contourne en retouchant le contenu** (sPlus = S⁺ + 1, ou une petite arête positive en moins) : nouveau hash, et l'omission revient | **C est refait** : on stocke les FAITS prouvés (arête (client, agent) → poids, réclamation de source (u, src, via)) et on les vérifie sur toute ligne ultérieure. Liveness : `refreshFact` et `clearSourceFact`. ENCODING §3.5 réécrit |
+| 2 | **Auto-boucle** : le wallet d'un agent poste un négatif sur cet agent (gardé par B), et la preuve se rejoue sur chaque certificat (DoS) | `proveEdge` refuse une arête vers l'agent même de la ligne (`BadProof(27)`) ; la vérification des faits saute l'agent lui-même |
+| 3 | `_edgeHolds` ignorait l'échec de lecture de `isAuthorizedOrOwner` (une auto-recommandation pouvait passer après une upgrade) | `RegistryUnreadable` |
+| 4 | G-11 (appel direct) annoncé mais pas appliqué | appliqué sur les sets ouverts : `msg.sender == tx.origin`, sinon `NotSubmitter`. Les tests soumettent par `_direct()`, car en isolation la config `tx_origin` est ignorée (MESURÉ par une sonde) |
+| 5 | `_clientOf` appelait le registre sans plafond de gas et sans séparer inexistant et échec | `_idAddr` : plafond, `RegistryUnreadable` ou `EdgeMismatch(row, 256)` |
+| 6 | `ownerOf` lu deux fois en mode strict | lu une seule fois |
+| 7 | La garde « alias → ligne d'agent » ne pouvait jamais échouer | retirée (la forme est déjà vérifiée) |
+| 8 | Chiffre non sourcé dans un commentaire du payeur | remplacé par la mesure, datée et sourcée |
+
+**Mesures** (MESURÉ le 06/10) :
+- Tests : `ANCRE_VECTORS=.v04bis/solver/vectors/ forge test` → **187 tests, tous verts** (16 suites, forks compris). Les 5 nouveaux tests sont dans `Bis.t.sol` (`test_review_*`).
+- Banc démo k = 3 :
+  - mise à jour Registry-verified **15 024 552** (+0,33 % par rapport à `bc2d911`) ;
+  - veto par approbation **+41,6 k** ;
+  - taille **38 992 octets**.
+- Le banc d'un set qui a des faits n'est **pas encore mesuré** dans la version par faits (ESTIMÉ du même ordre que les 9,3 k par ligne de la première version).
+
+**INTERFACE** :
+- `provenFalse` et `rowHash` disparaissent ;
+- nouveaux : `edgeFact`, `provenSource`, `sourceHash`, `refreshFact`, `clearSourceFact`, events `EdgeFact` et `SourceFactCleared` ;
+- **soumission directe obligatoire sur les sets ouverts** ;
+- `BadProof(27)` pour une auto-boucle, `BadProof(28)` quand il n'y a pas de fait.
+
+Le relais vers l'indexeur et le certificateur (04) : avant de soumettre sur un set qui a des faits, rafraîchir les faits périmés.
+
+**Prochaine étape** : `/security-review` (E7, 2/2).

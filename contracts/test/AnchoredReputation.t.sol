@@ -101,6 +101,7 @@ contract AnchoredReputationTest is AncreBase {
         bytes memory v = CertLib.encodeVectors(g, t);
         bytes memory rows = CertLib.encodeRows(g, 2);
         vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.NotSubSolution.selector, 0, 1));
+        _direct();
         ar.submitCertificate(setId, 3, type(uint256).max, "", v, rows);
     }
 
@@ -115,7 +116,9 @@ contract AnchoredReputationTest is AncreBase {
         bytes memory v = CertLib.encodeVectors(g, t);
         bytes memory rows = CertLib.encodeRows(g, 2);
         vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.ResidualTooLarge.selector, eBad, 100));
+        _direct();
         ar.submitCertificate(setId, 3, 100, "", v, rows);
+        _direct();
         ar.submitCertificate(setId, 3, eBad, "", v, rows);
         // the zero vector is a sub-solution too: trusted by nobody, eUp ~ 1 WAD
         uint256[][] memory z = new uint256[][](1);
@@ -136,6 +139,7 @@ contract AnchoredReputationTest is AncreBase {
             bytes memory v = CertLib.encodeVectors(g, t);
             bytes memory rows = CertLib.encodeRows(g, 2);
             vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadEdge.selector, 0));
+            _direct();
             ar.submitCertificate(setId, 3, type(uint256).max, "", v, rows);
         }
     }
@@ -148,6 +152,7 @@ contract AnchoredReputationTest is AncreBase {
         bytes memory v = CertLib.encodeVectors(g, t);
         bytes memory rows = CertLib.encodeRows(g, 2);
         vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadEdge.selector, 0));
+        _direct();
         ar.submitCertificate(setId, 3, type(uint256).max, "", v, rows);
 
         g = CertLib.newGraph(3, 1, AN, AD, 3, 4);
@@ -155,6 +160,7 @@ contract AnchoredReputationTest is AncreBase {
         v = CertLib.encodeVectors(g, t);
         rows = CertLib.encodeRows(g, 2);
         vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadEdge.selector, 0));
+        _direct();
         ar.submitCertificate(setId, 3, type(uint256).max, "", v, rows);
     }
 
@@ -437,8 +443,8 @@ contract AnchoredReputationTest is AncreBase {
         CertLib.Graph memory g = _chainGraph(true);
         bytes memory v = CertLib.encodeVectors(g, _handT());
         bytes memory rows = CertLib.encodeRows(g, 2);
-        vm.prank(address(0xBAD));
         vm.expectRevert(AnchoredReputation.NotSubmitter.selector);
+        vm.prank(address(0xBAD), address(0xBAD));
         ar.submitCertificate(setId, 3, type(uint256).max, "", v, rows);
     }
 
@@ -463,6 +469,7 @@ contract AnchoredReputationTest is AncreBase {
         bytes memory v = CertLib.encodeVectors(g, t);
         bytes memory rows = CertLib.encodeRows(g, 2);
         vm.expectRevert(AnchoredReputation.BadNCert.selector);
+        _direct();
         ar.submitCertificate(setId, 2, type(uint256).max, "", v, rows);
     }
 

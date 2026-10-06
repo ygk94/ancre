@@ -164,7 +164,8 @@ contract TrustGatedPayerForkTest is PayerBase {
         g.ownerFp[3] = ar.ownerFingerprint(OFARM);
         g.ownerFp[4] = ar.ownerFingerprint(OF1);
         g.ownerFp[5] = ar.ownerFingerprint(OF2);
-        vm.prank(makeAddr("any-certifier"));
+        address cert = makeAddr("any-certifier");
+        vm.prank(cert, cert); // open set: a direct submission by anyone (G-11)
         ar.submitCertificate(sid, 6, type(uint256).max, "", CertLib.encodeVectors(g, g.fixedPoint(60)), CertLib.encodeRows(g, 2));
     }
 

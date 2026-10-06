@@ -56,6 +56,7 @@ contract VerifiedTest is AncreBase {
         uint256[][] memory t = g.fixedPoint(60);
         vm.expectRevert(err);
         // with a low-level call, expectRevert does not fail by itself: ok is true iff it reverted with err
+        _direct();
         (bool ok,) = address(ar).call(_cd(setId, g, t));
         assertTrue(ok, "submission did not revert as expected");
     }
@@ -65,7 +66,7 @@ contract VerifiedTest is AncreBase {
         bytes32 setId = _set(true, true);
         CertLib.Graph memory g = _honest();
         uint256[][] memory t = g.fixedPoint(60);
-        vm.prank(address(0xCAFE)); // open submission: anyone
+        vm.prank(address(0xCAFE), address(0xCAFE)); // open submission: anyone (directly, G-11)
         ar.submitCertificate(setId, 4, type(uint256).max, "", CertLib.encodeVectors(g, t), CertLib.encodeRows(g, 2));
         assertTrue(ar.passesAnchorPolicy(101, setId));
         // Z has no mass: its fingerprint is not checked; a wrong one is harmless (never trusted)
@@ -110,6 +111,7 @@ contract VerifiedTest is AncreBase {
         g.eW[0] = -4000;
         g.eIdx[0] = 2;
         uint256[][] memory t = g.fixedPoint(60);
+        _direct();
         (bool ok,) = address(ar).call(_cd(setId, g, t));
         assertTrue(ok, "negative dominance, index of the slash");
     }
@@ -143,10 +145,12 @@ contract VerifiedTest is AncreBase {
     }
 
     function _submitOk(bytes32 setId, CertLib.Graph memory g, uint256[][] memory t) internal {
+        _direct();
         ar.submitCertificate(setId, uint32(g.n), type(uint256).max, "", CertLib.encodeVectors(g, t), CertLib.encodeRows(g, 2));
     }
 
     function _submitRefused(bytes32 setId, CertLib.Graph memory g, uint256[][] memory t) internal {
+        _direct();
         (bool ok, bytes memory ret) = address(ar).call(_cd(setId, g, t));
         assertFalse(ok, "replacement must be refused");
         assertEq(bytes4(ret), AnchoredReputation.NotBetter.selector);
@@ -243,6 +247,7 @@ contract VerifiedTest is AncreBase {
         g.ownerFp[3] = uint64(uint160(OZ));
         uint256[][] memory t = g.fixedPoint(80);
         assertTrue(CertLib.isSubSolution(g, t));
+        _direct();
         (bool ok,) = address(ar).call(_cd(setId, g, t));
         assertTrue(ok);
         // Y receives from X and from Z (copy of X's row): (1-a) (t_X + t_Z)
@@ -256,6 +261,7 @@ contract VerifiedTest is AncreBase {
         t = g.fixedPoint(80);
         vm.roll(block.number + 2000);
         vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadRows.selector, 10));
+        _direct();
         (ok,) = address(ar).call(_cd(setId, g, t));
         assertTrue(ok, "alias with another wallet must revert BadRows(10)");
     }
@@ -687,6 +693,7 @@ contract VerifiedTest is AncreBase {
         _submitOk(setId, g, t);
         ar.proveEdge(setId, _proofA(g), _none(), "", 102);
         // D48-C (02-bis): the proven row itself is refused, before the replacement rule
+        _direct();
         (bool ok, bytes memory ret) = address(ar).call(_cd(setId, g, t));
         assertFalse(ok);
         assertEq(ret, abi.encodeWithSelector(AnchoredReputation.ProvenRowResubmitted.selector, 0));

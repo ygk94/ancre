@@ -123,7 +123,14 @@ abstract contract AncreBase is Test {
         a[1] = y;
     }
 
+    /// G-11 (02-bis): open sets accept only a submission sent directly by the transaction origin; in forge's
+    /// isolation mode the origin is the default sender, not the test contract
+    function _direct() internal {
+        vm.prank(address(this), address(this));
+    }
+
     function _submit(bytes32 setId, CertLib.Graph memory g, uint256[][] memory t, uint256 eMax) internal {
+        _direct();
         ar.submitCertificate(setId, uint32(g.n), eMax, "", CertLib.encodeVectors(g, t), CertLib.encodeRows(g, 2));
     }
 }

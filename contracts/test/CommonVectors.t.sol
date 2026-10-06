@@ -72,7 +72,7 @@ contract CommonVectorsTest is VectorBase {
             (setId, uint32(n), type(uint256).max, nodes, vm.parseJsonBytes(j, string.concat(cdKey, ".vectors")),
                 vm.parseJsonBytes(j, string.concat(cdKey, ".rows")))
         );
-        vm.prank(who);
+        vm.prank(who, who);
         (ok, ret) = address(ar).call(cd);
     }
 

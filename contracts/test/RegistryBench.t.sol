@@ -131,6 +131,7 @@ contract RegistryBenchTest is AncreBase {
     }
 
     function _call(bytes memory cd) internal returns (uint256 billed) {
+        _direct();
         (bool ok, bytes memory ret) = address(ar).call(cd);
         if (!ok) {
             assembly {

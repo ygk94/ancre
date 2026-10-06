@@ -64,9 +64,11 @@ contract FuzzTest is AncreBase {
         bytes memory rows = CertLib.encodeRows(g, 2);
         if (!sub) {
             vm.expectRevert(); // NotSubSolution(a, i) for the first violating node
+            _direct();
             ar.submitCertificate(setId, 10, type(uint256).max, "", vec, rows);
             return;
         }
+        _direct();
         ar.submitCertificate(setId, 10, type(uint256).max, "", vec, rows);
         uint256[] memory e = CertLib.eUp(g, t);
         for (uint256 c; c < 2; ++c) {

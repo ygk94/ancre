@@ -48,7 +48,9 @@ contract BisTest is AncreBase {
         internal
         returns (bool ok, bytes memory ret)
     {
-        (ok, ret) = address(ar).call(_cd(setId, g, t, W));
+        bytes memory cd = _cd(setId, g, t, W);
+        _direct();
+        (ok, ret) = address(ar).call(cd);
     }
 
     function _ok(bytes32 setId, CertLib.Graph memory g, uint256[][] memory t) internal {
@@ -87,6 +89,7 @@ contract BisTest is AncreBase {
         ar.addNodes(setId, zero);
         // the same entry through submitCertificate(newNodes)
         vm.expectRevert(AnchoredReputation.BadNodes.selector);
+        _direct();
         ar.submitCertificate(setId, 1, type(uint256).max, zero, new bytes(16), hex"0200000000");
     }
 
@@ -466,5 +469,98 @@ contract BisTest is AncreBase {
         assertEq(ar.assess(101, setId, true).trust, 0);
         idr.transfer(101, address(0xDEAD));
         assertEq(uint8(ar.assess(101, setId, true).status), uint8(AnchoredReputation.Status.TRANSFERRED));
+    }
+
+    // ================================================================== /code-review high of 06/10
+    /// finding 1: the row hash could be dodged by a content tweak (sPlus = S+ + 1) that keeps the omitted negative
+    /// edge out. The proven FACT (client, agent) -> weight is now checked, whatever the encoding.
+    function test_review_omittedNegativeCannotComeBackWithSPlusTweak() public {
+        bytes32 setId = _set(1, 1, true);
+        address A = _anchors(1)[0];
+        vm.startPrank(A);
+        rep.giveFeedback(101, 100, 0, "vouch", "");
+        rep.giveFeedback(102, -100, 0, "slash", "");
+        vm.stopPrank();
+        CertLib.Graph memory g = CertLib.newGraph(4, 1, AN, AD, 4, 4); // the slash on Y omitted
+        g.addRow(0, address(0), _one(1), _oneW(10_000));
+        g.addRow(1, OX, new uint256[](0), new int256[](0));
+        g.ownerFp[1] = uint64(uint160(OX));
+        _ok(setId, g, g.fixedPoint(60));
+        ar.proveEdge(setId, _rowRef(g, 0), _none(), "", 102);
+        (bool proven, int256 w) = ar.edgeFact(setId, A, 102);
+        assertTrue(proven);
+        assertEq(w, -10_000);
+        CertLib.Graph memory h = CertLib.newGraph(4, 1, AN, AD, 4, 4); // same omission, sPlus = S+ + 1
+        h.addRowDecl(0, address(0), _one(1), _oneW(10_000), 10_001);
+        h.addRow(1, OX, new uint256[](0), new int256[](0));
+        h.ownerFp[1] = uint64(uint160(OX));
+        _refused(setId, h, h.fixedPoint(60), 2, abi.encodeWithSelector(PROVEN_ROW, 0));
+        // with the slash, accepted
+        CertLib.Graph memory c = CertLib.newGraph(4, 1, AN, AD, 4, 4);
+        c.addRow(0, address(0), _two(1, 2), _twoW(10_000, -10_000));
+        c.addRow(1, OX, new uint256[](0), new int256[](0));
+        c.ownerFp[1] = uint64(uint160(OX));
+        _ok(setId, c, c.fixedPoint(60));
+    }
+
+    /// liveness: the registry changes back after the proof; refreshFact re-reads it and the true row is accepted
+    function test_review_refreshFact() public {
+        (bytes32 setId, CertLib.Graph memory g, uint256[][] memory t) = _provenDilution(true); // fact (A, Y) = +1
+        address A = _anchors(1)[0];
+        vm.expectRevert(AnchoredReputation.NothingToProve.selector);
+        ar.refreshFact(setId, A, 102);
+        vm.prank(A);
+        rep.revokeFeedback(102, 1); // A -> Y gone: the original row (without Y) is true again
+        ar.refreshFact(setId, A, 102);
+        (, int256 w) = ar.edgeFact(setId, A, 102);
+        assertEq(w, 0);
+        vm.roll(block.number + 2000); // past maxAge: the replacement rule lets any valid certificate in
+        _ok(setId, g, t);
+    }
+
+    /// finding 2: an agent's own wallet slashing it (kept by D48-B) gave a self-loop proof, replayable forever
+    function test_review_selfLoopProofRefused() public {
+        bytes32 setId = _set(1, 1, false);
+        address A = _anchors(1)[0];
+        vm.prank(A);
+        rep.giveFeedback(101, 100, 0, "vouch", "");
+        idr.setWallet(101, address(0xC0FFEE));
+        vm.prank(address(0xC0FFEE));
+        rep.giveFeedback(101, -100, 0, "slash", ""); // the wallet is not owner / operator / approved
+        CertLib.Graph memory g = CertLib.newGraph(4, 1, AN, AD, 4, 4);
+        g.addRow(0, address(0), _one(1), _oneW(10_000));
+        g.addRow(1, address(0xC0FFEE), new uint256[](0), new int256[](0));
+        g.ownerFp[1] = uint64(uint160(OX));
+        _ok(setId, g, g.fixedPoint(60));
+        vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadProof.selector, 27));
+        ar.proveEdge(setId, _rowRef(g, 1), _none(), "", 101);
+    }
+
+    /// finding 3: a failed isAuthorizedOrOwner read at submission is not "not a controller"
+    function test_review_unreadableControllerReadAtSubmission() public {
+        bytes32 setId = _set(1, 1, true);
+        address A = _anchors(1)[0];
+        vm.prank(A);
+        rep.giveFeedback(101, 100, 0, "vouch", "");
+        CertLib.Graph memory g = CertLib.newGraph(4, 1, AN, AD, 4, 4);
+        g.addRow(0, address(0), _one(1), _oneW(10_000));
+        g.ownerFp[1] = uint64(uint160(OX));
+        vm.mockCallRevert(address(idr), abi.encodeWithSelector(idr.isAuthorizedOrOwner.selector), "");
+        _refused(setId, g, g.fixedPoint(60), 2, abi.encodeWithSelector(AnchoredReputation.RegistryUnreadable.selector));
+    }
+
+    /// finding 4 (G-11): on an open set, a certificate sent through a contract is refused (rows must be auditable
+    /// from the transaction calldata)
+    function test_review_openSetRequiresDirectCall() public {
+        bytes32 setId = _set(1, 1, true);
+        CertLib.Graph memory g = CertLib.newGraph(4, 1, AN, AD, 4, 4);
+        uint256[][] memory t = g.fixedPoint(60);
+        vm.prank(address(this), address(0xE0A)); // msg.sender = this contract, tx.origin = an EOA
+        (bool ok, bytes memory ret) = address(ar).call(_cd(setId, g, t, 2));
+        assertFalse(ok);
+        assertEq(ret, abi.encodeWithSelector(AnchoredReputation.NotSubmitter.selector));
+        vm.prank(address(0xE0A), address(0xE0A));
+        (ok,) = address(ar).call(_cd(setId, g, t, 2));
+        assertTrue(ok, "a direct submission is accepted");
     }
 }

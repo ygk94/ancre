@@ -48,6 +48,7 @@ contract UpgradeTest is AncreBase {
             AnchoredReputation.submitCertificate,
             (setId, uint32(5), type(uint256).max, "", CertLib.encodeVectors(g, t), CertLib.encodeRows(g, 2))
         );
+        _direct();
         (bool ok, bytes memory ret) = address(ar).call(cd);
         if (!ok) {
             assembly {

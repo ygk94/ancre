@@ -52,7 +52,7 @@ contract SolverVectorsTest is VectorBase {
             AnchoredReputation.submitCertificate,
             (o.setId, uint32(n), _u(j, ".expected.eEff"), nodes, vec, vm.parseJsonBytes(j, ".calldata.rows"))
         );
-        vm.prank(o.submitter); // the prank applies to the very next call: compute every argument before it
+        vm.prank(o.submitter, o.submitter); // the prank applies to the very next call: compute every argument before it
         (o.ok, o.ret) = address(ar).call(cd);
     }
 
