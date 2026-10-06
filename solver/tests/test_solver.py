@@ -209,7 +209,7 @@ def fb(agent, client, idx, value, tag, dec=0, revoked=False):
 
 
 def test_graph_rules_d14_d15_d20():
-    A, B, C, D, E, O, OP, AP, PO = ("0x" + c * 40 for c in "abcde0f12")
+    A, B, C, D, E, O, OP, AP, PO = ("0x" + c * 40 for c in "abcde3f12")
     idn = ident(owner={1: O, 2: B, 3: B, 4: E}, wallet={1: O, 2: B, 3: B, 4: E},
                 operators={O: {OP}}, approved={1: AP}, past_owners={1: {PO}})
     fbs = [

@@ -39,7 +39,7 @@ from fractions import Fraction
 from pathlib import Path
 
 from export import check_file_obj, export_certificate, reference_policy, vector_schema_hash
-from graph import AGENT, ANCHOR, GRID, WAD, ZERO, Edge, Feedback, Identity, build_graph, load_schema
+from graph import ADDR, AGENT, ANCHOR, GRID, WAD, ZERO, Edge, Feedback, Identity, build_graph, load_schema
 from ppr import certify, contributions, distrust, e_eff, trust_robust, verify
 
 HERE = Path(__file__).parent
@@ -237,6 +237,31 @@ def cases() -> dict[str, dict]:
         "common_2hop_one_anchor", r1, [A1, A2],
         "Control (AM-10.6): H1 endorsed by ONE anchor only. H2 has mass in A1's column only: trustRobust = 0 with "
         "m = 2, it does NOT pass. The second hop needs an intermediary endorsed by two anchors.", [50, 51])
+    # ---------------------------------------------------------------- R1 of 02-bis: an address(0) node
+    def zero_node(g):                                    # an address node 0x0 (addNodes is open), appended
+        from graph import ADDR                           # to the node table; its row is injected after certify
+        g.nodes.append((ADDR, ZERO))
+        g.index[(ADDR, ZERO)] = len(g.nodes) - 1
+        return g
+
+    def zero_row(g, cert):                               # row of client 0 -> #51 (the pre-fix parser skipped it and
+        gi = g.index[(ADDR, ZERO)]                       # re-read every later row out of phase)
+        n = cert.n
+        cert.node_map.append(gi)
+        cert.n = n + 1
+        for col in cert.t:
+            col.append(0)
+        cert.rows[n] = [(cert.node_map.index(g.index[(AGENT, 51)]), GRID, 1)]
+        cert.splus[n] = GRID
+        cert.row_src[n] = (ZERO, "address")
+    z = vector("common_R1_address_zero_node", r2, [A1, A2],
+               "R1 (review 05/10, critical): the 2nd-hop certificate plus an address node 0x0 with a row. Before the "
+               "fix, _verifyRows skipped the row of client 0 without advancing past its edges, every later row was "
+               "re-read out of phase and a fabricated edge passed Registry-verified. The node itself MUST be refused.",
+               [], mutate=zero_node, mutate_cert=zero_row, expect="BadNodes()")
+    z["attack"] = {"node": next(n["i"] for n in z["nodes"] if n.get("address") == ZERO), "address": ZERO,
+                   "why": "address(0) marks a source-less row; as a node it desynchronised the re-read (R1)"}
+    out["common_R1_address_zero_node"] = z
     return out
 
 

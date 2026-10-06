@@ -167,3 +167,25 @@ Read side of `docs/ressources/design-indexeur-envio.md` §5/§7. **To be relayed
 - **SetEdge semantics expected by the parity test.** One row per `(set, client, agent)`: retained iff `rejected == null` and `w != 0`; `w`, `decidingTag`, `feedbackIndex` = R3-R5 (**tie rule changed on 01/10: highest feedbackIndex**, §0 R5; the TypeScript string-order risk AM-04.12 is gone). `OUT_OF_BOUNDS` is a **per-tag** outcome in R3: a pair is `OUT_OF_BOUNDS` only if no tag of the filter yields a weight; one out-of-bounds tag next to a valid tag still gives an edge. `CONTROLLER_*` = R6 on **current** controllers (no past-owner reason), **and only when the combined weight is positive (D48-B, 06/10): a controller's negative pair is retained** (`rejected == null`, w < 0). The emitter (R7) is **not** part of SetEdge: the solver resolves it.
 - **When parity is meaningful**: SetEdge is current state only, so compare at the indexer's head (or with the indexer stopped at B).
 - **Handing over a dump from another machine**: one `<Entity>.json` per entity (list of rows, GraphQL shape) plus a `BLOCK` file, in `solver/tests/fixtures/indexer/`; `test_parity_real_indexer_dump` then runs automatically. CLI: `.venv/bin/python from_indexer.py --fixture DIR --block B --out OUT --parity` (exit code 1 on any difference).
+
+## 8. Common vectors 02-bis / 04-bis (D48, D50, R1) — `vectors/common/*.json`
+
+Produced by `common_vectors.py` (normative pipeline, then `check_file_obj`), tested by `tests/test_common_vectors.py`.
+Extra blocks on top of §1: `registry` (agents `{agentId, owner, agentWallet, approved}`, `operators`, `feedbacks` in
+index order per pair, for `contracts/test/utils/Mocks.sol`), `expect.submission` (`ACCEPTED` or the custom error),
+`expect.read[agentId]` (`contributions`, `trustRobust`, `distrust`, `vetoBits`, `vetoByApproval`,
+`passesAnchorPolicy`), `attack` (what makes a refused vector a real attack). Policy: Registry-verified (mocks) except C
+(Submitter-attested); θ = 1e-3, ρ = 1/2, m = 2, strict.
+
+| vector | expect | shows |
+|---|---|---|
+| common_A_anchor_not_source | ACCEPTED | anchor X = wallet of S: S listed without row; F (endorsed by X only) trustRobust 0 |
+| common_A_attack_anchor_copy | `AnchorAsSource(2)` | S carries X's row: F would get mass in two columns |
+| common_A_mainnet_old_slash_anchor | `AnchorAsSource(5)` | the 01/10 demo vector (0xea0b anchor and wallet of #18), real registry, fork at 110 994 810 |
+| common_B_controller_negative | ACCEPTED | anchor made operator (A2) and approved address (P) slash #30: kept; veto bit + vetoByApproval; #31 passes |
+| common_C_proven_row_resubmitted | ACCEPTED, then `proveEdge` (A1 row, agentJ 41), then `ProvenRowResubmitted(0)` on `resubmission` | same false row, other bytes (empty row of #40 dropped); `control` (honest) ACCEPTED |
+| common_2hop | ACCEPTED | H2 (#51) trustRobust 2/27 ≈ 0.0741: passes; a one-hop list says unknown (D50) |
+| common_2hop_one_anchor | ACCEPTED | H1 endorsed by one anchor: H2 trustRobust 0, refused (AM-10.6) |
+| common_R1_address_zero_node | `BadNodes()` | address node 0x0 with a row (R1 of the 05/10 review) |
+
+The canonical row hash of C is defined by the contract (02-bis), not carried by the vector.

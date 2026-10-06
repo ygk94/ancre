@@ -394,9 +394,10 @@ def e_eff(cert: Certificate) -> int:
     return sum(ceil_div(cert.lambdas[a] * cert.e[a], WAD) for a in range(cert.k))
 
 
-def is_trusted(cert: Certificate, v: int, *, theta: int, m: int = 2, rhoN: int = 1, rhoD: int = 2,
+def passes_anchor_policy(cert: Certificate, v: int, *, theta: int, m: int = 2, rhoN: int = 1, rhoD: int = 2,
                e_low: int = 0) -> bool:
-    """D26 reading (tour 4 spec), without the statuses (veto, transfer, freshness) that belong to the contract:
+    """Solver mirror of the contract's passesAnchorPolicy (renamed from isTrusted, D48 / AM-9.5).
+    D26 reading (tour 4 spec), without the statuses (veto, transfer, freshness) that belong to the contract:
     trustLow = trustRobust − eLow (t is already a lower bound; eLow only from proven decreases),
     distrustUp = d + eEff ; OK ⇔ trustLow ≥ θ ∧ ρD·distrustUp ≤ ρN·trustLow."""
     tr = trust_robust(contributions(cert, v), m) - e_low

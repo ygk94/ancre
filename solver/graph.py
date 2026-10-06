@@ -497,6 +497,9 @@ def combine_pairs(feedbacks: list[Feedback], identity: Identity, schema: dict[st
         by_pair[(c, a)].append((q, f))
     out: dict[tuple[str, int], PairEdge] = {}
     for (c, a), lst in by_pair.items():
+        if c == ZERO:                                   # no feedback can come from address(0) (msg.sender); it marks a
+            log["client_zero_ignore"] += 1              # source-less row in ENCODING and is refused as a node (R1)
+            continue
         neg = [x for x in lst if x[0] < 0]                                  # R5
         # ties between tags of equal weight: the HIGHEST feedbackIndex (unified v1, F-6: the contract stores only
         # tag hashes, so it cannot compare tag strings; it scans from the last index down and keeps the first)

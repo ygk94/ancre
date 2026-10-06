@@ -138,3 +138,18 @@ Tests : **155 passed** (MESURÉ).
 - E5 : `/code-review high` sur ce worktree.
 - Rapport `docs/chantiers/rapports/04bis.md`.
 - 🧑 Alchemy : clé de signature, jeton Notify, URL HTTPS (voir entrée D55).
+
+## 2026-10-06 ~16:00 — E3 fini, renommage solveur (E4, partie solveur)
+
+**Fait**
+- Vecteur **`common_R1_address_zero_node`** (attendu `BadNodes()`, nom relu dans le worktree 02-bis, lecture seule) : le certificat du 2ᵉ saut plus un nœud-adresse 0x0 portant une ligne.
+- Garde-fou solveur : un client `address(0)` est ignoré (aucun avis ne peut en venir ; il marque une ligne sans source dans l'encodage). Un test existant utilisait `0x000…0` comme owner fictif : adresse changée.
+- `tests/test_common_vectors.py` (14 tests) : vecteurs à jour et déterministes, arithmétiquement valides (un refus ne peut venir que de D48/R1), attendus sémantiques (2ᵉ saut OK seulement avec deux ancres, négatifs de contrôleur gardés + veto, l'attaque A ferait vraiment passer F, la resoumission C garde la même ligne fausse avec d'autres octets — vérifié sur le calldata décodé).
+- FORMAT.md §8.
+- **Renommage** : `ppr.is_trusted` → `ppr.passes_anchor_policy`. C'est le seul usage côté solveur : `certifier`, `watcher` et `simulate` n'appellent ni `isTrusted` ni `assess` (vérifié par grep).
+
+**Mesures** : `.venv/bin/python -m pytest -q tests` → **169 passed** (MESURÉ, 06/10).
+
+**Blocage** : le contrat corrigé de 02-bis **n'est pas commité** (journal 02-bis : 7 tests rouges en local). Le rejeu `simulate.py` contre leur contrat attend leur commit ; je rejoue d'abord contre le contrat de `main`.
+
+**Prochaine étape** : `simulate.py` sur fork (contrat de `main`), puis `/code-review high`.
