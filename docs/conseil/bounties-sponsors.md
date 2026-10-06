@@ -50,6 +50,10 @@ Ils ne demandent aucune candidature :
 - Dwellir : 3 mois ;
 - Spectrum : 2 mois.
 
+## ⚠️ Mise à jour du 06/10 (D53)
+
+**MetaMask « Best Agent Wallet Plugin » est réservé à la track Onchain Finance & Trading (confirmé par Hugo). Il n'est plus visé.** Bounties visés : Envio et Mera, plus éventuellement un bounty « All tracks » (liste à relever sur la plateforme). **BlockVision (8 k$) est un prix pour les gagnants de track, pas un bounty** (AM-10.2).
+
 ## Décision de Hugo (27/09) → D38
 
 **Bounties visés : Envio (Best Use of Envio), MetaMask (Best Agent Wallet Plugin), Monad Foundation (Mera: One Passkey, Many Keys).** Les critères détaillés restent NON LUS (plateforme derrière une connexion). Chainlink CRE et Nansen ne sont pas visés.
@@ -137,3 +141,19 @@ Copiées par Hugo depuis hackathon.monad.xyz le 2026-09-27 (DOC OFFICIELLE, verb
 | Chainlink, Best workflow with CRE | 3 k$ | Certificateur en workflow CRE | 2 jours + support Monad non vérifié | déconseillé à 8 jours |
 | Monad Foundation, Best Community Team Project | 5 k$ | Éligibilité inconnue | ? | à lire |
 | Cleanverse, CVI/CVA | 2 k$ | Identité vérifiée comme source d'ancres ? Produit inconnu | ? | à lire |
+
+---
+
+## Fiche officielle : Alchemy, « Best Projects using Alchemy » (D54)
+
+Copiée par Hugo depuis la plateforme le 2026-10-06 (DOC OFFICIELLE). **Sélectionné dans le projet.**
+
+- **Prix** : 1 000 $ en crédits Alchemy, un seul gagnant.
+- **Track : All tracks**, donc compatible avec la track 04.
+- **Date limite** : 14/10/2026 à 05:59 GMT+2.
+- **Objet** : un projet fonctionnel, déployé sur Monad, qui intègre **de façon significative** au moins un service ou un outil Alchemy. Tout service Alchemy qui supporte Monad est éligible.
+- **Critères** : qualité de l'intégration, exécution technique, utilité et innovation du projet.
+- **Demandé à la soumission** :
+  - une description de la façon dont le projet intègre un ou plusieurs services Alchemy ;
+  - une vidéo de démo optionnelle, **2 minutes au plus**, qui montre l'intégration.
+- **Ressources** : la page des outils d'Alchemy qui supportent Monad (alchemy.com), docs.monad.xyz, developers.monad.xyz.

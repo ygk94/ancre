@@ -144,3 +144,34 @@ Il faut aussi, **pour le 29/09** : un domaine HTTPS fixe et le `rpId` (Mera), et
 - **02-E2 ⇄ 03-E4.** Si Registry-verified est abordable, la fabrication devient impossible on-chain. L'audit Envio garde alors surtout les **omissions** et les arêtes **périmées**, et son intérêt pour le bounty baisse un peu (il reste l'analytique multichain et la parité). Si c'est Submitter-attested, l'audit devient central, puisque c'est lui qui déclenche la preuve (v).
 - **D20 et D44 (copie de ligne, repli owner) ⇄ encodage.** L'« alias de ligne » doit être défini **une seule fois**, dans ENCODING.md et FORMAT.md, avant 02-E3 et 04-E1.
 - **02-E1 (D39) change le `setId`**, puisque la politique y est désormais engagée. Les vecteurs de test (04, 08) et le payeur (05) doivent attendre cette version.
+
+
+---
+
+## Plan daté du 06 au 12/10 (tour 7, D52) (sessions sur cette machine, une par worktree, le journal comme seul canal)
+
+| Jour | Hugo | Sessions et agents | Skills |
+|---|---|---|---|
+| **Lun 06/10** | **Avant tout** : inscription et projet (track 04, Envio, Mera, et MetaMask en attente), recopie de la modale Rules, question au support (MetaMask, vidéo par bounty), **décision de divulgation** et envoi du brouillon (c) si oui. **Soumission d'assurance, dépôt encore privé** (D-7.4). Keystore chiffré, faucet testnet (≥ 15 MON, 1 USDC). Domaine HTTPS et `rpId` pour Mera | **02-bis** (nouvelle session, 2 agents) : D-7.1 complet + vecteurs AM-08.22. **04** (1 agent) : snapshot rafraîchi, vecteurs « 2ᵉ saut » et « ancre ≠ source », règle R6 pour w < 0. **06-E1/E2** (1 session) : budget et scripts des scènes sur fork, sur l'ABI renommée | `/code-review high`, `/llm-council` (si une décision bloque) |
+| **Mar 07/10** | Feu vert T1, mise à disposition du MON de testnet. Prototype Mera sur 2 appareils (06-E3, avec un agent) | **02-bis** : fin, `/security-review`, mesures de gas (C, veto par approbation). **03** : handler `CertificateSubmitted` sur l'ABI finale, règle w < 0, diagnostic « ancien contrôleur ». **05** : T1 réel (une seule exécution), adaptation au renommage. **07** démarre (1 session) : Vite + React + viem, mode rejeu, poids effectif | `/security-review`, `/code-review`, `/dataviz` |
+| **Mer 08/10** | Autoriser le **déploiement testnet** (environ 0,9 MON de testnet) | **02** : déploiement testnet et vérification (MonadVision et Sourcify). **06** : scènes 1 à 6 et 2ᵉ saut **sur le testnet**. **07** : branchement GraphQL (03) et flux `monadLogs`. **02-E8 / Mera** si P4 est passée, sinon coffre seul. **08** : ERC mis à jour (D-7.1, renommage, extensions) | `/run`, `/code-review` |
+| **Jeu 09/10** | **Valider le budget mainnet** (environ 2 MON, ESTIMÉ) puis l'exécution minimale. Décider du dépôt public et de la licence (MIT ou Apache-2.0, en remplaçant les SPDX CC0) | **06** : répétition complète, export de l'état figé, exécution mainnet minimale. **03** : déploiement Cloud final. **09** démarre : write-up, README public, nettoyage avant publication | `/run`, `/simplify` |
+| **Ven 10/10** | Relecture du README et du write-up | **09** : enregistrement de répétition, figures. **07** : finitions, mode rejeu validé hors ligne. Mise à jour de la soumission d'assurance | `/dataviz`, `/code-review` |
+| **Sam 11/10** | **Voix et tournage** de la vidéo de 3 minutes, publication YouTube ou Loom. **Dépôt rendu public** (après la divulgation) | **09** : montage, chiffres recalculés au tournage, champs Envio et Mera du formulaire | — |
+| **Dim 12/10** | **Soumission finale** | Pilote : vérification de la soumission, gel de `main`, publication de `ancre-indexer` | — |
+| Lun 13/10 | Marge (clôture le 14/10 à 05:59) | Surveillant actif à partir du 13/10, pendant le jugement | — |
+
+**Dépendances critiques envers Hugo**
+- Le 06 : l'inscription, la divulgation et le keystore avec le MON de testnet. Sans eux, 02-bis ne peut pas déployer et 06 ne peut pas jouer sur le testnet.
+- Le 07 : T1 et les appareils Mera.
+- Le 09 : le budget mainnet et le dépôt public.
+
+
+**Ajustement du 06/10 (D53)** : le bounty MetaMask n'est plus visé. Le chantier 05 ne fait plus que l'adaptation au renommage (`passesAnchorPolicy`) et le test T1, qui reste utile pour la garde dure de la démo. Aucun autre travail sur le plugin.
+
+**Lots du 06/10** :
+- **02-bis** : correction A, B, C et renommage (`docs/chantiers/02bis-corrections.md`) ;
+- **04-bis** : snapshot rafraîchi, vecteurs « 2ᵉ saut » et « ancre ≠ source », règle R6 pour w < 0 ;
+- **06** : budget et scripts des scènes sur fork.
+
+Prompts : `mustdo/prompts/`.

@@ -63,3 +63,12 @@ Tu n'attends de réponse de personne pour avancer. Le pilote suit sans interveni
 Écris docs/chantiers/rapports/06.md et commite-le : ce qui est livré ; les scènes qui passent en fork (avec les statuts) ; les latences mesurées ; le budget ; ce qui attend Hugo ; les décisions et leurs raisons ; les angles morts AM-06.n ; les écarts à la roadmap ; ce qu'il reste à faire.
 
 Commence par lire, puis écris la première entrée du journal (« démarrage : ce que j'ai compris, mon plan »), puis E3 (format des événements) et E1 en parallèle, puis E2.
+
+
+=== COMPLÉMENTS DU TOUR 7 (pilote, 06/10), qui priment en cas de conflit ===
+- Scène « 2ᵉ saut » (D50) : H1 approuvé par DEUX ancres (sinon le leave-one-out échoue, AM-10.6), puis H1 qui approuve H2. H2 est payé, alors qu'une liste de confiance à un saut le dirait inconnu. C'est la scène qui nous distingue des concurrents (trudransh/Assay : un seul saut). Elle ne se coupe jamais (D52).
+- AUCUNE ancre ne doit être le wallet d'un agent (AM-08.A). Sinon le leave-one-out tombe, même après la correction du contrat.
+- Le renommage isTrusted → passesAnchorPolicy est en cours dans le chantier 02-bis (/Users/hugo/Projet/ancre-02bis, branche chantier/02bis-corrections). Isole les appels de lecture dans un seul module, pour basculer en une ligne. Ne modifie jamais contracts/ ni solver/.
+- Variante « la ferme se paie vraiment » (D45) : 100 % de reçus vrais, refus quand même.
+- Le +1 qui suit un slash est posté par UN AUTRE noteur (D33).
+- Bounty MetaMask abandonné (D53) : le plugin n'a qu'un rôle de garde côté agent, 6 s au plus dans la vidéo.

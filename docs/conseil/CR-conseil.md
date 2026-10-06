@@ -47,7 +47,7 @@
 | D35 | Transfert | `ownerOf` en direct par défaut (strict) ; le cache du router amortit ; mode rapide optionnel | 5B | 0,6 |
 | D36 | Recertification | pas d'incrémental (réparation non locale mesurée) ; budget d'élargissement eLow_max engagé dans la politique, au-delà STALE | 5B | 0,6 |
 | D37 | Vérification | 5 lemmes écrits (L1-L5) ; fuzz Python contre fractions exactes ; test différentiel Foundry ; vecteurs normatifs des 4 violations ; pas de Lean avant le 13/10 | 5B | 0,8 |
-| D38 | Bounties sponsors *(décision de Hugo)* | viser **Envio** (indexeur du chantier 03 construit avec Envio), **MetaMask Agent Wallet Plugin** (chantier 05) et **Mera « One Passkey, Many Keys »** (ancres en passkey, chantiers 02 et 06). Aucun ne passe avant D32 ni avant la démo figée. Critères détaillés non lus (plateforme connectée) | 27/09 | — |
+| D38 | Bounties sponsors *(décision de Hugo ; amendée par D50 et D53 : MetaMask retiré)* | viser **Envio** (indexeur du chantier 03 construit avec Envio), **MetaMask Agent Wallet Plugin** (chantier 05) et **Mera « One Passkey, Many Keys »** (ancres en passkey, chantiers 02 et 06). Aucun ne passe avant D32 ni avant la démo figée. Critères détaillés non lus (plateforme connectée) | 27/09 | — |
 | D39 | Statut ≠ confiance | θ, ρ, m, q, maxAge et eLow_max sont engagés dans le `setId` et appliqués par `isTrusted`. `assess` OK ne veut pas dire « payable » | vagues 1-2 | 0,9 |
 | D40 | Réseau de l'acte 2 *(amende D19, décision de Hugo)* | H-B : ferme et répétitions sur le testnet, une exécution minimale sur le mainnet (≈ 0,9 MON estimé) | vagues 1-2 | 0,7 |
 | D41 | Double garde de paiement | payeur ERC-1271 qui détient les USDC (`isTrusted` dans `isValidSignature`) + plugin `mm` qui appelle `decide()` avant de signer ; Guard Mode n'autorise que le payeur | vagues 1-2 | 0,75 |
@@ -57,7 +57,14 @@
 | D45 | Positionnement | *« A receipt can be true and still come from a farm… »* On ne demande pas si le paiement a eu lieu, on demande si quelqu'un en qui **toi** tu as confiance se porte garant. **Scène de moins de 20 s** : notre ferme sur le testnet se paie vraiment (100 % de reçus vrais), mais sa masse ANCRE est nulle et `isTrusted` refuse dans le payeur. On n'affirme jamais le verdict d'un tiers. Dans le pitch, une diapositive « complementary layers » | 6 | 0,75 |
 | D46 | Kanmani / Sentinel | cité comme exemple d'`edgeFilterId` dans l'ERC, et son constat (73 déclarations fausses sur 85, auto-déclaré) en Motivation ; **aucune dépendance** ; **pas de filtre « reçu vrai » par défaut**, parce qu'il récompense une ferme qui s'auto-paie | 6 | 0,7 |
 | D47 | **Override humain seulement** *(décision de Hugo, 01/10)* | Quand ANCRE refuse, le plugin affiche le verdict et propose un passage en force **réservé à un humain**. Il **paie depuis le wallet personnel de l'humain**, signé dans son extension, jamais depuis l'Agent Wallet ni depuis le payeur. **Un agent ne peut jamais l'exécuter.** **Pas de bascule** entre le wallet de l'agent et le wallet humain. Conditions de la garantie : Agent Wallet en mode server-wallet (pas BYOK), aucun USDC sur l'Agent Wallet, Guard Mode limité au payeur et à l'USDC. Chaque refus et chaque override sont journalisés. | 01/10 | 0,9 |
-| D48 | **Bounty MetaMask abandonné** *(décision de Hugo, 05/10)* | Le bounty « Best Agent Wallet Plugin » n'est ouvert qu'à la track 01 (Onchain Finance & Trading) ; ANCRE est en track 04, donc inéligible. Le plugin `mm ancre` **reste en l'état** (fonctionnel), cité au plus comme garde côté client ; **plus aucun travail**, plus présenté comme bounty. Amende D38. Bounties restants : Envio ; les autres à trancher (éligibilité track 04 à vérifier) | 05/10 | 1 |
+| D48 | **Lot de correction 02-bis** (tour 7) | **A** : refus à la soumission de toute ligne d'agent dont la source (le wallet, ou l'owner si VIA_OWNER est activé) est une ancre de l'ensemble ; `proveWallet` invalide une ligne dont le nouveau wallet devient une ancre. **B** : les contrôleurs ne sont rejetés que pour les avis positifs (w > 0), leurs négatifs sont conservés ; une ancre approuvée ou opératrice de l'agent vaut veto. **C** : refus du hash canonique d'une ligne prouvée fausse, y compris sous REGISTRY_CHANGED, avec contrôle de forme canonique. **Renommage** de `isTrusted` en `passesAnchorPolicy`. AM-9.3 (ancien owner qui note juste après le transfert) : assumé et affiché en diagnostic | 7 | 0,85 / 0,75 / 0,7 |
+| D49 | Périmètre face à ARCHITECTURE.md | **Dans la démo** : le poids effectif d'une revue (chantier 07). **Extension de l'ERC et slide** : TrustDomain et VouchBond. **Après le hackathon** : PermissionedRegistry. **Une ligne dans l'ERC** : le registre Validation | 7 | 0,75 |
+| D50 | Positionnement | En avant : **la propagation au-delà d'un saut, avec une borne Sybil et un certificat vérifié on-chain**. Nouvelle scène « 2ᵉ saut » : H1 approuvé par **deux** ancres (sinon le leave-one-out échoue), puis H1 qui approuve H2 | 7 | 0,8 |
+| D51 | Vidéo et réseau | 3 minutes, à partir du storyboard de 2:55, avec le 2ᵉ saut (12 s) ; l'override dans le README, pas dans la vidéo. Acte 2 sur le testnet, plus une exécution minimale sur le mainnet. Snapshot et chiffres recalculés au tournage | 7 | 0,75 |
+| D52 | Plan du 06 au 12/10 | Plan daté dans `docs/chantiers/ROADMAP.md`. **Ordre de coupe** : (1) le code de rotation Mera, (2) le plugin dans la vidéo, (3) l'écran live, (4) la mesure de C. **Jamais coupés** : l'acte 1, la ferme refusée, l'ancre compromise (donc la correction A), le disjoncteur, le 2ᵉ saut, la démo figée, la soumission d'assurance | 7 | 0,75 |
+| D53 | **Bounty MetaMask abandonné** *(décidée par Hugo le 05/10 ; notée « D48 » par la session de l'autre machine, renumérotée D53 ici pour éviter la collision avec le lot 02-bis)* | Le bounty « Best Agent Wallet Plugin » est réservé à la track Onchain Finance & Trading. **On ne le vise plus.** Le plugin `mm ancre` reste dans le produit : il est la garde côté agent, et apparaît 6 s dans la vidéo au plus, ou dans le README seulement. Bounties visés : **Envio et Mera**, plus éventuellement un bounty « All tracks » à choisir (voir MUSTDO) | 06/10 | 0,9 |
+| D54 | **Troisième bounty : Alchemy** *(décision de Hugo, 06/10)* | Bounties visés : **Envio, Mera et Alchemy** (« Best Projects using Alchemy », 1 k$ en crédits). Alchemy remplace MetaMask. Le plugin MetaMask est **gardé s'il marche**, hors bounty. **La fiche officielle d'Alchemy reste à récupérer**, critères compris | 06/10 | — |
+| D55 | **Intégration Alchemy** (recherche du 06/10, `docs/ressources/alchemy.md`) | **① Webhook Alchemy** sur les events des registres ERC-8004 et du contrat ANCRE : il déclenche la recertification (certificateur, chantier 04) et la surveillance des certificats. **② Transfers API** : la provenance des fonds sert à expliquer le score (`explain()`, écran 07). Écarté : Smart Wallet et Gas Manager (payants sur le mainnet, et contraires à AM-03.3). **Utiliser seulement `rpc1` ne suffit pas.** Budget : 1,5 jour au plus. **Mesure MESURÉE le 06/10 : 150 noteurs d'Eve tirés au hasard ont tous reçu leur premier MON du propriétaire d'Eve (`0x97cD…0996`), toujours 11,0 MON.** C'est un fait de pitch, qu'on peut montrer en direct avec la Transfers API. À mesurer avant de le promettre : le délai du webhook, et l'état du bloc à l'envoi (Proposed ou Finalized) | 06/10 | 0,7 |
 
 ---
 
@@ -1385,3 +1392,85 @@ Rapport : `docs/chantiers/rapports/05.md`. Fusionné dans `feat/conseil-solveur-
 - **Si l'owner est un compte délégué EIP-7702 sans `isValidSignature`**, il ne pourra pas signer l'override en EIP-3009. C'est à vérifier.
 
 **Ce qui attend Hugo** (MUSTDO, point 14h) : le test T1 réel, `mm login`, et l'adresse owner et trésorerie.
+
+---
+
+# Réconciliation avec ARCHITECTURE.md et BACKEND-KIT.md — 2026-10-05
+
+**Constat (AM-PIL.2, angle mort de méthode, troisième occurrence d'AM-3.13).** `main` contenait depuis le 24-26/09 deux documents qu'**aucune session n'avait lus**, puisque toutes travaillaient sur `feat/conseil-solveur-contrat` :
+- `ARCHITECTURE.md` : un moteur, quatre surfaces, des contrats produit, six flux, une échelle de périmètre, un script de démo de 5 minutes ;
+- `BACKEND-KIT.md` : trois chantiers numérotés 01 à 03, avec leurs prompts.
+
+Ils sont fusionnés sur `main` depuis le 05/10. **`BACKEND-KIT.md` est remplacé par `docs/chantiers/`.** `ARCHITECTURE.md` reste la vision produit, mais elle est **antérieure aux tours 1 à 6**.
+
+| Élément d'ARCHITECTURE.md | Statut au regard des décisions | À trancher au tour 7 ? |
+|---|---|---|
+| §0 « la confiance existe depuis quelqu'un », agent neuf = 0, revue inatteignable = 0, « le refus vient du contrat » | **Aligné** (D1, D13, D41) | non |
+| `trustOf → (score = t·N, errorBound, epoch, level)` ; `minScore` en 1e18 = moyenne uniforme | **Remplacé** par D1 (part de masse en WAD) et D39 (`isTrusted`, politique dans le `setId`) | non |
+| Niveaux Verified / Optimistic, caution, 3 contestations | **Remplacé** par D6 et D32 (Registry-verified / Submitter-attested, sans slashing) | non |
+| `TagSchemaRegistry` global, indexé par (registrant, tag) | **En conflit** avec D12 (schéma engagé par ensemble, pas de registre global) | à confirmer |
+| `TrustGatedRouter` x402 `upto` | **Fait** sous le nom `TrustGatedPayer` (`exact` + `upto`, D41) | non |
+| F6 : le disjoncteur passe par un certificat republié en ~0,6 s | **Mieux couvert** par le veto direct (D33) : refus au bloc suivant, sans recertification | non (mettre le script de démo à jour) |
+| « Registres absents du testnet » | **Faux** (vérifié le 27/09) | non |
+| **Surface 4 : afficher le poids effectif d'une revue** (« cette revue compte pour 0,00 dans votre domaine ») | **Nouveau, très démonstratif, peu coûteux** (affichage + `explain`) ; rejoint le panneau de diagnostics des ancres | **oui** : l'intégrer au chantier 07 ? |
+| **`TrustDomain`** (ancres + schémas + politique + **appartenance**) ; `PermissionedRegistry` | Le `setId` couvre déjà ancres, schéma et politique (D39). **L'appartenance et le registre permissionné sont nouveaux** (angle entreprise) | **oui** : périmètre |
+| **`VouchBond`, le parrainage cautionné** (tag `ancre:vouch`, poids plafonné, caution en USDC, slashing) | **Nouveau.** Il rejoint la piste du « vivier cautionné » (discussion du 30/09) et D27. Limite reconnue par le document : la responsabilité est économique, pas algorithmique | **oui** : hackathon ou ERC et slide ? |
+| `AgentFactory` | Couvert par le script de mise en place du 05 (`setup-fork.mjs`), pas par un contrat | probablement non |
+| Surface 2, import cross-chain | L'indexeur couvre déjà 3 chaînes (D42). La lecture d'un certificat sur une autre chaîne n'est pas faite | non (suite) |
+| API de lecture + SDK agent | En partie couverts par le plugin `mm ancre` | non |
+| Script de démo de 5 min (domaine ACME, parrainage) | À fusionner avec D19, D40, D45 et le storyboard de 2:55 (`design-demo-et-soumission.md`) | **oui** |
+
+---
+
+# Veille du 05/10 — faits nouveaux
+
+Sources : `docs/ressources/veille-2026-10-05-hackathon.md`, `veille-2026-10-05-technique.md` et `veille-2026-10-05-concurrence.md`.
+
+**Hackathon**
+- **D'après la doc officielle (`/tracks`), le bounty MetaMask n'est probablement pas ouvert à la track 04** : seuls les bounties « All tracks » se combinent avec n'importe quelle track (AM-9.1).
+- On peut cumuler un prix de track et plusieurs bounties.
+- Échéance inchangée : le 14/10 à 05:59, heure de Paris. Aucune prolongation.
+- Jury de track et jury de bounties distincts.
+- Nouveaux prix : BlockVision (8 k$, à examiner), une remise PingBusiness.
+- Envio Cloud : 2 mois gratuits.
+
+**Technique**
+- Registres, proxys et owner inchangés ; la PR #80 est toujours ouverte. Monad passe en 0.16.4, sans changement de protocole. **La doc fixe le bloc à 300 ms.**
+- **7 nouveaux avis** sur le mainnet entre le 28/09 et le 04/10, dont 3 arêtes candidates : **le snapshot est périmé** (AM-9.2).
+- **Cas réel de « l'ancien owner »** : `0x4947…` transfère #10255, puis lui met 5 notes à 100 environ 4,6 minutes plus tard. C'est le prix de D20 (AM-9.3).
+- **Le registre Validation ERC-8004 est déployé sur Monad** depuis le 03/02 : `0x8004Cc84…AB58` sur le mainnet, `0x8004Cb1B…4272` sur le testnet, avec le même owner. **Une seule requête** à ce jour (AM-9.4).
+- L'issue n° 99 du dépôt ERC-8004 conclut que « le poids relève du lecteur » et qu'« un contrat ne peut pas parcourir un graphe pendant un règlement » : **c'est un appui direct pour ANCRE**.
+
+**Concurrence**
+- **trudransh/Assay**, créé le 29/09 : `gradeOf(model, host, trusted[])`. La confiance est choisie par le lecteur et lue par un contrat avant paiement, mais **sur un seul saut, sans propagation ni borne Sybil**. Il vise aussi Envio et Mera.
+- **norbert351/merit** : une réputation résistante aux Sybil en track 04, avec une démo de ferme proche de la nôtre.
+- **trustset utilise aussi `isTrusted`** (AM-9.5 : renommer avant de figer l'ERC).
+- monagent, un plugin MetaMask, calcule la moyenne naïve.
+- Kanmani passe à 12 agents. ColinkaMir est prêt à soumettre.
+- **Ce qui reste propre à ANCRE : la propagation au-delà d'un saut, avec une borne et un certificat vérifié on-chain.** D'où une scène de démo « 2ᵉ saut » (AM-9.6).
+
+
+---
+
+# Tour 7 — 2026-10-05 — défauts du contrat, périmètre, bounties, plan
+
+Délibération complète en annexe : `docs/conseil/tour7.md`. Décisions renumérotées **D48 à D52** (D-7.1 à D-7.5). Spécification de correction de 02-bis : `tour7.md`, D-7.1.
+
+**Désaccords non résolus**
+1. Veto par approbation : lu en direct (environ 32 k gas, ESTIMÉ) ou posé par preuve ?
+2. Code Mera : couper la rotation ? La porte P4 tranche.
+3. Exécution sur le mainnet : risque de dernière minute, ou preuve exigée par le critère Monad Integration ?
+4. Le plugin dans la vidéo.
+5. La soumission d'assurance accepte-t-elle un lien de dépôt privé ?
+
+| Id | Angle mort | Suite |
+|---|---|---|
+| AM-10.1 | Un DevRel de MetaMask figure parmi les juges de track, pas parmi les juges de bounty | sans objet depuis D53 |
+| AM-10.2 | BlockVision (8 k$) est un prix pour les gagnants de track, pas un bounty | fiche des bounties corrigée |
+| AM-10.3 | La correction B change la règle d'arête normative dans 4 implémentations : contrat, solveur, indexeur, ERC | un seul lot, 02-bis, avec des vecteurs communs |
+| AM-10.4 | Le renommage casse l'ABI de 4 consommateurs : payeur, plugin, indexeur, écran | à faire avant tout déploiement sur le testnet |
+| AM-10.5 | Sans forme canonique stricte, la correction C se contourne | contrôle de forme à la soumission |
+| AM-10.6 | Le 2ᵉ saut échoue au leave-one-out si le maillon intermédiaire n'a qu'une ancre | H1 approuvé par deux ancres |
+| AM-10.7 | Une soumission d'assurance avec un dépôt public exposerait le contournement avant la divulgation | dépôt privé, ou divulgation d'abord |
+| AM-10.8 | Les coûts du veto par approbation et de C ne sont pas mesurés | mesures dans 02-bis |
+| AM-10.9 | **La revue maximale du code (05/10) a été interrompue par la limite d'usage**, avant tout résultat | remplacée par `/code-review high` et `/security-review` dans 02-bis, et sur chaque lot |
