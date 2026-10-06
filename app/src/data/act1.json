@@ -1,0 +1,1322 @@
+{
+ "format": "ancre-screen-act1-v1",
+ "status": "COMPUTED by the reference solver (not deployed on mainnet), reproducible",
+ "command": "cd app && ../solver/.venv/bin/python scripts/export_act1.py",
+ "solverCommit": "fe3d554",
+ "chainId": 143,
+ "featured": [
+  "182",
+  "4",
+  "8317",
+  "18",
+  "2",
+  "3",
+  "9",
+  "87",
+  "19",
+  "10279",
+  "10278"
+ ],
+ "snapshotBlock": 108835675,
+ "snapshotFeedbacks": 9283,
+ "snapshotAgents": 10262,
+ "source": "solver/data/mainnet-108835675.{feedbacks,identity}.json.gz (re-read on-chain, solver/snapshot.py)",
+ "rules": "D20, alpha = 1/3, m = 2, uniform lambdas, integer certificate from 0 (D26)",
+ "policy": {
+  "theta": "20000000000000000",
+  "thetaPct": 2.0,
+  "rhoN": 1,
+  "rhoD": 2,
+  "note": "theta of the chantier 06 demo set, applied off-chain to illustrate the payment verdict"
+ },
+ "farm": {
+  "agents": 7666,
+  "eveFeedbacks": 7665,
+  "eveOutOfRange": 117,
+  "eveNaiveAverage": "1.5264e+36"
+ },
+ "selfRating8317": {
+  "received": 78,
+  "edgesKept": 0,
+  "rejectedMeasurementD15": 78
+ },
+ "registry": {
+  "182": {
+   "feedbacks": 7665,
+   "clients": 7665,
+   "naiveAverage": "1.5264e+36",
+   "outOfRange": 117,
+   "topClientShare": 0.0001304631441617743,
+   "owner": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+   "wallet": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996"
+  },
+  "4": {
+   "feedbacks": 76,
+   "clients": 3,
+   "naiveAverage": "72.3947",
+   "outOfRange": 0,
+   "topClientShare": 0.9605263157894737,
+   "owner": "0x734b0e337bfa7d4764f4b806b4245dd312ddf134",
+   "wallet": "0x734b0e337bfa7d4764f4b806b4245dd312ddf134"
+  },
+  "8317": {
+   "feedbacks": 78,
+   "clients": 1,
+   "naiveAverage": "-14.4744",
+   "outOfRange": 0,
+   "topClientShare": 1.0,
+   "owner": "0x656df648b057c809d03d18b73b0b14f3e5a34a10",
+   "wallet": "0x449854134593bcb92c1244cfb382b5ab6254eead"
+  },
+  "18": {
+   "feedbacks": 2,
+   "clients": 2,
+   "naiveAverage": "50.5000",
+   "outOfRange": 0,
+   "topClientShare": 0.5,
+   "owner": "0xea0b21fb2441464f4920ce3e34d478235605816b",
+   "wallet": "0xea0b21fb2441464f4920ce3e34d478235605816b"
+  },
+  "2": {
+   "feedbacks": 1,
+   "clients": 1,
+   "naiveAverage": "100.0000",
+   "outOfRange": 0,
+   "topClientShare": 1.0,
+   "owner": "0x8df64bacf6b70f7787f8d14429b258b3ff958ec1",
+   "wallet": "0x8df64bacf6b70f7787f8d14429b258b3ff958ec1"
+  },
+  "3": {
+   "feedbacks": 1,
+   "clients": 1,
+   "naiveAverage": "1.0000",
+   "outOfRange": 0,
+   "topClientShare": 1.0,
+   "owner": "0xe4cdd1ad7fae7d54441ef12db1a68ab9a4c2d7b5",
+   "wallet": "0xe4cdd1ad7fae7d54441ef12db1a68ab9a4c2d7b5"
+  },
+  "9": {
+   "feedbacks": 518,
+   "clients": 1,
+   "naiveAverage": "1592.6680",
+   "outOfRange": 0,
+   "topClientShare": 1.0,
+   "owner": "0x25b993d1c494b5ce6612085f406f2a2e2063134b",
+   "wallet": "0x25b993d1c494b5ce6612085f406f2a2e2063134b"
+  },
+  "87": {
+   "feedbacks": 508,
+   "clients": 1,
+   "naiveAverage": "1595.3957",
+   "outOfRange": 0,
+   "topClientShare": 1.0,
+   "owner": "0xf04366a36d8231748673864dfcac967e1d600420",
+   "wallet": "0xf04366a36d8231748673864dfcac967e1d600420"
+  },
+  "19": {
+   "feedbacks": 0,
+   "clients": 0,
+   "naiveAverage": null,
+   "outOfRange": 0,
+   "topClientShare": null,
+   "owner": "0x75b583c518215e272f3c0a3bcc1b27012f294adc",
+   "wallet": "0x75b583c518215e272f3c0a3bcc1b27012f294adc"
+  },
+  "10279": {
+   "feedbacks": 0,
+   "clients": 0,
+   "naiveAverage": null,
+   "outOfRange": 0,
+   "topClientShare": null,
+   "owner": null,
+   "wallet": null
+  },
+  "10278": {
+   "feedbacks": 0,
+   "clients": 0,
+   "naiveAverage": null,
+   "outOfRange": 0,
+   "topClientShare": null,
+   "owner": null,
+   "wallet": null
+  }
+ },
+ "lenses": [
+  {
+   "id": "independent",
+   "title": "Two independent raters",
+   "blurb": "Anchors: two addresses outside the farm that rated the one honest chain (#18 -> #2, #3). Reference schema (D15).",
+   "anchors": [
+    {
+     "address": "0x0730536018541c5149a049d35528a76c2c8f1e6b",
+     "label": "0x0730\u2026"
+    },
+    {
+     "address": "0xf7d5543dfff21ac729626579216776412132fe74",
+     "label": "0xf7d5\u2026"
+    }
+   ],
+   "alpha": "1/3",
+   "m": 2,
+   "schema": "reference",
+   "filter": [
+    "vouch",
+    "review",
+    "slash",
+    "starred",
+    "quality",
+    "escrow-rating",
+    "agent_rating:data_collection",
+    "worker_rating:data_collection"
+   ],
+   "edges": 11,
+   "certifiedNodes": 6,
+   "iterations": 4,
+   "e": [
+    "15",
+    "15"
+   ],
+   "eEff": "16",
+   "massOnFarm": [
+    "0",
+    "0"
+   ],
+   "massOnFarmWeighted": "0",
+   "agents": {
+    "182": {
+     "inSupport": false,
+     "t": [
+      "0",
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "unknown to these anchors (mass 0)"
+     }
+    },
+    "4": {
+     "inSupport": true,
+     "t": [
+      "0",
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "148148148148148148",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "slashed by a trusted rater: distrust 14.81%, no mass"
+     }
+    },
+    "8317": {
+     "inSupport": false,
+     "t": [
+      "0",
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "unknown to these anchors (mass 0)"
+     }
+    },
+    "18": {
+     "inSupport": true,
+     "t": [
+      "222222222222222222",
+      "222222222222222222"
+     ],
+     "trust": "222222222222222222",
+     "trustRobust": "111111111111111111",
+     "distrust": "0",
+     "verdict": {
+      "pay": true,
+      "reason": "OK",
+      "detail": "trustLow >= theta, distrust within rho"
+     }
+    },
+    "2": {
+     "inSupport": true,
+     "t": [
+      "74074074074074074",
+      "74074074074074074"
+     ],
+     "trust": "74074074074074074",
+     "trustRobust": "37037037037037037",
+     "distrust": "0",
+     "verdict": {
+      "pay": true,
+      "reason": "OK",
+      "detail": "trustLow >= theta, distrust within rho"
+     }
+    },
+    "3": {
+     "inSupport": true,
+     "t": [
+      "74074074074074074",
+      "74074074074074074"
+     ],
+     "trust": "74074074074074074",
+     "trustRobust": "37037037037037037",
+     "distrust": "0",
+     "verdict": {
+      "pay": true,
+      "reason": "OK",
+      "detail": "trustLow >= theta, distrust within rho"
+     }
+    },
+    "9": {
+     "inSupport": false,
+     "t": [
+      "0",
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "unknown to these anchors (mass 0)"
+     }
+    },
+    "87": {
+     "inSupport": false,
+     "t": [
+      "0",
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "unknown to these anchors (mass 0)"
+     }
+    },
+    "19": {
+     "inSupport": false,
+     "t": [
+      "0",
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "unknown to these anchors (mass 0)"
+     }
+    },
+    "10279": {
+     "inSupport": false,
+     "t": [
+      "0",
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "unknown to these anchors (mass 0)"
+     }
+    },
+    "10278": {
+     "inSupport": false,
+     "t": [
+      "0",
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "unknown to these anchors (mass 0)"
+     }
+    }
+   },
+   "ranking": [
+    {
+     "agentId": "18",
+     "trust": "222222222222222222",
+     "trustRobust": "111111111111111111",
+     "distrust": "0",
+     "verdict": {
+      "pay": true,
+      "reason": "OK",
+      "detail": "trustLow >= theta, distrust within rho"
+     }
+    },
+    {
+     "agentId": "2",
+     "trust": "74074074074074074",
+     "trustRobust": "37037037037037037",
+     "distrust": "0",
+     "verdict": {
+      "pay": true,
+      "reason": "OK",
+      "detail": "trustLow >= theta, distrust within rho"
+     }
+    },
+    {
+     "agentId": "3",
+     "trust": "74074074074074074",
+     "trustRobust": "37037037037037037",
+     "distrust": "0",
+     "verdict": {
+      "pay": true,
+      "reason": "OK",
+      "detail": "trustLow >= theta, distrust within rho"
+     }
+    },
+    {
+     "agentId": "4",
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "148148148148148148",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "slashed by a trusted rater: distrust 14.81%, no mass"
+     }
+    }
+   ]
+  },
+  {
+   "id": "screener-as-trust",
+   "title": "A risk screener read as trust",
+   "blurb": "Anchor: an automated risk-screening service (score 85 = 'risk low, unverified'). Its measurements are read as endorsements, as if D15 did not exist: the mass leaks into the farm region.",
+   "anchors": [
+    {
+     "address": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
+     "label": "0xa06f\u202643a4"
+    }
+   ],
+   "alpha": "1/3",
+   "m": 2,
+   "schema": "no-D15 (measurements propagate)",
+   "filter": [
+    "trust",
+    "liveness",
+    "eve",
+    "plague",
+    "vouch",
+    "review",
+    "slash"
+   ],
+   "edges": 7587,
+   "certifiedNodes": 30,
+   "iterations": 4,
+   "e": [
+    "165"
+   ],
+   "eEff": "165",
+   "massOnFarm": [
+    "345622119815668159"
+   ],
+   "massOnFarmWeighted": "345622119815668159",
+   "agents": {
+    "182": {
+     "inSupport": true,
+     "t": [
+      "138248847926267255"
+     ],
+     "trust": "138248847926267255",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    "4": {
+     "inSupport": false,
+     "t": [
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    "8317": {
+     "inSupport": false,
+     "t": [
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    "18": {
+     "inSupport": false,
+     "t": [
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    "2": {
+     "inSupport": false,
+     "t": [
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    "3": {
+     "inSupport": false,
+     "t": [
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    "9": {
+     "inSupport": false,
+     "t": [
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    "87": {
+     "inSupport": false,
+     "t": [
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    "19": {
+     "inSupport": false,
+     "t": [
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    "10279": {
+     "inSupport": false,
+     "t": [
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    "10278": {
+     "inSupport": false,
+     "t": [
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    }
+   },
+   "ranking": [
+    {
+     "agentId": "182",
+     "trust": "138248847926267255",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "2422",
+     "trust": "10240655401945724",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "4078",
+     "trust": "10240655401945724",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "4993",
+     "trust": "10240655401945724",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "5169",
+     "trust": "10240655401945724",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "5205",
+     "trust": "10240655401945724",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "5240",
+     "trust": "10240655401945724",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "5329",
+     "trust": "10240655401945724",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "3156",
+     "trust": "8704557091653865",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "4557",
+     "trust": "8704557091653865",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "5117",
+     "trust": "8704557091653865",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "5720",
+     "trust": "8704557091653865",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "5957",
+     "trust": "8704557091653865",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "6149",
+     "trust": "8704557091653865",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "6618",
+     "trust": "8704557091653865",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "6906",
+     "trust": "8704557091653865",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "7222",
+     "trust": "8704557091653865",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "7362",
+     "trust": "8704557091653865",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "7657",
+     "trust": "8704557091653865",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "8095",
+     "trust": "8704557091653865",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "8220",
+     "trust": "8704557091653865",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "8357",
+     "trust": "8704557091653865",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "4442",
+     "trust": "6144393241167434",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "6238",
+     "trust": "6144393241167434",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "7537",
+     "trust": "6144393241167434",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "5710",
+     "trust": "3072196620583717",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "5779",
+     "trust": "3072196620583717",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "8216",
+     "trust": "3072196620583717",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    {
+     "agentId": "1829",
+     "trust": "1024065540194572",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    }
+   ]
+  },
+  {
+   "id": "screener-d15",
+   "title": "Same screener, schema D15",
+   "blurb": "Same single anchor, reference schema: measurements never create edges (D15). The leak is zero.",
+   "anchors": [
+    {
+     "address": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4",
+     "label": "0xa06f\u202643a4"
+    }
+   ],
+   "alpha": "1/3",
+   "m": 2,
+   "schema": "reference",
+   "filter": [
+    "trust",
+    "liveness",
+    "eve",
+    "plague",
+    "vouch",
+    "review",
+    "slash"
+   ],
+   "edges": 5,
+   "certifiedNodes": 1,
+   "iterations": 2,
+   "e": [
+    "3"
+   ],
+   "eEff": "3",
+   "massOnFarm": [
+    "0"
+   ],
+   "massOnFarmWeighted": "0",
+   "agents": {
+    "182": {
+     "inSupport": false,
+     "t": [
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    "4": {
+     "inSupport": false,
+     "t": [
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    "8317": {
+     "inSupport": false,
+     "t": [
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    "18": {
+     "inSupport": false,
+     "t": [
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    "2": {
+     "inSupport": false,
+     "t": [
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    "3": {
+     "inSupport": false,
+     "t": [
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    "9": {
+     "inSupport": false,
+     "t": [
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    "87": {
+     "inSupport": false,
+     "t": [
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    "19": {
+     "inSupport": false,
+     "t": [
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    "10279": {
+     "inSupport": false,
+     "t": [
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    },
+    "10278": {
+     "inSupport": false,
+     "t": [
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "one anchor: leave-one-out (m = 2) leaves 0"
+     }
+    }
+   },
+   "ranking": []
+  },
+  {
+   "id": "inside-farm",
+   "title": "A reader who anchors inside the farm",
+   "blurb": "Anchors: two wallets of the farm itself, every tag read as an endorsement. ANCRE is relative to the reader's anchors: it does not protect a reader who trusts the farm.",
+   "anchors": [
+    {
+     "address": "0x000b86d0927095aed35e2193a0f98401b35b6358",
+     "label": "0x000b\u20266358"
+    },
+    {
+     "address": "0x0021c946b40995c00cc4cacdb65dd63bfb053717",
+     "label": "0x0021\u20263717"
+    }
+   ],
+   "alpha": "1/3",
+   "m": 2,
+   "schema": "stress (every tag = endorsement)",
+   "filter": [
+    "eve",
+    "plague",
+    "vouch",
+    "review",
+    "slash",
+    "trust",
+    "liveness"
+   ],
+   "edges": 7587,
+   "certifiedNodes": 3,
+   "iterations": 3,
+   "e": [
+    "6",
+    "6"
+   ],
+   "eEff": "6",
+   "massOnFarm": [
+    "0",
+    "222222222222222222"
+   ],
+   "massOnFarmWeighted": "111111111111111111",
+   "agents": {
+    "182": {
+     "inSupport": true,
+     "t": [
+      "0",
+      "222222222222222222"
+     ],
+     "trust": "111111111111111111",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "reached by one anchor only: leave-one-out mass 0"
+     }
+    },
+    "4": {
+     "inSupport": false,
+     "t": [
+      "0",
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "unknown to these anchors (mass 0)"
+     }
+    },
+    "8317": {
+     "inSupport": false,
+     "t": [
+      "0",
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "unknown to these anchors (mass 0)"
+     }
+    },
+    "18": {
+     "inSupport": false,
+     "t": [
+      "0",
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "unknown to these anchors (mass 0)"
+     }
+    },
+    "2": {
+     "inSupport": false,
+     "t": [
+      "0",
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "unknown to these anchors (mass 0)"
+     }
+    },
+    "3": {
+     "inSupport": false,
+     "t": [
+      "0",
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "unknown to these anchors (mass 0)"
+     }
+    },
+    "9": {
+     "inSupport": false,
+     "t": [
+      "0",
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "unknown to these anchors (mass 0)"
+     }
+    },
+    "87": {
+     "inSupport": false,
+     "t": [
+      "0",
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "unknown to these anchors (mass 0)"
+     }
+    },
+    "19": {
+     "inSupport": false,
+     "t": [
+      "0",
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "unknown to these anchors (mass 0)"
+     }
+    },
+    "10279": {
+     "inSupport": false,
+     "t": [
+      "0",
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "unknown to these anchors (mass 0)"
+     }
+    },
+    "10278": {
+     "inSupport": false,
+     "t": [
+      "0",
+      "0"
+     ],
+     "trust": "0",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "unknown to these anchors (mass 0)"
+     }
+    }
+   },
+   "ranking": [
+    {
+     "agentId": "182",
+     "trust": "111111111111111111",
+     "trustRobust": "0",
+     "distrust": "0",
+     "verdict": {
+      "pay": false,
+      "reason": "UNTRUSTED",
+      "detail": "reached by one anchor only: leave-one-out mass 0"
+     }
+    }
+   ]
+  }
+ ]
+}

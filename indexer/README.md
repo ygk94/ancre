@@ -19,9 +19,10 @@ layer. It does three things:
 2. **Audits certificates.** It decodes a certificate's calldata and compares every committed edge with the
    registry, as normalised shares `w / B`. Fabricated, inflated, diluted or omitted edges become typed
    discrepancies, ready for an on-chain dispute (`proveEdge` / `proveWallet` of the ANCRE contract). The
-   decoder (certificate format `ancre-cert-v1`) and the audit are done and tested on real data. The event handler
-   will be wired to the ANCRE contract once it is deployed; a handler reading `transaction.input` is proven to work
-   on real Monad transactions.
+   decoder (certificate format `ancre-cert-v1`) and the audit run **inside the event handler** of the ANCRE contract:
+   every `CertificateSubmitted` gets a `Certificate` row (status, Merkle root check), its `Discrepancy` findings and the
+   set's `SetHealth`. Tested on Monad's real state with the real calldata of the normative certificates. The contract
+   address is a placeholder until the deployment.
 3. **Measures the standard with HyperSync.** A multichain scan shows how few ERC-8004 feedbacks survive the
    rules (see below).
 
@@ -55,6 +56,7 @@ reorg rolls back its own chain only. Real volume measured on 2026-09-28: 55 138 
 | 1 · append-only history (replays any past block) | `Feedback`, `WalletChange`, `OwnerChange`, `ApprovalChange`, `OperatorChange`, `RegistryEvent` |
 | 2 · current state | `Agent`, `WalletAgents` (reverse wallet → agents index, absent on-chain), `Operator` |
 | 3 · normative edges | `TripleLatest` (every tag), `SetEdge` per anchor set (`ref` = reference schema), with a typed rejection reason (`null` = retained) |
+| ANCRE audit | `AnchorSet` (on-chain sets), `SetNode`, `Certificate`, `Discrepancy` (with the on-chain proof to use), `SetHealth` |
 | stats | `ChainStats` |
 
 ```graphql

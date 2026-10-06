@@ -175,3 +175,22 @@ Il faut aussi, **pour le 29/09** : un domaine HTTPS fixe et le `rpId` (Mera), et
 - **06** : budget et scripts des scènes sur fork.
 
 Prompts : `mustdo/prompts/`.
+
+
+---
+
+## État au 06/10 (pilote)
+
+| Chantier | État | Ce qui reste |
+|---|---|---|
+| 02, contrat v1 | ✅ livré, fusionné | **02-bis en cours** : défaut critique du nœud `address(0)`, corrections A/B/C, renommage `passesAnchorPolicy` |
+| 03, indexeur Envio | ✅ livré : audit en direct, Cloud | adresse du contrat déployé, publication sur Envio Cloud (2ᵉ déploiement sur 3), constats de la revue |
+| 04, solveur et certificateur | ✅ livré | **04-bis en cours** : règle B, snapshot, vecteurs du 2ᵉ saut, webhook Alchemy (D55), **AM-06.1 (keystore cassé avec Foundry ≥ 1.8)** |
+| 05, payeur et plugin | ✅ livré | adaptation au renommage ; T1 réel (🧑) ; plugin hors bounty (D53) |
+| 06, ferme et scènes | ✅ 8 scènes en fork, démo figée | **acte 2 sur le vrai testnet, après la fusion de 02-bis** (🧑) |
+| 07, écran | ✅ livré | hébergement (🧑) ; D49 (poids effectif), D50 (vue du 2ᵉ saut), ABI finale : **session à relancer** |
+| 08, norme | ✅ livré | mettre à jour avec D48 à D56 et le renommage, après 02-bis |
+| 09, soumission | **en cours** | `git merge main` pour récupérer `demo/VIDEO-SHOTS.md`, `JUDGES.md` et `SCREEN.md` |
+| Revue maximale | **vérification en cours** (9 lots sur 13) | rapport consolidé, puis répartition des constats |
+
+**Ordre critique** : 02-bis fusionné → `forge build` → répétition puis acte 2 sur le testnet → adresse dans l'indexeur, puis publication Cloud → latences réelles dans VIDEO-SHOTS et JUDGES → tournage le 11/10 → soumission le 12/10.

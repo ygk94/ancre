@@ -80,7 +80,9 @@ export async function recomputeRefEdge(context: Ctx, client: string, agentId: st
       prev.feedbackIndex === next.feedbackIndex) return;
   if (!prev) {
     context.Agent.set({ ...agent, refEdgeRows: agent.refEdgeRows + 1 }); // lets recomputeEdgesInto skip edge-less agents
-    if (!refSet) context.AnchorSet.set({ id: REF_SET, kind: "reference" });
+    if (!refSet) context.AnchorSet.set({ id: REF_SET, kind: "reference", anchors: undefined, lambdas: undefined, alphaN: undefined,
+      alphaD: undefined, tagsJson: undefined, policyJson: undefined, ownerFallback: undefined, registryVerified: undefined,
+      decodable: undefined, nodesComplete: undefined, nodeCount: undefined, registeredBlock: undefined, registeredTx: undefined });
   }
   context.SetEdge.set(next);
   const was = prev && prev.w !== 0 ? 1 : 0;

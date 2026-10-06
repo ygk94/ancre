@@ -8,6 +8,29 @@
 
 ## 🔴 Cette semaine, parce que ça bloque d'autres chantiers
 
+- [ ] **Chantier 03, brancher l'indexeur Envio sur le contrat déployé (06/10)**. L'audit des certificats en direct est fini et testé (`indexer/src/handlers/ancre.ts`), mais l'adresse du contrat est un **placeholder `0x…01`**. **Juste après le déploiement d'`AnchoredReputation` sur le testnet** (étape du chantier 06) :
+  1. Donne-moi l'**adresse** du contrat et le **bloc de son déploiement** (ou fais-le toi-même : dans `indexer/config.yaml`, chaîne 10143, contrat `AnchoredReputation`, remplacer l'adresse et ajouter `start_block: <bloc>`).
+  2. Ton clone local d'`ancre-indexer` doit pointer vers **`ygk94/ancre-indexer`** : `git -C <clone> remote set-url origin https://github.com/ygk94/ancre-indexer.git` (le script refuse sinon).
+  3. `cd indexer && scripts/publish.sh <clone> --deploy` : publie et redéploie sur Envio Cloud. **C'est le 2ᵉ des 3 déploiements du plan gratuit** : ne le lance qu'une fois l'adresse définitive.
+  4. Vérifie sur envio.dev/app que le déploiement est *synced* ; je contrôle ensuite qu'un certificat de la démo apparaît bien `AUDITED` / `CLEAN` dans `SetHealth`.
+  Même opération pour le mainnet si l'exécution minimale (D40) a lieu : ce serait le 3ᵉ et dernier déploiement.
+
+> ⚠️ **Ordre à respecter (pilote, 06/10)** : lance l'acte 2 sur le vrai testnet **seulement après la fusion de 02-bis**. L'acte 2 déploie sa propre instance du contrat : sans 02-bis, elle embarquerait le **défaut critique du nœud `address(0)`** trouvé par la revue (une arête fabriquée passe en Registry-verified), et l'ancien nom `isTrusted`. **Hébergement : un seul domaine** pour l'écran, le `rpId` de Mera et les webhooks Alchemy (Netlify recommandé par le 07).
+
+- [ ] **Chantier 06, acte 2 sur le vrai testnet (06/10)**. Tout est prêt et répété ; **8 scènes PASS en fork**, dont le 2ᵉ saut. Il ne manque que toi. Détail : `demo/RUNBOOK.md` §5 ; coût : `demo/BUDGET.md`.
+  1. **Keystore** : `cast wallet new ~/.foundry/keystores`, puis renommer le fichier en `~/.foundry/keystores/ancre-demo`. **Sa clé est la graine de tous les comptes de la démo** (ancres, ferme, fournisseurs) : ne l'utilise pour rien d'autre. Ça peut être le même keystore que celui du plan ci-dessous (« au moins 15 MON ») ; l'acte 2 seul en consomme environ 5.
+  2. **Faucets** sur l'adresse affichée : **5 MON** (https://faucet.monad.xyz) et **1 USDC** (https://faucet.circle.com, réseau Monad testnet).
+  3. **Répétition sans risque** (fork, aucune transaction réelle) : `cd demo && npm ci && node run.ts --rehearse-testnet --keystore ~/.foundry/keystores/ancre-demo --sweep`. Elle doit afficher `ACT 2 PASS`.
+  4. **Ton feu vert explicite** dans la conversation, puis, dans ton terminal : `node run.ts --network testnet --keystore ~/.foundry/keystores/ancre-demo --sweep`. Le script demande une phrase de confirmation tapée, puis le mot de passe. Coût :
+     - ≈ 3,15 MON de frais (4,1 avec la marge) ;
+     - 2,25 MON prêtés aux comptes de la démo, dont ≈ 0,8 récupérés par `--sweep` ;
+     - 0,11 USDC ;
+     - 98 events Envio ;
+     - environ 3 à 5 min.
+  5. **Dépendance** : le **test T1 réel** (point 14h, porte P3) n'a jamais tourné. Si le facilitator refuse le payeur ERC-1271, les paiements honnêtes (scènes 1, 4 et 7) s'arrêtent. Dans ce cas, on filme sur le fork ou sur l'état figé (`node run.ts --frozen`, sans réseau).
+  6. **Après l'exécution** : me donner le résultat. Je colle les adresses dans `demo/JUDGES.md` (TODO marqué) et je mesure les vraies latences du disjoncteur.
+  - À savoir : l'acte 2 **déploie sa propre instance** d'ANCRE et du payeur, avec le contrat de `contracts/` au moment de l'exécution. Si le lot 02-bis (renommage `passesAnchorPolicy`, corrections A, B et C) est fusionné avant, il faut refaire `forge build` puis la répétition. La démo ne lit qu'`assess` (`demo/lib/ancre.ts`), donc une seule ligne à changer si son nom bouge.
+
 - [ ] **06/10, suite de ta réponse** :
   - **Compte Alchemy gratuit (D55)** : crée-le, puis donne aux sessions, par un fichier `.env` local et jamais dans le dépôt :
     - la **clé d'API** ;
@@ -18,6 +41,21 @@
   - **Divulgation aux auteurs d'ERC-8004** : le dépôt passe public le 12/10. Or il contient la description du contournement du garde-fou et de l'EOA d'upgrade. **Le brouillon (c) de `docs/erc/drafts/` doit donc partir avant le 12/10**, ou ces passages doivent être retirés de la version publique. À trancher.
   - **Keystore de démo** : à créer avec la commande donnée dans la conversation, puis à alimenter au faucet (au moins 15 MON et 1 USDC de testnet).
   - **Domaine HTTPS pour Mera** : choisir le nom d'hôte, définitif, puisque le passkey y sera lié.
+
+- [ ] **06/10, chantier 07 (écran de démo)**, fait et fusionné sur `main`. Détails : `docs/chantiers/rapports/07.md`, lancement : `demo/SCREEN.md`, tournage : `demo/VIDEO-SHOTS.md`.
+  - **Hébergement du lien « product live »** (🧑 bloqué, rien n'est en ligne) :
+    - A. **Netlify, recommandé** : 0 $ (Free plan, « 300 credit limit », SSL et domaine personnalisé), `npx netlify-cli deploy --prod --dir=app/dist` avec ton compte. Marche avec le dépôt privé.
+    - B. **Vercel** : 0 $ (Hobby, 100 Go/mois), mais réservé à un usage « personal, non-commercial ».
+    - **Une seule décision pour trois besoins** : le même domaine HTTPS doit servir l'écran, le `rpId` de Mera (définitif) et l'URL des webhooks Alchemy (D55). Choisis-le en une fois.
+    - La page publique montre l'acte 1 en direct (Envio) et l'acte 2 en **rejeu** ; le live de l'acte 2 ne tourne qu'en local.
+  - **Feu vert du run testnet du 06 (E6)** : c'est lui qui donne au plan 8 de la vidéo une vraie latence Monad (« refusé au bloc N+1, en X ms »). Sans lui, la vidéo dit « the very next payment », sans chiffre.
+  - **Clé Alchemy (déjà demandée)** : elle permettrait aussi d'afficher à l'écran « les 7 665 noteurs d'Eve ont reçu leur premier MON de son propriétaire » (D55). Optionnel.
+  - **Relancer une session 07** pour ce qui reste du tour 7 :
+    - **D49, poids effectif d'une revue** (à faire en premier : prêt côté données pour l'acte 1) ;
+    - **D50, vue du 2ᵉ saut**, dès que le 06 aura la scène ;
+    - revérifier l'écran sur l'ABI finale de 02-bis (`passesAnchorPolicy`).
+  - **Au tournage** : `cd app && npm run snapshot:scan && ../solver/.venv/bin/python scripts/export_act1.py && npm run sync:runs && npm run build`, puis suivre `demo/VIDEO-SHOTS.md` et sa checklist d'honnêteté. Ne jamais citer une latence mesurée sur fork comme une latence Monad.
+  - **Pousser `main`** : je ne pousse pas sans ton accord.
 
 - [ ] **📅 Ton plan jour par jour (tour 7, D52)** :
   - **Lun 06/10** :
