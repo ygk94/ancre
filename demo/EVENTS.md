@@ -174,7 +174,7 @@ score". It is computed from the registry (`readAllFeedback`), never from an API.
 | Field | Meaning |
 |---|---|
 | `status` | `OK`, `NO_CERT`, `STALE`, `TRANSFERRED`, `VETOED`, `REGISTRY_CHANGED` (enum name) |
-| `trusted` | `assess(...).trusted` = what `isTrusted` returns = what the payer acts on (D39) |
+| `trusted` | `assess(...).passesPolicy` (named `trusted` before 02-bis) = what `passesAnchorPolicy` returns = what the payer acts on (D39) |
 | `trust` | anchor-weighted mass (WAD) |
 | `trustRobust` | mass minus the m − 1 largest anchor contributions (leave-one-out, D8) |
 | `trustLow`, `trustLowPct` | **the ANCRE mass shown on screen**: `trustRobust − eLow`, the lower bound the policy compares to `theta` |

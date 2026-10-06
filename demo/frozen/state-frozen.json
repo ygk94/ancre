@@ -3,16 +3,16 @@
   "mode": "fork",
   "chainId": 10143,
   "operator": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
-  "runId": "run-20261006T121308Z",
+  "runId": "run-20261006T181713Z",
   "agents": {
     "provider-1 (demo)": {
-      "agentId": "2022",
+      "agentId": "2033",
       "owner": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
       "wallet": "0x06b8FaFf5E9D268060cFcA3b18AC0A41b9a53783",
       "role": "provider"
     },
     "provider-2 (demo)": {
-      "agentId": "2023",
+      "agentId": "2034",
       "owner": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
       "wallet": "0xe4eb8f7f3cb89a93Af6fd4cd07BeE263Fb8828fd",
       "role": "provider"
@@ -20,52 +20,52 @@
   },
   "done": {
     "0.fund-mon": {
-      "block": 68682352,
-      "at": "2026-10-06T12:13:11.861Z"
+      "block": 68753987,
+      "at": "2026-10-06T18:17:15.963Z"
     },
     "0.deploy-ancre": {
-      "block": 68682353,
-      "at": "2026-10-06T12:13:12.145Z"
+      "block": 68753988,
+      "at": "2026-10-06T18:17:16.240Z"
     },
     "0.anchor-set": {
-      "block": 68682354,
-      "at": "2026-10-06T12:13:12.473Z"
+      "block": 68753989,
+      "at": "2026-10-06T18:17:16.424Z"
     },
     "0.register:provider-1 (demo)": {
-      "block": 68682355,
-      "at": "2026-10-06T12:13:12.926Z"
+      "block": 68753990,
+      "at": "2026-10-06T18:17:16.897Z"
     },
     "0.wallet:provider-1 (demo)": {
-      "block": 68682356,
-      "at": "2026-10-06T12:13:13.108Z"
+      "block": 68753991,
+      "at": "2026-10-06T18:17:17.061Z"
     },
     "0.register:provider-2 (demo)": {
-      "block": 68682357,
-      "at": "2026-10-06T12:13:13.588Z"
+      "block": 68753992,
+      "at": "2026-10-06T18:17:17.481Z"
     },
     "0.wallet:provider-2 (demo)": {
-      "block": 68682358,
-      "at": "2026-10-06T12:13:13.703Z"
+      "block": 68753993,
+      "at": "2026-10-06T18:17:17.584Z"
     },
     "0.deploy-payer": {
-      "block": 68682359,
-      "at": "2026-10-06T12:13:13.841Z"
+      "block": 68753994,
+      "at": "2026-10-06T18:17:17.722Z"
     },
     "0.fund-payer": {
-      "block": 68682360,
-      "at": "2026-10-06T12:13:14.094Z"
+      "block": 68753995,
+      "at": "2026-10-06T18:17:17.926Z"
     },
     "0.cert": {
-      "block": 68682361,
-      "at": "2026-10-06T12:13:14.793Z",
+      "block": 68753996,
+      "at": "2026-10-06T18:17:18.177Z",
       "value": {
         "action": "certified",
-        "block": 68682361
+        "block": 68753996
       }
     },
     "scene-0": {
-      "block": 68682361,
-      "at": "2026-10-06T12:13:14.995Z"
+      "block": 68753996,
+      "at": "2026-10-06T18:17:18.394Z"
     }
   },
   "notes": {},

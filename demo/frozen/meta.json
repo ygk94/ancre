@@ -1,10 +1,10 @@
 {
-  "forkBlock": 68682336,
-  "frozenAt": "2026-10-06T12:13:35.512Z",
+  "forkBlock": 68753971,
+  "frozenAt": "2026-10-06T18:17:39.821Z",
   "accounts": 39,
   "addedFromCache": {
     "accounts": 5,
-    "slots": 419
+    "slots": 420
   },
-  "rehearsalRun": "run-20261006T121308Z"
+  "rehearsalRun": "run-20261006T181713Z"
 }

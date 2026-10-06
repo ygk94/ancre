@@ -15,7 +15,9 @@
   4. Vérifie sur envio.dev/app que le déploiement est *synced* ; je contrôle ensuite qu'un certificat de la démo apparaît bien `AUDITED` / `CLEAN` dans `SetHealth`.
   Même opération pour le mainnet si l'exécution minimale (D40) a lieu : ce serait le 3ᵉ et dernier déploiement.
 
-> ⚠️ **Ordre à respecter (pilote, 06/10)** : lance l'acte 2 sur le vrai testnet **seulement après la fusion de 02-bis**. L'acte 2 déploie sa propre instance du contrat : sans 02-bis, elle embarquerait le **défaut critique du nœud `address(0)`** trouvé par la revue (une arête fabriquée passe en Registry-verified), et l'ancien nom `isTrusted`. **Hébergement : un seul domaine** pour l'écran, le `rpId` de Mera et les webhooks Alchemy (Netlify recommandé par le 07).
+> ✅ **06/10 soir : 02-bis est fusionné sur `main`** (avec 04-bis, les corrections du plugin et celles de l'indexeur ; 197 tests du contrat verts, forks compris). L'acte 2 peut donc partir sur le vrai testnet **dès que `main` est poussé** (j'attends ton accord) et qu'un `forge build` puis la répétition `--rehearse-testnet` ont été refaits. **Hébergement : un seul domaine** pour l'écran, le `rpId` de Mera et les webhooks Alchemy (Netlify recommandé par le 07).
+>
+> ⚠️ **L'indexeur Envio Cloud doit être redéployé** (son schéma a changé avec la revue) : `indexer/check.ts` échoue contre l'endpoint actuel. Fais-le **en même temps** que le branchement de l'adresse du contrat ci-dessus : c'est le même 2ᵉ déploiement, pas un de plus.
 
 - [ ] **Chantier 06, acte 2 sur le vrai testnet (06/10)**. Tout est prêt et répété ; **8 scènes PASS en fork**, dont le 2ᵉ saut. Il ne manque que toi. Détail : `demo/RUNBOOK.md` §5 ; coût : `demo/BUDGET.md`.
   1. **Keystore** : `cast wallet new ~/.foundry/keystores`, puis renommer le fichier en `~/.foundry/keystores/ancre-demo`. **Sa clé est la graine de tous les comptes de la démo** (ancres, ferme, fournisseurs) : ne l'utilise pour rien d'autre. Ça peut être le même keystore que celui du plan ci-dessous (« au moins 15 MON ») ; l'acte 2 seul en consomme environ 5.

@@ -1526,3 +1526,52 @@ Rapports : `docs/chantiers/rapports/03.md`, `06.md` et `07.md`, fusionnés sur `
 | **AM-07.5** | **La latence du disjoncteur sur Monad n'est pas mesurée** : le « bloc N+1, 300 ms » du storyboard reste à mesurer sur le testnet | run testnet du 06 |
 | AM-07.3 | Pas de `monadLogs` ; les refus viennent du journal du 06. L'écran ne s'abonne pas aux `RefusalReported` | à décider (07) |
 | AM-07.8 | La page publique ne fait que du rejeu ; le live n'existe qu'en local | assumé |
+
+## Revue maximale du 06/10 : corrections fusionnées sur `main` (pilote, 06/10 soir)
+
+Ordre de fusion : 02-bis, puis 04-bis, plugin-revue et indexer-revue. Tests relancés par le pilote sur `main` après chaque étape (MESURÉ, 06/10) :
+
+| Partie | Résultat | Commande |
+|---|---|---|
+| Contrat | **197/197** (8 tests en fork d'abord en échec sur des HTTP 429 de `rpc1.monad.xyz`, verts en relance un par un) | `ETH_RPC_TIMEOUT=900 forge test`, puis `forge test --rerun --threads 1` |
+| Solveur | **195/195** | `solver/.venv/bin/python -m pytest -q` |
+| Plugin | **76/76** | `cd plugin && npm test` |
+| Indexeur | **75 verts, 7 sautés** (tests HyperSync, faute de `ENVIO_API_TOKEN`) | `npx -y pnpm@9 test` |
+| Écran | typecheck et 11/11 | `cd app && npx tsc -b && npm test` |
+
+Constats traités, par lot (le détail est dans les rapports `02bis.md` §8, `04bis.md` §6 bis, `plugin-revue.md` et `indexer-revue.md`) :
+- **02-bis (contrat)** : K6, L1, K7, E1, la part contrat de STUCK et A1d, K10, K8, A2b et ALT8.
+- **04-bis (solveur)** : les 6 hauts, 13 moyens, AM-06.1 et des faibles triviaux.
+- **Plugin** : les 18 constats, dont M4 (override, D47).
+- **Indexeur** : les 12 constats, DEC18 et la règle B.
+
+Ajouts du pilote pendant la fusion :
+- **AM-PIL.3** : `contracts/test/Fork.t.sol` ne compilait pas en build propre (stack too deep sous via-IR). Les « 197 verts » de 02-bis venaient d'artefacts en cache. Corrigé en découpant la fonction (`_eaRow3`, `_setOwnerFps`). **Leçon : un rapport de tests doit venir d'un `forge clean` ou d'un clone neuf.**
+- L'écran affichait encore `isTrusted` : renommé en `passesAnchorPolicy`.
+- **AM-PIL.4** : `simulate.py` (vecteurs, violations et vecteurs communs sur fork) contre le contrat de 02-bis :
+  - la plupart des scénarios revertent `BadNodes`, parce que le harnais passe les nœuds en ligne sur un set ouvert, ce que A1d refuse désormais ;
+  - un `AnchorAsSource`, à confirmer comme refus attendu ;
+  - un `ProvenRowResubmitted` sur la resoumission du scénario C.
+
+  Le service `certifier.py` n'est pas touché : il passe déjà par `addNodes`. **Correction du harnais en cours** (`chantier/simulate-02bis`).
+- **Relais de l'indexeur vers le solveur**, en cours (`chantier/solver-relais`) :
+  - REGCB, à porter dans `graph.py` ;
+  - `tag1Exact` dans `from_indexer.py`.
+
+**Ce qui reste ouvert après la revue** :
+- **À trancher par Hugo ou le conseil** :
+  - A1b (zone de transit D23) ;
+  - EFF1 (fenêtre `scanMax`, normative) ;
+  - G-11, les EOA 7702 sur un set ouvert (AM-02bis.6) ;
+  - la liveness des faits (AM-02bis.2) ;
+  - D44, le repli owner ;
+  - l'ancre 0x794c du vecteur `mainnet_slash_anchor`.
+- **Non vérifié faute d'environnement** :
+  - SW2, NUL et LONGTAG sur un vrai Postgres (Docker éteint) ;
+  - la parité HyperSync (pas de jeton) ;
+  - M4 sur une vraie session MetaMask (format de `mm wallet policy get`, 2FA) ;
+  - ARGV (Linux).
+- **Faibles, reportés après la soumission** :
+  - côté contrat : le nettoyage de 02-bis ;
+  - côté solveur : REGADDR, SRCLESS, SYNROWS, DEAD, K27 et MERKLE.
+- **Conséquence pour le déploiement** : `indexer/check.ts` ne passe plus contre l'endpoint Envio Cloud actuel tant qu'il n'est pas redéployé, car le schéma a changé (2ᵉ des 3 déploiements).
