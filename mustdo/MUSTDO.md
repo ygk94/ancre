@@ -25,10 +25,10 @@
 3. [ ] **Faucet testnet sur `0x810724967b0d895d087b991304385720d4903c3F`** (solde au 06/10 : 0 MON, 0 USDC) :
    - au moins **15 MON** sur https://faucet.monad.xyz ;
    - **1 USDC** sur https://faucet.circle.com (réseau Monad testnet).
-4. [ ] **Choisir l'hébergement et le domaine HTTPS, une seule fois.**
-   - Ce même domaine sert l'écran, le `rpId` de Mera (définitif : les passkeys y sont liés) et l'URL des webhooks Alchemy.
-   - Netlify est recommandé : gratuit, et il marche avec un dépôt privé.
-   - Donne-moi le nom d'hôte.
+4. [x] **Hébergement et domaine HTTPS.** ✅ 07/10 : **`https://ancre-xyz.netlify.app`** (Netlify, déployé depuis `main` par `netlify.toml`, qui ne publie que `app/dist`).
+   - **`rpId` de Mera = `ancre-xyz.netlify.app`**, définitif : ne plus renommer le site.
+   - **Protection d'accès Netlify active (401)** : la garder jusqu'à la mise en public.
+   - Le webhook Alchemy n'ira **pas** sur Netlify : il doit arriver là où tourne le certificateur (tunnel pour la démo ; hôte du 13 au 27/10 à décider).
 5. [ ] **Trancher la divulgation aux auteurs d'ERC-8004 (D29).**
    - Le dépôt passe public le 12/10, et il décrit le contournement du garde-fou et l'EOA d'upgrade.
    - Deux options : envoyer le brouillon (c) de `docs/erc/drafts/` avant le 12/10 (recommandé), ou retirer ces passages de la version publique.
@@ -66,7 +66,9 @@
    - Appareils : un Mac sous macOS 15 et un iPhone sous iOS 18.4 ou plus, avec le même trousseau iCloud.
    - Il se fait sur le domaine du point 4.
 5. [ ] **Relancer une session pour l'écran (chantier 07).**
-   - Ce qui reste : D49, le poids effectif d'une revue (à faire en premier), puis D50, la vue du 2ᵉ saut.
+   - **Refonte du front** demandée par Hugo le 07/10.
+   - Ce qui reste aussi : D49, le poids effectif d'une revue (à faire en premier), puis D50, la vue du 2ᵉ saut.
+   - Le site se met à jour à chaque push sur `main` (`ancre-xyz.netlify.app`).
    - L'écran est déjà adapté au contrat corrigé.
 6. [ ] **Relancer une session pour la norme (chantier 08).** Elle doit mettre l'ERC à jour avec :
    - les décisions D48 à D56 ;
