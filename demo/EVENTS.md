@@ -48,10 +48,11 @@ Encoding rules (all files):
     "tags": [{ "tag": "review", "hash": "0x…", "kind": "endorsement", "min": "-1", "neutral": "0", "max": "1" }]
   },
   "actors": [
+    { "label": "ANCRE operator (deployer, certifier, payer owner)", "role": "operator", "address": "0x…" },
+    { "label": "anchor-A (demo)", "role": "anchor", "address": "0x…" },
     { "label": "provider-1 (demo)", "role": "provider", "agentId": "1234", "owner": "0x…", "wallet": "0x…" },
     { "label": "farm-07 (demo)", "role": "farm", "agentId": "1250", "owner": "0x…", "wallet": "0x…" },
-    { "label": "farm target (demo)", "role": "farm-target", "agentId": "1243", "owner": "0x…", "wallet": "0x…" },
-    { "label": "certifier", "role": "certifier", "agentId": null, "owner": null, "wallet": "0x…" }
+    { "label": "farm target (demo)", "role": "farm-target", "agentId": "1243", "owner": "0x…", "wallet": "0x…" }
   ],
   "startedAt": "2026-10-07T14:15:02.311Z"
 }
@@ -60,9 +61,11 @@ Encoding rules (all files):
 - `network.mode`: `"fork"` (anvil fork of testnet 10143), `"frozen"` (replay of the dumped anvil state, D28)
   or `"testnet"` (real network). `forkBlock` is `null` on the testnet.
 - `set.tags[].hash` = `keccak256(tag)`: `assess.triggerTag` is a **hash** (AM-04.2); resolve it with this table.
-- `actors` lists every account of the run with its label. `role` ∈ `anchor`, `provider`, `farm`,
-  `farm-target`, `rater` (the third-party rater of scene 5), `certifier`, `payer-operator`, `deployer`.
-  The screen should take labels from here, never guess them.
+- `actors` lists every account of the run with its label: accounts as `{label, role, address}`, agents as
+  `{label, role, agentId, owner, wallet}`. `role` ∈ `operator` (deployer, attested certifier, payer owner),
+  `anchor`, `payer-operator`, `farm-owner`, `rater` (the third-party rater of scene 5), `provider`, `farm`,
+  `farm-target`. Agents appear once registered: the header is rewritten after every scene. The screen should take
+  labels from here, never guess them.
 
 ## 3. Event
 
@@ -142,11 +145,11 @@ Proposed/Finalized states; this log never contains speculative blocks.
 | `feedback-batch` | many `giveFeedback` of the farm summarised in one event | `{ "count", "clients", "tag1", "value", "decimals", "txHashes": [...] , "firstBlock", "lastBlock" }` |
 | `revoke` | `revokeFeedback` | `{ "client", "feedbackIndex" }` |
 | `certificate` | the certifier submitted (or skipped) a certificate | see `certificate` below; `data` = `{ "trigger": "<why it recertified>" }` |
-| `assess` | a pure read of the agent's state, no transaction (e.g. before/after) | `null` |
+| `assess` | a pure read of the agent's state, no transaction; scene 4 uses it to carry the `latency` block (step `4.latency`) | `null` |
 | `payment` | an x402 payment attempt through the `TrustGatedPayer` | see `payer` below |
 | `farm-payment` | scene 3: a farm agent pays another farm agent, plain x402 `exact` from an EOA | `{ "from", "to", "amount", "receiptVerified": true }` |
-| `rejected` | an expected revert (scene 6) | `{ "fn", "error": "EdgeMismatch(3,0)", "selector": "0x…" }` |
-| `scene-start`, `scene-end` | bracket of a scene | `scene-end`: `{ "ok": true, "checks": [{ "name", "ok", "expected", "actual" }] }` |
+| `rejected` | an expected revert (scene 6) | `{ "fn", "error": "EdgeMismatch(2, 1)", "simulated": true, "fabricatedEdge": {a, c, v, d, t1}, "mass" }` (simulated: `eth_estimateGas`, nothing broadcast) |
+| `scene-start`, `scene-end` | bracket of a scene | `scene-end`: `{ "ok": true, "checks": [{ "name", "ok", "expected", "actual" }], "durationMs" }` |
 
 ### 3.3 `agent`: the two columns of the screen
 
@@ -196,6 +199,7 @@ against `thetaPct`, `ePct` as the error bar, `status`, and the payer's verdict.
   "reason": "UNTRUSTED",
   "decide": "UNTRUSTED",
   "explain": { "reason": "UNTRUSTED", "status": "OK", "trustLow": "0", "distrustUp": "…", "triggerTag": null },
+  "facilitator": { "verify": "FiatTokenV2: invalid signature", "settle": null },
   "settlementTx": null,
   "providerReceived": "0",
   "payerBalanceAfter": "90000"
@@ -210,7 +214,12 @@ against `thetaPct`, `ePct` as the error bar, `status`, and the payer's verdict.
 | `decide` | `payer.decide(agentId, payTo, amount)` before signing (enum name) |
 | `explain` | `payer.explain(hash, blob)` at the attempt's block: the refusal rebuilt (AM-6.8, a refused x402 payment leaves no on-chain trace) |
 | `settlementTx` | hash of the settlement transaction if one was broadcast, else `null` |
+| `facilitator` | raw outcome of `/verify` and `/settle`: `"ok"` or the error text (`settle` is `null` when verify refused) |
 | `providerReceived` | USDC base units actually received by `payTo` (balance delta) |
+
+`block` of a payment event = the block whose state `/verify` was evaluated on (refusal), or the settlement
+block (paid). A `REFUSED` event is only written for a refusal by the contract (stage `verify`, `explain.reason` ≠
+`OK`); a facilitator or RPC failure stops the script instead of being logged as a refusal.
 
 The hard guard is what the demo shows: a scene that tests a refusal **signs the payment anyway** (bypassing
 the soft `decide` check) and records the facilitator's verify/settle outcome, so that a refusal is the

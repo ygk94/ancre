@@ -6,9 +6,9 @@ rejected. Everything below was run on 2026-10-06 (chantier 06); timings are MEAS
 
 | Goal | Command (from `demo/`) | Network | Time |
 |---|---|---|---|
-| Replay the whole act on a fork | `node run.ts` | reads testnet state through the fork | ~1 min (24 s of scenes, MEASURED) |
-| Replay scenes 1-6 with **no network at all** | `node run.ts --frozen` | none | ~30 s |
-| Resumable rehearsal | `node fork.ts` + `node run.ts --rpc http://127.0.0.1:8549` | fork | ~1 min |
+| Replay the whole act on a fork | `node run.ts` | reads testnet state through the fork | 27 s (MEASURED 06/10, anvil start included) |
+| Replay scenes 1-6 with **no network at all** | `node run.ts --frozen` | none | 20 s (MEASURED 06/10) |
+| Resumable rehearsal | `node fork.ts` + `node run.ts --rpc http://127.0.0.1:8549` | fork | ~30 s |
 | Dress rehearsal of the testnet run | `node run.ts --rehearse-testnet --keystore <ks> --sweep` | fork, interval mining | 7.5 min at 1 s blocks |
 | **Real testnet** (Hugo's go-ahead only) | `node run.ts --network testnet --keystore <ks> --sweep` | Monad testnet | 3-5 min (ESTIMATED) |
 
@@ -26,7 +26,7 @@ cd demo && npm ci
 `demo/` runs TypeScript with Node's type stripping (no build step) and calls the chantier 04 certifier through
 `demo/certify.py` (`ANCRE_PYTHON` overrides `solver/.venv/bin/python`).
 
-## 2. Replay act 2 on a fork (< 15 minutes from a fresh clone)
+## 2. Replay act 2 on a fork (< 15 minutes from a fresh clone: MEASURED 78 s, build included, 06/10)
 
 ```bash
 cd demo

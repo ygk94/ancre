@@ -49,7 +49,8 @@ export class Chain {
     this.monadRules = monadRules;
     this.mode = mode;
     this.chainId = chainId;
-    this.pub = createPublicClient({ transport: http(rpc, { timeout: 120_000, retryCount: 5 }) }) as PublicClient;
+    // 250 ms receipt polling: viem defaults to 4 s, which is 13 Monad blocks per transaction
+    this.pub = createPublicClient({ pollingInterval: 250, transport: http(rpc, { timeout: 120_000, retryCount: 5 }) }) as PublicClient;
   }
 
   wallet(account: PrivateKeyAccount) {

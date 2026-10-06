@@ -1,96 +1,119 @@
-# Budget de l'acte 2 sur le testnet Monad (10143)
+# Act 2 budget on Monad testnet (10143)
 
-> Chantier 06, E1. Rédigé le 2026-10-06. **Rien n'a été dépensé** : tous les chiffres viennent d'exécutions sur un
-> fork local (`anvil 1.8.3 --network monad`, modèle de gas Monad : pages MIP-8, gas limit facturée), sur les vrais
-> registres ERC-8004 v2.0.0 du testnet. Étiquettes : **MESURÉ-FORK** (mesuré sur le fork), **MESURÉ** (réseau réel),
-> **DOC** (documentation Monad), **ESTIMÉ**, **NON VÉRIFIÉ**.
-> Commande qui produit les mesures : `cd demo && node run.ts --sweep` → `demo/out/run-<ts>.budget.json`.
+> Chantier 06, step E1, written 2026-10-06. **Nothing has been spent.** Every number comes from runs on a local
+> fork (`anvil 1.8.3 --network monad`: Monad gas model, MIP-8 pages, gas limit billed), on the real ERC-8004 v2.0.0
+> registries of the testnet. Labels: **MEASURED-FORK**, **MEASURED** (real network), **DOC** (Monad docs),
+> **ESTIMATED**, **UNVERIFIED**. The measurements come from `cd demo && node run.ts --sweep`, which writes
+> `demo/out/run-<ts>.budget.json`.
 
-## 1. Hypothèses
+## 1. Assumptions
 
-| | Valeur | Statut |
+| | Value | Status |
 |---|---|---|
-| Prix du gas testnet | **102 gwei** (`cast gas-price`), base fee 100 gwei (`cast base-fee`) | MESURÉ 2026-10-06 07:34 UTC |
-| Facturation | sur la **gas limit**, pas sur le gas consommé | DOC (CLAUDE.md §7) |
-| Gas limit de chaque tx | `ceil(eth_estimateGas × 1,10) + 5 000` | choix (`lib/chain.ts`) |
-| Taille de la ferme | 10 agents + 1 cible, 5 paiements internes (D45) | choix (`lib/config.ts`, `ANCRE_FARM_SIZE`) |
-| Réserve Monad | sous 10 MON, un transfert de valeur qui fait descendre sous la réserve revert, sauf une fois par fenêtre de 3 blocs (compte non délégué) ; le consensus contrôle les frais contre le solde vu 3 blocs plus tôt | DOC (docs.monad.xyz/developer-essentials/reserve-balance, note du vault) |
+| Testnet gas price | **102 gwei** (`cast gas-price`), base fee 100 gwei (`cast base-fee`) | MEASURED 2026-10-06 07:34 UTC |
+| Billing | on the **gas limit**, not on the gas used | DOC (CLAUDE.md §7) |
+| Gas limit of each tx | `ceil(eth_estimateGas × 1.10) + 5 000` | choice (`lib/chain.ts`) |
+| Farm size | 10 agents + 1 target, 5 payments inside the farm (D45) | choice (`lib/config.ts`, `ANCRE_FARM_SIZE`) |
+| Monad reserve balance | below 10 MON, a value transfer that ends under the reserve reverts, except once per 3-block window (non-delegated account). The consensus checks fees against the balance seen 3 blocks earlier | DOC (docs.monad.xyz/developer-essentials/reserve-balance, vault note) |
 
-## 2. Coût unitaire mesuré (gas limit facturée)
+## 2. Measured unit costs (billed gas limit)
 
-MESURÉ-FORK le 2026-10-06, fork du bloc 68 628 2xx, exécution complète des 7 scènes (`run-20261006T074828Z`).
+MEASURED-FORK on 2026-10-06, fork of block 68 628 2xx, full run of the 7 scenes (`run-20261006T074828Z`).
 
-| Transaction | n | Gas limit moyenne (min-max) | gasUsed moyen | MON à 102 gwei (total) |
+| Transaction | n | Avg gas limit (min-max) | Avg gas used | MON at 102 gwei (total) |
 |---|---|---|---|---|
-| Déploiement `AnchoredReputation` + `TrustGatedPayer` | 2 | 8 015 569 et 2 385 083 | 4 723 023 | 1,061 |
-| `registerAnchorSet` (k = 3, 3 tags) | 1 | 552 467 | 497 697 | 0,056 |
-| `register(agentURI)` (URI `data:` de ~230 octets) | 13 | 376 803 (373 869-392 919) | 333 444 | 0,500 |
-| `setAgentWallet` | 13 | 96 777 | 82 808 | 0,128 |
-| `giveFeedback` | 27 | 314 845 (222 939-326 950) | 277 954 | 0,867 |
-| `submitCertificate` (certificateur du 04, ≤ 20 nœuds) | 4 | 569 467 (488 139-657 250) | 525 085 | 0,232 |
-| Transferts MON (15) et USDC (6) | 21 | 53 022 | 43 436 | 0,114 |
-| **Total de nos transactions** | **81** | **29 001 846** | | **2,958** |
+| Deploy `AnchoredReputation` + `TrustGatedPayer` | 2 | 8 015 569 and 2 385 083 | 4 723 023 | 1.061 |
+| `registerAnchorSet` (k = 3, 3 tags) | 1 | 552 467 | 497 697 | 0.056 |
+| `register(agentURI)` (~230-byte `data:` URI) | 13 | 376 803 (373 869-392 919) | 333 444 | 0.500 |
+| `setAgentWallet` | 13 | 96 777 | 82 808 | 0.128 |
+| `giveFeedback` | 27 | 314 845 (222 939-326 950) | 277 954 | 0.867 |
+| `submitCertificate` (chantier 04 certifier, ≤ 20 nodes) | 4 | 569 467 (488 139-657 250) | 525 085 | 0.232 |
+| MON (15) and USDC (6) transfers | 21 | 53 022 | 43 436 | 0.114 |
+| **All our transactions** | **81** | **29 001 846** | | **2.958** |
 
-Écart avec les chiffres antérieurs : `register` coûte 377 k de limite ici, contre 221 k de gas mesuré par le chantier 05. Deux causes : notre URI `data:` est plus longue (elle décrit l'agent comme « demo », lisible dans un explorateur), et la limite inclut la marge de 10 %. Une URI courte économiserait ≈ 0,2 MON. On garde la version autodescriptive.
+Why `register` costs more here: chantier 05 measured 221 k gas used, against a 377 k limit here. Our URI is a
+self-describing `data:` URI that labels the agent "demo" in any explorer, and the limit includes the 10 % margin.
+A short URI would save about 0.2 MON. We keep the self-describing one.
 
-## 3. Les deux enveloppes
+## 3. The two envelopes
 
-### Enveloppe 1 : frais (dépensés)
+### Envelope 1: fees (spent)
 
-| Poste | MON |
+| Item | MON |
 |---|---|
-| Nos 81 transactions, toutes scènes (§2) | 2,958 (MESURÉ-FORK, limites × 102 gwei) |
-| Balayage final (`--sweep`) : 15 transferts × 21 000 gas | 0,032 (CALCULÉ) |
-| **Total des frais** | **≈ 2,99 MON** |
-| Avec une marge de 30 % (prix du gas, une scène rejouée) | **≈ 3,9 MON** |
+| Our 81 transactions, all scenes (§2) | 2.958 (MEASURED-FORK, limits × 102 gwei) |
+| Final sweep (`--sweep`): 15 transfers × 21 000 gas | 0.032 (computed) |
+| **Total fees** | **≈ 2.99 MON** |
+| With a 30 % margin (gas price, one replayed scene) | **≈ 3.9 MON** |
 
-### Enveloppe 2 : capital immobilisé (prêté puis récupéré)
+### Envelope 2: capital (lent, then recovered)
 
-Chaque compte émetteur reçoit de l'opérateur le MON de ses propres frais : limites mesurées × 1,5 à 102 gwei (`run.ts`). Le reste est **renvoyé à l'opérateur par `--sweep`** à la fin.
+Each emitting account receives from the operator the MON for its own fees: its measured limits × 1.5, at 102 gwei
+(`run.ts`). What it does not spend is **swept back to the operator** by `--sweep` at the end.
 
-| Compte | Transactions | Prêté (MON) |
+| Account | Transactions | Lent (MON) |
 |---|---|---|
-| anchor-A / anchor-B / anchor-C | 1 / 3 / 2 avis | 0,051 / 0,151 / 0,101 |
-| Owner de la ferme | 11 `register` + 11 `setAgentWallet` | 0,833 |
-| 10 wallets de la ferme | 2 avis chacun | 10 × 0,101 = 1,010 |
-| Noteur tiers (scène 5) | 1 avis | 0,050 |
-| **Total prêté** | | **2,196 MON** (MESURÉ-FORK, `capitalLentToEmittersMon`) |
-| Dépensé par ces comptes (inclus dans l'enveloppe 1) | | ≈ 1,40 MON |
-| **Récupérable après la démo** | | **≈ 0,80 MON** (ESTIMÉ : prêté − dépensé − balayage) |
+| anchor-A / anchor-B / anchor-C | 1 / 3 / 2 feedback | 0.051 / 0.151 / 0.101 |
+| Farm owner | 11 `register` + 11 `setAgentWallet` | 0.833 |
+| 10 farm wallets | 2 feedback each | 10 × 0.101 = 1.010 |
+| Third-party rater (scene 5) | 1 feedback | 0.050 |
+| **Total lent** | | **2.196 MON** (MEASURED-FORK, `capitalLentToEmittersMon`) |
+| Spent by these accounts (already in envelope 1) | | ≈ 1.40 MON |
+| **Recoverable after the demo** | | **≈ 0.80 MON** (ESTIMATED: lent − spent − sweep) |
 
-La **réserve de 10 MON n'immobilise rien en plus** : aucun compte n'a besoin de rester au-dessus de 10 MON. Sous la réserve, la règle impose seulement d'espacer les transferts de valeur. `lib/chain.ts` attend 3 blocs entre deux transferts d'un même compte, et 3 blocs après l'approvisionnement d'un compte avant sa première transaction. Sur le testnet, ça ajoute ≈ 15 × 1,2 s.
+**The 10 MON reserve locks nothing more**: no account needs to stay above 10 MON. Below the reserve, the rule only
+spaces value transfers. `lib/chain.ts` waits 3 blocks between two transfers from the same account, and 3 blocks
+after funding an account before its first transaction. This adds about 15 × 1.2 s on the testnet.
 
-### Ce que l'opérateur doit détenir au départ
+### What the operator must hold at the start
 
 | | MON |
 |---|---|
-| Frais de l'opérateur lui-même (déploiements, ensemble, 2 fournisseurs, certificats, transferts) | 1,56 (MESURÉ-FORK, par compte) |
-| Capital prêté aux 15 autres émetteurs | 2,20 |
-| Marge | 1,24 |
-| **Solde de départ recommandé** | **5 MON testnet** |
-| **USDC testnet** | **0,11 USDC** (0,1 déposé dans le payeur + 5 × 0,002 pour la ferme) ; demander 1 USDC au faucet |
+| The operator's own fees (deployments, set, 2 providers, certificates, transfers) | 1.56 (MEASURED-FORK, per account) |
+| Capital lent to the 15 other emitters | 2.20 |
+| Margin | 1.24 |
+| **Recommended starting balance** | **5 MON testnet** |
+| **Testnet USDC** | **0.11 USDC** (0.1 deposited in the payer + 5 × 0.002 for the farm); ask the faucet for 1 USDC |
 
-## 4. Ce que paient les autres
+Dress rehearsal (`node run.ts --rehearse-testnet --keystore … --sweep`, MEASURED-FORK 06/10). Same code path as the
+testnet, interval mining at 1 s, operator funded with **5 MON only**. All 7 scenes PASS, 2.18 MON recovered by the
+sweep. The fork's gas price is about 4 gwei, so this rehearsal checks the flow and the waits, not the 102 gwei bill.
 
-- **Facilitator x402** (`x402-facilitator.molandak.org`, signataire `0x7f6a…Db86`). Il règle 3 paiements du payeur et 5 paiements internes à la ferme : **1 843 982 gas de limites ≈ 0,19 MON**, à sa charge (MESURÉ-FORK, facilitator émulé comme x402-rs). Les refus au `/verify` ne coûtent rien : aucune transaction n'est envoyée.
-- **Envio** (plan gratuit, 100 000 events, ~55 800 déjà consommés selon le pilote) : une exécution complète émet **92 events des registres** (65 sur l'Identity : `Registered`, `Transfer`, `MetadataSet` ; 27 `NewFeedback` sur la Reputation), MESURÉ-FORK (`eventsByContract`). Plafond fixé : 25 000, soit **plus de 250 exécutions**. Aucun risque.
+## 4. What others pay
 
-## 5. Nombre de comptes
+- **The x402 facilitator** (`x402-facilitator.molandak.org`, signer `0x7f6a…Db86`) settles 3 payer payments and
+  5 payments inside the farm. That is **1 843 982 gas of limits, ≈ 0.19 MON, paid by the facilitator**
+  (MEASURED-FORK, facilitator emulated the way x402-rs works). Refusals at `/verify` cost nothing: no transaction
+  is sent.
+- **Envio** (free plan, 100 000 events, ~55 800 already used according to the pilot). One full run emits
+  **92 registry events** (MEASURED-FORK, `eventsByContract`):
+  - 65 on the Identity registry: `Registered`, `Transfer`, `MetadataSet`;
+  - 27 `NewFeedback` on the Reputation registry.
 
-**16 comptes émetteurs** (MESURÉ-FORK : `sendingAccounts`) :
-- l'opérateur ;
-- 3 ancres (m = 2 exige au moins 2 ancres honnêtes, plus une compromise à la scène 2) ;
-- l'owner de la ferme ;
-- 10 wallets de ferme ;
-- 1 noteur tiers.
+  Against the 25 000 cap, that is **more than 250 runs**. No risk.
 
-Les wallets des fournisseurs, de la cible et l'opérateur du payeur **signent seulement**, sans MON.
+## 5. Number of accounts
 
-Minimum absolu : 6 + N, où N est la taille de la ferme. La ferme coûte ≈ 0,11 MON par agent (`register`, `setAgentWallet`, 2 avis), soit ≈ 1,1 MON pour N = 10. Avec N = 5 (`ANCRE_FARM_SIZE=5`), la scène reste lisible (moyenne naïve 100 sur 5 avis) et coûte ≈ 0,55 MON de moins. On garde N = 10 pour le contraste visuel.
+**16 emitting accounts** (MEASURED-FORK, `sendingAccounts`):
+- the operator;
+- 3 anchors (m = 2 needs at least 2 honest anchors, plus one compromised in scene 2);
+- the farm owner;
+- 10 farm wallets;
+- 1 third-party rater.
 
-## 6. Ce qui n'est pas mesurable en fork
+The provider wallets, the target wallet and the payer's operator key only sign, so they need no MON.
 
-- **Le prix du gas le jour J** (102 gwei MESURÉ le 06/10 ; la base fee peut monter) : la marge de 30 % le couvre.
-- **`eth_estimateGas` du vrai testnet** contre celui d'anvil `--network monad` : un écart supérieur à la marge de 10 % ferait échouer une transaction (elle paie quand même sa limite). Non observé au chantier 05 (T1 préparé, pas exécuté). NON VÉRIFIÉ.
-- **Le faucet** (https://faucet.monad.xyz, https://faucet.circle.com) : montant et délai entre deux demandes NON VÉRIFIÉS.
-- **Le facilitator réel avec le payeur ERC-1271** : c'est la porte P3 (test T1), toujours en attente de Hugo. Si elle échoue, les scènes 1 et 4 (paiements honnêtes réglés) échouent sur le testnet. Les refus, eux, se constatent sans transaction.
+Absolute minimum: 6 + N, with N the farm size. Each farm agent costs about 0.11 MON (`register`,
+`setAgentWallet`, 2 feedback), so about 1.1 MON for N = 10. With N = 5 (`ANCRE_FARM_SIZE=5`), the scene stays
+readable (naive average 100 over 5 feedback) and costs about 0.55 MON less. We keep N = 10 for the visual contrast.
+
+## 6. What a fork cannot measure
+
+- **The gas price on the day.** 102 gwei was MEASURED on 06/10, and the base fee can rise. The 30 % margin covers it.
+- **The real testnet's `eth_estimateGas` against anvil `--network monad`.** A gap larger than the 10 % margin would
+  make a transaction fail, and it would still pay its limit. Not observed in chantier 05 (T1 prepared, not run).
+  UNVERIFIED.
+- **The faucets** (https://faucet.monad.xyz, https://faucet.circle.com). Amounts and cooldowns are UNVERIFIED.
+- **The real facilitator with the ERC-1271 payer.** This is gate P3 (test T1), still waiting for Hugo. If it fails,
+  scenes 1 and 4 (honest payments settled) fail on the testnet. The refusals are still observed, since they need no
+  transaction.
