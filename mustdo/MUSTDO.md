@@ -8,6 +8,20 @@
 
 ## 🔴 Cette semaine, parce que ça bloque d'autres chantiers
 
+- [ ] **Chantier 06, acte 2 sur le vrai testnet (06/10)**. Tout est prêt et répété ; **8 scènes PASS en fork**, dont le 2ᵉ saut. Il ne manque que toi. Détail : `demo/RUNBOOK.md` §5 ; coût : `demo/BUDGET.md`.
+  1. **Keystore** : `cast wallet new ~/.foundry/keystores`, puis renommer le fichier en `~/.foundry/keystores/ancre-demo`. **Sa clé est la graine de tous les comptes de la démo** (ancres, ferme, fournisseurs) : ne l'utilise pour rien d'autre. Ça peut être le même keystore que celui du plan ci-dessous (« au moins 15 MON ») ; l'acte 2 seul en consomme environ 5.
+  2. **Faucets** sur l'adresse affichée : **5 MON** (https://faucet.monad.xyz) et **1 USDC** (https://faucet.circle.com, réseau Monad testnet).
+  3. **Répétition sans risque** (fork, aucune transaction réelle) : `cd demo && npm ci && node run.ts --rehearse-testnet --keystore ~/.foundry/keystores/ancre-demo --sweep`. Elle doit afficher `ACT 2 PASS`.
+  4. **Ton feu vert explicite** dans la conversation, puis, dans ton terminal : `node run.ts --network testnet --keystore ~/.foundry/keystores/ancre-demo --sweep`. Le script demande une phrase de confirmation tapée, puis le mot de passe. Coût :
+     - ≈ 3,15 MON de frais (4,1 avec la marge) ;
+     - 2,25 MON prêtés aux comptes de la démo, dont ≈ 0,8 récupérés par `--sweep` ;
+     - 0,11 USDC ;
+     - 98 events Envio ;
+     - environ 3 à 5 min.
+  5. **Dépendance** : le **test T1 réel** (point 14h, porte P3) n'a jamais tourné. Si le facilitator refuse le payeur ERC-1271, les paiements honnêtes (scènes 1, 4 et 7) s'arrêtent. Dans ce cas, on filme sur le fork ou sur l'état figé (`node run.ts --frozen`, sans réseau).
+  6. **Après l'exécution** : me donner le résultat. Je colle les adresses dans `demo/JUDGES.md` (TODO marqué) et je mesure les vraies latences du disjoncteur.
+  - À savoir : l'acte 2 **déploie sa propre instance** d'ANCRE et du payeur, avec le contrat de `contracts/` au moment de l'exécution. Si le lot 02-bis (renommage `passesAnchorPolicy`, corrections A, B et C) est fusionné avant, il faut refaire `forge build` puis la répétition. La démo ne lit qu'`assess` (`demo/lib/ancre.ts`), donc une seule ligne à changer si son nom bouge.
+
 - [ ] **06/10, suite de ta réponse** :
   - **Compte Alchemy gratuit (D55)** : crée-le, puis donne aux sessions, par un fichier `.env` local et jamais dans le dépôt :
     - la **clé d'API** ;
