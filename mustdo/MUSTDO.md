@@ -22,7 +22,7 @@
    ```
    - La commande demande un mot de passe et n'affiche que l'adresse.
    - **C'est la graine de tous les comptes de la démo** : ne t'en sers pour rien d'autre.
-3. [ ] **Faucet testnet sur `0x810724967b0d895d087b991304385720d4903c3F`**, à faire au fur et à mesure (solde au 07/10 : **10 MON sur 15**, 0 USDC) :
+3. [ ] **Faucet testnet sur `0x810724967b0d895d087b991304385720d4903c3F`**, à faire au fur et à mesure (07/10 : **15 MON ✅**, **0 USDC : reste à faire** sur faucet.circle.com, réseau Monad Testnet) :
    - au moins **15 MON** sur https://faucet.monad.xyz ;
    - **1 USDC** sur https://faucet.circle.com (réseau Monad testnet).
 4. [x] **Hébergement et domaine HTTPS.** ✅ 07/10 : **`https://ancre-xyz.netlify.app`** (Netlify, déployé depuis `main` par `netlify.toml`, qui ne publie que `app/dist`).
