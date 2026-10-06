@@ -16,13 +16,13 @@
 1. [ ] **Autoriser le push de `main`** (42 commits).
    - Ce que ça contient : toutes les corrections de la revue et la démo adaptée.
    - Pourquoi c'est bloquant : sans ce push, l'autre machine et l'acte 2 travaillent sur l'ancien contrat, celui qui a le défaut critique du nœud `address(0)`.
-2. [ ] **Créer le keystore de démo.** Commande, à taper dans la conversation pilote :
+2. [x] **Créer le keystore de démo.** ✅ 06/10 : `~/.foundry/keystores/ancre-demo`, adresse **`0x810724967b0d895d087b991304385720d4903c3F`**. Commande, à taper dans la conversation pilote :
    ```
    ! ~/.foundry/bin/cast wallet new ~/.foundry/keystores ancre-demo
    ```
    - La commande demande un mot de passe et n'affiche que l'adresse.
    - **C'est la graine de tous les comptes de la démo** : ne t'en sers pour rien d'autre.
-3. [ ] **Faucet testnet sur cette adresse** :
+3. [ ] **Faucet testnet sur `0x810724967b0d895d087b991304385720d4903c3F`** (solde au 06/10 : 0 MON, 0 USDC) :
    - au moins **15 MON** sur https://faucet.monad.xyz ;
    - **1 USDC** sur https://faucet.circle.com (réseau Monad testnet).
 4. [ ] **Choisir l'hébergement et le domaine HTTPS, une seule fois.**
