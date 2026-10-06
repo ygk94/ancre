@@ -22,7 +22,7 @@
    ```
    - La commande demande un mot de passe et n'affiche que l'adresse.
    - **C'est la graine de tous les comptes de la démo** : ne t'en sers pour rien d'autre.
-3. [ ] **Faucet testnet sur `0x810724967b0d895d087b991304385720d4903c3F`** (solde au 06/10 : 0 MON, 0 USDC) :
+3. [ ] **Faucet testnet sur `0x810724967b0d895d087b991304385720d4903c3F`**, à faire au fur et à mesure (solde au 07/10 : **5 MON sur 15**, 0 USDC) :
    - au moins **15 MON** sur https://faucet.monad.xyz ;
    - **1 USDC** sur https://faucet.circle.com (réseau Monad testnet).
 4. [x] **Hébergement et domaine HTTPS.** ✅ 07/10 : **`https://ancre-xyz.netlify.app`** (Netlify, déployé depuis `main` par `netlify.toml`, qui ne publie que `app/dist`).
@@ -42,10 +42,9 @@
    - **117 des 201 commits sont signés avec une adresse professionnelle** (`@employer`), et 6 avec `@former-employer`.
    - L'historique est obligatoire (§4.1), donc on ne peut pas publier un dépôt sans historique. Si tu préfères, je peux réécrire l'auteur de ces commits vers ton adresse perso avant la mise en public. Les dates et le contenu ne changent pas, mais les hashes changent.
    - C'est à toi de juger ; je ne donne pas d'avis juridique.
-7. [ ] **Compte Alchemy gratuit (D54, D55).** Mets ces trois éléments dans `solver/.env`, jamais dans le dépôt :
-   - la **clé d'API** ;
-   - le **jeton Notify** et la clé de signature du webhook ;
-   - l'**URL HTTPS publique** (sur le domaine du point 4).
+7. [x] **Compte Alchemy gratuit (D54, D55).** ✅ 07/10 : Monad testnet et Monad mainnet sont activés, et la clé d'API est dans `solver/.env` (ignoré par git, droits 600).
+   - Vérifié par `eth_chainId` : le testnet répond `0x279f` (10143) et le mainnet `0x8f` (143).
+   - **Reste à faire le 08/10** : le jeton Notify, la clé de signature et l'URL du webhook (voir le point 4 de ce jour-là).
 
 ## 🟠 Mar 07/10 : les tests réels sur le testnet
 
@@ -106,6 +105,11 @@
       ```
       Ce déploiement embarque aussi le **nouveau schéma v3** de la revue : l'endpoint actuel ne marche plus avec le solveur. C'est le **2ᵉ des 3 déploiements gratuits**.
    5. Vérifie « synced » sur envio.dev/app, puis donne-moi l'URL GraphQL.
+
+4. [ ] **Webhook Alchemy**, après le déploiement :
+   - Crée un **Custom Webhook** sur Monad testnet, sur l'adresse d'`AnchoredReputation` et sur le registre de réputation (`0x8004B663…`).
+   - Colle dans `solver/.env` le **jeton Notify** (*Webhooks → Auth token*) et la **clé de signature** du webhook.
+   - **L'URL** : un tunnel vers la machine qui fait tourner le certificateur, pas Netlify. Je te prépare la commande ce jour-là.
 
 ## Jeu 09/10 : le mainnet et le dépôt public
 
