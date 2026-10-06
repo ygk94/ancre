@@ -176,3 +176,31 @@ Tests : **155 passed** (MESURÉ).
 **À relayer (pilote → 03)** : `indexer/src/lib/edges.ts` rejette encore tout contrôleur ; D48-B demande de garder le négatif (SetEdge `rejected = null`, w < 0). La parité réelle avec l'indexeur échouera tant que ce n'est pas porté.
 
 **Fin de session** : rapport `docs/chantiers/rapports/04bis.md`. Reste : rejeu contre le contrat de 02-bis dès son commit, webhook Alchemy réel (🧑).
+
+## 2026-10-07 — Revue maximale complète (relais `revue-vers-04bis.md`) : constats HAUTS + AM-06.1
+
+`git merge main` fait (commit 4aaf785, sans conflit). Constats lus dans `docs/revue/revue-max-2026-10-06-complete.md` §5-§10.
+
+| Id | Correction | Test de non-régression (`tests/test_review_max_04bis.py`) |
+|---|---|---|
+| **TBL** | `certifier.chain_table` lit la table dans le stockage du contrat (`nodeCount`, `nodeKeyAt`, en JSON-RPC direct) au lieu de décoder le calldata derrière chaque `NodesAdded` ; incrémental ; contrôle des ancres. L'ancien lecteur reste sous `chain_table_from_logs` | `test_tbl_…` : une chaîne factice qui lève sur toute lecture de logs ou de calldata |
+| **STUCK** | `run_once` ne saute plus un titulaire **prouvé ou STALE** identique au recalcul ; s'il est prouvé, il soumet une **variante distincte valide** (`distinct_variant` : 1 wei de moins sur un nœud massif qui n'alimente personne : sous-solution, d et graphRoot inchangés, seul vectorRoot change) | `test_stuck_…` ×2 (variante valide ; titulaire prouvé identique → `certified`, au lieu de `skip_identical`) |
+| **THIRD** | `Certifier.contract_changed` : la boucle relit `certificate(setId)` à chaque tour et recalcule dès que (graphRoot, vectorRoot, eLowEff, eEff) bouge sans nous (certificat d'un tiers, preuve) | `test_third_…` |
+| **L3** | `ppr.certify` : le plafond des négatifs est contrôlé **après** le calcul de masse ; seule une ligne massive (ou d'ancre) de plus de ROW_MAX négatifs lève | `test_l3_…` : 257 slashs d'une adresse sans masse ne lèvent plus ; les mêmes par une ancre lèvent |
+| **W1** | `watcher.audit` : dilution décidée **par ligne** (somme des omissions positives) ; preuves enchaînées avec le poids des dilutions restantes (`still_dilutes(…, pending)`) | `test_w1_…` : 9 DILUTION prouvables au lieu de 9 OMITTED_POSITIVE |
+| **W6** (moyenne, liée) | `watcher.side` = transcription exacte de `_side` ; plancher `gP = max(GRID, sPlus déclaré)` (GRID si non déclaré), budget `max(gP, S amendée)` | `test_w6_…` (cas `w6_cycle` : sauté par l'ancienne règle), `test_side_…` |
+| **AMENDS** | `watcher.chain_amends` : amendements reconstruits depuis `EdgeProven` / `RowVoided` du certificat courant, vérifiés contre `rowStateOf(setId, u).h = keccak(leaf ‖ amends)` ; discordances déjà prouvées sautées ; ligne non concordante journalisée et laissée de côté (jamais une preuve vouée à `BadProof(5)`) | `test_amends_…` (#7 prouvé deux fois : remplacé sur place ; hash faux → ligne sautée) |
+| **AM-06.1** | `Signer` : avec Foundry ≥ 1.8, `ETH_PASSWORD` est un **chemin**. Le mot de passe est écrit une fois dans un fichier 0600 d'un répertoire 0700 (supprimé à la sortie) ; une variable `*_FILE` ou `password_file` passe un chemin directement (compatible avec le contournement de `demo/certify.py`). `Chain._run` remonte stdout quand cast `--json` y écrit l'erreur. `Signer.build` : constructeur unique pour les CLI | `test_am061_…` ×2 |
+
+**Vérification AM-INT.2** : les 10 nouveaux tests lancés sur le code **d'avant correction** (`git stash` de certifier/ppr/watcher) : **9 échouent**. Le test W6 initial ne discriminait pas ; il a été réécrit sur le scénario `w6_cycle` du rapport, et il discrimine.
+
+**Mesures** (MESURÉ, 07/10)
+- `.venv/bin/python -m pytest -q tests` → **185 passed**.
+- Fork (`simulate.py --scenarios violations,common`, bloc 110 994 810, contrat de `main`, 53 s) : 10 vecteurs de violation, preuves toutes réussies, **double omission enchaînée sur une ligne** comprise (passe maintenant par `chain_amends`, c'est-à-dire par les vrais `EdgeProven` et `rowStateOf`).
+
+**INTERFACE**
+- Le certificateur et le surveillant lisent `nodeCount`/`nodeKeyAt` et `rowStateOf` (déjà dans le contrat de `main` ; à garder dans 02-bis).
+- Pour 06 : `Signer` accepte maintenant le mot de passe dans une variable (fichier 0600 créé par le solveur), une variable `*_FILE`, ou `password_file` ; le contournement de `demo/certify.py` peut être retiré.
+- Résidu TBL : un `submitCertificate` **relayé** (multisig, 4337) reste « undecodable » pour le surveillant ; il faudrait une trace d'appels, que le RPC public d'Alchemy refuse (`debug_traceTransaction`, `docs/ressources/alchemy.md` §1.1). STUCK côté contrat (REFUSED-first pour un titulaire STALE) relève de 02-bis.
+
+**Prochaine étape** : constats moyens (NODES600, LOGS, CHKREG, DEFER, STALE, DIES, W7, BREAK, SWALLOW, ONCE, A1d, GASCAP, ARGV, HEADREG).

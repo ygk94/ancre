@@ -331,14 +331,30 @@ def certify(g: Graph, alpha: Fraction, *, lambdas: list[int] | None = None, trun
     anchors = set(g.anchors)
     # an agent whose source is an anchor (D48-A) gets NO row, not even an empty one (the contract refuses any agent
     # row sourced by an anchor): it is listed without a row and pays the truncation margin (eUp side only)
-    committed = {u: cap_row([(e.dst, e.q, e.feedback_index) for e in g.rows.get(u, [])], is_anchor=u in anchors)
-                 for u in range(g.n) if u not in g.anchor_sourced}
+    committed, overneg = {}, set()
+    for u in range(g.n):
+        if u in g.anchor_sourced:
+            continue
+        row = [(e.dst, e.q, e.feedback_index) for e in g.rows.get(u, [])]
+        try:
+            committed[u] = cap_row(row, is_anchor=u in anchors)
+        except ValueError:
+            if u in anchors:                            # anchor rows are never truncated (D21): always massive
+                raise
+            # review L3: more than ROW_MAX negatives. Negatives do not change t; only a MASSIVE row has to be
+            # provided, so decide after the mass is known (an address without mass must not stop the certifier)
+            overneg.add(u)
+            committed[u] = sorted(sorted((e for e in row if e[1] > 0), key=lambda e: (-e[1], e[0]))[:ROW_MAX])
     splus = {u: g.splus(u) for u in range(g.n)}
     t, iters = power_from_zero(g.n, g.anchors, aN, aD, committed, splus, lambdas, max_iter)
     if truncate_below > 0:
         keep = {u for u in range(g.n) if u in anchors or any(t[a][u] > truncate_below for a in range(k))}
         committed = {u: r for u, r in committed.items() if u in keep}
         t, iters = power_from_zero(g.n, g.anchors, aN, aD, committed, splus, lambdas, max_iter)
+    for u in overneg:
+        if any(t[a][u] for a in range(k)):
+            raise ValueError(f"massive row {u} with more than ROW_MAX={ROW_MAX} negative edges: cannot be "
+                             "certified honestly")
     rows = {u: r for u, r in committed.items() if any(t[a][u] for a in range(k))}
     keep = set(g.anchors) | {v for v in range(g.n) if any(t[a][v] > 0 for a in range(k))}
     for u, row in rows.items():
