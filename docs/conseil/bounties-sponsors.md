@@ -141,3 +141,19 @@ Copiées par Hugo depuis hackathon.monad.xyz le 2026-09-27 (DOC OFFICIELLE, verb
 | Chainlink, Best workflow with CRE | 3 k$ | Certificateur en workflow CRE | 2 jours + support Monad non vérifié | déconseillé à 8 jours |
 | Monad Foundation, Best Community Team Project | 5 k$ | Éligibilité inconnue | ? | à lire |
 | Cleanverse, CVI/CVA | 2 k$ | Identité vérifiée comme source d'ancres ? Produit inconnu | ? | à lire |
+
+---
+
+## Fiche officielle : Alchemy, « Best Projects using Alchemy » (D54)
+
+Copiée par Hugo depuis la plateforme le 2026-10-06 (DOC OFFICIELLE). **Sélectionné dans le projet.**
+
+- **Prix** : 1 000 $ en crédits Alchemy, un seul gagnant.
+- **Track : All tracks**, donc compatible avec la track 04.
+- **Date limite** : 14/10/2026 à 05:59 GMT+2.
+- **Objet** : un projet fonctionnel, déployé sur Monad, qui intègre **de façon significative** au moins un service ou un outil Alchemy. Tout service Alchemy qui supporte Monad est éligible.
+- **Critères** : qualité de l'intégration, exécution technique, utilité et innovation du projet.
+- **Demandé à la soumission** :
+  - une description de la façon dont le projet intègre un ou plusieurs services Alchemy ;
+  - une vidéo de démo optionnelle, **2 minutes au plus**, qui montre l'intégration.
+- **Ressources** : la page des outils d'Alchemy qui supportent Monad (alchemy.com), docs.monad.xyz, developers.monad.xyz.
