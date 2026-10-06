@@ -1,8 +1,8 @@
 """Roll the versioned mainnet snapshot forward from the chain (AM-9.2): solver/data/mainnet-<B>.* -> mainnet-<H>.*.
 
 Provenance (all on-chain, never 8004scan, AM-R4.2):
-  1. eth_getLogs over (B, H] on an RPC that accepts the range (rpc1.monad.xyz, Alchemy: full history, 10 k logs cap,
-     chunked here): ReputationRegistry NewFeedback / FeedbackRevoked, IdentityRegistry Transfer / Approval /
+  1. eth_getLogs over (B, H] on an RPC that accepts the range (rpc1.monad.xyz, Alchemy: full history MEASURED 27/09;
+     10 k logs cap per call per ANCRE.md §5, NOT re-measured here; chunked, a refused chunk is halved): ReputationRegistry NewFeedback / FeedbackRevoked, IdentityRegistry Transfer / Approval /
      ApprovalForAll / MetadataSet / Registered, and Upgraded on both proxies (must be 0: a new implementation would
      change the edge rules' inputs, D17);
   2. every agent touched by a NewFeedback or a FeedbackRevoked is RE-READ at block H with
@@ -20,6 +20,7 @@ import json
 import os
 import subprocess
 import time
+import urllib.error
 import urllib.request
 from collections import Counter
 from pathlib import Path
@@ -34,44 +35,60 @@ CAST = os.path.expanduser("~/.foundry/bin/cast")
 
 
 def topic(sig: str) -> str:
-    return "0x" + keccak(sig.encode()).hex()
+    """keccak of the canonical signature ('indexed' words dropped)."""
+    name, args = sig.split("(", 1)
+    canon = name + "(" + ",".join(a.split()[0] for a in args.rstrip(")").split(",") if a) + ")"
+    return "0x" + keccak(canon.encode()).hex()
 
 
-T = {
-    "NewFeedback": topic("NewFeedback(uint256,address,uint64,int128,uint8,string,string,string,string,string,bytes32)"),
-    "FeedbackRevoked": topic("FeedbackRevoked(uint256,address,uint64)"),
-    "Transfer": topic("Transfer(address,address,uint256)"),
-    "Approval": topic("Approval(address,address,uint256)"),
-    "ApprovalForAll": topic("ApprovalForAll(address,address,bool)"),
-    "MetadataSet": topic("MetadataSet(uint256,string,string,bytes)"),
-    "Registered": topic("Registered(uint256,string,address)"),
-    "Upgraded": topic("Upgraded(address)"),
-}
+def _topics() -> dict[str, str]:
+    """Event topics from the signatures of the polling loop (certifier.REGISTRY_EVENTS: one source of truth), plus
+    the IdentityRegistry `Registered`."""
+    import certifier as C
+    t = {k: topic(s) for k, s in C.REGISTRY_EVENTS.items()}
+    t["Registered"] = topic("Registered(uint256 indexed,string,address indexed)")
+    return t
+
+
+T = _topics()
 NAME = {v: k for k, v in T.items()}
 READ_ALL = ("readAllFeedback(uint256,address[],string,string,bool)"
             "(address[],uint64[],int128[],uint8[],string[],string[],bool[])")
+
+
+class RpcError(RuntimeError):
+    """A deterministic refusal by the node (JSON-RPC error, HTTP 4xx): never retried as such."""
 
 
 class Rpc:
     def __init__(self, url: str):
         self.url, self.calls = url, 0
 
-    def __call__(self, method: str, params: list):
+    def __call__(self, method: str, params: list, retries: int = 6):
+        """A JSON-RPC error answer is DETERMINISTIC (range too large, revert): raised at once as RpcError. Transport
+        failures (timeout, HTTP 429/5xx) are retried with backoff; HTTP 4xx other than 429 is raised as RpcError.
+        rpc1 answers HTTP 403 to urllib's default User-Agent (MEASURED 06/10): an explicit one is sent."""
         body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode()
-        for attempt in range(6):
+        for attempt in range(retries):
             try:
                 req = urllib.request.Request(self.url, data=body, headers={"content-type": "application/json",
                                                                           "user-agent": "ancre-solver/1"})
                 with urllib.request.urlopen(req, timeout=120) as r:
                     out = json.load(r)
+            except urllib.error.HTTPError as e:
+                if e.code != 429 and e.code < 500:
+                    raise RpcError(f"HTTP {e.code}") from e
+                if attempt == retries - 1:
+                    raise
+            except OSError:
+                if attempt == retries - 1:
+                    raise
+            else:
                 self.calls += 1
                 if "error" in out:
-                    raise RuntimeError(out["error"])
+                    raise RpcError(out["error"])
                 return out["result"]
-            except (OSError, RuntimeError) as e:          # rate limit / transient: back off, then give up loudly
-                if attempt == 5:
-                    raise
-                time.sleep(1.5 * (attempt + 1))
+            time.sleep(1.5 * (attempt + 1))
 
 
 def get_logs(rpc: Rpc, address: str, topics0: list[str], frm: int, to: int, step: int = 500_000) -> list[dict]:
@@ -82,7 +99,7 @@ def get_logs(rpc: Rpc, address: str, topics0: list[str], frm: int, to: int, step
         try:
             out += rpc("eth_getLogs", [{"address": address, "topics": [topics0], "fromBlock": hex(lo), "toBlock": hex(hi)}])
             lo = hi + 1
-        except RuntimeError as e:
+        except (RpcError, OSError):                       # cap hit / range refused / timeout on a huge range: split
             if step <= 1000:
                 raise
             step //= 2

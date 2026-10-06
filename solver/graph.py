@@ -496,6 +496,7 @@ def combine_pairs(feedbacks: list[Feedback], identity: Identity, schema: dict[st
             continue
         by_pair[(c, a)].append((q, f))
     out: dict[tuple[str, int], PairEdge] = {}
+    blocks_of: dict[tuple[str, int], list[int]] | None = None            # AM-9.3: built once, only if needed
     for (c, a), lst in by_pair.items():
         if c == ZERO:                                   # no feedback can come from address(0) (msg.sender); it marks a
             log["client_zero_ignore"] += 1              # source-less row in ENCODING and is refused as a node (R1)
@@ -524,8 +525,13 @@ def combine_pairs(feedbacks: list[Feedback], identity: Identity, schema: dict[st
                     "pastWallet" if c in identity.past_wallets.get(a, ()) else None)
             if kind:
                 tb = identity.past_owner_until.get(a, {}).get(c) if kind == "pastOwner" else None
-                after = [x.block for x in feedbacks if x.client == c and x.agent_id == a and x.block
-                         and tb is not None and x.block >= tb]
+                if blocks_of is None:                   # feedbacks that can make an edge: non-revoked, endorsement
+                    blocks_of = defaultdict(list)       # tags of the filter (the ones R3 looked at)
+                    for x in feedbacks:
+                        if x.block and not x.revoked and x.tag1 in ftags and x.tag1 in schema \
+                                and schema[x.tag1].kind == "endorsement":
+                            blocks_of[(x.client, x.agent_id)].append(x.block)
+                after = [b for b in blocks_of.get((c, a), ()) if tb is not None and b >= tb]
                 first = min(after) if after else None
                 diagnostics.append({"kind": kind, "client": c, "agentId": a, "w": q, "tag1": f.tag1,
                                     "feedbackIndex": f.index, "feedbackBlock": f.block or None, "transferBlock": tb,

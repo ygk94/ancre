@@ -247,7 +247,6 @@ def scenario_common(chain: C.Chain, contract: str) -> list[dict]:
     Submitter-attested level (own setId); the mainnet one runs Registry-verified. Against the contract of `main` this
     records the state BEFORE the D48/R1 fixes (attacks expected to pass); against 02-bis, `expect.submission` holds."""
     import common_vectors as CV
-    from graph import Feedback, Identity
     out = []
     for p in sorted((HERE / "vectors" / "common").glob("*.json")):
         obj = json.loads(p.read_text())
@@ -264,15 +263,7 @@ def scenario_common(chain: C.Chain, contract: str) -> list[dict]:
             r = submit_vector(chain, contract, set_id, obj, cfg)
             row.update(result=r["result"], reason=r.get("reason"), gasUsed=r.get("gasUsed"))
             if "resubmission" in obj and r["result"] == "ACCEPTED":      # C: prove the false row, then resubmit
-                reg = obj["registry"]
-                fbs, idx = [], {}
-                for f in reg["feedbacks"]:
-                    k = (f["client"], f["agentId"])
-                    idx[k] = idx.get(k, 0) + 1
-                    fbs.append(Feedback(f["agentId"], f["client"], idx[k], f["value"], f["decimals"], f["tag1"],
-                                        f["tag2"], f["revoked"]))
-                idn = Identity(block=0, owner={a["agentId"]: a["owner"] for a in reg["agents"]},
-                               wallet={a["agentId"]: a["agentWallet"] for a in reg["agents"]})
+                fbs, idn = CV.Reg.from_block(obj["registry"]).build()
                 _, nodes, _ = vector_calldata(obj)
                 row["proof"] = _prove_all(chain, contract, cfg, set_id, nodes, fbs, idn, start)["proofs"]
                 again = {**obj, "calldata": obj["resubmission"]["calldata"], "nCert": obj["resubmission"]["nCert"],

@@ -166,3 +166,13 @@ Tests : **155 passed** (MESURÉ).
 **Reste pour E4** : rejouer `vectors,violations,common` contre le contrat de 02-bis dès son commit (commande : `cd solver && .venv/bin/python simulate.py --scenarios vectors,violations,common`, en pointant `build_contract` sur leur branche fusionnée).
 
 **Prochaine étape** : E5 `/code-review high`.
+
+## 2026-10-06 ~18:30 — E5 : `/code-review high` sur ce worktree (AM-02.9 : chemin et plage donnés explicitement)
+
+**Fait** : revue de `git -C /Users/hugo/Projet/ancre-04bis diff bc2d911..HEAD -- solver/`. **10 constats, 9 corrigés, 1 relayé** (détail : rapport 04bis §6). Les deux plus graves : (1) le webhook perdait les événements dont la recertification échouait ou rencontrait `data_behind` (le journal D55 affirmait à tort qu'ils étaient rattrapés : c'est maintenant vrai) ; (2) le surveillant cessait d'auditer les arêtes d'une ligne sourcée par une ancre (constat ANCHOR_SOURCE ajouté, non prouvable, arêtes auditées).
+
+**Mesures** : `.venv/bin/python -m pytest -q tests` → **174 passed** (MESURÉ, 06/10), dont 5 de non-régression (`tests/test_review_04bis.py`).
+
+**À relayer (pilote → 03)** : `indexer/src/lib/edges.ts` rejette encore tout contrôleur ; D48-B demande de garder le négatif (SetEdge `rejected = null`, w < 0). La parité réelle avec l'indexeur échouera tant que ce n'est pas porté.
+
+**Fin de session** : rapport `docs/chantiers/rapports/04bis.md`. Reste : rejeu contre le contrat de 02-bis dès son commit, webhook Alchemy réel (🧑).

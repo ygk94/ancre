@@ -89,6 +89,16 @@ class Reg:
             idn.apply_operator(o, op, True)
         return fbs, idn
 
+    @classmethod
+    def from_block(cls, blk: dict) -> "Reg":
+        r = cls()
+        for a in blk["agents"]:
+            r.agent(a["agentId"], a["owner"], a["agentWallet"], a["approved"])
+        for o in blk["operators"]:
+            r.operator(o["owner"], o["operator"])
+        r.fbs = [dict(f) for f in blk["feedbacks"]]
+        return r
+
     def block(self) -> dict:
         return {"agents": list(self.agents.values()),
                 "operators": [{"owner": o, "operator": op} for o, op in self.ops], "feedbacks": self.fbs}

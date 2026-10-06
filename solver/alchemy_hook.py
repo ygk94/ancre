@@ -8,7 +8,8 @@ One Alchemy Custom Webhook (GraphQL, one per network: MONAD_MAINNET, MONAD_TESTN
   - the AnchoredReputation contract: CertificateSubmitted                  -> audit + proofs (watcher, AM-5.9, AM-02.2).
 Alchemy POSTs a signed JSON (header X-Alchemy-Signature = hex HMAC-SHA256 of the raw body with the webhook's signing
 key) for each block that has a matching log. This module verifies the signature, answers 200 at once (Alchemy retries
-non-200 answers with backoff for up to 10 minutes), deduplicates by (txHash, logIndex), and hands the events to the
+non-200 answers with backoff for up to 10 minutes on the Free / PAYG tiers: DOC, alchemy.com/docs/reference/
+notify-api-quickstart, read 06/10, NOT MEASURED), deduplicates by (txHash, logIndex), and hands the events to the
 SAME code paths as the polling loops (certifier.relevant / Certifier.run_once, watcher.watch_once).
 
 Fallback (kept on purpose): a poller reads the registries with eth_getLogs every `poll_interval` seconds over the
@@ -170,26 +171,46 @@ class Dispatcher:
     set_id: str | None = None
     support_of: callable = None           # () -> certifier.Support | None
     journal: C.Journal = field(default_factory=lambda: C.Journal(None))
-    seen: set = field(default_factory=set)
+    seen: dict = field(default_factory=dict)   # (tx, logIndex) -> block, for events HANDLED successfully only
     covered: int = -1                     # highest block fully handled by the poller
     last_webhook: float = 0.0
-    lock: threading.Lock = field(default_factory=threading.Lock)
+    lock: threading.Lock = field(default_factory=threading.Lock)       # dedup state
+    run_lock: threading.Lock = field(default_factory=threading.Lock)   # one recertification / audit at a time
+    keep_blocks: int = 20_000             # dedup memory: keys older than (highest block seen − keep_blocks) are pruned
 
     def handle(self, events: list[dict], source: str, block: int | None) -> dict:
-        with self.lock:
-            fresh = [e for e in events if (e["tx"], e["logIndex"]) not in self.seen]
-            self.seen.update((e["tx"], e["logIndex"]) for e in fresh)
-        sup = self.support_of() if self.support_of else None
-        rel = [e for e in fresh if e["kind"] != "CertificateSubmitted" and (sup is None or C.relevant(e, sup))]
-        aud = [e for e in fresh if e["kind"] == "CertificateSubmitted" and (self.set_id is None or e.get("setId") ==
-                                                                           self.set_id.lower())]
-        res = {"source": source, "block": block, "events": len(events), "fresh": len(fresh),
-               "duplicates": len(events) - len(fresh), "relevant": len(rel), "certificates": len(aud)}
-        if rel and self.on_recertify:
-            res["recertify"] = self.on_recertify(rel, max(e["block"] for e in rel))
-        if aud and self.on_audit:
-            res["audit"] = self.on_audit(min(e["block"] for e in aud), max(e["block"] for e in aud))
-        return res
+        """Events are marked as seen only AFTER their handler succeeded: a recertification that fails, or that
+        reports `data_behind`, leaves them fresh, so the next poll (or an Alchemy retry) processes them again.
+        Handlers are serialised (webhook worker and fallback poller never run the certifier concurrently)."""
+        with self.run_lock:
+            with self.lock:
+                fresh = [e for e in events if (e["tx"], e["logIndex"]) not in self.seen]
+            sup = self.support_of() if self.support_of else None
+            rel = [e for e in fresh if e["kind"] != "CertificateSubmitted" and (sup is None or C.relevant(e, sup))]
+            aud = [e for e in fresh if e["kind"] == "CertificateSubmitted" and
+                   (self.set_id is None or e.get("setId") == self.set_id.lower())]
+            res = {"source": source, "block": block, "events": len(events), "fresh": len(fresh),
+                   "duplicates": len(events) - len(fresh), "relevant": len(rel), "certificates": len(aud)}
+            blk = lambda lst, f: f([e["block"] for e in lst if e.get("block") is not None] or [block or 0])
+            done = [e for e in fresh if e not in rel and e not in aud]          # nothing to do: handled
+            if rel and self.on_recertify:
+                r = self.on_recertify(rel, blk(rel, max))                      # raises -> stays fresh
+                res["recertify"] = r
+                if not (isinstance(r, dict) and r.get("action") in ("data_behind", "error")):
+                    done += rel
+            else:
+                done += rel
+            if aud and self.on_audit:
+                res["audit"] = self.on_audit(blk(aud, min), blk(aud, max))
+            done += aud
+            with self.lock:
+                for e in done:
+                    self.seen[(e["tx"], e["logIndex"])] = e.get("block") or block or 0
+                top = max(self.seen.values(), default=0)
+                if len(self.seen) > 50_000:
+                    self.seen = {k: b for k, b in self.seen.items() if b >= top - self.keep_blocks}
+            res["pending"] = len(fresh) - len(done)
+            return res
 
 
 def commit_state(rpc: str, block: int) -> dict:
@@ -202,14 +223,8 @@ def commit_state(rpc: str, block: int) -> dict:
 
 
 def _rpc(url: str, method: str, params: list):
-    req = urllib.request.Request(url, data=json.dumps({"jsonrpc": "2.0", "id": 1, "method": method,
-                                                       "params": params}).encode(),
-                                 headers={"content-type": "application/json", "user-agent": "ancre-solver/1"})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        out = json.load(r)
-    if "error" in out:
-        raise RuntimeError(out["error"])
-    return out["result"]
+    from refresh import Rpc                             # the solver's single JSON-RPC client
+    return Rpc(url)(method, params)
 
 
 class Receiver:
@@ -219,7 +234,6 @@ class Receiver:
         self.d, self.key, self.rpc = dispatcher, signing_key, rpc
         self.journal = journal or dispatcher.journal
         self.q: queue.Queue = queue.Queue()
-        self.results: list[dict] = []
 
     def accept(self, body: bytes, signature: str | None, t_recv: float) -> int:
         """HTTP status for one POST (the work itself is queued)."""
@@ -250,10 +264,8 @@ class Receiver:
             except Exception as e:                                      # a measure must never block the trigger
                 m["commitStateError"] = str(e)[:200]
         res = self.d.handle(events, "webhook", meta["number"])
-        ev = self.journal.log(action="webhook", eventId=meta["eventId"], sequenceNumber=meta["sequenceNumber"],
-                              blockHash=meta["hash"], **m, **res)
-        self.results.append(ev)
-        return ev
+        return self.journal.log(action="webhook", eventId=meta["eventId"], sequenceNumber=meta["sequenceNumber"],
+                                blockHash=meta["hash"], **m, **res)
 
     def work_forever(self):
         while True:
@@ -309,7 +321,10 @@ def poll_once(d: Dispatcher, chain: C.Chain, chain_id: int, ancre: str | None, h
             if e:
                 evs.append(e)
     res = d.handle(evs, "poll", head)
-    d.covered = head
+    if res.get("pending"):                              # retry these blocks next round (data_behind / failure)
+        d.covered = min(e["block"] for e in evs if (e["tx"], e["logIndex"]) not in d.seen) - 1
+    else:
+        d.covered = head
     return {**res, "fromBlock": frm}
 
 
