@@ -66,3 +66,11 @@ Tu n'attends de réponse de personne pour avancer. Le pilote suit sans interveni
 Écris docs/chantiers/rapports/07.md et commite-le : ce qui est livré (avec captures) ; ce qui est réel et ce qui est mocké ; les sources de chaque chiffre ; les latences mesurées ; l'état du live et du rejeu ; ce qui attend Hugo ; les décisions et leurs raisons ; les angles morts AM-07.n ; ce qu'il reste à faire.
 
 Commence par lire, puis écris la première entrée du journal (« démarrage : ce que j'ai compris, mon plan »), puis E1 et E2.
+
+
+=== COMPLÉMENTS DU TOUR 7 (pilote, 06/10), qui priment en cas de conflit ===
+- **Poids effectif d'une revue (D49)** : pour chaque avis affiché dans la colonne « ce que voit un explorateur », montre son poids dans la colonne « ce que voit ton contrat ». Exemple : « compte pour 0,00 : son auteur n'est atteignable depuis aucune de tes ancres ». C'est la surface 4 d'ARCHITECTURE.md, retenue pour la démo.
+- Scène « 2ᵉ saut » (D50) : rendre visible le chemin ancre → H1 → H2.
+- Renommage isTrusted → passesAnchorPolicy (02-bis, en cours) : isole l'appel dans un seul module.
+- Un refus x402 ne laisse aucune trace on-chain (AM-6.8) : affiche explain() et reportRefusal.
+- Skills : /dataviz pour les chiffres, /run pour vérifier l'écran.
