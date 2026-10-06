@@ -129,10 +129,96 @@ enum EdgeReject {                     # null = edge retained (solver/from_indexe
   CONTROLLER_APPROVED
 }
 
-type AnchorSet {                     # "ref" = reference schema (src/lib/schema_reference.json, filter "reference")
+type AnchorSet {                     # "ref" = reference schema (src/lib/schema_reference.json, filter "reference"); else setId
   id: ID!
   kind: String!                      # reference | onchain
   edges: [SetEdge!]! @derivedFrom(field: "set")
+  # onchain sets only (AnchorSetRegistered + registerAnchorSet calldata); null for "ref"
+  anchors: [String!]
+  lambdas: [String!]                 # WAD
+  alphaN: Int
+  alphaD: Int
+  tagsJson: String                   # [{tag, min, neutral, max, kind}] bounds in WAD: the set's edge schema (D12)
+  policyJson: String                 # full Policy struct (theta, rho, m, q, vetoMax, maxAge, ...)
+  ownerFallback: Boolean             # D44
+  registryVerified: Boolean          # D32
+  decodable: Boolean                 # false = registerAnchorSet not called directly (relayed): no schema, no audit
+  nodeCount: Int                     # anchors + appended nodes, as seen by the indexer
+  registeredBlock: BigInt
+  registeredTx: String
+  nodes: [SetNode!]! @derivedFrom(field: "set")
+  certificates: [Certificate!]! @derivedFrom(field: "set")
+}
+
+############ ANCRE certificates (contract AnchoredReputation) — audit layer (D42)
+
+type SetNode {                       # node table of an on-chain set; id = setId-index (anchors are 0..k-1)
+  id: ID!
+  set: AnchorSet!
+  index: Int! @index
+  kind: String!                      # anchor | agent | address
+  agentId: String
+  address: String
+}
+
+enum CertificateStatus {
+  AUDITED                            # decoded and audited against the registry state at its block
+  UNDECODABLE                        # submitCertificate not called directly (relayer, multicall, Safe): calldata unavailable
+  UNKNOWN_SET                        # set registered by an undecodable transaction: no schema to audit against
+  NODES_MISSING                      # node table incomplete (an addNodes was undecodable)
+}
+
+type Certificate {                   # id = txHash-logIndex
+  id: ID!
+  set: AnchorSet!
+  certBlock: BigInt! @index
+  blockNumber: BigInt! @index
+  txHash: String!
+  submitter: String!
+  eEff: BigInt!
+  graphRoot: String!
+  graphRootMatches: Boolean          # keccak Merkle root of the decoded rows == event graphRoot
+  vectorRoot: String!
+  versionHash: String!
+  nCert: Int!
+  numRows: Int!
+  registryVerified: Boolean!
+  status: CertificateStatus!
+  rowsChecked: Int!
+  edgesChecked: Int!
+  discrepancyCount: Int!
+  discrepancies: [Discrepancy!]! @derivedFrom(field: "certificate")
+}
+
+type Discrepancy {                   # one audit finding; id = certificateId-n (see src/lib/audit.ts for the kinds)
+  id: ID!
+  certificate: Certificate!
+  set_id: String! @index
+  kind: String! @index               # FABRICATED | INFLATED | OVERSTATED_NEG | OMITTED_NEG | WRONG_INDEX | SOURCE | SOURCE_MISSING | UNKNOWN_AGENT | SHAPE
+  proof: String                      # on-chain remedy: proveEdge | proveWallet | refused at submission | none
+  u: Int!
+  dst: Int
+  client: String
+  agentId: String
+  wCommitted: Int!
+  wRegistry: Int!
+  bCommitted: Int
+  bRegistry: Int
+  feedbackIndex: BigInt
+  registryFeedbackIndex: BigInt
+}
+
+type SetHealth {                     # id = setId: what a watcher needs at a glance
+  id: ID!
+  set: AnchorSet!
+  certificates: Int!
+  lastCertificate: Certificate
+  lastCertBlock: BigInt
+  status: String!                    # CLEAN | DISCREPANCY | UNAUDITED
+  openDiscrepancies: Int!            # findings of the latest certificate
+  edgesProven: Int!                  # EdgeProven events (a proof landed on chain)
+  rowsVoided: Int!                   # RowVoided events
+  lastEEff: BigInt
 }
 
 type SetEdge {                       # combined edge per (set, client, agent): R2-R6 of solver/FORMAT.md
