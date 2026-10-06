@@ -3,16 +3,16 @@
   "mode": "fork",
   "chainId": 10143,
   "operator": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
-  "runId": "run-20261006T083258Z",
+  "runId": "run-20261006T121308Z",
   "agents": {
     "provider-1 (demo)": {
-      "agentId": "2017",
+      "agentId": "2022",
       "owner": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
       "wallet": "0x06b8FaFf5E9D268060cFcA3b18AC0A41b9a53783",
       "role": "provider"
     },
     "provider-2 (demo)": {
-      "agentId": "2018",
+      "agentId": "2023",
       "owner": "0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1",
       "wallet": "0xe4eb8f7f3cb89a93Af6fd4cd07BeE263Fb8828fd",
       "role": "provider"
@@ -20,57 +20,57 @@
   },
   "done": {
     "0.fund-mon": {
-      "block": 68639125,
-      "at": "2026-10-06T08:33:01.303Z"
+      "block": 68682352,
+      "at": "2026-10-06T12:13:11.861Z"
     },
     "0.deploy-ancre": {
-      "block": 68639126,
-      "at": "2026-10-06T08:33:01.557Z"
+      "block": 68682353,
+      "at": "2026-10-06T12:13:12.145Z"
     },
     "0.anchor-set": {
-      "block": 68639127,
-      "at": "2026-10-06T08:33:01.889Z"
+      "block": 68682354,
+      "at": "2026-10-06T12:13:12.473Z"
     },
     "0.register:provider-1 (demo)": {
-      "block": 68639128,
-      "at": "2026-10-06T08:33:02.408Z"
+      "block": 68682355,
+      "at": "2026-10-06T12:13:12.926Z"
     },
     "0.wallet:provider-1 (demo)": {
-      "block": 68639129,
-      "at": "2026-10-06T08:33:02.605Z"
+      "block": 68682356,
+      "at": "2026-10-06T12:13:13.108Z"
     },
     "0.register:provider-2 (demo)": {
-      "block": 68639130,
-      "at": "2026-10-06T08:33:03.063Z"
+      "block": 68682357,
+      "at": "2026-10-06T12:13:13.588Z"
     },
     "0.wallet:provider-2 (demo)": {
-      "block": 68639131,
-      "at": "2026-10-06T08:33:03.187Z"
+      "block": 68682358,
+      "at": "2026-10-06T12:13:13.703Z"
     },
     "0.deploy-payer": {
-      "block": 68639132,
-      "at": "2026-10-06T08:33:03.404Z"
+      "block": 68682359,
+      "at": "2026-10-06T12:13:13.841Z"
     },
     "0.fund-payer": {
-      "block": 68639133,
-      "at": "2026-10-06T08:33:03.540Z"
+      "block": 68682360,
+      "at": "2026-10-06T12:13:14.094Z"
     },
     "0.cert": {
-      "block": 68639134,
-      "at": "2026-10-06T08:33:03.926Z",
+      "block": 68682361,
+      "at": "2026-10-06T12:13:14.793Z",
       "value": {
         "action": "certified",
-        "block": 68639134
+        "block": 68682361
       }
     },
     "scene-0": {
-      "block": 68639134,
-      "at": "2026-10-06T08:33:03.980Z"
+      "block": 68682361,
+      "at": "2026-10-06T12:13:14.995Z"
     }
   },
   "notes": {},
-  "ancre": "0x6A0C23666D3449FccFD35A44a343A9EC0C6A6c1f",
-  "setId": "0x1c68b8b4bbdeda41cbb34924e216db79a60744224a88d337c506997e226bc129",
+  "ancre": "0x554f82Ec824c4312FD040FD425880d3B2441ecf1",
+  "setId": "0x676454745e544979a0d5be56a8a898b8cb50932b07dd035f3e2d8ef2d999a2fb",
   "set": {
     "anchors": [
       "0x730184ca0b0088c0be0b01df7cb8f0f69947d786",
@@ -110,7 +110,7 @@
       }
     ],
     "policy": {
-      "theta": 20000000000000000,
+      "theta": 10000000000000000,
       "rhoN": 1,
       "rhoD": 2,
       "minAnchors": 2,
@@ -128,5 +128,5 @@
       ]
     }
   },
-  "payer": "0xdF33ADd2cc4a3F10154B66e44f1E695E637b8B09"
+  "payer": "0x2906B1885b902bb0b74373F95E0a67bc2854268d"
 }

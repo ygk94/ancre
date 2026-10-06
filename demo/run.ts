@@ -21,7 +21,7 @@ import { Chain, type Mode } from "./lib/chain.ts";
 import { DEMO, FARM_SIZE, FORK_PORT, OUT, SET, TESTNET } from "./lib/config.ts";
 import { EventLog } from "./lib/events.ts";
 import { EmulatedFacilitator, HttpFacilitator } from "./lib/x402.ts";
-import { ancreArt, type Ctx, scene0, scene1, scene2, scene3, scene4, scene5, scene6 } from "./lib/scenes.ts";
+import { ancreArt, type Ctx, scene0, scene1, scene2, scene3, scene4, scene5, scene6, scene7 } from "./lib/scenes.ts";
 import { loadState, saveState, type State, statePath } from "./lib/state.ts";
 import { budgetReport } from "./lib/budget.ts";
 import { sweep } from "./lib/sweep.ts";
@@ -35,7 +35,7 @@ const { values: args } = parseArgs({ strict: true, options: {
 } });
 
 function parseScenes(s: string): number[] {
-  if (s === "all") return [0, 1, 2, 3, 4, 5, 6];
+  if (s === "all") return [0, 1, 7, 2, 3, 4, 5, 6]; // scene 7 (second hop, D50) right after the honest providers
   return s.split(",").flatMap((p) => {
     const [a, b] = p.split("-").map(Number);
     return b === undefined ? [a] : Array.from({ length: b - a + 1 }, (_, i) => a + i);
@@ -70,7 +70,7 @@ async function main() {
   const mode: Mode = args.network === "testnet" ? "testnet" : frozen ? "frozen" : "fork";
   const monadRules = mode === "testnet" || rehearse;
   const name = rehearse ? "rehearsal" : mode;
-  const scenes = parseScenes(args.scenes ?? (frozen ? "1-6" : "all"));
+  const scenes = parseScenes(args.scenes ?? (frozen ? "1,7,2-6" : "all"));
   const ks = monadRules ? await unlock(args.keystore, mode === "testnet") : undefined;
   let anvil: Anvil | undefined;
   let rpc = args.rpc ?? (mode === "testnet" ? TESTNET.rpc : undefined);
@@ -150,6 +150,7 @@ async function main() {
   monBudget[acc.farmOwner.label] = wei((FARM_SIZE + 1) * (REG + WAL));
   acc.farm.forEach((a) => { monBudget[a.label] = wei(2 * FB); });
   monBudget[acc.rater.label] = wei(FB);
+  monBudget[acc.providers[0].label] = wei(FB); // scene 7: provider-1 vouches for provider-3
 
   const ctx: Ctx = {
     chain, name, acc, state: st, log, signer, passwordEnv: ks?.passwordEnv, monBudget, facilitatorTxs: [],
@@ -160,7 +161,7 @@ async function main() {
     if (anvil) await anvil.stop();
     return;
   }
-  const fns = [scene0, scene1, scene2, scene3, scene4, scene5, scene6];
+  const fns = [scene0, scene1, scene2, scene3, scene4, scene5, scene6, scene7];
   let failed: unknown;
   try {
     for (const s of scenes) {

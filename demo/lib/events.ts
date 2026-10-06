@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { type Abi, type Address, type Hex, keccak256, toHex, zeroHash } from "viem";
 import { reputationAbi, STATUSES } from "./abi.ts";
 import type { Chain, TxRecord } from "./chain.ts";
+import { readAssess } from "./ancre.ts";
 import { OUT, TESTNET } from "./config.ts";
 
 export const FORMAT = "ancre-demo-events-v1";
@@ -13,7 +14,7 @@ const WAD = 10n ** 18n;
 const json = (v: unknown) => JSON.stringify(v, (_, x) => (typeof x === "bigint" ? x.toString() : x));
 const pct = (wad: bigint) => Number((wad * 1_000_000n) / 10n ** 16n) / 1_000_000; // WAD -> %, 6 decimals
 
-export const SCENES = ["setup", "honest", "farm", "farm-pays-itself", "breaker", "anti-erasure", "fabricated-cert"] as const;
+export const SCENES = ["setup", "honest", "farm", "farm-pays-itself", "breaker", "anti-erasure", "fabricated-cert", "second-hop"] as const;
 
 /** Mean of value/10^decimals with 6 truncated decimals, exact (bigint). */
 export function naiveAverage(values: bigint[], decimals: number[]): string | null {
@@ -86,8 +87,7 @@ export class EventLog {
     const [[clients, , values, decs, , , revoked], x] = await Promise.all([
       this.chain.pub.readContract({ address: TESTNET.reputation, abi: reputationAbi, functionName: "readAllFeedback",
         args: [agentId, [], "", "", true], blockNumber: block }),
-      this.ancre ? this.chain.pub.readContract({ address: this.ancre.address, abi: this.ancre.abi, functionName: "assess",
-        args: [agentId, this.ancre.setId, true], blockNumber: block }) as Promise<Record<string, bigint | number | boolean | Hex>> : undefined,
+      this.ancre ? readAssess(this.chain, this.ancre, agentId, this.ancre.setId, block) : undefined,
     ]);
     const live = revoked.map((r, i) => (r ? -1 : i)).filter((i) => i >= 0);
     const explorer = {

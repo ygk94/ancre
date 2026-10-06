@@ -18,18 +18,18 @@
 
 ## 2. Measured unit costs (billed gas limit)
 
-MEASURED-FORK on 2026-10-06, fork of block 68 628 2xx, full run of the 7 scenes (`run-20261006T074828Z`).
+MEASURED-FORK on 2026-10-06, fork of block 68 682 336, full run of the 8 scenes (`run-20261006T121308Z`, the rehearsal of the frozen state).
 
 | Transaction | n | Avg gas limit (min-max) | Avg gas used | MON at 102 gwei (total) |
 |---|---|---|---|---|
 | Deploy `AnchoredReputation` + `TrustGatedPayer` | 2 | 8 015 569 and 2 385 083 | 4 723 023 | 1.061 |
 | `registerAnchorSet` (k = 3, 3 tags) | 1 | 552 467 | 497 697 | 0.056 |
-| `register(agentURI)` (~230-byte `data:` URI) | 13 | 376 803 (373 869-392 919) | 333 444 | 0.500 |
-| `setAgentWallet` | 13 | 96 777 | 82 808 | 0.128 |
-| `giveFeedback` | 27 | 314 845 (222 939-326 950) | 277 954 | 0.867 |
-| `submitCertificate` (chantier 04 certifier, ≤ 20 nodes) | 4 | 569 467 (488 139-657 250) | 525 085 | 0.232 |
-| MON (15) and USDC (6) transfers | 21 | 53 022 | 43 436 | 0.114 |
-| **All our transactions** | **81** | **29 001 846** | | **2.958** |
+| `register(agentURI)` (~230-byte `data:` URI) | 14 | 376 598 (373 869-392 919) | 333 260 | 0.538 |
+| `setAgentWallet` | 14 | 96 781 | 82 812 | 0.138 |
+| `giveFeedback` | 28 | 314 847 (222 939-339 019) | 277 955 | 0.899 |
+| `submitCertificate` (chantier 04 certifier, ≤ 20 nodes) | 5 | 596 008 (488 139-648 650) | 549 774 | 0.304 |
+| MON (16) and USDC (6) transfers | 22 | 51 889 | 42 416 | 0.116 |
+| **All our transactions** | **86** | **30 517 760** | | **3.113** |
 
 Why `register` costs more here: chantier 05 measured 221 k gas used, against a 377 k limit here. Our URI is a
 self-describing `data:` URI that labels the agent "demo" in any explorer, and the limit includes the 10 % margin.
@@ -41,10 +41,10 @@ A short URI would save about 0.2 MON. We keep the self-describing one.
 
 | Item | MON |
 |---|---|
-| Our 81 transactions, all scenes (§2) | 2.958 (MEASURED-FORK, limits × 102 gwei) |
-| Final sweep (`--sweep`): 15 transfers × 21 000 gas | 0.032 (computed) |
-| **Total fees** | **≈ 2.99 MON** |
-| With a 30 % margin (gas price, one replayed scene) | **≈ 3.9 MON** |
+| Our 86 transactions, all scenes (§2) | 3.113 (MEASURED-FORK, limits × 102 gwei) |
+| Final sweep (`--sweep`): 16 transfers × 21 000 gas | 0.034 (computed) |
+| **Total fees** | **≈ 3.15 MON** |
+| With a 30 % margin (gas price, one replayed scene) | **≈ 4.1 MON** |
 
 ### Envelope 2: capital (lent, then recovered)
 
@@ -57,8 +57,9 @@ Each emitting account receives from the operator the MON for its own fees: its m
 | Farm owner | 11 `register` + 11 `setAgentWallet` | 0.833 |
 | 10 farm wallets | 2 feedback each | 10 × 0.101 = 1.010 |
 | Third-party rater (scene 5) | 1 feedback | 0.050 |
-| **Total lent** | | **2.196 MON** (MEASURED-FORK, `capitalLentToEmittersMon`) |
-| Spent by these accounts (already in envelope 1) | | ≈ 1.40 MON |
+| provider-1 wallet (scene 7, second hop) | 1 feedback | 0.050 |
+| **Total lent** | | **2.247 MON** (MEASURED-FORK, `capitalLentToEmittersMon`) |
+| Spent by these accounts (already in envelope 1) | | ≈ 1.43 MON |
 | **Recoverable after the demo** | | **≈ 0.80 MON** (ESTIMATED: lent − spent − sweep) |
 
 **The 10 MON reserve locks nothing more**: no account needs to stay above 10 MON. Below the reserve, the rule only
@@ -69,9 +70,9 @@ after funding an account before its first transaction. This adds about 15 × 1.2
 
 | | MON |
 |---|---|
-| The operator's own fees (deployments, set, 2 providers, certificates, transfers) | 1.56 (MEASURED-FORK, per account) |
-| Capital lent to the 15 other emitters | 2.20 |
-| Margin | 1.24 |
+| The operator's own fees (deployments, set, 3 providers, certificates, transfers) | 1.68 (MEASURED-FORK, per account) |
+| Capital lent to the 16 other emitters | 2.25 |
+| Margin | 1.07 |
 | **Recommended starting balance** | **5 MON testnet** |
 | **Testnet USDC** | **0.11 USDC** (0.1 deposited in the payer + 5 × 0.002 for the farm); ask the faucet for 1 USDC |
 
@@ -81,29 +82,30 @@ sweep. The fork's gas price is about 4 gwei, so this rehearsal checks the flow a
 
 ## 4. What others pay
 
-- **The x402 facilitator** (`x402-facilitator.molandak.org`, signer `0x7f6a…Db86`) settles 3 payer payments and
-  5 payments inside the farm. That is **1 843 982 gas of limits, ≈ 0.19 MON, paid by the facilitator**
+- **The x402 facilitator** (`x402-facilitator.molandak.org`, signer `0x7f6a…Db86`) settles 4 payer payments and
+  5 payments inside the farm. That is **2 170 424 gas of limits, ≈ 0.22 MON, paid by the facilitator**
   (MEASURED-FORK, facilitator emulated the way x402-rs works). Refusals at `/verify` cost nothing: no transaction
   is sent.
 - **Envio** (free plan, 100 000 events, ~55 800 already used according to the pilot). One full run emits
-  **92 registry events** (MEASURED-FORK, `eventsByContract`):
-  - 65 on the Identity registry: `Registered`, `Transfer`, `MetadataSet`;
-  - 27 `NewFeedback` on the Reputation registry.
+  **98 registry events** (MEASURED-FORK, `eventsByContract`):
+  - 70 on the Identity registry: `Registered`, `Transfer`, `MetadataSet`;
+  - 28 `NewFeedback` on the Reputation registry.
 
-  Against the 25 000 cap, that is **more than 250 runs**. No risk.
+  Against the 25 000 cap, that is **about 250 runs**. No risk.
 
 ## 5. Number of accounts
 
-**16 emitting accounts** (MEASURED-FORK, `sendingAccounts`):
+**17 emitting accounts** (MEASURED-FORK, `sendingAccounts`):
 - the operator;
 - 3 anchors (m = 2 needs at least 2 honest anchors, plus one compromised in scene 2);
 - the farm owner;
 - 10 farm wallets;
-- 1 third-party rater.
+- 1 third-party rater;
+- provider-1's wallet (it vouches for provider-3 in scene 7, the second hop).
 
 The provider wallets, the target wallet and the payer's operator key only sign, so they need no MON.
 
-Absolute minimum: 6 + N, with N the farm size. Each farm agent costs about 0.11 MON (`register`,
+Absolute minimum: 7 + N, with N the farm size. Each farm agent costs about 0.11 MON (`register`,
 `setAgentWallet`, 2 feedback), so about 1.1 MON for N = 10. With N = 5 (`ANCRE_FARM_SIZE=5`), the scene stays
 readable (naive average 100 over 5 feedback) and costs about 0.55 MON less. We keep N = 10 for the visual contrast.
 
@@ -115,5 +117,5 @@ readable (naive average 100 over 5 feedback) and costs about 0.55 MON less. We k
   UNVERIFIED.
 - **The faucets** (https://faucet.monad.xyz, https://faucet.circle.com). Amounts and cooldowns are UNVERIFIED.
 - **The real facilitator with the ERC-1271 payer.** This is gate P3 (test T1), still waiting for Hugo. If it fails,
-  scenes 1 and 4 (honest payments settled) fail on the testnet. The refusals are still observed, since they need no
+  scenes 1, 4 and 7 (honest payments settled) fail on the testnet. The refusals are still observed, since they need no
   transaction.

@@ -43,7 +43,7 @@ Encoding rules (all files):
   "set": {
     "setId": "0x…",
     "anchors": [{ "address": "0x…", "label": "anchor-A (demo)" }],
-    "minAnchors": 2, "vetoQuorum": 1, "theta": "100000000000000000", "thetaPct": 10.0,
+    "minAnchors": 2, "vetoQuorum": 1, "theta": "10000000000000000", "thetaPct": 1.0,
     "level": "Registry-verified", "submitter": "0x…", "maxAge": 0, "minRefresh": 0,
     "tags": [{ "tag": "review", "hash": "0x…", "kind": "endorsement", "min": "-1", "neutral": "0", "max": "1" }]
   },
@@ -111,8 +111,8 @@ Encoding rules (all files):
 | Field | Type | Meaning |
 |---|---|---|
 | `seq` | number | strictly increasing within a run, from 1 |
-| `scene` | number | 0 setup · 1 honest providers paid · 2 Sybil farm refused · 3 the farm pays itself (D45) · 4 breaker · 5 anti-erasure (D33) · 6 fabricated certificate rejected |
-| `sceneName` | string | `setup`, `honest`, `farm`, `farm-pays-itself`, `breaker`, `anti-erasure`, `fabricated-cert` |
+| `scene` | number | 0 setup · 1 honest providers paid · 2 Sybil farm refused · 3 the farm pays itself (D45) · 4 breaker · 5 anti-erasure (D33) · 6 fabricated certificate rejected · 7 second hop (D50). **Run order: 0, 1, 7, 2, 3, 4, 5, 6** (7 is numbered last only so that the other ids stay stable) |
+| `sceneName` | string | `setup`, `honest`, `farm`, `farm-pays-itself`, `breaker`, `anti-erasure`, `fabricated-cert`, `second-hop` |
 | `step` | string | stable id within the scene (`"2.3-farm-ring"`), same across runs: the screen may key captions on it |
 | `attempt` | number | 1, or more if the step was replayed after a failure |
 | `kind` | string | see §3.2 |

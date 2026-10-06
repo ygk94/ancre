@@ -5,7 +5,8 @@ import {
   parseEventLogs, toHex, zeroAddress, zeroHash,
 } from "viem";
 import { identityAbi, REASONS, reputationAbi, STATUSES, usdcAbi } from "./abi.ts";
-import type { Actor, DemoAccounts } from "./accounts.ts";
+import { type Actor, type DemoAccounts, emitters } from "./accounts.ts";
+import { readAssess } from "./ancre.ts";
 import { certify, printSet, registryData, type SetConfig, setConfig } from "./certify.ts";
 import { artifact, type Chain } from "./chain.ts";
 import { FARM_PAY_AMOUNT, FARM_PAYMENTS, FARM_USDC, PAY_AMOUNT, PAYER_DEPOSIT, SET, TAG2, TESTNET, VALUES } from "./config.ts";
@@ -84,10 +85,7 @@ const cfgOf = (ctx: Ctx): SetConfig => setConfig(ctx.acc.anchors.map((x) => x.ac
 const usdcBalance = (ctx: Ctx, who: Address) =>
   ctx.chain.pub.readContract({ address: TESTNET.usdc, abi: usdcAbi, functionName: "balanceOf", args: [who] });
 
-async function assess(ctx: Ctx, a: AgentRec) {
-  return await ctx.chain.pub.readContract({ ...ancre(ctx), functionName: "assess", args: [id(a), ctx.state.setId!, true] }) as
-    { status: number; trusted: boolean; trust: bigint; trustRobust: bigint; trustLow: bigint; vetoCount: number };
-}
+const assess = (ctx: Ctx, a: AgentRec) => readAssess(ctx.chain, ancre(ctx), id(a), ctx.state.setId!);
 
 // ---------------------------------------------------------------- building blocks
 
@@ -232,7 +230,7 @@ export async function scene0(ctx: Ctx) {
         }
         await dealUsdc(chain, op.account.address, PAYER_DEPOSIT + BigInt(FARM_PAYMENTS) * FARM_USDC);
       }
-      const byLabel = new Map([...acc.anchors, acc.farmOwner, ...acc.farm, acc.rater].map((x) => [x.label, x]));
+      const byLabel = new Map(emitters(acc).map((x) => [x.label, x]));
       for (const [label, target] of Object.entries(ctx.monBudget)) {
         const actor = byLabel.get(label)!;
         const have = await chain.pub.getBalance({ address: actor.account.address });
@@ -306,6 +304,31 @@ export async function scene1(ctx: Ctx) {
       check("provider-2 trusted", true, (await assess(ctx, agent(ctx, "provider-2 (demo)"))).trusted),
       check("provider-1 paid", "PAID", p1.decision),
       check("provider-2 paid", "PAID", p2.decision),
+    ];
+  });
+}
+
+// ---------------------------------------------------------------- scene 7 (D50): the second hop
+
+/** H1 (provider-1, vouched for by TWO anchors, else leave-one-out kills it, AM-10.6) vouches for H2 (provider-3),
+ * whom no anchor has ever rated: a one-hop trust list says "unknown", ANCRE propagates and the payer pays.
+ * Run right after scene 1 (`all` = 0, 1, 7, 2, ...); numbered 7 so that the scene ids of the event log stay stable. */
+export async function scene7(ctx: Ctx) {
+  const { acc } = ctx;
+  const H2 = "provider-3 (demo)";
+  await scene(ctx, 7, "second hop: an agent vouched for by a trusted provider, never rated by an anchor, is paid", async () => {
+    await registerAgent(ctx, 7, H2, acc.operator, acc.providers[2], "provider");
+    await feedback(ctx, 7, "7.vouch:p1->p3", acc.providers[0], H2, VALUES.hopVouch, "vouch", `provider-1 (trusted, 2 anchors) vouches for ${H2}`);
+    await certifyStep(ctx, 7, "7.cert", "provider-1 vouched for provider-3");
+    const pay = await payViaPayer(ctx, 7, "7.pay:p3", H2, "PAID");
+    const [x, raters] = await Promise.all([assess(ctx, agent(ctx, H2)), ctx.chain.pub.readContract({ address: TESTNET.reputation,
+      abi: reputationAbi, functionName: "readAllFeedback", args: [id(agent(ctx, H2)), [], "", "", false] })]);
+    const anchorSet = new Set(acc.anchors.map((a) => a.account.address.toLowerCase()));
+    return [
+      check("no anchor rated provider-3 (a one-hop list says unknown)", 0, raters[0].filter((c) => anchorSet.has(c.toLowerCase())).length),
+      check("provider-3 robust mass above theta (2 hops, both anchor columns)", true, x.trustLow >= SET.theta),
+      check("provider-3 trusted", true, x.trusted),
+      check("provider-3 paid", "PAID", pay.decision),
     ];
   });
 }

@@ -61,15 +61,16 @@ emulated exactly as x402-rs does it (`eth_call` for `/verify`, then `eth_estimat
 
 ```bash
 cd demo
-node run.ts            # forks testnet (needs internet), runs scenes 0-6, prints 26 checks and "ACT 2 PASS" (~30 s)
-node run.ts --frozen   # scenes 1-6 with NO network: anvil loads demo/frozen/anvil-state.json (~20 s)
+node run.ts            # forks testnet (needs internet), runs every scene, prints 30 checks and "ACT 2 PASS" (~30 s)
+node run.ts --frozen   # scenes 1-7 with NO network: anvil loads demo/frozen/anvil-state.json (~20 s)
 ```
 
 Keys are derived from a public seed. They are test keys and hold nothing of value.
 
 | Scene | What you should see |
 |---|---|
-| 1 Honest providers | 2 providers, each vouched for by 2 of the 3 anchors, have mass ≈ 3.5-4 % (> θ = 2 %). The payer contract **pays** them over x402 |
+| 1 Honest providers | 2 providers, each vouched for by 2 of the 3 anchors, have mass ≈ 3.5-4 % (> θ = 1 %). The payer contract **pays** them over x402 |
+| 7 Second hop | A trusted provider vouches for a third agent that **no anchor ever rated**. A one-hop trust list says "unknown"; ANCRE propagates the trust (mass 2.3 %) and the payer **pays** it |
 | 2 Sybil farm | 10 agents rate each other and a target at the schema maximum. The **naive average is 100**, the **ANCRE mass is 0**, and the payer **refuses** at `/verify` (`UNTRUSTED`). A compromised anchor then vouches for the target: `trust > 0`, but leave-one-out (m = 2) leaves `trustRobust = 0`, so it is still refused |
 | 3 The farm pays itself | 5 real x402 payments inside the farm, each USDC `Transfer` re-read from the receipt. True receipts, mass still 0, still refused. *A receipt can be true and still come from a farm* |
 | 4 Breaker | An anchor slashes a provider that went bad. The **very next payment is refused** (`VETOED`), with no need to wait for a new certificate (the veto is read live). Then a recertification, and still refused |

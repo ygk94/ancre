@@ -40,7 +40,7 @@ export const SET = {
   maxAge: 288_000,
   minRefresh: 288_000,
   slackRefresh: 0,
-  theta: 2n * 10n ** 16n, // 0.02 WAD: honest providers measured at 3.46 % and 3.95 % on the fork (06/10), farm 0
+  theta: 10n ** 16n, // 0.01 WAD: lowest honest mass MEASURED on the fork (06/10) is the second hop, 2.30 %; farm 0
   rhoN: 1,
   rhoD: 2,
   eLowMax: 10n ** 16n,
@@ -64,6 +64,7 @@ export const VALUES = {
   compromisedVouch: 100n,
   slash: -100n, // slash -100..0
   thirdPartyReview: 1n, // review -1..1
+  hopVouch: 100n, // scene 7: the trusted provider fully vouches for the second-hop agent
 } as const;
 
 export const TAG2 = "demo";

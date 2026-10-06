@@ -30,7 +30,7 @@ export function demoAccounts(seed: Hex, operatorIsSeed: boolean) {
     operator,
     anchors,
     payerOperator: a("payer operator key (demo agent wallet)", "payer-operator"),
-    providers: [a("provider-1 wallet (demo)", "provider"), a("provider-2 wallet (demo)", "provider")],
+    providers: [a("provider-1 wallet (demo)", "provider"), a("provider-2 wallet (demo)", "provider"), a("provider-3 wallet (demo)", "provider")],
     farmOwner: a("farm owner (demo)", "farm-owner"),
     farmTarget: a("farm target wallet (demo)", "farm-target"),
     farm,
@@ -39,9 +39,10 @@ export function demoAccounts(seed: Hex, operatorIsSeed: boolean) {
 }
 export type DemoAccounts = ReturnType<typeof demoAccounts>;
 
-/** Accounts that send transactions themselves (they need MON for gas). Wallet keys of agents only sign. */
+/** Accounts that send transactions themselves (they need MON for gas). Other agent wallets only sign; provider-1's
+ * wallet sends the second-hop vouch of scene 7. */
 export function emitters(d: DemoAccounts): Actor[] {
-  return [d.operator, ...d.anchors, d.farmOwner, ...d.farm, d.rater];
+  return [d.operator, ...d.anchors, d.providers[0], d.farmOwner, ...d.farm, d.rater];
 }
 
 // ---------------------------------------------------------------- keystore (testnet only)
