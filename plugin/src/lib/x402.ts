@@ -1,4 +1,5 @@
 import { type Address, getAddress, type Hex, isAddress } from "viem";
+import { AncreError } from "./errors.js";
 import type { Authorization } from "./payer.js";
 
 /** x402 v2 transport (specs/transports-v2/http.md, x402-foundation/x402 @ 02e80f3): base64 JSON headers. */
@@ -24,12 +25,6 @@ export type PaymentRequired = {
   extensions?: Record<string, unknown>;
 };
 
-export class X402Error extends Error {
-  constructor(readonly code: string, message: string, readonly hint: string) {
-    super(message);
-  }
-}
-
 export function encodeB64Json(v: unknown): string {
   return Buffer.from(JSON.stringify(v), "utf8").toString("base64");
 }
@@ -40,7 +35,7 @@ export function decodeB64Json<T>(s: string): T {
 
 /** Reads a 402 challenge. v1 (accepts in the body) is refused explicitly: the Monad facilitator speaks v2. */
 export function parsePaymentRequired(status: number, headers: Headers, body: string): PaymentRequired {
-  if (status !== 402) throw new X402Error("ANCRE_NOT_402", `Expected HTTP 402, got ${status}`, "This resource does not ask for an x402 payment");
+  if (status !== 402) throw new AncreError("ANCRE_NOT_402", `Expected HTTP 402, got ${status}`, "This resource does not ask for an x402 payment");
   const h = headers.get(H_REQUIRED);
   if (!h) {
     let v1 = false;
@@ -49,7 +44,7 @@ export function parsePaymentRequired(status: number, headers: Headers, body: str
     } catch {
       /* not JSON */
     }
-    throw new X402Error(
+    throw new AncreError(
       v1 ? "ANCRE_X402_V1" : "ANCRE_NO_CHALLENGE",
       v1 ? "The server speaks x402 v1" : "402 without a PAYMENT-REQUIRED header",
       "ANCRE pays x402 v2 only (PAYMENT-REQUIRED / PAYMENT-SIGNATURE headers)",
@@ -59,43 +54,52 @@ export function parsePaymentRequired(status: number, headers: Headers, body: str
   try {
     pr = decodeB64Json<PaymentRequired>(h);
   } catch {
-    throw new X402Error("ANCRE_BAD_CHALLENGE", "PAYMENT-REQUIRED is not base64 JSON", "Malformed server response");
+    throw new AncreError("ANCRE_BAD_CHALLENGE", "PAYMENT-REQUIRED is not base64 JSON", "Malformed server response");
   }
   if (pr.x402Version !== 2 || !Array.isArray(pr.accepts)) {
-    throw new X402Error("ANCRE_BAD_CHALLENGE", `Unsupported x402Version ${pr.x402Version}`, "ANCRE pays x402 v2 only");
+    throw new AncreError("ANCRE_BAD_CHALLENGE", `Unsupported x402Version ${pr.x402Version}`, "ANCRE pays x402 v2 only");
   }
   return pr;
 }
 
+/** What an offer must be for ANCRE to pay it. Shared by the CLI (selectOffer) and the SDK guard (x402-guard.ts, M3). */
+export type OfferRules = { network: string; usdc: Address; maxAmount?: bigint };
+/** selectOffer only: among payable offers, prefer the first at most this amount (the payer's maxPerPayment) */
+export type OfferChoice = OfferRules & { preferAtMost?: bigint };
+
 /**
- * The only offer ANCRE pays: exact (EIP-3009, the default asset transfer method) in USDC on this chain,
- * a valid payTo, an amount within --max-amount and within the payer's maxPerPayment.
+ * Why an offer is not payable, or undefined if it is: exact (EIP-3009, the default asset transfer method) in USDC
+ * on this chain, in the FiatToken EIP-712 domain, to a valid payTo, for a decimal amount within maxAmount.
+ * The payer's maxPerPayment is NOT checked here: decide() answers OVER_LIMIT, which is journaled and overridable (K19).
  */
-export function selectOffer(
-  pr: PaymentRequired,
-  want: { network: string; usdc: Address; maxAmount?: bigint; maxPerPayment?: bigint },
-): PaymentRequirements {
+export function offerProblem(o: Partial<PaymentRequirements>, want: OfferRules): string | undefined {
+  if (o.scheme !== "exact") return `scheme ${o.scheme}`;
+  if (o.network !== want.network) return `network ${o.network}`;
+  if (typeof o.asset !== "string" || !isAddress(o.asset) || getAddress(o.asset) !== getAddress(want.usdc)) return `asset ${o.asset}`;
+  // the facilitator builds the EIP-712 domain from extra.name/version: anything else than FiatToken's would not match
+  if (o.extra?.name !== "USDC" || o.extra?.version !== "2") return `EIP-712 domain ${String(o.extra?.name)}/${String(o.extra?.version)}`;
+  const method = o.extra?.assetTransferMethod;
+  if (method !== undefined && method !== "eip3009") return `method ${String(method)}`;
+  if (typeof o.payTo !== "string" || !isAddress(o.payTo)) return `payTo ${o.payTo}`;
+  if (typeof o.amount !== "string" || !/^\d+$/.test(o.amount)) return `amount ${o.amount}`;
+  if (want.maxAmount !== undefined && BigInt(o.amount) > want.maxAmount) return `amount ${o.amount} > --max-amount`;
+  return undefined;
+}
+
+/** The first payable offer of the challenge (offerProblem), preferring one within preferAtMost, else ANCRE_NO_OFFER. */
+export function selectOffer(pr: PaymentRequired, want: OfferChoice): PaymentRequirements {
   const why: string[] = [];
   const ok = pr.accepts.filter((o, i) => {
-    const tag = `accepts[${i}]`;
-    if (o.scheme !== "exact") return why.push(`${tag}: scheme ${o.scheme}`), false;
-    if (o.network !== want.network) return why.push(`${tag}: network ${o.network}`), false;
-    if (!isAddress(o.asset) || getAddress(o.asset) !== want.usdc) return why.push(`${tag}: asset ${o.asset}`), false;
-    // the facilitator builds the EIP-712 domain from extra.name/version: anything else than FiatToken's would not match
-    if (o.extra?.name !== "USDC" || o.extra?.version !== "2") return why.push(`${tag}: EIP-712 domain ${String(o.extra?.name)}/${String(o.extra?.version)}`), false;
-    const method = o.extra?.assetTransferMethod;
-    if (method !== undefined && method !== "eip3009") return why.push(`${tag}: method ${String(method)}`), false;
-    if (!isAddress(o.payTo)) return why.push(`${tag}: payTo ${o.payTo}`), false;
-    if (!/^\d+$/.test(o.amount)) return why.push(`${tag}: amount ${o.amount}`), false;
-    const a = BigInt(o.amount);
-    if (want.maxAmount !== undefined && a > want.maxAmount) return why.push(`${tag}: amount ${a} > --max-amount`), false;
-    if (want.maxPerPayment !== undefined && a > want.maxPerPayment) return why.push(`${tag}: amount ${a} > maxPerPayment`), false;
-    return true;
+    const p = offerProblem(o, want);
+    if (p) why.push(`accepts[${i}]: ${p}`);
+    return !p;
   });
   if (ok.length === 0) {
-    throw new X402Error("ANCRE_NO_OFFER", `No payable offer (${why.join("; ") || "empty accepts"})`, `ANCRE pays "exact" USDC on ${want.network} only`);
+    throw new AncreError("ANCRE_NO_OFFER", `No payable offer (${why.join("; ") || "empty accepts"})`,
+      `ANCRE pays "exact" USDC on ${want.network} only, within --max-amount`);
   }
-  return ok[0];
+  const within = want.preferAtMost === undefined ? undefined : ok.find((o) => BigInt(o.amount) <= want.preferAtMost!);
+  return within ?? ok[0];
 }
 
 /**
@@ -105,14 +109,14 @@ export function selectOffer(
 export function resolveAgentId(flag: string | undefined, offer: PaymentRequirements): bigint {
   const raw = flag ?? (offer.extra?.erc8004AgentId as string | number | undefined);
   if (raw === undefined || raw === null || raw === "") {
-    throw new X402Error(
+    throw new AncreError(
       "ANCRE_NO_AGENT_ID",
       "The offer does not declare an ERC-8004 agentId",
       "Ask the human (or the server's docs) for the provider's agentId and pass --agent-id N",
     );
   }
   const s = String(raw);
-  if (!/^\d+$/.test(s)) throw new X402Error("ANCRE_BAD_AGENT_ID", `Invalid agentId "${s}"`, "agentId is a decimal integer");
+  if (!/^\d+$/.test(s)) throw new AncreError("ANCRE_BAD_AGENT_ID", `Invalid agentId "${s}"`, "agentId is a decimal integer");
   return BigInt(s);
 }
 
@@ -161,8 +165,25 @@ export function decodePaymentResponse(headers: Headers): SettleResponse | undefi
   const h = headers.get(H_RESPONSE);
   if (!h) return undefined;
   try {
-    return decodeB64Json<SettleResponse>(h);
+    const r = decodeB64Json<SettleResponse>(h);
+    return typeof r === "object" && r !== null ? r : undefined;
   } catch {
     return undefined;
   }
+}
+
+/**
+ * What the response to a paid request proves, before any on-chain read (K15, A4a):
+ * - "settled": PAYMENT-RESPONSE success:true with a transaction, WHATEVER the HTTP status (the upfront flow settles
+ *   before the handler and may answer 500 with a successful settlement);
+ * - "verify_rejected": 402 with a new PAYMENT-REQUIRED and no PAYMENT-RESPONSE: the server refused at /verify, before
+ *   any settlement (@x402/core 2.27, processHTTPRequest);
+ * - "unproven": anything else (2xx without proof, a 5xx or a proxy's 504, settlement_pending with a hash, a failed
+ *   /settle: a facilitator that timed out after broadcasting answers exactly like one that never broadcast).
+ */
+export function paidResponseEvidence(status: number, headers: Headers): { kind: "settled" | "verify_rejected" | "unproven"; settlement?: SettleResponse } {
+  const settlement = decodePaymentResponse(headers);
+  if (settlement?.success === true && typeof settlement.transaction === "string" && settlement.transaction) return { kind: "settled", settlement };
+  if (!settlement && status === 402 && headers.get(H_REQUIRED)) return { kind: "verify_rejected" };
+  return { kind: "unproven", settlement };
 }

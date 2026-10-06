@@ -1,4 +1,5 @@
-import { type Address, encodePacked, type Hex, hashTypedData, hexToBytes, bytesToHex, size } from "viem";
+import { type Address, bytesToHex, encodePacked, type Hex, hashTypedData, hexToBytes, numberToBytes, size } from "viem";
+import { AncreError } from "./errors.js";
 
 /** Reason enum of TrustGatedPayer, in declaration order (contracts/src/TrustGatedPayer.sol). */
 export const REASONS = [
@@ -98,26 +99,48 @@ export function usdcAuthorizationDigest(chainId: number, usdc: Address, auth: Au
   return hashTypedData(usdcAuthorizationTypedData(chainId, usdc, auth));
 }
 
-/** 65-byte r|s|v with v in {27, 28}: the only form the payer accepts. Accepts v in {0, 1} and EIP-2098 compact. */
+/** secp256k1 group order. TrustGatedPayer._recover refuses s > N/2 (PAYER.md: "low s"). */
+const SECP256K1_N = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n;
+
+/**
+ * 65-byte r|s|v with v in {27, 28} and a low s: the only form the payer accepts. Accepts v in {0, 1}, EIP-2098
+ * compact, and a high-s signature, which it maps to its low-s twin (s' = n - s, v flipped): both recover the same
+ * signer, so the operator check of the plugin and the payer's agree (K5).
+ */
 export function normalizeSignature(sig: Hex): Hex {
-  const b = hexToBytes(sig);
+  let b: Uint8Array;
+  try {
+    b = hexToBytes(sig);
+  } catch {
+    throw new AncreError("ANCRE_BAD_SIGNATURE", "The wallet returned a signature that is not hex", "Do not retry; tell the human");
+  }
+  let r: Uint8Array, s: bigint, v: number;
   if (b.length === 65) {
-    const v = b[64];
-    if (v === 0 || v === 1) b[64] = v + 27;
-    else if (v !== 27 && v !== 28) throw new Error(`unsupported signature v=${v}`);
-    return bytesToHex(b);
-  }
-  if (b.length === 64) {
-    const out = new Uint8Array(65);
-    out.set(b.slice(0, 32), 0);
+    r = b.slice(0, 32);
+    s = BigInt(bytesToHex(b.slice(32, 64)));
+    v = b[64];
+    if (v === 0 || v === 1) v += 27;
+    else if (v !== 27 && v !== 28) throw new AncreError("ANCRE_BAD_SIGNATURE", `Unsupported signature v=${v}`, "Do not retry; tell the human");
+  } else if (b.length === 64) {
+    r = b.slice(0, 32);
     const vs = b.slice(32, 64);
-    const v = vs[0] & 0x80 ? 28 : 27;
+    v = vs[0] & 0x80 ? 28 : 27;
     vs[0] &= 0x7f;
-    out.set(vs, 32);
-    out[64] = v;
-    return bytesToHex(out);
+    s = BigInt(bytesToHex(vs));
+  } else {
+    throw new AncreError("ANCRE_BAD_SIGNATURE", `Unsupported signature length ${b.length} (an ECDSA signature of the operator is expected)`,
+      "Do not retry; tell the human");
   }
-  throw new Error(`unsupported signature length ${b.length} (an ECDSA signature of the operator is expected)`);
+  if (s === 0n || s >= SECP256K1_N) throw new AncreError("ANCRE_BAD_SIGNATURE", "Signature s out of range", "Do not retry; tell the human");
+  if (s > SECP256K1_N / 2n) {
+    s = SECP256K1_N - s;
+    v = v === 27 ? 28 : 27;
+  }
+  const out = new Uint8Array(65);
+  out.set(r, 0);
+  out.set(numberToBytes(s, { size: 32 }), 32);
+  out[64] = v;
+  return bytesToHex(out);
 }
 
 /** Kind-1 blob (246 bytes), layout of TrustGatedPayer: 0x01|agentId|to|value|validAfter|validBefore|nonce|opSig. */
@@ -127,7 +150,7 @@ export function encodeExactBlob(auth: Authorization, agentId: bigint, opSig: Hex
     ["uint8", "uint256", "address", "uint256", "uint256", "uint256", "bytes32", "bytes"],
     [1, agentId, auth.to, auth.value, auth.validAfter, auth.validBefore, auth.nonce, sig],
   );
-  if (size(blob) !== 246) throw new Error(`blob length ${size(blob)} != 246`);
+  if (size(blob) !== 246) throw new AncreError("ANCRE_INTERNAL", `blob length ${size(blob)} != 246`, "Do not retry; tell the human");
   return blob;
 }
 
@@ -168,6 +191,6 @@ export function encodeUptoBlob(u: UptoAuthorization, agentId: bigint, opSig: Hex
     ["uint8", "uint256", "address", "uint256", "uint256", "uint256", "address", "uint256", "bytes"],
     [2, agentId, u.to, u.cap, u.nonce, u.deadline, u.facilitator, u.validAfter, normalizeSignature(opSig)],
   );
-  if (size(blob) !== 266) throw new Error(`blob length ${size(blob)} != 266`);
+  if (size(blob) !== 266) throw new AncreError("ANCRE_INTERNAL", `blob length ${size(blob)} != 266`, "Do not retry; tell the human");
   return blob;
 }

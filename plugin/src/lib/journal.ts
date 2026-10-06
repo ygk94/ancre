@@ -3,13 +3,14 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
 /**
- * Append-only journal of every ANCRE refusal and every human override (D47), one JSON object per line.
+ * Append-only journal of every exit of `pay` and `override` (D47, M1), one JSON object per line: refusals,
+ * payments, unknown outcomes, aborted attempts (pay_aborted: RPC or HTTP error, wallet refusal, non-operator signer).
  * The demo screen (chantier 07) tails this file, or reads `mm ancre journal --json`.
  * Location: ANCRE_JOURNAL, default ~/.ancre/journal.jsonl (never under ~/.metamask).
  */
 export type JournalEntry = {
   kind:
-    | "refusal" | "paid" | "settlement_refused" | "unknown"
+    | "refusal" | "paid" | "settlement_refused" | "unknown" | "pay_aborted"
     | "override_requested" | "override_refused" | "override_declined" | "override_signed" | "override_paid" | "override_failed" | "override_unknown";
   url: string;
   agentId: string;
@@ -43,6 +44,21 @@ export function fileJournal(path = journalPath(), warn: (s: string) => void = (s
     } catch (err) {
       warn(`ANCRE journal: could not write ${path} (${(err as Error).message}); entry ${e.kind} for agent #${e.agentId} not recorded`);
     }
+  };
+}
+
+/**
+ * For the commands: a journal that remembers whether the flow wrote anything, so that a failure before or
+ * outside the flow (eth_chainId, the gateway, the host wallet state) is journaled too, once (M1, D47).
+ */
+export function trackedJournal(j: Journal) {
+  let wrote = false;
+  return {
+    journal: ((e) => { wrote = true; j(e); }) as Journal,
+    failedOutside: (kind: JournalEntry["kind"], url: string, e: unknown) => {
+      if (wrote) return;
+      j({ kind, url, agentId: "?", payTo: "?", amount: "?", detail: `${(e as { code?: string }).code ?? "ERROR"}: ${(e as Error)?.message ?? String(e)}` });
+    },
   };
 }
 

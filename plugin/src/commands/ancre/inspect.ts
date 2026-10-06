@@ -1,5 +1,5 @@
 import { type CommandIO, InputFieldType, type InputSchema, PluginCommand, schemaToArgs, schemaToFlags } from "@metamask/agent-wallet/plugin";
-import { parseUsdc, resolveConfig } from "../../lib/config.js";
+import { optionalUsdc, resolveConfig } from "../../lib/config.js";
 import { type InspectResult, inspectFlow } from "../../lib/flows.js";
 import { hostDeps, toCommandError } from "../../lib/host.js";
 
@@ -27,7 +27,7 @@ export default class AncreInspect extends PluginCommand<InspectResult> {
       const inp = await io.resolveInputs(inputs);
       const cfg = resolveConfig({ chainId: inp.chainId, payer: inp.payer });
       const d = await hostDeps(this.ctx, io, cfg, null, inp.rpcUrl ?? process.env.ANCRE_RPC_URL);
-      return await inspectFlow(d, cfg, inp.url, inp.agentId, inp.maxAmount ? parseUsdc(inp.maxAmount) : undefined);
+      return await inspectFlow(d, cfg, inp.url, inp.agentId, optionalUsdc(inp.maxAmount));
     } catch (e) {
       return toCommandError(e);
     }

@@ -1,8 +1,9 @@
 import { test } from "node:test";
+import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import { hashTypedData, keccak256, toHex, size, recoverTypedDataAddress, slice, getAddress } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { resolveConfig, parseUsdc, fmtUsdc } from "../dist/lib/config.js";
+import { resolveConfig, parseUsdc, fmtUsdc, optionalUsdc, CHAINS } from "../dist/lib/config.js";
 import { ancrePaymentTypedData, ancreUptoTypedData, encodeUptoBlob, encodeExactBlob, normalizeSignature, usdcAuthorizationDigest, REASONS, STATUSES } from "../dist/lib/payer.js";
 import { parsePaymentRequired, selectOffer, resolveAgentId, newAuthorization, buildPaymentPayload, encodeB64Json, decodeB64Json, decodePaymentResponse } from "../dist/lib/x402.js";
 import { describe as verdictOf, tagName } from "../dist/lib/verdict.js";
@@ -86,15 +87,17 @@ test("parsePaymentRequired: v2 header, v1 refused, non-402 refused", () => {
   assert.throws(() => parsePaymentRequired(402, new Headers({ "PAYMENT-REQUIRED": "!!" }), ""), (e) => e.code === "ANCRE_BAD_CHALLENGE");
 });
 
-test("selectOffer: exact USDC on this chain, within both caps", () => {
-  const want = { network: "eip155:143", usdc: USDC_143, maxAmount: 20_000n, maxPerPayment: 15_000n };
+test("selectOffer: exact USDC on this chain, within --max-amount", () => {
+  const want = { network: "eip155:143", usdc: USDC_143, maxAmount: 20_000n };
   assert.equal(selectOffer(pr([offer({ scheme: "upto" }), offer()]), want).scheme, "exact");
-  for (const bad of [offer({ network: "eip155:10143" }), offer({ asset: PAYTO }), offer({ amount: "16000" }), offer({ amount: "1e6" }),
+  for (const bad of [offer({ network: "eip155:10143" }), offer({ asset: PAYTO }), offer({ amount: "26000" }), offer({ amount: "1e6" }),
     offer({ payTo: "nope" }), offer({ extra: { name: "USDC", version: "2", assetTransferMethod: "permit2" } }),
     offer({ extra: { name: "USD Coin", version: "2" } }), offer({ extra: {} })]) {
     assert.throws(() => selectOffer(pr([bad]), want), (e) => e.code === "ANCRE_NO_OFFER");
   }
-  assert.throws(() => selectOffer(pr([offer({ amount: "30000" })]), { ...want, maxPerPayment: undefined }), /max-amount/);
+  assert.throws(() => selectOffer(pr([offer({ amount: "30000" })]), want), /max-amount/);
+  // K19: the payer's maxPerPayment is not a filter any more (decide answers OVER_LIMIT); a stray field is ignored
+  assert.equal(selectOffer(pr([offer({ amount: "16000" })]), { ...want, maxPerPayment: 15_000n }).amount, "16000");
 });
 
 test("resolveAgentId: flag, else the proposed extra.erc8004AgentId, never guessed", () => {
@@ -121,10 +124,10 @@ test("authorization window and payload: from = payer, signature = blob, decimal 
   assert.equal(r.transaction, "0xabc");
 });
 
-const A = (o = {}) => ({ status: 0, trust: 0n, trustRobust: 0n, distrust: 0n, e: 0n, certBlock: 5n, vetoCount: 0, triggerTag: "0x" + "00".repeat(32), trustLow: 0n, distrustUp: 0n, eLow: 0n, trusted: false, ...o });
+const A = (o = {}) => ({ status: 0, trust: 0n, trustRobust: 0n, distrust: 0n, e: 0n, certBlock: 5n, vetoCount: 0, triggerTag: "0x" + "00".repeat(32), trustLow: 0n, distrustUp: 0n, eLow: 0n, passesPolicy: false, ...o });
 
 test("verdicts: reason x status -> what the skill does", () => {
-  assert.equal(verdictOf(0, A({ trusted: true }), 1n, PAYTO).verdict, "PAY");
+  assert.equal(verdictOf(0, A({ passesPolicy: true }), 1n, PAYTO).verdict, "PAY");
   assert.equal(verdictOf(10, A(), 1n, PAYTO).verdict, "UNTRUSTED");
   const v = verdictOf(9, A({ status: 4, vetoCount: 1, triggerTag: keccak256(toHex("slash")) }), 1n, PAYTO);
   assert.equal(v.verdict, "VETOED");
@@ -146,4 +149,60 @@ test("upto blob: 266 bytes at the contract's offsets", async () => {
   assert.equal(BigInt(slice(b, 53, 85)), 5000n);
   assert.equal(slice(b, 149, 169).toLowerCase(), PAYTO.toLowerCase());
   assert.equal(slice(b, 201, 266), sig);
+});
+
+// ---------------------------------------------------------------- revue max 2026-10-06 (plugin-revue)
+const N = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n;
+
+test("K5: a high-s operator signature is mapped to its low-s twin (same signer), which the payer accepts", async () => {
+  const acct = privateKeyToAccount("0x" + "11".repeat(32));
+  const td = ancrePaymentTypedData(143, auth, 12n);
+  const sig = await acct.signTypedData(td); // viem: low s
+  const r = sig.slice(2, 66), s = BigInt("0x" + sig.slice(66, 130)), v = parseInt(sig.slice(130), 16);
+  const high = "0x" + r + (N - s).toString(16).padStart(64, "0") + (v === 27 ? "1c" : "1b");
+  assert.ok(BigInt("0x" + high.slice(66, 130)) > N / 2n, "the twin is high-s");
+  assert.equal(await recoverTypedDataAddress({ ...td, signature: high }), acct.address, "viem accepts high-s (why the plugin let it through)");
+  const norm = normalizeSignature(high);
+  assert.equal(norm, sig, "normalised back to the low-s form");
+  assert.ok(BigInt("0x" + norm.slice(66, 130)) <= N / 2n);
+  // in the 246-byte blob too (the payer's _recover refuses s > n/2)
+  const b = encodeExactBlob(auth, 12n, high);
+  assert.equal(slice(b, 181, 246), sig);
+  // junk keeps an ANCRE code (SIMP7), never a raw Error
+  for (const bad of ["0x1234", "0x" + "00".repeat(64) + "1d", "0x" + "11".repeat(32) + "00".repeat(32) + "1b"]) {
+    assert.throws(() => normalizeSignature(bad), (e) => e.code === "ANCRE_BAD_SIGNATURE", bad);
+  }
+});
+
+test("D3e: an empty --max-amount / --amount is an error, never 'no cap'", () => {
+  assert.equal(optionalUsdc(undefined), undefined);
+  assert.equal(optionalUsdc(null), undefined);
+  assert.equal(optionalUsdc("0.25"), 250_000n);
+  assert.throws(() => optionalUsdc(""), (e) => e.code === "ANCRE_BAD_AMOUNT");
+  assert.throws(() => optionalUsdc(" "), (e) => e.code === "ANCRE_BAD_AMOUNT");
+  // the commands use it for every amount flag
+  for (const f of ["check", "inspect", "pay", "override"]) {
+    const js = readFileSync(new URL(`../dist/commands/ancre/${f}.js`, import.meta.url), "utf8");
+    assert.match(js, /optionalUsdc\(inp\.(maxAmount|amount)\)/, f);
+    assert.doesNotMatch(js, /inp\.(maxAmount|amount) \? parseUsdc/, f);
+  }
+});
+
+test("SIMP7: one error class; toCommandError keeps our codes and wraps anything else as ANCRE_INTERNAL", async () => {
+  const { toCommandError } = await import("../dist/lib/host.js");
+  const { AncreError } = await import("../dist/lib/errors.js");
+  const { CommandError } = await import("@metamask/agent-wallet/plugin");
+  const code = (e) => { try { toCommandError(e); } catch (x) { return [x instanceof CommandError, x.code, x.hint]; } };
+  assert.deepEqual(code(new AncreError("ANCRE_X", "m", "h")), [true, "ANCRE_X", "h"]);
+  assert.deepEqual(code(new Error("boom")).slice(0, 2), [true, "ANCRE_INTERNAL"]);
+  assert.match(code(new Error("boom"))[2], /Do not retry/);
+  const host = new CommandError("HOST_CODE", "x", "y");
+  assert.throws(() => toCommandError(host), (e) => e === host, "a host error passes through");
+  // the three former classes are gone, and so are the duplicate identityAbi and CHAINS[*].rpc
+  for (const f of ["lib/flows.js", "lib/x402.js", "lib/config.js", "lib/x402-guard.js"]) {
+    const js = readFileSync(new URL(`../dist/${f}`, import.meta.url), "utf8");
+    assert.doesNotMatch(js, /class \w+Error extends Error/, f);
+    assert.doesNotMatch(js, /const identityAbi/, f);
+  }
+  assert.equal(Object.values(CHAINS).some((c) => "rpc" in c), false);
 });

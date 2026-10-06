@@ -2,10 +2,13 @@
 // Rehearsal of the 5-minute demo on a local fork (no real transaction): anvil --network monad fork of the testnet,
 // TrustGatedPayer + T1Oracle (stand-in for ANCRE: "good" trusted, "farm" not), a local x402 server with two
 // providers, settlement by an emulated x402-rs facilitator.
-//   node scripts/demo-local.mjs                       pay flows with a dev key standing in for the Agent Wallet
+//   node scripts/demo-local.mjs                       pay flows with a fresh key standing in for the Agent Wallet
 //   MM_HOME=<isolated dir> node scripts/demo-local.mjs  + the read commands through the real `mm` binary
-// The real demo replaces the dev key by `mm ancre pay` (signature through ctx.walletExecutor, needs `mm login`)
+// The real demo replaces that key by `mm ancre pay` (signature through ctx.walletExecutor, needs `mm login`)
 // and the oracle by AnchoredReputation; see plugin/DEMO.md.
+// Roles (02-bis, R8): the dev key D deploys and owns, a fresh key stands in for the Agent Wallet (operator), and
+// the human's key is the treasury, then also the owner before the override scene (D47 setup). Needs the 02-bis
+// contracts (T1.s.sol with T1_TREASURY / T1_OPERATOR, T1Oracle.passesAnchorPolicy).
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { bytesToHex, createPublicClient, createWalletClient, getAddress, http } from "viem";
@@ -43,7 +46,10 @@ async function main() {
     const dev = privateKeyToAccount(DEV_D);
     const admin = createWalletClient({ account: dev, transport: http(anvil.rpc) });
     await dealUsdc(pub, dev.address, 1_000_000n);
-    const d = forgeScript(anvil.rpc, { T1_STEP: "deploy", T1_PROVIDER: DEV_P, T1_FUND: "100000" }, ["--private-key", DEV_D]);
+    const agentWallet = privateKeyToAccount(bytesToHex(randomBytes(32))); // the operator (Agent Wallet stand-in)
+    const humanKey = privateKeyToAccount(bytesToHex(randomBytes(32))); // the human's MetaMask extension stand-in
+    const d = forgeScript(anvil.rpc, { T1_STEP: "deploy", T1_PROVIDER: DEV_P, T1_FUND: "100000", T1_TREASURY: humanKey.address, T1_OPERATOR: agentWallet.address },
+      ["--private-key", DEV_D]);
     const payer = getAddress(d.payer);
     const oracle = getAddress(d.oracle);
     const setAgent = async (id, wallet, trusted, status) => {
@@ -64,14 +70,14 @@ async function main() {
       hooks: { beforeSettle: async () => { if (vetoBeforeSettle) await setAgent(1n, DEV_P, true, VETOED); } },
     });
     const cfg = { chainId: CHAIN_ID, network: NETWORK, usdc: USDC, payer };
-    // dev key standing in for the Agent Wallet executor (the real one is ctx.walletExecutor after `mm login`)
+    // a fresh key standing in for the Agent Wallet executor (the real one is ctx.walletExecutor after `mm login`)
     const signs = [];
     const deps = {
       readContract: (a) => pub.readContract(a),
       fetch: globalThis.fetch.bind(globalThis),
       nowSec: () => Math.floor(Date.now() / 1000),
       random32: () => bytesToHex(randomBytes(32)),
-      signTypedData: async (td, summary) => { signs.push(summary); return dev.signTypedData(td); },
+      signTypedData: async (td, summary) => { signs.push(summary); return agentWallet.signTypedData(td); },
     };
     const bal = (a) => pub.readContract({ address: USDC, abi: usdcAbi, functionName: "balanceOf", args: [a] });
 
@@ -109,7 +115,7 @@ async function main() {
     const now = Math.floor(Date.now() / 1000);
     const offer = { scheme: "exact", network: NETWORK, amount: "10000", asset: USDC, payTo: DEV_F, maxTimeoutSeconds: 120, extra: { name: "USDC", version: "2", erc8004AgentId: "2" } };
     const auth = newAuthorization(payer, offer, now, bytesToHex(randomBytes(32)));
-    const blob = encodeExactBlob(auth, 2n, await dev.signTypedData(ancrePaymentTypedData(CHAIN_ID, auth, 2n)));
+    const blob = encodeExactBlob(auth, 2n, await agentWallet.signTypedData(ancrePaymentTypedData(CHAIN_ID, auth, 2n)));
     const forced = await fetch(`${server.url}/farm`, { headers: { "payment-signature": encodeB64Json(buildPaymentPayload({ x402Version: 2, accepts: [offer] }, offer, auth, blob, `${server.url}/farm`)) } });
     scene("4. bypass: operator signs for the farm by hand", { httpStatus: forced.status, facilitator: JSON.parse(await forced.text()), farmReceived: (await bal(DEV_F)) - f0 });
 
@@ -138,7 +144,7 @@ async function main() {
     await dealUsdc(pub, eoa.address, 50_000n);
     const decisions = [];
     const client = new x402Client().register("eip155:*", new ExactEvmScheme(eoa)).setSpendControls(false);
-    client.onBeforePaymentCreation(ancreGuard({ readContract: (a) => pub.readContract(a), ancre: oracle, setId: ("0x" + "00".repeat(31) + "01"), onDecision: (x) => decisions.push(x) }));
+    client.onBeforePaymentCreation(ancreGuard({ readContract: (a) => pub.readContract(a), chainId: CHAIN_ID, getChainId: () => pub.getChainId(), ancre: oracle, setId: ("0x" + "00".repeat(31) + "01"), onDecision: (x) => decisions.push(x) }));
     const pay = wrapFetchWithPayment(fetch, client);
     let farmOutcome;
     try {
@@ -155,7 +161,6 @@ async function main() {
 
     // ---- D47: human override of the farm refusal, paid from the human's own wallet (a fresh key stands in for
     // the human's MetaMask extension; in the real command the human signs on a local page in the browser)
-    const humanKey = privateKeyToAccount(bytesToHex(randomBytes(32)));
     await dealUsdc(pub, humanKey.address, 50_000n);
     // the override signer must be the payer's owner or treasury: hand the ownership to the human (D47 setup)
     const th = await admin.writeContract({ address: payer, abi: payerAbi, functionName: "transferOwnership", args: [humanKey.address], gas: 80_000n, chain: null });
@@ -165,7 +170,12 @@ async function main() {
     const farmBefore = await bal(DEV_F);
     const ov = await overrideFlow({
       readContract: (a) => pub.readContract(a), fetch: globalThis.fetch.bind(globalThis), nowSec: () => Math.floor(Date.now() / 1000),
-      random32: () => bytesToHex(randomBytes(32)), interactive: true, agentWallets: [dev.address], journal: fileJournal(jpath),
+      random32: () => bytesToHex(randomBytes(32)), interactive: true, agentWallets: [agentWallet.address], journal: fileJournal(jpath),
+      chainId: () => pub.getChainId(),
+      // M4 pin: on the fork a fresh key stands in for the server wallet, and its Guard Mode policy (MetaMask's
+      // backend, read with `mm wallet policy get` in the real command) is simulated as the expected allowlist
+      selectedWallet: { address: agentWallet.address, mode: "server" },
+      guardPolicy: async () => `schema_version: 1\nallowlist:\n  addresses: [${USDC}, ${payer}]\n  token_recipients: [${payer}]\n`,
       confirm: async () => true,
       humanSign: async (req) => signAsExtension(humanKey, req),
     }, cfg, `${server.url}/farm`, {});

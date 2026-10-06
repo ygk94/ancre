@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Test T1 (porte P3): does the x402 facilitator settle a payment from an ERC-1271 payer whose isValidSignature
-// burns 78 k / 190 k gas (the cost of ANCRE's isTrusted), and what happens on a refusal?
+// burns 78 k / 190 k gas (the cost of ANCRE's passesAnchorPolicy, isTrusted before 02-bis), and what happens on a refusal?
 //
 //   node scripts/t1.mjs --local       dry run: anvil --network monad fork of the testnet, the facilitator emulated
 //                                     as x402-rs does it (eth_call, then eth_estimateGas, then a send with that limit).

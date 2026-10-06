@@ -24,16 +24,24 @@ const sign = async (acct, req) => {
   const { EIP712Domain, ...types } = td.types;
   return { address: acct.address, signature: await acct.signTypedData({ ...td, types, message: { ...td.message, from: acct.address } }), template: td };
 };
-const A = (o = {}) => ({ status: 4, trust: 0n, trustRobust: 0n, distrust: 0n, e: 0n, certBlock: 5n, vetoCount: 1, triggerTag: keccak256(toHex("veto")), trustLow: 0n, distrustUp: 0n, eLow: 0n, trusted: false, ...o });
+const A = (o = {}) => ({ status: 4, trust: 0n, trustRobust: 0n, distrust: 0n, e: 0n, certBlock: 5n, vetoCount: 1, triggerTag: keccak256(toHex("veto")), trustLow: 0n, distrustUp: 0n, eLow: 0n, passesPolicy: false, ...o });
 
-function world({ decide = [9, A()], humanBalance = 10n ** 6n, owner = human.address, treasury = human.address } = {}) {
+const AGENT_ADDR = getAddress(privateKeyToAccount("0x" + "11".repeat(32)).address);
+const POLICY = (payer = PAYER, wallet = AGENT_ADDR) => JSON.stringify({ address: wallet,
+  policy: `schema_version: 1\nallowlist:\n  addresses:\n    - ${USDC.toLowerCase()}\n    - ${payer.toLowerCase()}\n  token_recipients:\n    - ${payer.toLowerCase()}\n` });
+
+function world({ decide = [9, A()], humanBalance = 10n ** 6n, owner = human.address, treasury = human.address, used = false } = {}) {
   const fetches = [];
+  const reads = [];
   const leaked = { sign: 0, send: 0 };
   const offer = { scheme: "exact", network: "eip155:143", amount: "10000", asset: USDC, payTo: PAYTO, maxTimeoutSeconds: 60, extra: { name: "USDC", version: "2", erc8004AgentId: "12" } };
   const deps = {
-    readContract: async ({ functionName, args }) => {
+    readContract: async ({ address, functionName, args }) => {
+      reads.push({ address, functionName, args });
       switch (functionName) {
         case "decide": return decide;
+        case "usdc": return USDC;
+        case "authorizationState": return typeof used === "function" ? used() : used;
         case "maxPerPayment": return 1_000_000n;
         case "balanceOf": return args[0] === PAYER ? 10n ** 6n : humanBalance;
         case "isOperator": return getAddress(args[0]) === agent.address;
@@ -51,14 +59,16 @@ function world({ decide = [9, A()], humanBalance = 10n ** 6n, owner = human.addr
     nowSec: () => 1_900_000_000,
     random32: () => keccak256(toHex("n")),
     interactive: true,
+    selectedWallet: { address: agent.address, mode: "server" },
     agentWallets: [agent.address],
+    guardPolicy: async () => POLICY(),
     confirm: async (_p, expected) => expected === "override 12",
     humanSign: (req) => sign(human, req),
     // what an agent would love to use: the Agent Wallet's own signer, injected on purpose. It must never be called.
     signTypedData: async () => { leaked.sign++; return "0x"; },
     sendTransaction: async () => { leaked.send++; return { status: "CONFIRMED" }; },
   };
-  return { deps, fetches, leaked };
+  return { deps, fetches, leaked, reads };
 }
 
 // ---------------------------------------------------------------- static: the code cannot reach the executor
@@ -71,7 +81,7 @@ test("static: the override command declares no wallet-submit and never builds a 
   assert.ok(c, "ancre:override in the manifest");
   assert.ok(!c.capabilities.includes("wallet-submit"), "without wallet-submit the host denies ctx.walletExecutor (PERMISSION_DENIED)");
   const cmd = src("commands/ancre/override.js");
-  assert.match(cmd, /hostDeps\(this\.ctx, io, cfg, null,/, "hostDeps is called with commandId = null");
+  assert.match(cmd, /hostDeps\(this\.ctx, io, cfg, null\)/, "hostDeps is called with commandId = null and no rpcUrl (M4)");
   assert.doesNotMatch(cmd, /walletExecutor/);
   for (const f of ["lib/override.js", "lib/human.js", "lib/journal.js"]) {
     assert.doesNotMatch(src(f), /walletExecutor|signTypedData\(|sendTransaction/, `${f} must not reach any agent signer`);
@@ -85,7 +95,7 @@ test("static: the override command declares no wallet-submit and never builds a 
 });
 
 test("static: hostDeps(…, null) never calls ctx.walletExecutor", async () => {
-  const ctx = { publicClient: () => ({ readContract: async () => 0 }), walletExecutor: () => { throw new Error("executor reached"); } };
+  const ctx = { publicClient: () => ({ readContract: async () => 0, getChainId: async () => 143 }), walletExecutor: () => { throw new Error("executor reached"); } };
   const d = await hostDeps(ctx, {}, cfg, null);
   assert.equal(d.signTypedData, undefined);
   assert.equal(d.sendTransaction, undefined);
@@ -100,7 +110,7 @@ test("override refuses to run non-interactively (an agent's shell, --json), befo
 });
 
 test("override is refused when ANCRE says PAY (no override of a payable agent)", async () => {
-  const w = world({ decide: [0, A({ status: 0, trusted: true, vetoCount: 0 })] });
+  const w = world({ decide: [0, A({ status: 0, passesPolicy: true, vetoCount: 0 })] });
   await assert.rejects(overrideFlow(w.deps, cfg, "https://p/x", {}), (e) => e.code === "ANCRE_OVERRIDE_NOT_NEEDED");
 });
 
@@ -124,7 +134,7 @@ const journaled = (w) => {
 test("a signature by the Agent Wallet / an operator is refused (no switch between the two wallets), and journaled", async () => {
   for (const variant of ["agentWallets", "operatorOnly"]) {
     const w = world();
-    if (variant === "operatorOnly") w.deps.agentWallets = undefined; // host state unknown: the payer's operator list still catches it
+    if (variant === "operatorOnly") w.deps.agentWallets = []; // host state unknown: the payer's operator list still catches it
     const kinds = journaled(w);
     w.deps.humanSign = (req) => sign(agent, req);
     await assert.rejects(overrideFlow(w.deps, cfg, "https://p/x", {}), (e) => e.code === "ANCRE_OVERRIDE_NOT_HUMAN", variant);
@@ -176,12 +186,16 @@ test("the non-interactive refusal is journaled too (an agent trying is what the 
 
 test("isInteractive: TTY on both ends and no machine output", async () => {
   const { isInteractive } = await import("../dist/lib/interactive.js");
-  assert.equal(isInteractive(true, true, ["ancre", "override", "u"]), true);
-  assert.equal(isInteractive(undefined, true, []), false, "stdin piped (an agent's shell)");
-  assert.equal(isInteractive(true, false, []), false, "stdout piped");
-  for (const f of ["--json", "--toon", "--format=json", "--format"]) assert.equal(isInteractive(true, true, ["x", f]), false, f);
+  assert.equal(isInteractive(true, true, ["ancre", "override", "u"], true), true);
+  assert.equal(isInteractive(undefined, true, [], true), false, "stdin piped (an agent's shell)");
+  assert.equal(isInteractive(true, false, [], true), false, "stdout piped");
+  for (const f of ["--json", "--toon", "--format=json", "--format"]) assert.equal(isInteractive(true, true, ["x", f], true), false, f);
+  // A4e: the host's alias and persistent format: -f json, -f=json, -fjson, `mm config set format json` (io.isInteractive false)
+  for (const f of ["-f", "-f=json", "-fjson"]) assert.equal(isInteractive(true, true, ["x", f, "json"], true), false, f);
+  assert.equal(isInteractive(true, true, ["ancre", "override", "u"], false), false, "the host chose the headless renderer");
+  assert.equal(isInteractive(true, true, ["ancre", "override", "u"], undefined), false, "unknown host answer: refuse");
   const cmd = readFileSync(new URL("../dist/commands/ancre/override.js", import.meta.url), "utf8");
-  assert.match(cmd, /isInteractive\(process\.stdin\.isTTY, process\.stdout\.isTTY, argv\)/, "the command uses it");
+  assert.match(cmd, /isInteractive\(process\.stdin\.isTTY, process\.stdout\.isTTY, argv, io\.isInteractive\)/, "the command uses the host's answer too");
 });
 
 test("2xx without settlement proof after a human signature is UNKNOWN, with the live authorisation", async () => {
@@ -207,7 +221,7 @@ test("the validity window starts when the human clicks, not when the page opens"
 });
 
 test("the payer's maxPerPayment does not bind the human's own wallet", async () => {
-  const w = world({ decide: [5, A({ status: 0, trusted: true, vetoCount: 0 })] }); // OVER_LIMIT for the payer
+  const w = world({ decide: [5, A({ status: 0, passesPolicy: true, vetoCount: 0 })] }); // OVER_LIMIT for the payer
   const r = await overrideFlow(w.deps, cfg, "https://p/x", { maxAmount: 10n ** 6n });
   assert.equal(r.verdict, "OVER_LIMIT");
   assert.equal(r.outcome, "OVERRIDE_PAID");
@@ -246,7 +260,8 @@ test("pay journals a refusal and points to the human-only override", async () =>
 test("human signing page: one-time token, 127.0.0.1 only, resolves on the posted signature", async () => {
   const { humanSign } = await import("../dist/lib/human.js");
   let url;
-  const p = humanSign({ chainId: 143, summary: "<b>x</b>", prepare: () => ({ issued: 1 }), onUrl: (u) => (url = u), timeoutMs: 5000 });
+  const tpl = { domain: {}, types: {}, primaryType: "T", message: { nonce: "0xaa" } };
+  const p = humanSign({ chainId: 143, summary: "<b>x</b>", prepare: () => tpl, onUrl: (u) => (url = u), timeoutMs: 5000 });
   while (!url) await new Promise((r) => setTimeout(r, 10));
   assert.match(url, /^http:\/\/127\.0\.0\.1:\d+\/\?t=[0-9a-f]{32}$/);
   const bare = url.split("?")[0];
@@ -255,9 +270,231 @@ test("human signing page: one-time token, 127.0.0.1 only, resolves on the posted
   assert.match(html, /eth_signTypedData_v4/);
   assert.match(html, /&#60;b&#62;x&#60;\/b&#62;/, "the summary is escaped");
   const t = new URL(url).searchParams.get("t");
-  const tpl = await (await fetch(`${bare}template?t=${t}`)).json();
-  assert.deepEqual(tpl, { issued: 1 });
+  assert.deepEqual(await (await fetch(`${bare}template?t=${t}`)).json(), tpl);
   const posted = { address: human.address, signature: "0x12" };
-  assert.equal((await fetch(`${bare}done?t=${t}`, { method: "POST", body: JSON.stringify(posted) })).status, 200);
-  assert.deepEqual(await p, { ...posted, template: { issued: 1 } }, "the template comes from the plugin, not from the page");
+  assert.equal((await fetch(`${bare}done?t=${t}`, { method: "POST", body: JSON.stringify({ ...posted, nonce: "0xbb" }) })).status, 400, "unknown nonce");
+  assert.equal((await fetch(`${bare}done?t=${t}`, { method: "POST", body: JSON.stringify({ ...posted, nonce: "0xaa" }) })).status, 200);
+  assert.deepEqual(await p, { ...posted, template: tpl }, "the template comes from the plugin, not from the page");
+});
+
+// ---------------------------------------------------------------- revue max 2026-10-06 (plugin-revue)
+const AW2 = privateKeyToAccount("0x" + "33".repeat(32)); // a second, non-selected address of the host wallet
+
+test("M4: the payer must be pinned by the Agent Wallet setup and read on the configured chain, else refused before any request", async () => {
+  const cases = [
+    ["host wallet state unreadable", (w) => (w.deps.selectedWallet = undefined), "ANCRE_OVERRIDE_UNPINNED"],
+    ["BYOK wallet (no Guard Mode policy)", (w) => (w.deps.selectedWallet = { address: agent.address, mode: "byok" }), "ANCRE_OVERRIDE_UNPINNED"],
+    ["payer not operated by the Agent Wallet", (w) => (w.deps.selectedWallet = { address: AW2.address, mode: "server" }), "ANCRE_OVERRIDE_UNPINNED"],
+    ["payer absent from the Guard Mode policy (one the agent deployed)", (w) => (w.deps.guardPolicy = async () => POLICY(getAddress("0x00000000000000000000000000000000000000ab"))), "ANCRE_OVERRIDE_UNPINNED"],
+    ["Guard Mode policy unreadable", (w) => (w.deps.guardPolicy = async () => { throw new Error("not logged in"); }), "ANCRE_OVERRIDE_UNPINNED"],
+  ];
+  for (const [name, tweak, code] of cases) {
+    const w = world();
+    const kinds = journaled(w);
+    tweak(w);
+    await assert.rejects(overrideFlow(w.deps, cfg, "https://p/x", {}), (e) => e.code === code, name);
+    assert.equal(w.fetches.length, 0, `${name}: not even the challenge`);
+    assert.deepEqual(kinds(), ["override_refused"], name);
+  }
+});
+
+test("M4 PoC: a fake reader answering owner = treasury = the agent's funded key K no longer yields OVERRIDE_PAID", async () => {
+  // the review's PoC: the agent runs the override in a pty, with its own payer (or a fake RPC) whose owner and
+  // treasury are K, and drives the signing page with K. The payer is not in the Guard Mode policy: refused.
+  const w = world({ owner: stranger.address, treasury: stranger.address });
+  w.deps.guardPolicy = async () => POLICY(getAddress("0x00000000000000000000000000000000000000ab")); // the human pinned another payer
+  w.deps.humanSign = (req) => sign(stranger, req);
+  await assert.rejects(overrideFlow(w.deps, cfg, "https://p/x", {}), (e) => e.code === "ANCRE_OVERRIDE_UNPINNED");
+  // and the command itself has no --rpc-url and reads through the gateway only
+  const cmd = readFileSync(new URL("../dist/commands/ancre/override.js", import.meta.url), "utf8");
+  assert.doesNotMatch(cmd, /flag: "rpc-url"/);
+  assert.doesNotMatch(cmd, /hostDeps\([^)]*ANCRE_RPC_URL/);
+});
+
+test("A4f: owner OR treasury held by the agent is enough to refuse (misconfigured)", async () => {
+  for (const [owner, treasury] of [[agent.address, human.address], [human.address, agent.address], [human.address, AW2.address]]) {
+    const w = world({ owner, treasury });
+    w.deps.agentWallets = [agent.address, AW2.address];
+    await assert.rejects(overrideFlow(w.deps, cfg, "https://p/x", {}), (e) => e.code === "ANCRE_OVERRIDE_MISCONFIGURED", `${owner}/${treasury}`);
+    assert.equal(w.fetches.length, 1, "challenge only");
+  }
+});
+
+test("K15 (override): a non-2xx with a successful PAYMENT-RESPONSE is OVERRIDE_PAID, not FAILED", async () => {
+  const w = world();
+  const orig = w.deps.fetch;
+  w.deps.fetch = async (url, init = {}) => init.headers
+    ? new Response("handler failed", { status: 500, headers: { "PAYMENT-RESPONSE": encodeB64Json({ success: true, transaction: "0x" + "99".repeat(32) }) } })
+    : orig(url, init);
+  const r = await overrideFlow(w.deps, cfg, "https://p/x", {});
+  assert.equal(r.outcome, "OVERRIDE_PAID");
+  assert.equal(r.transaction, "0x" + "99".repeat(32));
+});
+
+test("A4a (override): no proof -> authorizationState(human, nonce) decides; 5xx never reads as failed", async () => {
+  const paid500 = async (url, init, orig) => (init.headers ? new Response("bad gateway", { status: 504 }) : orig(url, init));
+  for (const [used, outcome] of [[true, "OVERRIDE_PAID"], [false, "OVERRIDE_UNKNOWN"]]) {
+    const w = world({ used });
+    const orig = w.deps.fetch;
+    w.deps.fetch = (url, init = {}) => paid500(url, init, orig);
+    const r = await overrideFlow(w.deps, cfg, "https://p/x", {});
+    assert.equal(r.outcome, outcome, `nonce used=${used}`);
+    const q = w.reads.find((x) => x.functionName === "authorizationState");
+    assert.equal(q.address, USDC);
+    assert.equal(q.args[0], human.address, "the authoriser is the human");
+  }
+  // a verify rejection (402 + PAYMENT-REQUIRED) with an unused nonce is the only OVERRIDE_FAILED
+  const w = world();
+  const orig = w.deps.fetch;
+  w.deps.fetch = async (url, init = {}) => init.headers
+    ? new Response("{}", { status: 402, headers: { "PAYMENT-REQUIRED": encodeB64Json({ x402Version: 2, error: "invalid_signature", accepts: [] }) } })
+    : orig(url, init);
+  assert.equal((await overrideFlow(w.deps, cfg, "https://p/x", {})).outcome, "OVERRIDE_FAILED");
+});
+
+test("A4d: a double click on the signing page verifies each signature against its own template, and says Signed only once accepted", async () => {
+  const { humanSign } = await import("../dist/lib/human.js");
+  // real page server, driven like the browser: two /template (two clicks), the FIRST one is signed
+  const w = world();
+  const kinds = journaled(w);
+  w.deps.humanSign = (req) => humanSign({ ...req, timeoutMs: 5000, onUrl: async (url) => {
+    const bare = url.split("?")[0];
+    const t = new URL(url).searchParams.get("t");
+    const td1 = await (await fetch(`${bare}template?t=${t}`)).json();
+    await (await fetch(`${bare}template?t=${t}`)).json(); // second click: a second nonce, n2
+    const { EIP712Domain, ...types } = td1.types;
+    const msg = { ...td1.message, from: human.address };
+    const signature = await human.signTypedData({ domain: td1.domain, types, primaryType: td1.primaryType,
+      message: { ...msg, value: BigInt(msg.value), validAfter: BigInt(msg.validAfter), validBefore: BigInt(msg.validBefore) } });
+    const r = await fetch(`${bare}done?t=${t}`, { method: "POST", body: JSON.stringify({ address: human.address, signature, nonce: td1.message.nonce }) });
+    assert.equal(r.status, 200, await r.clone().text());
+  } });
+  let n = 0;
+  w.deps.random32 = () => keccak256(toHex(`n${n++}`)); // distinct nonces per click
+  const r = await overrideFlow(w.deps, cfg, "https://p/x", {});
+  assert.equal(r.outcome, "OVERRIDE_PAID");
+  const a = decodeB64Json(w.fetches[1].headers["payment-signature"]).payload.authorization;
+  assert.equal(a.nonce, keccak256(toHex("n0")), "paid with the template that was signed");
+  assert.deepEqual(kinds(), ["override_requested", "override_signed", "override_paid"]);
+});
+
+test("A4d: a refused signature is reported on the page (not 'Signed') and in the terminal", async () => {
+  const { humanSign } = await import("../dist/lib/human.js");
+  const w = world();
+  let page, drove;
+  // the page stays open after a refusal (another account may sign); the timeout then reports the last refusal
+  w.deps.humanSign = (req) => humanSign({ ...req, timeoutMs: 400, onUrl: (url) => void (drove = (async () => {
+    const bare = url.split("?")[0];
+    const t = new URL(url).searchParams.get("t");
+    const td = await (await fetch(`${bare}template?t=${t}`)).json();
+    const { EIP712Domain, ...types } = td.types;
+    const m = { ...td.message, from: stranger.address, value: BigInt(td.message.value), validAfter: BigInt(td.message.validAfter), validBefore: BigInt(td.message.validBefore) };
+    const signature = await stranger.signTypedData({ domain: td.domain, types, primaryType: td.primaryType, message: m });
+    const r = await fetch(`${bare}done?t=${t}`, { method: "POST", body: JSON.stringify({ address: stranger.address, signature, nonce: td.message.nonce }) });
+    page = { status: r.status, text: await r.text() };
+  })()) });
+  await assert.rejects(overrideFlow(w.deps, cfg, "https://p/x", {}), (e) => e.code === "ANCRE_OVERRIDE_NOT_HUMAN");
+  await drove;
+  assert.equal(page.status, 400);
+  assert.match(page.text, /neither the payer's owner nor its treasury/);
+  assert.equal(w.fetches.length, 1, "no paid request");
+});
+
+test("A4g: Ctrl-C (io.signal) closes the signing page and stops the override", async () => {
+  const { humanSign } = await import("../dist/lib/human.js");
+  const ac = new AbortController();
+  let url;
+  const w = world();
+  const kinds = journaled(w);
+  w.deps.signal = ac.signal;
+  w.deps.humanSign = (req) => humanSign({ ...req, timeoutMs: 60_000, onUrl: (u) => { url = u; setTimeout(() => ac.abort(), 20); } });
+  const t0 = Date.now();
+  await assert.rejects(overrideFlow(w.deps, cfg, "https://p/x", {}), (e) => e.code === "ANCRE_OVERRIDE_NOT_SIGNED" && /cancelled/.test(e.message));
+  assert.ok(Date.now() - t0 < 5000, "does not wait for the timeout");
+  await assert.rejects(fetch(url), "the page is closed");
+  assert.equal(w.fetches.length, 1);
+  assert.deepEqual(kinds(), ["override_requested", "override_failed"]);
+});
+
+test("M4: readGuardPolicy runs `wallet policy get --json` with this process's own Node and mm entry point, not a `mm` on PATH", async () => {
+  const { readGuardPolicy } = await import("../dist/lib/host.js");
+  const { writeFileSync } = await import("node:fs");
+  const dir = mkdtempSync(join(tmpdir(), "ancre-mm-"));
+  const fake = join(dir, "mm-entry.mjs");
+  writeFileSync(fake, `process.stdout.write(JSON.stringify({ argv: process.argv.slice(2), policy: "allowlist: [${PAYER}]" }))`);
+  const saved = process.argv[1];
+  const savedPath = process.env.PATH;
+  process.argv[1] = fake;
+  process.env.PATH = "/nonexistent"; // a fake `mm` on PATH would not be used anyway
+  try {
+    const out = JSON.parse(await readGuardPolicy());
+    assert.deepEqual(out.argv, ["wallet", "policy", "get", "--json"]);
+    assert.match(out.policy, new RegExp(PAYER.slice(2), "i"));
+  } finally {
+    process.argv[1] = saved;
+    process.env.PATH = savedPath;
+  }
+});
+
+test("code-review: the Guard Mode pin parses the policy: this wallet's, an allowlist of contracts, not recipients nor a deny list", async () => {
+  const { policyAllowsContract } = await import("../dist/lib/override.js");
+  const W = AGENT_ADDR;
+  const P = PAYER.toLowerCase();
+  const doc = (policy, address = W) => JSON.stringify({ address, policy });
+  assert.equal(policyAllowsContract(doc(`allowlist:\n  addresses:\n    - ${P}\n`), W, PAYER), true);
+  assert.equal(policyAllowsContract(doc(`allowlist:\n  addresses: [${USDC}, ${PAYER}]\n`), W, PAYER), true, "inline list");
+  assert.equal(policyAllowsContract(JSON.stringify({ data: { address: W, policy: `whitelist:\n- ${P}\n` } }), W, PAYER), true, "{ data } envelope");
+  for (const [name, raw] of [
+    ["only a token recipient", doc(`allowlist:\n  addresses:\n    - ${USDC}\n  token_recipients:\n    - ${P}\n`)],
+    ["a deny list", doc(`denylist:\n  addresses:\n    - ${P}\n`)],
+    ["a blocked entry under allowlist", doc(`allowlist:\n  blocked:\n    - ${P}\n`)],
+    ["a metadata field", doc(`note: ${P}\nallowlist:\n  addresses:\n    - ${USDC}\n`)],
+    ["another wallet's policy", doc(`allowlist:\n  addresses:\n    - ${P}\n`, AW2.address)],
+    ["not JSON", `allowlist:\n  addresses:\n    - ${P}\n`],
+    ["no policy", JSON.stringify({ address: W })],
+  ]) assert.notEqual(policyAllowsContract(raw, W, PAYER), true, name);
+});
+
+test("code-review: a refusal after the human signed is journaled override_failed, not override_refused", async () => {
+  const w = world();
+  const kinds = journaled(w);
+  const orig = w.deps.fetch;
+  w.deps.fetch = async (url, init = {}) => { if (init.headers) throw Object.assign(new Error("x"), { code: "ANCRE_X" }); return orig(url, init); };
+  w.deps.readContract = ((r) => async (a) => { if (a.functionName === "authorizationState") throw new Error("boom"); return r(a); })(w.deps.readContract);
+  const r = await overrideFlow(w.deps, cfg, "https://p/x", {});
+  assert.equal(r.outcome, "OVERRIDE_UNKNOWN");
+  // now an exception after override_signed
+  const w2 = world();
+  const k2 = journaled(w2);
+  w2.deps.fetch = ((f) => async (url, init = {}) => { if (init.headers) return { ok: true, status: 200, headers: { get() { throw new Error("broken response"); } }, text: async () => "" }; return f(url, init); })(w2.deps.fetch);
+  await assert.rejects(overrideFlow(w2.deps, cfg, "https://p/x", {}));
+  assert.deepEqual(k2(), ["override_requested", "override_signed", "override_failed"]);
+  void kinds;
+});
+
+test("code-review: a refused signature leaves the page open; a second attempt with the right account is paid", async () => {
+  const { humanSign } = await import("../dist/lib/human.js");
+  const w = world();
+  let n = 0;
+  w.deps.random32 = () => keccak256(toHex(`m${n++}`));
+  const signWith = async (acct, bare, t) => {
+    const td = await (await fetch(`${bare}template?t=${t}`)).json();
+    const { EIP712Domain, ...types } = td.types;
+    const m = { ...td.message, from: acct.address, value: BigInt(td.message.value), validAfter: BigInt(td.message.validAfter), validBefore: BigInt(td.message.validBefore) };
+    const signature = await acct.signTypedData({ domain: td.domain, types, primaryType: td.primaryType, message: m });
+    return fetch(`${bare}done?t=${t}`, { method: "POST", body: JSON.stringify({ address: acct.address, signature, nonce: td.message.nonce }) });
+  };
+  const statuses = [];
+  let drove;
+  w.deps.humanSign = (req) => humanSign({ ...req, timeoutMs: 5000, onUrl: (url) => void (drove = (async () => {
+    const bare = url.split("?")[0];
+    const t = new URL(url).searchParams.get("t");
+    statuses.push((await signWith(stranger, bare, t)).status);
+    statuses.push((await signWith(human, bare, t)).status);
+  })()) });
+  const r = await overrideFlow(w.deps, cfg, "https://p/x", {});
+  await drove;
+  assert.deepEqual(statuses, [400, 200]);
+  assert.equal(r.outcome, "OVERRIDE_PAID");
+  assert.equal(r.human, human.address);
 });

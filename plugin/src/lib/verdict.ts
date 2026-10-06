@@ -1,7 +1,7 @@
 import { type Hex, keccak256, toHex } from "viem";
 import { REASONS, STATUSES } from "./payer.js";
 
-/** Assessment of AnchoredReputation v1 as returned by viem (struct -> object). */
+/** Assessment of AnchoredReputation as returned by viem (struct -> object); passesPolicy was `trusted` before 02-bis. */
 export type Assessment = {
   status: number;
   trust: bigint;
@@ -14,7 +14,7 @@ export type Assessment = {
   trustLow: bigint;
   distrustUp: bigint;
   eLow: bigint;
-  trusted: boolean;
+  passesPolicy: boolean;
 };
 
 export type VerdictName =
@@ -80,6 +80,19 @@ const ACTIONS: Record<VerdictName, string> = {
   SETTLEMENT_FAILED:
     "Not paid, and not because of ANCRE (expired window, facilitator or server failure). Do not retry or sign again automatically; tell the human",
 };
+
+/**
+ * Verdicts that payer.decide() itself can return against a payment (its policy and ANCRE): exactly the refusals that
+ * `mm ancre override` accepts, since it re-reads decide(). Signature and blob errors, and SETTLEMENT_FAILED, are not
+ * ANCRE refusing: the override answers ANCRE_OVERRIDE_NOT_NEEDED for them, so no override note may point there (K18).
+ */
+const DECIDE_REFUSALS: ReadonlySet<VerdictName> = new Set<VerdictName>([
+  "UNTRUSTED", "VETOED", "TRANSFERRED", "NO_CERT", "STALE", "REGISTRY_CHANGED", "WALLET_MISMATCH", "NO_WALLET", "OVER_LIMIT", "PAUSED",
+]);
+
+export function overridable(v: Pick<Verdict, "verdict">): boolean {
+  return DECIDE_REFUSALS.has(v.verdict);
+}
 
 /** After a failed paid request, an explain() that says OK means the failure was not the policy: never report PAY. */
 export function afterFailure(v: Verdict): Verdict {
