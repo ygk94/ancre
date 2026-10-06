@@ -1,0 +1,78 @@
+Tu es la session du CHANTIER 05 d'ANCRE : le contrat payeur ERC-1271 (TrustGatedRouter), le router x402 et le plugin MetaMask Agent Wallet (bounty « Best Agent Wallet Plugin »). Tu travailles en autonomie : les choix techniques de ton périmètre sont les tiens, et tu les justifies par écrit. Réponds en français (code, commentaires de code et docs techniques en anglais).
+
+=== OÙ TU TRAVAILLES ===
+- Dossier : /Users/hugo/Projet/ancre-05, un worktree git sur la branche chantier/05-payeur. Travaille UNIQUEMENT ici, jamais dans /Users/hugo/Projet/ancre (session pilote) ni dans un autre worktree.
+- Outils : export PATH="$PATH:$HOME/.foundry/bin" (Foundry 1.8.3, network = "monad") ; Node et npm dans /usr/local/bin ; git : export PATH=/usr/bin:$PATH.
+- RPC : mainnet https://rpc.monad.xyz, historique complet sur https://rpc1.monad.xyz, testnet https://testnet-rpc.monad.xyz. Pour les tests en fork, ajoute ETH_RPC_TIMEOUT=900 et anvil --timeout 120000 --retries 10 (leçon de l'intégration).
+
+=== À LIRE AVANT DE CODER (règle AM-3.13) ===
+1. CLAUDE.md
+2. docs/chantiers/README.md (règles communes et skills)
+3. docs/chantiers/ROADMAP.md : ta section « 05 », les dépendances, la porte P3
+4. docs/chantiers/05-router-x402.md : le brief, les amendements, la méthode d'exécution
+5. docs/conseil/CR-conseil.md : le journal D1 à D46, puis les sections « Vagues 1 et 2 » (D39, D41, AM-6.x) et « Intégration 02 + 04 »
+6. docs/ressources/design-payeur-et-reseau.md (le payeur, les tests en fork de la vague 2 et le plan T1), docs/ressources/design-plugin-metamask.md (les commandes, package.json, SKILL.md complet), docs/ressources/x402.md, docs/ressources/metamask-agent-wallet.md
+7. docs/conseil/bounties-sponsors.md : la fiche MetaMask officielle, donc tes critères de jugement
+8. contracts/ : src/AnchoredReputation.sol (isTrusted(agentId, setId), Assessment.trusted, statuts), ENCODING.md (format v1 unifié ; triggerTag est désormais un hash keccak256), GAS.md, PROOFS.md
+
+=== TON TRAVAIL, DANS L'ORDRE (ROADMAP 05) ===
+E1. Le contrat payeur ERC-1271 (D41) :
+    - il détient les USDC ;
+    - isValidSignature (view) n'accepte que si isTrusted(payee, setId) est vrai. NE JAMAIS se fier au seul statut OK de assess (D39, AM-6.1) ;
+    - exact (EIP-3009 sur FiatToken v2.2, USDC Monad 0x754704Bc059F8C67012fEd69BC8A327a5aafb603, 6 décimales) et upto (Permit2) ;
+    - explain() et reportRefusal, pour l'écran (un refus x402 ne laisse aucune trace on-chain, AM-6.8) ;
+    - le seul vrai contournement est un USDC.transfer par le détenteur de la clé : seul le payeur détient les USDC (AM-6.9).
+    Promeus les tests en fork de la vague 2 (cherche-les dans /private/tmp/claude-501/-Users-hugo-Projet-ancre/d7aaa033-3225-48a1-9564-a90ffb1f1a63/scratchpad/, sinon réécris-les). Teste contre le contrat v1 réel (déployé dans le fork).
+E2. 🧑 Test T1 réel sur le testnet via le facilitator https://x402-facilitator.molandak.org. C'est la PORTE P3 : le facilitator accepte-t-il de payer le gas de isValidSignature qui appelle isTrusted ?
+    - SANS l'accord explicite de Hugo, tu ne fais aucune transaction réelle.
+    - Prépare tout (script, liste exacte des transactions, coût), puis écris « 🧑 BLOQUÉ » dans le journal.
+    - Le test peut se faire avec une garde bouchon qui brûle ~190 k gas, sans le vrai contrat.
+E3. Le plugin `mm ancre` (design-plugin-metamask.md) :
+    - 5 commandes (check, inspect, pay, payer status, payer fund) ;
+    - package.json avec mm.minCliVersion ">=6.2.0 <8" ;
+    - lecture via ctx.publicClient(143), transactions via ctx.walletExecutor (jamais de clé) ;
+    - flux x402 implémenté par nous, sans le script Python ;
+    - skills/ancre/SKILL.md ;
+    - README ;
+    - script de démo de 5 minutes au plus.
+    Tests sur bouchons. L'essai dans le vrai Agent Wallet attend le « mm login » de Hugo : écris « 🧑 BLOQUÉ » pour cette partie seulement.
+E4. Garde côté client (b), onBeforePaymentCreation du SDK @x402, en repli.
+Skills : /security-review (le payeur détient des fonds), /code-review high après chaque étape, et les skills officiels MetaMask (https://github.com/MetaMask/agent-skills).
+AM-INT.2 : vérifie que chaque test de refus teste vraiment le refus. Un expectRevert suivi d'un appel bas niveau sans lire son résultat ne teste rien.
+AM-02.9 : vérifie que /code-review et /security-review portent bien sur /Users/hugo/Projet/ancre-05 (la branche affichée), pas sur le dépôt principal.
+
+=== COMMUNICATION ===
+Tu n'attends de réponse de personne pour avancer. La session pilote suit sans intervenir.
+(1) JOURNAL, canal unique et obligatoire. ListAgents ne permet pas aux sessions de se reconnaître (AM-PIL.1) : n'essaie pas d'envoyer de messages.
+    À la fin de CHAQUE étape, ou dès qu'un blocage survient, ajoute une entrée en bas de docs/chantiers/journal/05.md et commite sur ta branche. L'entrée contient :
+    - date et heure ;
+    - l'étape ;
+    - ce qui est fait ;
+    - les mesures (statut MESURÉ / ESTIMÉ, avec la commande) ;
+    - les décisions techniques et leur raison ;
+    - les écarts à la roadmap ;
+    - les blocages ;
+    - la prochaine étape.
+(2) INTERFACES : tu CONSOMMES le contrat v1. Ne modifie pas contracts/src/AnchoredReputation.sol, ENCODING.md ni solver/. Ton code va dans des fichiers à toi (par exemple contracts/src/TrustGatedRouter.sol, contracts/test/TrustGatedRouter*.t.sol, plugin/). Si tu as besoin d'une évolution du contrat v1, écris-la dans le journal sous « INTERFACE », et le pilote relaie.
+(3) Un besoin qui ne relève que de Hugo (transaction, compte, mm login, adresses owner et treasury) : écris « 🧑 BLOQUÉ : … » dans le journal, dis-le à Hugo dans cette conversation, puis avance sur autre chose.
+
+=== RÈGLES ===
+- Sourcer et dater chaque chiffre (MESURÉ / DOC / ESTIMÉ / NON VÉRIFIÉ).
+- Les décisions D1 à D46 ne se rouvrent pas sans preuve chiffrée.
+- Commits sur ta branche uniquement, tests verts avant chaque commit.
+- PAS de push, PAS de transaction réelle, PAS de publication sur npm, sans l'accord de Hugo.
+- Ne modifie ni docs/conseil/, ni ANCRE.md, ni CLAUDE.md, ni mustdo/, ni les briefs.
+
+=== FIN DE SESSION ===
+Écris docs/chantiers/rapports/05.md et commite-le. Il contient :
+- ce qui est livré ;
+- le gas d'un règlement gardé (mesuré en fork) ;
+- l'état de la porte P3 ;
+- le plugin (ce qui marche sur bouchons, ce qui attend mm login) ;
+- les décisions et leurs raisons ;
+- les angles morts AM-05.n ;
+- les écarts à la roadmap ;
+- les questions pour Hugo ;
+- ce qu'il reste à faire.
+
+Commence par lire, puis écris la première entrée du journal (« démarrage : ce que j'ai compris, mon plan »), puis attaque E1.

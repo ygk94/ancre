@@ -250,7 +250,7 @@ CC0.
 | **W2 (Sep 29–Oct 5)** | Own 8004 registries on testnet · `TrustGatedRouter` + x402 `upto` via the Monad facilitator · omission challenge · Sybil-farm script |
 | **W3 (Oct 6–12)** | Live demo screen (`monadLogs`): naive vs ANCRE, circuit breaker · **mainnet (143)** deploy · video · project profile · **ERC draft published** (PR to `ethereum/ERCs` + reply to thread post #309) |
 
-**Stackable bounties:** Envio 1k$ (indexer) · MetaMask 2.5k$ (agent wallet plugin — ship the router as a snap) · Monad Foundation 2.5k$ (passkeys — anchors as P256 accounts via precompile `0x0100`).
+**Sponsor bounties (updated 2026-10-05):** Envio 1k$ (indexer, live on Envio Cloud). The MetaMask Agent Wallet bounty is restricted to track 01 and is **not** targeted; the `mm ancre` plugin stays in the repo as an optional client-side guard. Other bounties: to be decided.
 
 ---
 
@@ -258,6 +258,13 @@ CC0.
 
 `data/` is **not** in this repo yet. Reproduce with the endpoints in §1; the 2026-09-21 snapshot (`fb.json`, 9,188 entries; `agents.json`, 10,171 agents) lives in the research vault under `2 - EVM/Monad (L1)/Hackathons/_data-metropolis/`.
 
-## 10. Status
+## 10. Product & build kit
+
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** — product architecture: one engine, four surfaces (issue with vouching, import, private trust domain, weighted reviews), contracts, six flows, scope ladder, demo script. **Draft, not frozen.**
+- Presentation page: `docs/product-map.html`
+
+Backend workstreams, prompts and boundaries: **[BACKEND-KIT.md](BACKEND-KIT.md)** (laid-out version: `docs/backend-kit.html`). Three parallel workstreams — `indexer/`, `solver/`, `contracts/` — connected by frozen files in `spec/`.
+
+## 11. Status
 
 Research and specification complete; **no code written yet**. Next action: `AnchoredReputation.sol` with a real gas report, to replace the estimates in §4.

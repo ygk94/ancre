@@ -106,3 +106,94 @@ Ce ne sont pas des désaccords du CR. Chacun est marqué d'une note dans le text
 - le sel dans `nextKeyDigest` ;
 - l'exigence « même chaîne que les registres » (le draft du 21/09 admettait implicitement le cross-chain avec `chainId`) ;
 - la 5e demande à ERC-8004 (`getVersion`).
+
+---
+
+# Chantier 08 (2026-10-01) : alignement sur les tours 4 à 6 et sur l'implémentation v1
+
+- **Ancien texte** : draft R6 du 27/09 (copie dans le scratchpad de la session 08, et dans l'historique git, commit `e00f0cf`).
+- **Sources** : CR (D20 à D46, résultats 02/04, intégration), `contracts/ENCODING.md` (v1 unifié du 01/10), `solver/FORMAT.md` (R1-R8), `contracts/PROOFS.md` (L1-L7), `AnchoredReputation.sol` (interface et `_assess`).
+- **Principe** : le texte normatif décrit ce que fait le contrat v1. Quand le code s'écarte d'une décision du CR, l'écart est noté AM-08.n ci-dessous et dans une note ⟦ ⟧.
+
+## 4. Correspondance R6 → 08
+
+| R6 (27/09) | 08 (01/10) | Décision |
+|---|---|---|
+| `requires: 165, 721, 8004` ; `discussions-to` = fil d'ERC-8004 | `requires: 721, 8004` ; `discussions-to: TBD` (un fil dédié est attendu) | AM-08.7 |
+| §1.1 `nodeKey = keccak(kind, id)` | §5.1 clé `kind << 248 \| value`, table append-only, indices stables | D11 renversée, ENCODING §2 |
+| §2 `anchorId` à pré-rotation, `IAnchorKeyRegistry` | §11 extension hors version, ⟦OPEN⟧ | D9, D43 ; AM-08.8 |
+| §3.1 `TagSchema` (tag, kind, min, neutral, max), `TAGS_MAX = 8` (endorsement) | §2.1 `TagSpec` (idem, `uint8 kind`), `TAGS_MAX = 16` (tous tags), tags de longueur quelconque, appariés par hash | D24, AM-04.2 |
+| §3.2 émetteur = wallet unique, sinon nœud-adresse ; précédence exclusive de l'ancre | §3.5 source = wallet, sinon owner si `ownerFallback` ; copie de ligne ; ligne d'ancre en plus de la copie d'agent | D20, D34, D44 ; R7, R8 ; AM-R6.14 fermé |
+| §3.3 rejet des contrôleurs et des anciens owners | §3.3 rejet des contrôleurs actuels seulement | D20 ; AM-R6.4 fermé |
+| §3.4 normalisation | §3.2, inchangée (d > 18 invalide) | D18 |
+| §3.5 dernier avis valide par tag ; égalité par le plus petit tag | §3.3 dernier avis non révoqué par tag, hors bornes ⇒ le tag ne donne rien ; égalité par l'index le plus grand | D14 ; R3, R5 ; AM-R6.21 et AM-R6.24 fermés |
+| §3.6 B⁺ = max(GRID, S⁺) | §3.6 B⁺ = max(GRID, sPlus), sPlus = vraie somme déclarée | D32, F-1 |
+| §3.7 `edgeFilterId` non nul permis hors niveau contesté | §3.8 réservé, nul dans cette version ; dans le document de schéma | D3, D46 ; AM-08.2 |
+| §4 borne d'erreur L1 globale `eEff` sur trust | §4.2 sous-solution `t ≤ F_bas(t)` ⇒ borne inférieure par agent ; §4.5 `eUp` (méfiance) et `eLow` (preuves de diminution) | D26, D32 |
+| §4 méfiance par colonne `d^(a)` | §4.3 méfiance calculée sur T combiné, arrondie vers le haut | ENCODING §4 ; AM-R6.13 fermé (arrondi vers le haut) |
+| §5 `AnchorSet` (registres, anchorKeyRegistry, edgeFilterId, Policy à 11 champs, metadataURI), `setId = keccak(chainid, set)` | §2.1 `SetParams` v1, `setId = keccak(abi.encode(anchors, lambdas, alphaN, alphaD, tagSchemaHash, tags, policy))` ; identité globale (chainId, agrégateur, setId) ; §2.4 document de schéma | D1, D39 ; AM-08.1 |
+| §5 `Policy` (minAnchors, vetoQuorum, threshold, rho, maxAge, minRefresh, slackRefresh, rowMax, minLevel, optimisticCertifier) | §2.2 `Policy` v1 (+ vetoMax, eLowMax, strictTransfer, registryVerified, ownerFallback, submitters ; − rowMax, minLevel, optimisticCertifier) | D33, D35, D36, D39, D32, D44 |
+| §6 niveaux ResidualVerified / RegistryContested / Optimistic | §2.3 RegistryVerified (ouvert ou listé) / SubmitterAttested (listé) | D32 ; AM-R6.17 fermé |
+| §6.1 feuilles normatives en `nodeKey`, encodage du calldata libre | §5.3-§5.5 encodage `ancre-cert-v1` normatif, `graphRoot` = Merkle des octets de ligne, `vectorRoot` = keccak des vecteurs | AM-R6.12 fermé |
+| §6.2 vérification du résidu `max(lo + cnt − t, t − lo)` | §5.6 `t ≤ y`, `r = Σ(y − t) + E⁺ + 1 + marges`, `eUp`, `q`, masse, D | D26, ENCODING §4 |
+| (absent) | §5.7 contrôles de forme (deux niveaux) et relectures Registry-verified | D32 |
+| §6.3 remplacement par `eEff` | §5.9 remplacement par qualité (masse, q, D), refus de resoumettre un certificat prouvé | AM-04.1, L7 |
+| §7 `dispute(kind)` (i)-(iv-b), plafond `‖C‖ + ‖D‖ + 2`, seulement en RegistryContested | §6 `proveEdge` ((i), (ii), (iii), contrôleur, (v)), `proveWallet` ((iv)), `proveTransfer` ; plafonds par côté ; actifs à tous les niveaux | D22, D32, D36, L6 |
+| §8 `checkRegistry()` global, `versionHash` par registre | §7 `checkRegistry(setId)`, un hash qui lie les deux registres et leurs versions | D17 ; AM-08.5 |
+| §9 statuts `OK, UNKNOWN_SET, NO_CERT, STALE, REGISTRY_CHANGED, TRANSFERRED, VETOED, REGISTRY_ERROR` ; `Reason` ; `trustOf` sans veto | §8 `OK, NO_CERT, STALE, TRANSFERRED, VETOED, REGISTRY_CHANGED` ; `isTrusted` ; `assess(…, withVeto)` ; `trustOf` = assess avec veto | D39 ; AM-08.6 |
+| §9 veto en direct = dominance des avis de la clé courante | §8.2 veto = dernier avis de l'ancre (direct) OU bit certifié ; `vetoMax` ; `triggerTag` = hash | D21, D33 |
+| (absent) | §9 obligations des ancres (veto en dernier, tag `veto` RECOMMENDED) | D33, AM-02.6 |
+| §10 ERC-165 MUST | §10 MAY | AM-08.7 |
+
+## 5. Traitement des ⟦OPEN⟧ du draft R6
+
+| ⟦OPEN⟧ R6 | Traitement | Raison |
+|---|---|---|
+| Tour 2 n° 1, vivacité | **maintenu** (Security, E3) | Aucun tour ne l'a tranché ; D27 dit qui paie, pas ce qui se passe s'il ne paie pas |
+| Tour 2 n° 2, rachat | **retiré** | Tranché autant que possible par D35 (strict) et D44 (gel des sortantes, via `proveWallet`) ; la limite restante est écrite en Security et liée à la demande 1 à ERC-8004 |
+| Tour 2 n° 3, m = 2 contre consommateur-ancre | **retiré** | Pas de choix normatif en attente : `minAnchors ≥ 2` est un MUST pour un transfert de valeur ; le compromis est décrit en Security |
+| Tour 2 n° 4, une lecture ou deux | **retiré** | Caduc depuis D11 renversée (AM-R6.8) : la lecture stockée est la seule |
+| Tour 2 n° 5, borne globale | **retiré** | D26 rend la borne de confiance exacte par agent à la soumission ; ce qui reste global (eLow, eUp après preuve) est écrit en Security |
+| Tour 2 n° 6, α | **retiré** | D24 : α par ensemble, RECOMMENDED 1/3 |
+| Tour 3 n° 1, négatif permanent | **maintenu** (Security, E3) | Toujours non tranché ; le texte ne définit aucune échéance |
+| Tour 3 n° 2, vérification de version | **retiré** comme marqueur | La synthèse retient les trois mécanismes ; la limite (upgrade à version inchangée) est en Security |
+| Tour 3 n° 4, oracle de refus | **retiré** | Tranché par la synthèse du tour 3 et par D33 (`triggerTag`) |
+| **Nouveau** : tour 5 n° 2, veto au dernier avis contre dominance | **ouvert** (§8) | Normatif, non tranché |
+| **Nouveau** : D9/D43 non implémentés | **ouvert** (§11) | Le code contredit une décision ; AM-08.8 |
+
+## 6. Incohérences trouvées par le chantier 08 (AM-08.n)
+
+| Id | Où | Incohérence | Traitement |
+|---|---|---|---|
+| AM-08.1 | D1/R6 contre `computeSetId` | Le `setId` v1 n'engage ni `chainId`, ni les adresses des registres, ni `metadataURI`, ni `edgeFilterId`, ni registre de clés d'ancre. Deux agrégateurs liés à des registres différents donnent le même `setId` à deux politiques qui ne lisent pas le même graphe | Texte aligné sur le code ; identité globale = (chainId, agrégateur, setId) ; `metadataURI` et `edgeFilterId` déplacés dans le document de schéma engagé par `tagSchemaHash` |
+| AM-08.2 | D3/D46 contre code | Pas d'`edgeFilterId` dans la v1. Et un filtre non nul sans prédicat on-chain rendrait les preuves d'écart abusives : un tiers « prouverait » l'omission de chaque arête légitimement filtrée | Réservé, MUST être nul dans cette version ; une version future devra définir le prédicat on-chain |
+| AM-08.3 | D44 contre code | ROW_ALIAS_MAX = 64 n'est pas vérifié par le contrat et ne borne rien on-chain (déjà AM-INT.7) | Non normatif ; cité en Rationale |
+| AM-08.4 | D44 contre code | D44 : « Pendant `TRANSFERRED`, on gèle aussi les arêtes **sortantes** ». En v1, le statut `TRANSFERRED` ne touche que la lecture de l'agent transféré. Ses arêtes sortantes restent dans les vecteurs stockés jusqu'à un `proveWallet` (le wallet est effacé au transfert) ou une recertification. Le gel dépend donc d'un surveillant, même en mode strict | Écrit tel quel (§6.2) ; à signaler au pilote |
+| AM-08.5 | D17/R6 contre code | `checkRegistry` est par ensemble : une upgrade doit être signalée ensemble par ensemble, et un ensemble que personne ne signale reste OK | Écrit (§7) ; Security |
+| AM-08.6 | R6 contre code | Pas de statut d'erreur : un registre illisible pendant le veto renvoie `REGISTRY_CHANGED` (sans marquer l'ensemble), un `ownerOf` qui revert renvoie `TRANSFERRED`. L'échec est bien fermé, mais un moniteur qui lit `REGISTRY_CHANGED` croira à une upgrade | Écrit (§8.1, §8.4) ; à documenter côté écran (07) |
+| AM-08.7 | R6 contre code | Le contrat v1 n'implémente pas ERC-165 | MUST → MAY |
+| AM-08.8 | D9/D43 contre code | Ancres par adresse, pas d'`anchorId` ni de registre de clés : la décision D9 n'est pas implémentée, et le `setId` n'a pas de champ pour elle | Extension hors version (§11), ⟦OPEN⟧ |
+| AM-08.9 | D10 contre code | Le certificat n'engage pas l'owner mais une empreinte de 63 bits (`ownerFp`). Un transfert vers une adresse qui partage ces 63 bits n'est pas vu ; il faut ≈ 2⁶³ essais pour en fabriquer une | Security (E3) |
+| AM-08.10 | norme contre code | L'implémentation appelle `isAuthorizedOrOwner` et `getVersion`, qui sont des fonctions de l'implémentation de référence d'ERC-8004, pas de son interface. Sur un déploiement d'ERC-8004 qui ne les a pas, la soumission revert (`getVersion`) ou toute arête paraît rejetée | La norme définit les contrôleurs par ERC-721 (§1) ; demande 5 à ERC-8004 ; Security |
+
+## 7. Incohérences et défauts trouvés en E2 et E5 (relecture `/llm-council`, 01/10)
+
+| Id | Où | Constat | Traitement |
+|---|---|---|---|
+| AM-08.11 | vecteurs du solveur | `tagSchemaHash` = `keccak("ancre-vector:" + label)` n'est le hash d'aucun document de schéma | Signalé dans le README des vecteurs ; le certificateur (04) devra produire le document de §2.4 |
+| AM-08.12 | `simulate.py` | Les violations sont rejouées en Submitter-attested sur un `setId` absent des vecteurs | Noté dans le JSON |
+| AM-08.13 | contrat | 33 527 octets > EIP-170 (= AM-INT.9) | Reference Implementation ; découpage avant la PR d'ERC |
+| **AM-08.14** | D20/R8 contre D8 | **Une ancre dont l'adresse est la source d'un agent rend m ≥ 2 inopérant** : sa ligne copiée dans l'agent porte la masse des autres colonnes. Vérifié en fractions exactes sur TC-3 : la Sybil obtient trustRobust = 0,0247, comme l'honnête #2 | Texte : SHOULD en §2.1, plus un paragraphe Security. **Code (02)** : refuser SRC ∈ ancres à la soumission. **Démo (06)** : aucune ancre qui soit le wallet d'un agent |
+| **AM-08.15** | R6/D20 contre le garde-fou d'ERC-8004 | **Mise sous silence par `setApprovalForAll`** : les critiques et les ancres rendus opérateurs perdent leurs négatifs (rejet des contrôleurs quel que soit le signe, l. 1130) et ne peuvent plus poster | Texte : Security, avec renvoi depuis §3.3. **Conseil** : rejeter les contrôleurs seulement pour w > 0, et compter comme veto une ancre approuvée. Ajouté aux brouillons (c) et (d) |
+| **AM-08.16** | §5.9 contre code l. 572-576 | Le refus de resoumettre un certificat prouvé est exact à l'octet près (une ligne vide de plus ou W = 4 le contournent) et sauté sous REGISTRY_CHANGED | Texte : portée exacte écrite, plus Security. **Code (02)** : amélioration stricte exigée si prouvé |
+| AM-08.17 | D23 contre code l. 406 | `addNodes` ouvert sur un ensemble ouvert : gonflement de la table, gel de l'ensemble | Security ; zone de préparation D23 non implémentée |
+| AM-08.18 | §5.9 | La fenêtre de rafraîchissement ne vérifie ni la masse ni D ; `minRefresh = 0` est permis | Security ; démo : `minRefresh = maxAge` |
+| AM-08.19 | §1 contre `proveEdge` l. 1652 | Un registre sans `isAuthorizedOrOwner` fait « prouver » l'absence de toute arête | Security ; code : quatre appels ERC-721 |
+| AM-08.20 | §7 | `getVersion` est requis, alors qu'il n'est pas dans ERC-8004 : la norme est inapplicable à un registre ERC-8004 minimal | Écrit en §1 et §7 ; demande 5 |
+| AM-08.21 | interface | Ni `certNonce` exposé, ni vue des paramètres d'un ensemble, ni tags dans l'event | §8.3 : clé de cache (certBlock, eEff, eLowEff) ; §2.4 : `setParams` dans le document |
+| AM-08.22 | vecteurs | Non couverts : k = 1, W = 4, croissance de nCert, `proveWallet`/`proveTransfer`, suite d'amendements, veto, remplacement | À produire (04/08) avant la PR |
+| AM-08.23 | ENCODING.md | La règle de W (« W = 2 if nCert ≤ 65 535 ») et « 0 if the registry reverts » (§7.1) sont périmés face au code | Relais vers le 02 |
+
+## 8. Corrections du texte après la relecture (01/10)
+
+Abstract : « exact » retiré, veto « sans recertification ». §1 : masse, plages u32, `getVersion` requis, agrégateur non upgradable, préséance. §2.1 : recommandation « ancre ≠ source ». §2.4 : `setParams` dans le document, RFC 8785, plus d'`edgeFilterId`. §3.3 : renvoi vers D2-a. §3.8 : aucun champ. §4.2 : SHOULD. §4.4 : plafond de d en 63 bits. §4.5 : bornes qualifiées. §5.1 : soumetteurs listés à tous les niveaux. §5.3 : u64 < 2⁶³. §5.4 : alias seulement vers une ligne d'agent, forme canonique. §5.7 : « address node », agents brûlés. §5.9 : portée du refus. §6 : ordre des amendements, ligne sans source. §7 : `getVersion` requis. §8.2 : égalité et timing. §8.3 : `payTo`, clé de cache, m ≥ 2 non appliqué, agrégateur épinglé. §8.4 : 120 000 gas. §10 : types déclarés, `identity`, `reputation`, `nodeCount`, `nodeKeyAt`. §11 : ancres en compte-contrat. Rationale : Cheng-Friedman, linéarité, limites de L7 et de « Two bounds ». Security : AM-08.14 à .19, compromission d'un nœud, concentration de méfiance, rachat discret, empoisonnement de paire, disponibilité des données, coût d'un registre hostile, EIP-7825. TC-3 : écart avec §2.1 signalé.

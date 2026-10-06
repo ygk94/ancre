@@ -1,8 +1,15 @@
 # CLAUDE.md — reprise de contexte ANCRE
 
+> ## 🚨🚨 À LIRE EN PREMIER — DÉCISIONS DU 2026-10-05 (valables sur toutes les machines) 🚨🚨
+>
+> 1. **BOUNTY METAMASK : ABANDONNÉ.** Le bounty « Best Agent Wallet Plugin » n'est ouvert qu'à la track **01 Onchain Finance & Trading** (vérifié par Hugo sur la plateforme le 05/10). Nous sommes en **track 04** : **inaccessible**. → Le plugin `mm ancre` (chantier 05) **reste tel quel** (il marche, 48 tests) et peut être cité comme intégration côté client, **mais plus aucun travail dessus** et **on ne le présente plus comme un bounty**. Le cœur de la démo reste la **garde dure on-chain** (`TrustGatedPayer`, ERC-1271). Décision **D48** dans le CR.
+> 2. **Bounties encore visés : Envio** (acquis, indexeur sur Envio Cloud). Les autres (Mera, Alchemy, Nansen, Chainlink CRE…) sont **à trancher par Hugo** : vérifier pour chacun qu'il est ouvert à la track 04. Liste : `docs/conseil/bounties-sponsors.md`, section « Mise à jour du 05/10 ».
+> 3. **GitHub : le compte s'appelle désormais `ygk94`** (ex-`hugothomas9`). Dépôts : `https://github.com/ygk94/ancre` (privé jusqu'à la soumission) et `ygk94/ancre-indexer`. Mettre à jour son remote : `git remote set-url origin https://github.com/ygk94/ancre.git`. `indexer/scripts/publish.sh` est déjà corrigé.
+> 4. **Textes de la plateforme de soumission** (bio, description, go-to-market, progress update), en anglais : `docs/soumission/textes-plateforme.txt`. Les modifier là, pas ailleurs.
+
 > Fichier de passation. Lis-le **avant** le README. Le README dit *ce qu'on construit* ; celui-ci dit *où on en est, ce qui est vérifié, et ce qu'il ne faut pas refaire*.
 > Dernière mise à jour : **2026-09-27** (faits vérifiés par 4 agents, tour 3 du conseil). **Décisions, angles morts et feuille de route à jour : `docs/conseil/CR-conseil.md`** — le lire juste après ce fichier.
-> Mise à jour précédente : **2026-09-23**. Auteur : session Claude Code avec Hugo (`hugo.thomas.perso@gmail.com`, GitHub `hugothomas9`).
+> Mise à jour précédente : **2026-09-23**. Auteur : session Claude Code avec Hugo (`hugo.thomas.perso@gmail.com`, GitHub `ygk94`, ex-`hugothomas9`).
 
 ## 1. Le contexte en 10 lignes
 
@@ -102,7 +109,7 @@ RPC mainnet : `https://rpc.monad.xyz` (25 rps) · testnet : `https://testnet-rpc
 
 ## 9. Prochaines actions, dans l'ordre
 
-> **Obsolète depuis le 2026-09-27** : la feuille de route à jour (R1 à R11, avec R6b découpage en chantiers) est dans `docs/conseil/CR-conseil.md`. Liste d'origine conservée ci-dessous pour mémoire.
+> **Obsolète depuis le 2026-09-27** : la feuille de route à jour est `docs/chantiers/ROADMAP.md`, les décisions sont dans `docs/conseil/CR-conseil.md`. `BACKEND-KIT.md` (24/09, 3 chantiers numérotés 01-03 autrement) est **remplacé** par `docs/chantiers/` (9 chantiers) ; `ARCHITECTURE.md` (26/09) décrit la couche produit, à réconcilier (voir le CR, tour 7). Liste d'origine conservée ci-dessous pour mémoire.
 
 1. **`AnchoredReputation.sol`** (niveau `Verified`) + `forge test --gas-report` → remplacer les estimations du README §4. **C'est le point qui peut tuer le projet : à faire en premier.**
 2. **Indexeur** des events `NewFeedback` / `FeedbackRevoked` (HyperSync) + reconstruction du graphe via `getAgentWallet` / owner ERC-721.

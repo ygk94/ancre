@@ -56,6 +56,8 @@
 | D44 | Repli owner *(amende D16/D20)* | A(c) = {j : wallet(j) = c} ∪ {j : wallet(j) = 0 ∧ owner(j) = c}. **Le wallet est prioritaire.** Pendant `TRANSFERRED`, on gèle aussi les arêtes **sortantes**. Deux lectures par agent concerné, ROW_ALIAS_MAX = 64, et une preuve (iv-a) pour le passage du wallet de 0 à une adresse | 6 | 0,65 |
 | D45 | Positionnement | *« A receipt can be true and still come from a farm… »* On ne demande pas si le paiement a eu lieu, on demande si quelqu'un en qui **toi** tu as confiance se porte garant. **Scène de moins de 20 s** : notre ferme sur le testnet se paie vraiment (100 % de reçus vrais), mais sa masse ANCRE est nulle et `isTrusted` refuse dans le payeur. On n'affirme jamais le verdict d'un tiers. Dans le pitch, une diapositive « complementary layers » | 6 | 0,75 |
 | D46 | Kanmani / Sentinel | cité comme exemple d'`edgeFilterId` dans l'ERC, et son constat (73 déclarations fausses sur 85, auto-déclaré) en Motivation ; **aucune dépendance** ; **pas de filtre « reçu vrai » par défaut**, parce qu'il récompense une ferme qui s'auto-paie | 6 | 0,7 |
+| D47 | **Override humain seulement** *(décision de Hugo, 01/10)* | Quand ANCRE refuse, le plugin affiche le verdict et propose un passage en force **réservé à un humain**. Il **paie depuis le wallet personnel de l'humain**, signé dans son extension, jamais depuis l'Agent Wallet ni depuis le payeur. **Un agent ne peut jamais l'exécuter.** **Pas de bascule** entre le wallet de l'agent et le wallet humain. Conditions de la garantie : Agent Wallet en mode server-wallet (pas BYOK), aucun USDC sur l'Agent Wallet, Guard Mode limité au payeur et à l'USDC. Chaque refus et chaque override sont journalisés. | 01/10 | 0,9 |
+| D48 | **Bounty MetaMask abandonné** *(décision de Hugo, 05/10)* | Le bounty « Best Agent Wallet Plugin » n'est ouvert qu'à la track 01 (Onchain Finance & Trading) ; ANCRE est en track 04, donc inéligible. Le plugin `mm ancre` **reste en l'état** (fonctionnel), cité au plus comme garde côté client ; **plus aucun travail**, plus présenté comme bounty. Amende D38. Bounties restants : Envio ; les autres à trancher (éligibilité track 04 à vérifier) | 05/10 | 1 |
 
 ---
 
@@ -1319,3 +1321,67 @@ Rapport : `docs/chantiers/rapports/integration.md`. Fusionnée dans `feat/consei
 | AM-INT.2 | Des tests de refus creux (`expectRevert` suivi d'un appel bas niveau sans lire son résultat) ne testent rien | corrigé ; à rappeler dans les briefs (`/code-review`) |
 
 **Relais** : `docs/chantiers/relais/vers-03.md` pour l'indexeur (égalité entre tags, `OUT_OF_BOUNDS` par tag, `via = none`, tags en hash). Les chantiers **05** et **07** doivent savoir que `triggerTag` est maintenant un hash.
+
+---
+
+# Résultats du chantier 08 (norme) — 2026-10-01
+
+Rapport : `docs/chantiers/rapports/08.md`. Relecture adversariale : `docs/erc/relecture-conseil.md`. Écarts : `docs/erc/CHANGES.md` (AM-08.1 à .23). Branche fusionnée dans `feat/conseil-solveur-contrat` (commit `6561211`). **Rien n'est publié ni envoyé.**
+
+**Ce qui est livré**
+- Le draft, aligné sur le contrat v1 et sur D20 à D46. L'encodage binaire devient normatif.
+- Sept ⟦OPEN⟧ retirés. **Quatre restent** : la règle du veto, la pré-rotation (D9), la vivacité, le négatif permanent.
+- **Lint `eipw` 0.11.0 : 0 erreur.**
+- 15 vecteurs de test dans `docs/erc/assets/erc-0000/`, avec un **vérificateur indépendant** (`verify.py`, bibliothèque standard Python uniquement) : **0 échec**. Il retrouve au wei près les bornes mesurées sur le contrat.
+- Les DOI des références sont vérifiés.
+- Cinq brouillons dans `docs/erc/drafts/`. **Ordre recommandé : la divulgation (c) d'abord**, parce que (a), (b) et (d) citent publiquement le contournement du garde-fou.
+
+**Faits revérifiés le 01/10** (bloc 109 610 215)
+- L'owner des deux registres est toujours une seule EOA.
+- #8317 a toujours 78 avis de son propre agentWallet.
+- Le post #309 compte 3 réponses, aucune d'un auteur d'ERC-8004.
+- La PR #84 a été fermée sans merge le 17/08 ; la PR #80 est toujours ouverte.
+
+**Verdict du chantier : le texte n'est pas prêt à soumettre.** La relecture a trouvé trois défauts de **conception**, à corriger dans le contrat et à arbitrer par le conseil. Le 08 a revérifié les deux premiers lui-même.
+
+| Id | Défaut | Gravité | Correction proposée (par le 08 ; à trancher) |
+|---|---|---|---|
+| **AM-08.A** | **Une ancre dont l'adresse est le wallet d'un agent annule `minAnchors ≥ 2`.** Avec la clé volée de cette ancre, un Sybil obtient le même trustRobust (0,0247) qu'un agent honnête (#2). Cause : D20 copie la ligne de l'ancre dans l'agent, qui reçoit de la masse depuis les **autres** colonnes. Le vecteur de démo `mainnet_slash_anchor` est **exactement dans ce cas** | **Critique** : le leave-one-out est la protection centrale | Ne jamais copier la ligne d'une ancre dans un agent (une adresse ancre n'émet que comme nœud-ancre), ou refuser comme ancre l'`agentWallet` d'un agent. **Démo : changer d'ancres** |
+| **AM-08.B** | **Un owner peut faire taire ses critiques et les ancres avec `setApprovalForAll`**, pour environ 0,08 MON (estimé). Le contrat rejette les arêtes négatives des contrôleurs, puis le garde-fou d'ERC-8004 empêche ces adresses de noter l'agent, **veto compris** | Élevée : le disjoncteur peut être désarmé par la cible | Garder les **négatifs** des contrôleurs (la règle de rejet ne vise que les positifs, c'est-à-dire l'auto-recommandation). Une ancre rendue opératrice de la cible doit valoir « non fiable » |
+| **AM-08.C** | Le refus de resoumettre un certificat déjà prouvé faux **se contourne en changeant les octets**, par exemple avec une ligne vide | Moyenne | Identifier un certificat par son contenu, pas par ses octets, ou exiger une amélioration par rapport à l'état prouvé |
+
+**Décisions de Hugo** : MUSTDO, point 14g.
+
+---
+
+# Résultats du chantier 05 (payeur, plugin MetaMask) — 2026-10-01
+
+Rapport : `docs/chantiers/rapports/05.md`. Fusionné dans `feat/conseil-solveur-contrat`. **Tests revérifiés par le pilote : 147 tests Foundry, forks compris, et 48 tests du plugin, tous verts.**
+
+**Ce qui est livré**
+- **`TrustGatedPayer`**, le payeur ERC-1271 de D41 :
+  - `isTrusted` est appelé dans `isValidSignature` ;
+  - schémas `exact` (EIP-3009) et `upto` (Permit2) ;
+  - `explain` et `reportRefusal` ;
+  - `/code-review high`, plus une revue de sécurité faite à la main (la skill relisait encore le dépôt principal, AM-02.9) : aucune faille notée ≥ 8/10.
+- **Le plugin `mm ancre`** : `check`, `inspect`, `pay`, `payer status`, `payer fund`, `override`, et un journal ; `SKILL.md` et README.
+- **L'override humain (D47).**
+  - Il affiche le verdict, demande une confirmation tapée, puis ouvre une page locale à usage unique. **L'humain signe dans son extension**, depuis son propre wallet. Le payeur et l'Agent Wallet ne sont jamais débités.
+  - **Le signataire est identifié positivement** : seuls l'owner ou la trésorerie du payeur, fixés on-chain, sont acceptés. La revue de code avait montré qu'une clé tierce financée passait dans la première version ; c'est corrigé.
+  - La commande refuse de tourner sans terminal interactif, et n'a pas accès à l'exécuteur de l'Agent Wallet.
+  - **17 tests prouvent qu'aucun chemin ne permet à un agent d'exécuter un override.** Dans le vrai `mm` 7.0.0, la tentative est refusée et inscrite au journal.
+- **La mise en place sur fork** (`scripts/setup-fork.mjs`) enchaîne :
+  - `register` ;
+  - `AgentWalletSet` signé ;
+  - `setAgentWallet` ;
+  - le déploiement du payeur ;
+  - le dépôt d'USDC.
+
+  **`SETUP PASS` sur les vrais registres du fork.**
+
+**Angles morts à retenir**
+- **Le journal du plugin est une commodité pour l'écran, pas une trace infalsifiable** : l'agent tourne sous le même utilisateur. La trace on-chain, c'est `reportRefusal`.
+- **Guard Mode n'est pas lisible par le plugin.** Il faut le vérifier avec `mm wallet policy get`.
+- **Si l'owner est un compte délégué EIP-7702 sans `isValidSignature`**, il ne pourra pas signer l'override en EIP-3009. C'est à vérifier.
+
+**Ce qui attend Hugo** (MUSTDO, point 14h) : le test T1 réel, `mm login`, et l'adresse owner et trésorerie.

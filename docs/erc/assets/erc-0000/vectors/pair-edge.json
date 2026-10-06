@@ -1,0 +1,351 @@
+{
+ "description": "Section 3.3. Combined weight w(c, j) of one (client, agent) pair from its whole feedback history, and the index of the deciding feedback. expected = null: no edge.",
+ "tags": {
+  "starred": {
+   "min": "0",
+   "neutral": "50000000000000000000",
+   "max": "100000000000000000000",
+   "kind": 0
+  },
+  "vouch": {
+   "min": "0",
+   "neutral": "0",
+   "max": "1000000000000000000",
+   "kind": 0
+  },
+  "review": {
+   "min": "-1000000000000000000",
+   "neutral": "0",
+   "max": "1000000000000000000",
+   "kind": 0
+  },
+  "slash": {
+   "min": "-100000000000000000000",
+   "neutral": "0",
+   "max": "0",
+   "kind": 0
+  },
+  "third": {
+   "min": "0",
+   "neutral": "0",
+   "max": "3000000000000000000",
+   "kind": 0
+  },
+  "minusthird": {
+   "min": "-3000000000000000000",
+   "neutral": "0",
+   "max": "0",
+   "kind": 0
+  },
+  "veto": {
+   "min": "-1000000000000000000",
+   "neutral": "0",
+   "max": "0",
+   "kind": 0
+  },
+  "uptime": {
+   "min": "0",
+   "neutral": "0",
+   "max": "100000000000000000000",
+   "kind": 1
+  }
+ },
+ "cases": [
+  {
+   "id": "p01",
+   "feedback": [
+    {
+     "tag1": "slash",
+     "value": "-100",
+     "decimals": 0,
+     "index": 1,
+     "revoked": false
+    },
+    {
+     "tag1": "review",
+     "value": "1",
+     "decimals": 0,
+     "index": 2,
+     "revoked": false
+    }
+   ],
+   "controller": false,
+   "expected": {
+    "w": -10000,
+    "feedbackIndex": 1
+   },
+   "note": "negative dominance: a later +1 under another tag does not erase the slash (real case, chain 143)"
+  },
+  {
+   "id": "p02",
+   "feedback": [
+    {
+     "tag1": "vouch",
+     "value": "1",
+     "decimals": 0,
+     "index": 1,
+     "revoked": false
+    },
+    {
+     "tag1": "vouch",
+     "value": "0",
+     "decimals": 0,
+     "index": 2,
+     "revoked": false
+    }
+   ],
+   "controller": false,
+   "expected": null,
+   "note": "the latest vouch is neutral: no edge"
+  },
+  {
+   "id": "p03",
+   "feedback": [
+    {
+     "tag1": "vouch",
+     "value": "1",
+     "decimals": 0,
+     "index": 1,
+     "revoked": false
+    },
+    {
+     "tag1": "vouch",
+     "value": "1",
+     "decimals": 0,
+     "index": 2,
+     "revoked": true
+    }
+   ],
+   "controller": false,
+   "expected": {
+    "w": 10000,
+    "feedbackIndex": 1
+   },
+   "note": "a revoked feedback never supersedes: index 1 decides"
+  },
+  {
+   "id": "p04",
+   "feedback": [
+    {
+     "tag1": "vouch",
+     "value": "1",
+     "decimals": 0,
+     "index": 1,
+     "revoked": false
+    },
+    {
+     "tag1": "vouch",
+     "value": "5",
+     "decimals": 0,
+     "index": 2,
+     "revoked": false
+    }
+   ],
+   "controller": false,
+   "expected": null,
+   "note": "latest then reject: an out-of-bounds latest feedback makes the tag yield nothing, the older one is NOT used"
+  },
+  {
+   "id": "p05",
+   "feedback": [
+    {
+     "tag1": "vouch",
+     "value": "1",
+     "decimals": 0,
+     "index": 1,
+     "revoked": false
+    },
+    {
+     "tag1": "uptime",
+     "value": "100",
+     "decimals": 0,
+     "index": 2,
+     "revoked": false
+    }
+   ],
+   "controller": false,
+   "expected": {
+    "w": 10000,
+    "feedbackIndex": 1
+   },
+   "note": "a measurement tag never creates an edge"
+  },
+  {
+   "id": "p06",
+   "feedback": [
+    {
+     "tag1": "uptime",
+     "value": "100",
+     "decimals": 0,
+     "index": 1,
+     "revoked": false
+    }
+   ],
+   "controller": false,
+   "expected": null,
+   "note": "measurement only: no edge"
+  },
+  {
+   "id": "p07",
+   "feedback": [
+    {
+     "tag1": "vouch",
+     "value": "1",
+     "decimals": 0,
+     "index": 1,
+     "revoked": false
+    },
+    {
+     "tag1": "review",
+     "value": "1",
+     "decimals": 0,
+     "index": 2,
+     "revoked": false
+    }
+   ],
+   "controller": false,
+   "expected": {
+    "w": 10000,
+    "feedbackIndex": 2
+   },
+   "note": "tie between tags of equal weight: the highest feedbackIndex decides"
+  },
+  {
+   "id": "p08",
+   "feedback": [
+    {
+     "tag1": "slash",
+     "value": "-100",
+     "decimals": 0,
+     "index": 1,
+     "revoked": false
+    },
+    {
+     "tag1": "review",
+     "value": "-1",
+     "decimals": 0,
+     "index": 3,
+     "revoked": false
+    }
+   ],
+   "controller": false,
+   "expected": {
+    "w": -10000,
+    "feedbackIndex": 3
+   },
+   "note": "negative tie: the highest feedbackIndex decides"
+  },
+  {
+   "id": "p09",
+   "feedback": [
+    {
+     "tag1": "vouch",
+     "value": "1",
+     "decimals": 0,
+     "index": 1,
+     "revoked": false
+    }
+   ],
+   "controller": true,
+   "expected": null,
+   "note": "the client is a controller of the agent (owner, agentWallet, approved or operator): rejected"
+  },
+  {
+   "id": "p10",
+   "feedback": [
+    {
+     "tag1": "foo",
+     "value": "1",
+     "decimals": 0,
+     "index": 1,
+     "revoked": false
+    }
+   ],
+   "controller": false,
+   "expected": null,
+   "note": "tag absent from the set: ignored"
+  },
+  {
+   "id": "p11",
+   "feedback": [
+    {
+     "tag1": "review",
+     "value": "1",
+     "decimals": 0,
+     "index": 1,
+     "revoked": false
+    },
+    {
+     "tag1": "review",
+     "value": "-1",
+     "decimals": 0,
+     "index": 2,
+     "revoked": true
+    }
+   ],
+   "controller": false,
+   "expected": {
+    "w": 10000,
+    "feedbackIndex": 1
+   },
+   "note": "the latest non-revoked review is +1"
+  },
+  {
+   "id": "p12",
+   "feedback": [
+    {
+     "tag1": "starred",
+     "value": "80",
+     "decimals": 0,
+     "index": 1,
+     "revoked": false
+    },
+    {
+     "tag1": "slash",
+     "value": "-1",
+     "decimals": 0,
+     "index": 2,
+     "revoked": false
+    },
+    {
+     "tag1": "vouch",
+     "value": "1",
+     "decimals": 0,
+     "index": 3,
+     "revoked": false
+    }
+   ],
+   "controller": false,
+   "expected": {
+    "w": -100,
+    "feedbackIndex": 2
+   },
+   "note": "one slightly negative tag dominates two positive ones"
+  },
+  {
+   "id": "p13",
+   "feedback": [
+    {
+     "tag1": "veto",
+     "value": "-1",
+     "decimals": 0,
+     "index": 1,
+     "revoked": false
+    },
+    {
+     "tag1": "review",
+     "value": "1",
+     "decimals": 0,
+     "index": 2,
+     "revoked": false
+    }
+   ],
+   "controller": false,
+   "expected": {
+    "w": -10000,
+    "feedbackIndex": 1
+   },
+   "note": "a veto followed by another feedback: the pair edge stays negative (the LIVE veto of section 8.2 would read only index 2)"
+  }
+ ]
+}

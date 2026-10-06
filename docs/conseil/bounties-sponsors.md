@@ -118,3 +118,22 @@ Copiées par Hugo depuis hackathon.monad.xyz le 2026-09-27 (DOC OFFICIELLE, verb
 - **Pistes suggérées**, dont **n° 05 : « Agent-to-agent commerce — A2A trading, paid tool calls via x402 payments + ERC-8004 agent identity/reputation/validation registry »**. C'est exactement ANCRE.
 - **Note** : les plugins ne sont supportés qu'à partir de l'Agent Wallet **v6.2.0**. Ressources : docs.metamask.io, template et exemples de plugin sur GitHub.
 - ⚠️ **Question ouverte** : la fiche affiche la track « Onchain Finance & Trading ». Un projet soumis en track 04 est-il éligible ? À vérifier sur la plateforme ou auprès des organisateurs.
+
+
+---
+
+## Mise à jour du 2026-10-05 (D48)
+
+**MetaMask est inaccessible** : la plateforme ne le propose qu'à la track 01 (Onchain Finance & Trading). ANCRE concourt en track 04. Le plugin reste dans le dépôt, sans travail supplémentaire.
+
+**Bounties restants, à trancher par Hugo** (pour chacun : vérifier sur la plateforme qu'il est ouvert à la track 04) :
+
+| Bounty | Montant | Ce qu'il faudrait faire | Coût estimé | Avis |
+|---|---|---|---|---|
+| Envio, Best Use of Envio | 1 k$ | Déjà fait : indexeur sur Envio Cloud, 3 chaînes. Reste : dépôt `ancre-indexer` public, un frontend qui consomme, la démo | faible | **garder** |
+| Monad Foundation, Mera: One Passkey, Many Keys | 2,5 k$ | Prototype PRF sur 2 appareils (06-E3), coffre du dossier de veto, démo multi-appareils en live | 1,5 à 2 jours | seulement si le prototype tourne avant le 08/10 |
+| Alchemy, Best Projects using Alchemy | 1 k$ en crédits | Utiliser un RPC Alchemy (rpc1.monad.xyz est servi par Alchemy) de façon visible | très faible | à tenter si éligible, critères à lire |
+| Nansen, Best use of Nansen | 5 k$ | Labels de wallets comme filtre d'arêtes (`edgeFilterId`) ou pour identifier les financeurs de la ferme. Nansen est au jury | 1 à 2 jours + accès API | seulement si les labels changent un résultat mesuré, sinon décoratif |
+| Chainlink, Best workflow with CRE | 3 k$ | Certificateur en workflow CRE | 2 jours + support Monad non vérifié | déconseillé à 8 jours |
+| Monad Foundation, Best Community Team Project | 5 k$ | Éligibilité inconnue | ? | à lire |
+| Cleanverse, CVI/CVA | 2 k$ | Identité vérifiée comme source d'ancres ? Produit inconnu | ? | à lire |

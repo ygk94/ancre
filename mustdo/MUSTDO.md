@@ -1,5 +1,7 @@
 # MUSTDO — ce que Hugo doit faire lui-même
 
+> 🚨 **05/10 : bounty MetaMask abandonné** (réservé à la track 01). Plugin gardé tel quel, plus de travail dessus. Les points 14b (« plugin MetaMask »), 14h (`mm login`, override) deviennent **optionnels**. **Reste à choisir les autres bounties** (ouverts à la track 04 ?). Compte GitHub renommé **`ygk94`**. Voir l'en-tête de `CLAUDE.md`.
+
 > Mis à jour le 2026-09-27. Rien ici ne peut être fait par Claude : il faut un compte, une décision, un appareil, de l'argent, ou une publication externe.
 > Clôture de Metropolis : **13/10 à 23:59, heure de New York**, soit **14/10 à 05:59 à Paris** (fiches de bounty). **Objectif : soumettre le 12/10.**
 > Coche au fur et à mesure (`[x]`), et dis-le moi : je mets à jour le CR et les briefs.
@@ -89,6 +91,26 @@
   - **Démo ouverte à tous en Registry-verified, ou avec un soumetteur attesté ?** Une dilution passe encore la règle de remplacement (AM-INT.1) : sur un ensemble ouvert, il faut un surveillant actif pendant le jugement. Si tu gardes un soumetteur attesté, qui paie les preuves ?
   - Faut-il émettre les **noms des tags** (pas seulement leur hash) dans l'event d'enregistrement d'un ensemble, pour la lisibilité ?
   - **Relayer au chantier 03** le fichier `docs/chantiers/relais/vers-03.md` : il faut pousser la branche, ou que tu le transmettes depuis l'autre machine.
+
+- [ ] **14g. Décisions issues du chantier 08, la norme (01/10)** :
+  - **⏰ La plus urgente : la divulgation** (brouillon `docs/erc/drafts/` c). Envoie-t-on avant le **05/10**, comme le recommande D29 ? **Canal** (contact des auteurs ou issue GitHub sobre), **signataires**, et **date de la mention publique**. Elle doit partir **avant** toute PR et avant que le dépôt devienne public, parce que les autres brouillons citent le contournement.
+  - **PR sur `ethereum/ERCs` avant ou après le 13/10 ?** La relecture recommande « après » (confiance 0,6, experts partagés).
+  - **Auteurs de l'ERC et fil Magicians dédié** : les éditeurs l'exigent avant toute PR. Qui signe ?
+  - **Code de référence** : rend-on le dépôt public, ou copie-t-on le contrat dans `docs/erc/assets/` ?
+  - **Contacter ColinkaMir (brouillon e) ? Et Kanmani ?**
+  - **Démo, à régler avant que le dépôt devienne public** :
+    - (a) **changer les ancres de démo** pour qu'aucune ne soit le wallet d'un agent (défaut AM-08.A) ;
+    - (b) **lister les soumetteurs** (D27) ;
+    - (c) **fixer `minRefresh = maxAge`**.
+  - **Autoriser une session de correction du contrat** pour les trois défauts AM-08.A, B et C. Le texte de la norme n'est pas soumettable tant qu'ils ne sont pas corrigés ou explicitement assumés.
+
+- [ ] **14h. Chantier 05 : ce qui ne dépend que de toi (01/10)** :
+  - **Test T1 réel sur le testnet** (porte P3 : le facilitator accepte-t-il le payeur ?). Il faut ton accord, puis environ **0,40 MON et 0,1 USDC de testnet** (faucets : https://faucet.monad.xyz, https://faucet.circle.com). La procédure est dans `contracts/`, voir `docs/chantiers/rapports/05.md`.
+  - **`mm login`** : pour essayer en vrai le `pay` et l'`override` avec ton extension MetaMask. Choisis le mode **server-wallet**, pas BYOK (condition de D47).
+  - **L'adresse owner et trésorerie du payeur** : ce sera **le seul wallet qui pourra signer un override**.
+    - Ce doit être **un compte de ton extension MetaMask**, distinct du wallet serveur de `mm`.
+    - **À vérifier** : si ce compte est délégué en EIP-7702 sans `isValidSignature`, il ne pourra pas signer l'override en EIP-3009.
+  - **Vérifier Guard Mode** avec `mm wallet policy get` : il doit être limité au payeur et à l'USDC, puisque le plugin ne peut pas le lire.
 
 ## 🟡 Avant le 12/10
 
