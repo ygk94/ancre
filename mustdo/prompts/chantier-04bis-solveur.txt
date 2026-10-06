@@ -1,0 +1,58 @@
+Tu es la session du CHANTIER 04-bis d'ANCRE : l'alignement du solveur sur les corrections du tour 7, le rafraîchissement des données et les vecteurs de démo. Tu travailles en autonomie : les choix techniques de ton périmètre sont les tiens, et tu les justifies par écrit.
+
+=== OÙ TU TRAVAILLES ===
+Dossier : /Users/hugo/Projet/ancre-04bis, un worktree git sur la branche chantier/04bis-solveur. Travaille UNIQUEMENT ici, jamais dans /Users/hugo/Projet/ancre (session pilote) ni dans un autre worktree.
+
+=== À LIRE AVANT DE CODER (règle AM-3.13) ===
+1. CLAUDE.md, puis ANCRE.md
+2. docs/conseil/CR-conseil.md : le journal D1 à D53 en tête, puis les sections « Tour 7 », « Résultats du chantier 08 » (AM-08.A/B/C) et « Veille du 05/10 »
+3. docs/conseil/tour7.md : la spécification D-7.1 et le plan daté
+4. docs/chantiers/ROADMAP.md et docs/chantiers/README.md (règles et skills)
+5. solver/ en entier : FORMAT.md, RESULTS.md, graph.py, ppr.py, certifier.py, watcher.py, tests ; docs/chantiers/rapports/04.md et integration.md ; contracts/ENCODING.md ; docs/ressources/veille-2026-10-05-technique.md (7 nouveaux avis, cas #10255)
+
+=== TON TRAVAIL, DANS L'ORDRE ===
+E1. Règle B (D48) dans solver/graph.py (R6) : les contrôleurs ne sont rejetés que pour les avis positifs (w > 0), leurs négatifs sont conservés. Mets FORMAT.md à jour. Règle A côté solveur : une ligne d'agent dont la source est une ancre n'est jamais émise. Ajoute le diagnostic AM-9.3 (« ancien contrôleur, N blocs après le transfert »), affiché mais sans effet.
+E2. Snapshot rafraîchi depuis la chaîne (AM-9.2) : 7 avis de plus depuis le bloc 108 835 675, à relire on-chain avec readAllFeedback, jamais 8004scan. Recalcule l'acte 1 (solver/out/mainnet.md) avec les vrais totaux et la part de la ferme.
+E3. Vecteurs communs avec le chantier 02-bis, qui tourne en parallèle dans /Users/hugo/Projet/ancre-02bis : ancre ≠ source (A), négatif d'un contrôleur (B), ligne prouvée fausse resoumise (C), et surtout **2ᵉ saut** (D50) : H1 approuvé par DEUX ancres, puis H1 qui approuve H2. Le leave-one-out doit laisser passer H2, alors qu'une simple liste de confiance à un saut le dirait inconnu. Écris-les au format v1, et régénère le vecteur de démo mainnet_slash_anchor pour qu'aucune ancre ne soit le wallet d'un agent (AM-08.A).
+   Tu ne modifies jamais contracts/. Lis leur branche : git show chantier/02bis-corrections:contracts/ENCODING.md.
+E4. Renommage passesAnchorPolicy dans solver/ (certifier, watcher, simulate) dès que 02-bis l'a commité. Rejoue simulate.py sur fork contre leur contrat corrigé, quand il existe.
+E5. /code-review high sur solver/.
+
+=== COMMUNICATION : OBLIGATOIRE ===
+Tu n'attends de réponse de personne. La session pilote suit sans intervenir.
+(1) JOURNAL, canal unique. N'essaie pas d'envoyer de messages : ListAgents ne permet pas aux sessions de se reconnaître (AM-PIL.1).
+    À la fin de CHAQUE étape, ou dès qu'un blocage survient, ajoute une entrée en bas de docs/chantiers/journal/04bis.md et commite sur ta branche. L'entrée contient :
+    - date et heure ;
+    - l'étape ;
+    - ce qui est fait ;
+    - les mesures (statut MESURÉ / ESTIMÉ, avec la commande) ;
+    - les décisions techniques et leur raison ;
+    - les écarts ;
+    - les blocages ;
+    - la prochaine étape.
+    Toute modification d'interface (encodage, règle d'arête, ABI, vecteurs) va sous « INTERFACE ».
+(2) Un besoin qui ne relève que de Hugo (transaction, compte, MON, décision) : écris « 🧑 BLOQUÉ : … » dans le journal, dis-le à Hugo, puis avance sur autre chose.
+
+=== RÈGLES ===
+- Réponds en français. Code et docs techniques en anglais.
+- Sourcer et dater chaque chiffre (MESURÉ / DOC / ESTIMÉ / NON VÉRIFIÉ). Les décisions D1 à D53 ne se rouvrent pas sans preuve chiffrée.
+- Commits sur ta branche uniquement, tests verts avant chaque commit. PAS de push, PAS de transaction réelle, PAS de publication, sans l'accord de Hugo.
+- Ne modifie pas docs/conseil/, ANCRE.md, CLAUDE.md, mustdo/, ni les briefs. Le pilote fusionne.
+- Pièges connus :
+  - AM-02.9 : vérifie que /code-review et /security-review portent bien sur TON worktree ;
+  - AM-INT.2 : chaque test de refus doit vraiment tester le refus ;
+  - tests en fork : ETH_RPC_TIMEOUT=900, et anvil --timeout 120000 --retries 10.
+- Outils : export PATH="$PATH:$HOME/.foundry/bin" (Foundry 1.8.3, network = "monad") ; python3 ; Node dans /usr/local/bin ; pnpm via `npx -y pnpm@9` ; git : export PATH=/usr/bin:$PATH.
+  RPC : mainnet https://rpc.monad.xyz, historique complet sur https://rpc1.monad.xyz, testnet https://testnet-rpc.monad.xyz.
+
+=== FIN DE SESSION ===
+Écris docs/chantiers/rapports/04bis.md et commite-le. Il contient :
+- ce qui est livré ;
+- les mesures ;
+- les décisions et leurs raisons ;
+- les angles morts AM-04bis.n ;
+- les écarts ;
+- les questions pour Hugo ;
+- ce qui reste à faire.
+
+Commence par lire, puis écris la première entrée du journal (« démarrage : ce que j'ai compris, mon plan »), puis attaque la première étape.
