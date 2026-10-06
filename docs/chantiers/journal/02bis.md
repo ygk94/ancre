@@ -37,3 +37,42 @@ Mock d'identité étendu : `getApproved`, `isApprovedForAll`, `approve`, `isAuth
 **Écart.** La règle « tests verts avant chaque commit » ne peut pas s'appliquer à ce commit : le brief demande justement des tests qui échouent, commités à part. Tous les autres tests sont verts.
 
 **Prochaine étape** : R1, puis A, B, C, R3 à R8.
+
+## 2026-10-06 — E2-E5 en cours : corrections écrites, NON commitées (limite d'usage de la session atteinte)
+
+**État du worktree** (modifications locales, pas encore commitées, car 7 tests restent rouges) :
+- **R1** : `address(0)` refusé dans la table ; `_verifyRows` ne saute plus de ligne et exige `off == rows.length`.
+- **A** : `AnchorAsSource(u)` dès qu'un SRC est une ancre (les deux niveaux). `proveWallet` couvre déjà le nouveau wallet devenu ancre (la source change).
+- **B** : un contrôleur ne donne plus d'arête positive, mais son arête négative est conservée (à la soumission et dans `proveEdge`) ; veto par approbation en mode strict (`_approvalVetoes`) ; `proveApproval` pour le mode rapide.
+- **C / R2 / R4** : `NotCanonical` (SRC = 0, SPLUS = S⁺, alias vers une ligne non agent). `provenFalse[setId][rowHash]` est calculé sur la ligne décodée, sans feedbackIndex et indépendant de W. Il est vérifié à chaque soumission, sous REGISTRY_CHANGED et au niveau attesté. L'ancienne garde sur les racines brutes est retirée.
+- **R3** : la facturation de `proveEdge` est cumulée depuis la ligne engagée (`_needs`, `_bill`), avec X = max(dEff + Δc, Scur).
+- **R5** : empreinte des ancres = 0 ; `dryRun` applique la forme et la borne 2⁶³.
+- **R6** : `_idCall` sépare `ERC721NonexistentToken` d'un échec de lecture ; les preuves revert `RegistryUnreadable` ; `assess` renvoie REGISTRY_CHANGED.
+- **R7** : le transfert en mode strict dépend de la masse, plus de trust.
+- **R8** : le payeur refuse un set en mode rapide (`FastTransferSet`) et une trésorerie opératrice (`OperatorIsTreasury`). T1Oracle est adapté, mais **le script T1 déploie encore owner = trésorerie = opérateur : à séparer**.
+- **Renommage** : `passesAnchorPolicy` et `Assessment.passesPolicy`, dans le contrat, le payeur, T1Oracle et les tests.
+
+**Mesure** (MESURÉ, `forge test` hors fork) : 137 verts, **7 rouges**.
+- `test_B_*` (3) : le veto par approbation ne déclenche pas. Cause probable : la boucle de veto direct (`_lastFeedback`) tourne avant, alors que le jeu `_trustedX` n'a pas de feedback d'ancre → à déboguer.
+- `test_neverRevertsOnBrokenRegistry` : le statut attendu est TRANSFERRED (3), on obtient REGISTRY_CHANGED (5). C'est l'effet voulu de R6 : le test est à mettre à jour.
+- `test_burntSourcelessRowNothingToProve` : le test simule un `getAgentWallet` qui revert, ce que le vrai registre ne fait pas (mesuré). À réécrire avec un vrai burn.
+- `test_replacementRefusesResubmittingProvenCertificate` : l'erreur est maintenant `ProvenRowResubmitted` et non `NotBetter`. Le test est à mettre à jour.
+- `test_revocationAndNewerFeedback` : avec la facturation cumulée, `incP` vaut 0 quand on revient à l'état engagé, au lieu de 0,5. C'est attendu, le test est à mettre à jour.
+
+**INTERFACE** (à relayer) :
+- renommage ABI `isTrusted` → `passesAnchorPolicy` et `trusted` → `passesPolicy` ;
+- règle d'arête B (négatif d'un contrôleur conservé) ;
+- erreurs `AnchorAsSource`, `ProvenRowResubmitted`, `NotCanonical` ;
+- SPLUS seulement si sPlus > S⁺ ;
+- `provenFalse(setId, h)` et `rowHash` publics ;
+- `proveApproval`, event `ApprovalProven` ;
+- montants de `proveEdge` changés (ENCODING §7.1, à réécrire) ;
+- getters ERC-721 ajoutés à l'interface ;
+- vecteur `mainnet_slash_anchor` désormais refusé : 04-bis doit le régénérer sans la ligne de #18.
+
+**Reste** :
+- corriger les 7 tests, puis commiter ;
+- vecteur de démo en fork et `SolverVectors` ;
+- mesures de gas : veto par approbation, coût de C, taille du contrat ;
+- ENCODING, PROOFS et GAS ;
+- E6 (vecteurs 04-bis), E7 (`/code-review high`, `/security-review`), E8 (script testnet simulé, rôles séparés), rapport 02bis.
