@@ -70,6 +70,29 @@ anchor set may commit its own filter, D12; the certificate audit replays it).
 0 difference on 143 (11 edges), 10143 (30) and 10 (10). A dump of chain 143 is in
 `solver/tests/fixtures/indexer/` (`test_parity_real_indexer_dump`).
 
+## ANCRE certificates — live audit (contract `AnchoredReputation`)
+
+Handlers in `src/handlers/ancre.ts`. Node tables, tag schemas and certificate rows are decoded from the calldata of
+**direct** calls (`registerAnchorSet`, `addNodes`, `submitCertificate`, read via `transaction.input`); a relayed call
+(multicall, Safe, relayer) is never guessed: it is marked undecodable.
+
+| Entity | Content |
+|---|---|
+| `AnchorSet` (kind `onchain`, id = setId) | anchors, lambdas, α, `tagsJson` (the set's edge schema, bounds in WAD), `policyJson`, `ownerFallback`, `registryVerified`, `decodable`, `nodeCount` |
+| `SetNode` (id = setId-index) | the set's node table: anchors at 0..k−1, then appended agents/addresses in contract order |
+| `Certificate` (id = txHash-logIndex) | event fields + `submitter`, `status` (`AUDITED` / `UNDECODABLE` / `UNKNOWN_SET` / `NODES_MISSING`), `graphRootMatches`, `rowsChecked`, `edgesChecked`, `discrepancyCount` |
+| `Discrepancy` | one audit finding: `kind` (see `src/lib/audit.ts`), the edge (`u`, `dst`, `client`, `agentId`, committed vs registry weight and row sums) and `proof`, the on-chain remedy (`proveEdge`, `proveWallet`, or refused at submission) |
+| `SetHealth` (id = setId) | `status` (`CLEAN` / `DISCREPANCY` / `UNAUDITED`), certificates, latest certificate and `eEff`, `openDiscrepancies`, `edgesProven`, `rowsVoided` |
+
+The audit runs inside the handler against the registry state rebuilt by the indexer **at that log** (events of a chain
+are processed in block/log order). Contract address: placeholder (`0x…01`) on 143 and 10143 until deployment.
+
+```graphql
+# Is the latest certificate of a set clean? What would a watcher prove?
+query { SetHealth(where: {chainId: {_eq: 10143}}) { id status certificates openDiscrepancies lastEEff edgesProven } }
+query { Discrepancy(where: {set_id: {_eq: "0x…"}}) { kind proof agentId client wCommitted wRegistry bCommitted bRegistry } }
+```
+
 ## Stats
 
 `ChainStats` (id = `"stats"`, one row per chain): `agents`, `transfers`, `feedbacks`, `revoked`,
@@ -85,6 +108,10 @@ anchor set may commit its own filter, D12; the certificate audit replays it).
 - `test/certificate.test.ts`: the `ancre-cert-v1` decoder re-reads the 13 solver vectors (violations included) byte for byte.
 - `test/audit.test.ts` (`pnpm test:parity`): audit on Monad's rebuilt state (block 108 835 675): 4 honest vectors →
   0 discrepancy, 4 normative violations (D37) → FABRICATED, INFLATED, OMITTED_NEG ×2, INFLATED (dilution).
+- `test/ancre.test.ts` (`pnpm test`): the certificate handlers on a simulated registry: set and node table from calldata,
+  honest certificate AUDITED/CLEAN, Merkle root check, inflated edge flagged with `proveEdge`, relayed call UNDECODABLE.
+- `test/ancre.real.test.ts` (`pnpm test:parity`): the same handlers on Monad's real state (block 108 835 675) with the
+  real calldata of the normative vectors: 4 honest → AUDITED, 0 discrepancy, root identical; 4 violations flagged. MESURÉ 06/10.
 
 ## Example queries
 
@@ -104,4 +131,5 @@ query { ChainStats { chainId agents feedbacks refEdges selfRatings outOfRange la
 - v0 (28/09): layers 1–3 for the reference set (`RefEdge`), ChainStats.
 - v1 (05/10): `RefEdge` → `SetEdge` + `AnchorSet` (from_indexer.py interface), `rejected` null when retained,
   `OUT_OF_BOUNDS` (per-tag semantics), R5 tie by highest feedbackIndex, `TripleLatest` for every tag.
-  Coming: `Certificate`, `CertificateAudit`, `Discrepancy`, `SetHealth` once the ANCRE contract is deployed (E4).
+- v2 (06/10): `AnchoredReputation` handlers: `AnchorSet` (on-chain sets), `SetNode`, `Certificate`, `Discrepancy`,
+  `SetHealth`. Live once the contract address replaces the placeholder.
