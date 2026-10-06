@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sync this folder to the standalone public repo hugothomas9/ancre-indexer (Envio Cloud reads it).
+# Sync this folder to the standalone public repo ygk94/ancre-indexer (Envio Cloud reads it).
 #   scripts/publish.sh <clone-dir> [--deploy]
 # Copies the indexer (no secrets, no node_modules, no monorepo-only analytics) plus the solver's normative vectors
 # into test/vectors, runs codegen + typecheck + tests there, commits on main and pushes. With --deploy, also pushes
@@ -8,9 +8,9 @@ set -euo pipefail
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
 DST="${1:?usage: scripts/publish.sh <clone-dir> [--deploy]}"
 DEPLOY="${2:-}"
-# Safety: only ever sync into a git clone of hugothomas9/ancre-indexer (rsync --delete below)
-git -C "$DST" remote get-url origin 2>/dev/null | grep -q "hugothomas9/ancre-indexer" \
-  || { echo "refusing: $DST is not a clone of hugothomas9/ancre-indexer" >&2; exit 1; }
+# Safety: only ever sync into a git clone of ygk94/ancre-indexer (rsync --delete below)
+git -C "$DST" remote get-url origin 2>/dev/null | grep -q "ygk94/ancre-indexer" \
+  || { echo "refusing: $DST is not a clone of ygk94/ancre-indexer" >&2; exit 1; }
 rsync -a --delete --filter 'P .github/' --filter 'P test/vectors/'  --exclude .git --exclude node_modules --exclude .envio --exclude .env --exclude .claude \
   --exclude A-FAIRE-HUGO-ENVIO.txt --exclude analytics --exclude generated --exclude '*.log' --exclude scripts/publish.sh \
   "$SRC/" "$DST/"
