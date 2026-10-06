@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ANCRE pitch figures</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface-1: #fcfcfb;
+  --text-primary: #0b0b0b; --text-secondary: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --baseline: #c3c2b7; --border: rgba(11,11,11,0.10);
+  --series-1: #2a78d6; --series-1-hover: #5598e7; --series-2: #eb6834;
+  --rule: #52514e;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface-1: #1a1a19;
+    --text-primary: #ffffff; --text-secondary: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --baseline: #383835; --border: rgba(255,255,255,0.10);
+    --series-1: #3987e5; --series-1-hover: #6da7ec; --series-2: #d95926;
+    --rule: #c3c2b7;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface-1: #1a1a19;
+  --text-primary: #ffffff; --text-secondary: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --baseline: #383835; --border: rgba(255,255,255,0.10);
+  --series-1: #3987e5; --series-1-hover: #6da7ec; --series-2: #d95926;
+  --rule: #c3c2b7;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--text-primary);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; }
+.lede { color: var(--text-secondary); margin: 0 0 28px; }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px;
+  padding: 24px; margin: 0 0 24px; }
+.card h2 { font-size: 17px; font-weight: 600; margin: 0 0 4px; }
+.card .sub { color: var(--text-secondary); margin: 0 0 20px; }
+.src { color: var(--muted); font-size: 12px; margin-top: 16px; }
+.note { color: var(--text-secondary); font-size: 13px; border-left: 2px solid var(--baseline);
+  padding: 2px 0 2px 10px; margin-top: 14px; }
+.tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+@media (max-width: 560px) { .tiles { grid-template-columns: 1fr; } }
+.tile { border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+.tile .label { color: var(--text-secondary); font-size: 13px; }
+.tile .value { font-size: 48px; font-weight: 600; line-height: 1.1; margin: 6px 0 4px; }
+.tile .value sup { font-size: 24px; }
+.tile .ctx { color: var(--text-secondary); font-size: 13px; }
+.tile.key .value { color: var(--text-primary); }
+.tile .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: 0; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { fill: var(--text-secondary); font-size: 12px; }
+svg .val { fill: var(--text-primary); font-size: 12px; font-variant-numeric: tabular-nums; }
+svg .cat { fill: var(--text-primary); font-size: 13px; }
+svg .tick { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+svg .grid { stroke: var(--grid); stroke-width: 1; }
+svg .base { stroke: var(--baseline); stroke-width: 1; }
+svg .bar { fill: var(--series-1); cursor: default; }
+svg .hit:hover + .bar, svg .hit:focus + .bar { fill: var(--series-1-hover); }
+svg .hit { fill: transparent; outline: none; }
+svg .rule { stroke: var(--rule); stroke-width: 2; }
+svg .rulelbl { fill: var(--text-primary); font-size: 12px; }
+details { margin-top: 14px; }
+summary { cursor: pointer; color: var(--text-secondary); font-size: 13px; }
+table { border-collapse: collapse; margin-top: 8px; font-size: 13px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 4px 14px 4px 0; border-bottom: 1px solid var(--grid); }
+td.n, th.n { text-align: right; }
+#tip { position: fixed; pointer-events: none; background: var(--surface-1); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 13px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12); display: none; max-width: 280px; }
+#tip strong { display: block; font-size: 14px; }
+#tip span { color: var(--text-secondary); }
+@media (max-width: 560px) { .tile .value { font-size: 40px; } .card { padding: 16px; } }
+</style>
+</head>
+<body>
+<main>
+<h1>ANCRE — pitch figures</h1>
+<p class="lede">Every value is measured; each figure names its script, its date and its block. Hover a bar for details; each figure has a table view.</p>
+
+<section class="card" id="fig1">
+  <h2>The average lies; ANCRE gives the farm nothing</h2>
+  <p class="sub">Eve-8004 (#182), Monad mainnet. One number per question — no shared axis exists between an average of 10<sup>36</sup> and a mass share of 0.</p>
+  <div class="tiles">
+    <div class="tile">
+      <div class="label">Naive average rating, all 7,665 raters</div>
+      <div class="value">1.526×10<sup>36</sup></div>
+      <div class="ctx"><code>getSummary(182, getClients(182))</code> · block 110,993,179 · 6 Oct 2026</div>
+    </div>
+    <div class="tile key">
+      <div class="label">ANCRE trust mass on the 7,666-agent farm region</div>
+      <div class="value">0</div>
+      <div class="ctx">two independent anchors, α = 1/3, Registry-verified · snapshot 28 Sep 2026</div>
+    </div>
+    <div class="tile">
+      <div class="label">Share of all mainnet ratings pointing to Eve</div>
+      <div class="value">83%</div>
+      <div class="ctx">7,665 of 9,283 · block 108,835,675</div>
+    </div>
+    <div class="tile">
+      <div class="label">Sampled raters first funded by Eve's own owner</div>
+      <div class="value">150/150</div>
+      <div class="ctx">11.0 MON each · Alchemy Transfers API · 6 Oct 2026</div>
+    </div>
+  </div>
+  <p class="src">Sources: README §5 (cast commands) · solver/out/mainnet.md §a (run_mainnet.py) · docs/ressources/alchemy.md (D55). Status: MEASURED. To recompute on shooting day (refreshed snapshot, lot 04-bis).</p>
+</section>
+
+<section class="card" id="fig2">
+  <h2>Less than 5% of ERC-8004 feedback survives as a trust edge, on every chain we scanned</h2>
+  <p class="sub">Share of feedback entries that become an ANCRE edge under the reference schema, by chain.</p>
+  <div id="chart-survival"></div>
+  <p class="note"><strong>Caveat.</strong> The reference tag schema was built from Monad's tags, and an unknown tag never creates an edge. Outside Monad these are lower bounds under our schema, not a verdict on those chains.</p>
+  <details><summary>Table view</summary><table id="tbl-survival"></table></details>
+  <p class="src">Source: indexer/analytics/survival_scan.py (Envio HyperSync), docs/chantiers/rapports/03.md §3 · MEASURED 28 Sep 2026.</p>
+</section>
+
+<section class="card" id="fig3a">
+  <h2>What a trust check costs a payment</h2>
+  <p class="sub">Gas of one x402 settlement, and of refusing an unknown agent, on a fork of Monad with the real registries.</p>
+  <div id="chart-pay"></div>
+  <details><summary>Table view</summary><table id="tbl-pay"></table></details>
+  <p class="src">Source: contracts/PAYER.md, contracts/GAS.md (forge test, network = "monad") · MEASURED 1 Oct 2026 · to re-measure after lot 02-bis.</p>
+</section>
+
+<section class="card" id="fig3b">
+  <h2>A Registry-verified certificate fits in one Monad transaction</h2>
+  <p class="sub">Gas of one certificate submission, against the 30 M gas transaction limit. Registry-verified re-reads every edge from the ERC-8004 registry.</p>
+  <div id="chart-cert"></div>
+  <details><summary>Table view</summary><table id="tbl-cert"></table></details>
+  <p class="src">Source: contracts/GAS.md (GasTest, RegistryBenchTest, simulate.py on a mainnet fork) · MEASURED 1 Oct 2026 · 30 M limit: DOC (Monad developer essentials) · to re-measure after lot 02-bis.</p>
+</section>
+</main>
+<div id="tip" role="tooltip"></div>
+
+<script>
+const fmt = n => n.toLocaleString("en-US");
+const tip = document.getElementById("tip");
+function showTip(e, title, lines) {
+  tip.replaceChildren();
+  const s = document.createElement("strong"); s.textContent = title; tip.appendChild(s);
+  for (const l of lines) { const d = document.createElement("span"); d.textContent = l; tip.appendChild(d); tip.appendChild(document.createElement("br")); }
+  tip.style.display = "block";
+  const r = e.target.getBoundingClientRect ? e.target.getBoundingClientRect() : null;
+  const x = e.clientX ?? (r ? r.right : 0), y = e.clientY ?? (r ? r.top : 0);
+  tip.style.left = Math.min(x + 14, innerWidth - 300) + "px";
+  tip.style.top = (y + 14) + "px";
+}
+const hideTip = () => { tip.style.display = "none"; };
+
+function table(id, head, rows) {
+  const t = document.getElementById(id);
+  const tr = document.createElement("tr");
+  head.forEach((h, i) => { const th = document.createElement("th"); th.textContent = h; if (i) th.className = "n"; tr.appendChild(th); });
+  t.appendChild(tr);
+  for (const r of rows) {
+    const row = document.createElement("tr");
+    r.forEach((c, i) => { const td = document.createElement("td"); td.textContent = c; if (i) td.className = "n"; row.appendChild(td); });
+    t.appendChild(row);
+  }
+}
+
+// Horizontal bar chart: one series, one axis, value labels at the bar tip.
+function hbar(el, data, { max, ticks, fmtTick, fmtVal, rule, labelW = 190 }) {
+  const NS = "http://www.w3.org/2000/svg";
+  const W = 900, rowH = 36, barH = 20, top = 8, axisH = 26, rightPad = 90;
+  const H = top + data.length * rowH + axisH + (rule ? 18 : 0);
+  const plotW = W - labelW - rightPad;
+  const x = v => labelW + (v / max) * plotW;
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.setAttribute("role", "img");
+  const mk = (tag, attrs, text) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (text != null) n.textContent = text; svg.appendChild(n); return n; };
+  const yAxis = top + data.length * rowH;
+  for (const t of ticks) {
+    mk("line", { class: "grid", x1: x(t), x2: x(t), y1: top, y2: yAxis });
+    mk("text", { class: "tick", x: x(t), y: yAxis + 16, "text-anchor": "middle" }, fmtTick(t));
+  }
+  mk("line", { class: "base", x1: labelW, x2: labelW, y1: top, y2: yAxis });
+  data.forEach((d, i) => {
+    const y = top + i * rowH + (rowH - barH) / 2;
+    const w = Math.max(x(d.v) - labelW, 0);
+    mk("text", { class: "cat", x: labelW - 10, y: y + barH / 2 + 4, "text-anchor": "end" }, d.label);
+    const hit = mk("rect", { class: "hit", x: labelW, y: top + i * rowH, width: plotW + rightPad, height: rowH, tabindex: 0 });
+    // 4px rounded data end, square at the baseline
+    const r = Math.min(4, w);
+    mk("path", { class: "bar", d: w > 0 ? `M${labelW},${y} h${w - r} a${r},${r} 0 0 1 ${r},${r} v${barH - 2 * r} a${r},${r} 0 0 1 -${r},${r} h-${w - r} z` : "" });
+    mk("text", { class: "val", x: labelW + w + 8, y: y + barH / 2 + 4 }, fmtVal(d.v));
+    const on = e => showTip(e, fmtVal(d.v), [d.label, ...(d.tip || [])]);
+    hit.addEventListener("pointermove", on); hit.addEventListener("focus", on);
+    hit.addEventListener("pointerleave", hideTip); hit.addEventListener("blur", hideTip);
+  });
+  if (rule) {
+    const rx = x(rule.v);
+    mk("line", { class: "rule", x1: rx, x2: rx, y1: top - 4, y2: yAxis });
+    mk("text", { class: "rulelbl", x: rx - 6, y: yAxis + axisH + 12, "text-anchor": "end" }, rule.label);
+  }
+  el.appendChild(svg);
+}
+
+// Figure 2 — survival, sorted descending
+const survival = [
+  ["Arbitrum", 1545, 498, 22, 4.4], ["Optimism", 545, 334, 10, 3.0], ["Ethereum", 51586, 17682, 519, 2.9],
+  ["Polygon", 680, 508, 10, 2.0], ["Base", 97351, 531500, 9857, 1.9], ["Monad testnet", 1949, 1862, 28, 1.5],
+  ["Monad mainnet", 10262, 9283, 11, 0.12],
+];
+hbar(document.getElementById("chart-survival"),
+  survival.map(([c, a, f, e, s]) => ({ label: c, v: s, tip: [`${fmt(e)} edges from ${fmt(f)} feedback entries`, `${fmt(a)} agents`] })),
+  { max: 5, ticks: [0, 1, 2, 3, 4, 5], fmtTick: t => t + "%", fmtVal: v => (v < 1 ? v.toFixed(2) : v.toFixed(1)) + "%" });
+table("tbl-survival", ["Chain", "Agents", "Feedback", "Edges kept", "Survival"],
+  survival.map(([c, a, f, e, s]) => [c, fmt(a), fmt(f), fmt(e), s + "%"]));
+
+// Figure 3a — per payment
+const pay = [
+  ["Refuse an unknown agent", 29231, "passesAnchorPolicy, no registry read"],
+  ["Plain x402 transfer (EOA)", 144605, "baseline, no trust check"],
+  ["Guarded settlement, exact", 327909, "TrustGatedPayer, EIP-3009, trusted agent"],
+  ["Guarded settlement, upto", 385876, "TrustGatedPayer, Permit2"],
+];
+hbar(document.getElementById("chart-pay"),
+  pay.map(([l, v, t]) => ({ label: l, v, tip: [t, `≈ ${(v * 102e-9).toFixed(4)} MON at 102 gwei`] })),
+  { max: 400000, ticks: [0, 100000, 200000, 300000, 400000], fmtTick: t => t ? (t / 1000) + "k" : "0", fmtVal: v => fmt(v) + " gas", labelW: 210 });
+table("tbl-pay", ["Operation", "Gas"], pay.map(([l, v]) => [l, fmt(v)]));
+
+// Figure 3b — per certificate, with the transaction limit
+const cert = [
+  ["Real mainnet graph, Registry-verified", 1028760, "6 nodes, 5 edges, first certificate"],
+  ["Demo graph, Submitter-attested", 1351917, "300 edges, 100 nodes, 3 anchors"],
+  ["Demo graph, Registry-verified", 14974802, "300 edges, 100 nodes, 3 anchors; ≈ 45k gas per edge re-read"],
+];
+hbar(document.getElementById("chart-cert"),
+  cert.map(([l, v, t]) => ({ label: l, v, tip: [t, `≈ ${(v * 102e-9).toFixed(2)} MON at 102 gwei`] })),
+  { max: 30000000, ticks: [0, 10e6, 20e6, 30e6], fmtTick: t => t ? (t / 1e6) + "M" : "0", fmtVal: v => (v / 1e6).toFixed(2) + "M gas",
+    rule: { v: 30e6, label: "30M gas transaction limit" }, labelW: 260 });
+table("tbl-cert", ["Certificate", "Gas"], cert.map(([l, v]) => [l, fmt(v)]));
+</script>
+</body>
+</html>
