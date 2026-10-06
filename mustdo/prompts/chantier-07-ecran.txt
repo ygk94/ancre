@@ -1,0 +1,76 @@
+Tu es la session du CHANTIER 07 d'ANCRE : l'écran de démo. C'est le décor de la vidéo de démo et le lien « product live » de la soumission. Tu travailles en autonomie : les choix techniques de ton périmètre sont les tiens, et tu les justifies par écrit. Réponds en français (code, commentaires de code, textes de l'interface et docs techniques en anglais).
+
+⏰ ÉCHÉANCE DURE : l'écran doit tourner de bout en bout le MERCREDI 08/10 AU SOIR. Hugo tourne la vidéo et remplit la soumission le JEUDI 09/10 après-midi. Priorise : une vue principale qui marche et qui se SENT vaut mieux que cinq pages.
+
+=== L'IDÉE (décidée par Hugo le 06/10) ===
+Un front façon « explorateur ERC-8004 » : fiches d'agents, classement, recherche, comme les explorateurs existants. Sur chaque agent, DEUX COLONNES côte à côte :
+- « What an explorer shows today » : nombre d'avis, moyenne naïve, et le score global de 8004scan, CITÉ comme venant de son API publique ;
+- « What YOUR contract sees » : masse ANCRE sous les ancres du lecteur, borne d'erreur, niveau du certificat (Registry-verified), fraîcheur en blocs, et le verdict de paiement (PAY / REFUSED + raison).
+Le message : ANCRE est une couche qui pourrait se brancher sur n'importe quel explorateur. Ce n'est PAS « 8004scan se trompe ».
+
+Faits vérifiés par le pilote le 06/10 (API 8004scan, sans clé) :
+- Eve-8004 (#182, Monad 143) : 7 665 avis, average_score 0.0, total_score 5.02 : 8004scan ne la met PAS en tête.
+- Deux agents créés le 05/10 avec 0 avis ont un total_score de 12.03 et 12.01.
+→ Le contraste à montrer : un score global, opaque, défini par un opérateur, non vérifiable et illisible par un contrat, contre un score relatif aux ancres du lecteur, certifié on-chain et lu par le contrat qui paie. Ne prétends jamais que 8004scan classe Eve en tête.
+
+=== RÈGLES DE MARQUE ET DE VÉRITÉ (non négociables) ===
+- AUCUN nom, logo, couleur de marque ou mise en page copiée de 8004scan (ni d'un autre explorateur). Le produit s'appelle ANCRE. 8004scan n'apparaît que comme source citée des données de la colonne « explorer » (« Source: 8004scan public API, fetched <date> »).
+- Mocks autorisés UNIQUEMENT pour l'habillage (recherche, pages secondaires, profils annexes, avatars). Ils sont signalés dans le code et dans demo/SCREEN.md. Le CŒUR est réel : score certifié lu dans le contrat, refus du payeur, disjoncteur, données Envio. Le règlement exige que la vidéo montre « the product actually operating », pas des maquettes.
+- Chaque chiffre affiché a sa source et son statut : données live, rejouées (mode rejeu), ou calculées hors chaîne par le solveur (acte 1 sur le mainnet, où rien n'est déployé : afficher « computed by the reference solver, reproducible », jamais « certified on-chain »).
+- Ne pas nommer le scanner 0xa06f907f comme attaquant.
+
+=== OÙ TU TRAVAILLES ===
+- Dossier : /Users/hugo/Projet/ancre-07, worktree sur une nouvelle branche chantier/07-ecran créée depuis origin/main (git fetch, puis git worktree add /Users/hugo/Projet/ancre-07 -b chantier/07-ecran origin/main). Travaille UNIQUEMENT ici. Si /Users/hugo n'existe pas, tu es sur l'autre machine (/Users/famillethomas) : adapte les chemins.
+- Outils : Node et npm dans /usr/local/bin ; Foundry : export PATH="$PATH:$HOME/.foundry/bin" ; git : export PATH=/usr/bin:$PATH.
+- Sources de données :
+  - Indexeur Envio (GraphQL public) : https://indexer.dev.hyperindex.xyz/433cc83/v1/graphql — Monad 143, testnet 10143, Optimism. Schéma : indexer/SCHEMA.md. C'est aussi ce qui rend le bounty Envio visible à l'écran : affiche discrètement « indexed by Envio HyperIndex ».
+  - API 8004scan : https://www.8004scan.io/api/v1/agents?chain_id=143&search=<nom> (champs total_score, total_feedbacks, average_score), feedbacks paginés par offset. Vérifie le CORS : s'il bloque le navigateur, prends un instantané JSON daté (script de build) plutôt qu'un proxy.
+  - Contrats (AnchoredReputation, TrustGatedPayer) : lecture via viem sur le fork anvil du chantier 06, puis sur le vrai testnet (changement d'URL seulement).
+  - Journal d'événements du chantier 06 : demo/out/run-*.json, format dans demo/EVENTS.md. Le 06 tourne EN PARALLÈLE sur la branche chantier/06-ferme : lis son demo/EVENTS.md dès qu'il existe (git fetch ne suffit pas, la branche n'est pas poussée : lis le fichier dans /Users/hugo/Projet/ancre-06/demo/). S'il n'existe pas encore, code contre un bouchon conforme à la description du brief 06 (E3) et note l'écart dans le journal.
+  - Acte 1 mainnet : solver/out/mainnet.md et solver/run_mainnet.py (Eve 1,53e36 → masse 0 ; chaîne honnête #18 → #2, #3).
+
+=== À LIRE AVANT DE CODER (règle AM-3.13) ===
+1. CLAUDE.md, EN PARTICULIER le bandeau « DÉCISIONS DU 2026-10-05 » en tête (D48 : pas de MetaMask)
+2. docs/chantiers/README.md, docs/chantiers/ROADMAP.md (section 07)
+3. docs/chantiers/07-ecran-demo.md : ton brief (le cadrage ci-dessus le PRÉCISE ; en cas de conflit, ce prompt l'emporte)
+4. docs/ressources/design-demo-et-soumission.md : §3 storyboard de la vidéo (11 plans, 2:55), §4 écran (maquette textuelle, flux monadLogs, mode rejeu, stack)
+5. docs/chantiers/06-ferme-scenarios.md (les scènes que tu mets en scène) et mustdo/prompts/chantier-06-ferme.txt (ce que le 06 produit)
+6. contracts/ : src/AnchoredReputation.sol (assess, isTrusted, trustOf, statuts), src/TrustGatedPayer.sol (explain, reportRefusal), PAYER.md
+7. indexer/README.md et indexer/SCHEMA.md ; solver/out/mainnet.md
+
+=== TON TRAVAIL, DANS L'ORDRE ===
+E1. Squelette Vite + React + viem (sans wagmi) dans app/ (ou demo/screen/, justifie). Une config unique par réseau (fork, testnet, mainnet lecture seule). Un design soigné, sobre, lisible en vidéo 1080p (gros chiffres, contraste fort, thème sombre).
+E2. La vue principale : fiche d'agent à deux colonnes + classement à deux colonnes (« explorer rank » / « your contract »). Commence par l'acte 1 sur les VRAIES données Monad 143 (Envio + 8004scan + sortie du solveur) : Eve-8004, puis la chaîne honnête. Un sélecteur d'ensemble d'ancres montre que le score dépend du lecteur.
+E3. Le panneau live de l'acte 2, branché sur le journal du 06 et sur le contrat : la ferme attaque (la colonne explorer grimpe, la colonne contract reste à 0, paiement REFUSED), puis le disjoncteur (veto d'une ancre → refus au bloc suivant, chronomètre en blocs et en ms MESURÉS, pas simulés). Les refus x402 ne laissent pas de trace on-chain : affiche explain() / reportRefusal (AM-6.8).
+E4. Mode rejeu hors ligne (obligatoire) : rejoue un demo/out/run-*.json à vitesse réelle ou accélérée, même code de rendu que le live (fonction pure). C'est ce qui sauve la vidéo si le réseau flanche.
+E5. Flux temps réel sur le vrai testnet : monadLogs / newHeads en WebSocket, états Proposed → Finalized, purge des blocs spéculatifs ; n'affiche « REFUSED » qu'après finalité. Si le temps manque, du polling propre suffit : note-le.
+E6. Build statique déployable (npm run build → dist/), et demo/SCREEN.md : lancement local, liste des parties mockées, sources de chaque chiffre. 🧑 L'hébergement HTTPS public (le lien « product live ») est une décision de Hugo : propose 2 options chiffrées (ex. Vercel ou Netlify avec son compte, GitHub Pages quand le dépôt sera public) et écris « 🧑 BLOQUÉ : hébergement ».
+E7. Captures et plan de tournage : demo/VIDEO-SHOTS.md, qui adapte le storyboard (§3) à l'écran réel, plan par plan, avec ce qu'on voit, ce qu'on clique et la durée. Cible : une vidéo de démo ≤ 3:00.
+
+Skills : /run pour lancer et vérifier l'écran (capture d'écran à chaque étape), /dataviz pour les chiffres, graphes et tuiles de stats, /code-review après E3 et E5, /simplify en fin de chantier.
+
+=== COMMUNICATION ===
+Tu n'attends de réponse de personne pour avancer. Le pilote suit sans intervenir.
+(1) JOURNAL, canal unique : à la fin de CHAQUE étape, ou dès qu'un blocage survient, ajoute une entrée en bas de docs/chantiers/journal/07.md et commite sur ta branche : date et heure ; étape ; ce qui est fait ; mesures (MESURÉ / ESTIMÉ, avec la commande) ; décisions et raisons ; écarts ; blocages ; prochaine étape.
+(2) INTERFACES : tu CONSOMMES le journal d'événements du 06, l'indexeur, le contrat et le solveur. Ne modifie ni contracts/, ni solver/, ni indexer/, ni demo/ du 06 (sauf demo/SCREEN.md et demo/VIDEO-SHOTS.md, à toi). Besoin d'un champ en plus dans le journal du 06 ? Écris-le sous « INTERFACE » dans ton journal.
+(3) Un besoin qui ne relève que de Hugo (hébergement, compte, nom de domaine) : écris « 🧑 BLOQUÉ : … » dans le journal, dis-le à Hugo dans cette conversation, puis avance sur autre chose.
+
+=== RÈGLES ===
+- Sourcer et dater chaque chiffre (MESURÉ / DOC / ESTIMÉ / NON VÉRIFIÉ), à l'écran comme dans les docs.
+- Les décisions D1 à D48 ne se rouvrent pas sans preuve chiffrée.
+- Commits sur ta branche uniquement, build vert avant chaque commit.
+- PAS de push, PAS de transaction réelle, PAS de mise en ligne publique sans l'accord de Hugo. Aucune clé ni token dans le code.
+- Ne modifie ni docs/conseil/, ni ANCRE.md, ni CLAUDE.md, ni mustdo/, ni les briefs.
+
+=== FIN DE SESSION ===
+Écris docs/chantiers/rapports/07.md et commite-le : ce qui est livré (avec captures) ; ce qui est réel et ce qui est mocké ; les sources de chaque chiffre ; les latences mesurées ; l'état du live et du rejeu ; ce qui attend Hugo ; les décisions et leurs raisons ; les angles morts AM-07.n ; ce qu'il reste à faire.
+
+Commence par lire, puis écris la première entrée du journal (« démarrage : ce que j'ai compris, mon plan »), puis E1 et E2.
+
+
+=== COMPLÉMENTS DU TOUR 7 (pilote, 06/10), qui priment en cas de conflit ===
+- **Poids effectif d'une revue (D49)** : pour chaque avis affiché dans la colonne « ce que voit un explorateur », montre son poids dans la colonne « ce que voit ton contrat ». Exemple : « compte pour 0,00 : son auteur n'est atteignable depuis aucune de tes ancres ». C'est la surface 4 d'ARCHITECTURE.md, retenue pour la démo.
+- Scène « 2ᵉ saut » (D50) : rendre visible le chemin ancre → H1 → H2.
+- Renommage isTrusted → passesAnchorPolicy (02-bis, en cours) : isole l'appel dans un seul module.
+- Un refus x402 ne laisse aucune trace on-chain (AM-6.8) : affiche explain() et reportRefusal.
+- Skills : /dataviz pour les chiffres, /run pour vérifier l'écran.

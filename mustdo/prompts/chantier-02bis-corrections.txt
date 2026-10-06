@@ -1,0 +1,75 @@
+Tu es la session du CHANTIER 02-bis d'ANCRE : la correction des trois défauts de conception du contrat (AM-08.A, B, C) et le renommage de isTrusted en passesAnchorPolicy (D48). Tu travailles en autonomie : les choix techniques de ton périmètre sont les tiens, et tu les justifies par écrit.
+
+=== OÙ TU TRAVAILLES ===
+Dossier : /Users/hugo/Projet/ancre-02bis, un worktree git sur la branche chantier/02bis-corrections. Travaille UNIQUEMENT ici, jamais dans /Users/hugo/Projet/ancre (session pilote) ni dans un autre worktree.
+
+=== À LIRE AVANT DE CODER (règle AM-3.13) ===
+1. CLAUDE.md, puis ANCRE.md
+2. docs/conseil/CR-conseil.md : le journal D1 à D53 en tête, puis les sections « Tour 7 », « Résultats du chantier 08 » (AM-08.A/B/C) et « Veille du 05/10 »
+3. docs/conseil/tour7.md : la spécification D-7.1 et le plan daté
+4. docs/chantiers/ROADMAP.md et docs/chantiers/README.md (règles et skills)
+5. docs/chantiers/02bis-corrections.md (ton brief) ; contracts/ en entier : src, test, ENCODING.md, PROOFS.md, GAS.md, PAYER.md ; docs/chantiers/rapports/02.md, integration.md et 08.md ; docs/erc/relecture-conseil.md (la description des trois défauts)
+
+=== TON TRAVAIL, DANS L'ORDRE ===
+E1. Tests qui REPRODUISENT les trois attaques sur le contrat actuel, et qui doivent échouer. Pour A, utilise aussi le vecteur de démo mainnet_slash_anchor. Commite-les à part, pour garder une trace datée.
+E2. Correction A (AnchorAsSource ; invalidation par proveWallet).
+E3. Correction B (négatifs des contrôleurs conservés ; ancre approuvée ou opératrice = veto en mode strict ; proveApproval en mode rapide). Mesure le gas d'assess en mode strict (le tour 7 l'estime à environ 32 k de plus).
+E4. Correction C (forme canonique à la soumission, provenFalse[setId][hash canonique], y compris sous REGISTRY_CHANGED). Mesure son coût.
+E5. Renommage passesAnchorPolicy dans le contrat, dans TrustGatedPayer et dans leurs tests. Mets à jour ENCODING.md (règle B, et AM-03.3 : appel direct obligatoire à submitCertificate), PROOFS.md et GAS.md (taille du contrat comprise).
+E6. Vecteurs communs avec le chantier 04-bis, qui tourne en parallèle dans /Users/hugo/Projet/ancre-04bis : ancre ≠ source, négatif d'un contrôleur, ligne prouvée fausse resoumise, 2ᵉ saut (H1 approuvé par DEUX ancres). Tu ne modifies jamais solver/. Tu lis leur branche : git show chantier/04bis-solveur:solver/... Test différentiel sur leurs vecteurs dès qu'ils sont commités.
+E7. /code-review high, puis /security-review, sur tout contracts/src (pas seulement ton diff). C'est le seul audit complet avant le déploiement : la revue maximale du 05/10 a été interrompue (AM-10.9).
+E8. Prépare le script de déploiement sur le testnet, simulé seulement, puis écris « 🧑 BLOQUÉ : accord de Hugo pour déployer ».
+
+=== COMMUNICATION : OBLIGATOIRE ===
+Tu n'attends de réponse de personne. La session pilote suit sans intervenir.
+(1) JOURNAL, canal unique. N'essaie pas d'envoyer de messages : ListAgents ne permet pas aux sessions de se reconnaître (AM-PIL.1).
+    À la fin de CHAQUE étape, ou dès qu'un blocage survient, ajoute une entrée en bas de docs/chantiers/journal/02bis.md et commite sur ta branche. L'entrée contient :
+    - date et heure ;
+    - l'étape ;
+    - ce qui est fait ;
+    - les mesures (statut MESURÉ / ESTIMÉ, avec la commande) ;
+    - les décisions techniques et leur raison ;
+    - les écarts ;
+    - les blocages ;
+    - la prochaine étape.
+    Toute modification d'interface (encodage, règle d'arête, ABI, vecteurs) va sous « INTERFACE ».
+(2) Un besoin qui ne relève que de Hugo (transaction, compte, MON, décision) : écris « 🧑 BLOQUÉ : … » dans le journal, dis-le à Hugo, puis avance sur autre chose.
+
+=== RÈGLES ===
+- Réponds en français. Code et docs techniques en anglais.
+- Sourcer et dater chaque chiffre (MESURÉ / DOC / ESTIMÉ / NON VÉRIFIÉ). Les décisions D1 à D53 ne se rouvrent pas sans preuve chiffrée.
+- Commits sur ta branche uniquement, tests verts avant chaque commit. PAS de push, PAS de transaction réelle, PAS de publication, sans l'accord de Hugo.
+- Ne modifie pas docs/conseil/, ANCRE.md, CLAUDE.md, mustdo/, ni les briefs. Le pilote fusionne.
+- Pièges connus :
+  - AM-02.9 : vérifie que /code-review et /security-review portent bien sur TON worktree ;
+  - AM-INT.2 : chaque test de refus doit vraiment tester le refus ;
+  - tests en fork : ETH_RPC_TIMEOUT=900, et anvil --timeout 120000 --retries 10.
+- Outils : export PATH="$PATH:$HOME/.foundry/bin" (Foundry 1.8.3, network = "monad") ; python3 ; Node dans /usr/local/bin ; pnpm via `npx -y pnpm@9` ; git : export PATH=/usr/bin:$PATH.
+  RPC : mainnet https://rpc.monad.xyz, historique complet sur https://rpc1.monad.xyz, testnet https://testnet-rpc.monad.xyz.
+
+=== FIN DE SESSION ===
+Écris docs/chantiers/rapports/02bis.md et commite-le. Il contient :
+- ce qui est livré ;
+- les mesures ;
+- les décisions et leurs raisons ;
+- les angles morts AM-02bis.n ;
+- les écarts ;
+- les questions pour Hugo ;
+- ce qui reste à faire.
+
+Commence par lire, puis écris la première entrée du journal (« démarrage : ce que j'ai compris, mon plan »), puis attaque la première étape.
+
+
+=== CONSTATS DE LA REVUE MAXIMALE DU 05/10 (5 agents sur 20 ont fini ; docs/revue/revue-max-2026-10-05-partielle.md). À TRAITER EN PRIORITÉ, AVANT E1 ===
+R1. CRITIQUE, trouvé par deux agents indépendants et confirmé par un test (scratchpad .../angleD/contracts/test/PocD.t.sol) : dans _verifyRows (environ l. 1120), `if (client == address(0)) continue;` n'avance pas `off` au-delà des arêtes de la ligne. Or _appendNodes accepte un nœud address(0), y compris via addNodes ouvert à tous. Toutes les lignes suivantes échappent à la relecture du registre : **une arête fabriquée est acceptée en Registry-verified**, ce qui annule la garantie de D32.
+    Correction : avancer off (ou refuser nE != 0 si client == 0), refuser address(0) dans _appendNodes, require(off == rows.length) en fin de _verifyRows. Vérifier aussi l'ordre de u et u < n. Test de non-régression obligatoire, à partir du PoC.
+R2. La garde « REFUSED first » se contourne en réencodant (elle compare des racines brutes) : c'est AM-08.C, corrigé par ta forme canonique (D48-C). Elle est aussi sautée quand registryChanged est vrai, alors qu'ENCODING §5 la place avant toutes les clauses d'acceptation.
+R3. Lignes à sPlus déclaré : eUp est sous-estimé quand une arête positive engagée est révoquée, à cause de la formule §7.1 elle-même (budget gardé à max(GRID, sPlus)). Corrige la formule, PROOFS.md et un test.
+R4. La règle de forme est testée sur la valeur décodée, pas sur le bit SRC : des lignes d'ancre ou d'adresse avec SRC = 0 passent, et une ligne d'adresse peut servir d'alias (_clientRare, environ l. 1179 ; le contrôle d'alias, environ l. 1014, compare le SRC brut). À traiter avec ta forme canonique.
+R5. _verifyOwners ne contrôle pas l'empreinte des ancres (« 0 pour les autres nœuds ») ni celle des agents sans masse. dryRun saute la règle de forme et la borne 2^63 sur ownerFp.
+R6. Un échec de lecture du registre est interprété comme un agent brûlé (proveEdge, environ l. 1652 ; _sourceHolds, environ l. 1830). Une upgrade UUPS qui dépasse le plafond de 120 k gas suffirait à mettre tous les sets en STALE. Distingue l'échec de lecture d'une vraie réponse.
+R7. Transfert en mode strict : le contrôle dépend de trust ≠ 0 au lieu de « masse > 0 » (effet limité au statut affiché).
+R8. TrustGatedPayer, qui a passé l'audit :
+    - un set avec strictTransfer = false paie l'acheteur d'un agent vendu (confirmé) : interdis-le à setPolicy, ou documente-le ;
+    - si la trésorerie est aussi opératrice, une seule clé vide tout par sweep (confirmé). Le script script/t1/T1.s.sol déploie exactement comme ça (owner = trésorerie = opérateur) : sépare les rôles dans les scripts de déploiement.
+R9. Nettoyage, optionnel : le calcul d'adresse des lanes est recopié 5 fois (vectorAt existe), l'en-tête de ligne est décodé 3 fois, R6 et R7 sont codées deux fois, ownerFingerprint est réécrit 3 fois. À traiter seulement si /simplify le justifie, et après les corrections.

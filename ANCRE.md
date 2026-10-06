@@ -41,7 +41,7 @@ Le message de la démo : *sur le mainnet, la moyenne ment ; ANCRE refuse de paye
 - **Bounties visés (D38)** :
   - **Envio « Best Use of Envio »**, 1 k$ ;
   - **Mera « One Passkey, Many Keys »**, 2,5 k$ ;
-  - **MetaMask « Best Agent Wallet Plugin »**, 2,5 k$. Il est affiché en track 01 : l'éligibilité depuis la track 04 est à confirmer.
+  - ~~MetaMask « Best Agent Wallet Plugin »~~ : **réservé à la track Onchain Finance & Trading, donc abandonné (D53, 06/10)**. Le plugin `mm ancre` reste dans le produit.
   - Fiches complètes : `docs/conseil/bounties-sponsors.md`.
 - **Leçon d'un jury précédent** (5e place) : *« idée bonne, mais pas assez novatrice ; l'analyse n'a rien apporté »*. Il faut donc de la nouveauté et une démo qui se **ressent** au lieu de s'expliquer. Pas de brique IA décorative.
 
@@ -356,7 +356,7 @@ Ancres : clés « demo » ; Mera (PRF du passkey) pour un usage hors wallet ─�
 | Kanmani / Sentinel / Assay (#10252, #10256, #10257, un seul owner) | « Confiance par le prix » : reçu de paiement vérifié, verdict daté par bloc **via une API x402 payante, non lisible par un contrat**, caution on-chain. Pas d'ancres ni de graphe | **D45** : *« A receipt can be true and still come from a farm »*. Nous : ancres du lecteur, borne Sybil, certificat on-chain, lecture dans le payeur, veto, norme. Complémentaire (D46) : exemple d'`edgeFilterId`, sans dépendance |
 | ~18 clones « passeport d'agent » | Produisent des signaux | ANCRE **agrège** pour le lecteur |
 
-**Le message** : *« la couche que la norme délègue au lecteur, et la preuve sur le mainnet que la moyenne ment »*. Face à la pile « confiance par le prix » (D45) : *« A receipt can be true and still come from a farm. ANCRE doesn't ask whether the payment happened — it asks whether anyone **you** trust vouches for who made it, and your contract reads the answer before it pays. »*
+**Le message** : *« la couche que la norme délègue au lecteur, et la preuve sur le mainnet que la moyenne ment »*. **Ce qui nous distingue au 05/10 (D50)** : la confiance **se propage au-delà d'un saut** depuis les ancres du lecteur, **avec une borne Sybil et un certificat vérifié on-chain**. Les concurrents s'arrêtent à un saut (trudransh/Assay) ou ne vérifient rien on-chain. La scène « 2ᵉ saut » de la démo le montre. Face à la pile « confiance par le prix » (D45) : *« A receipt can be true and still come from a farm. ANCRE doesn't ask whether the payment happened — it asks whether anyone **you** trust vouches for who made it, and your contract reads the answer before it pays. »*
 
 **Modèle économique** (D27) :
 - le propriétaire d'un ensemble d'ancres paie la certification ;

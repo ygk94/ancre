@@ -8,6 +8,46 @@
 
 ## 🔴 Cette semaine, parce que ça bloque d'autres chantiers
 
+- [ ] **06/10, suite de ta réponse** :
+  - **Compte Alchemy gratuit (D55)** : crée-le, puis donne aux sessions, par un fichier `.env` local et jamais dans le dépôt :
+    - la **clé d'API** ;
+    - le **jeton Notify** (webhooks) ;
+    - une **URL HTTPS publique** pour recevoir les webhooks. Une fonction serverless Vercel sur le domaine de démo suffit.
+  - **Bounty Alchemy (D54)** : colle-moi la fiche officielle d'Alchemy depuis la plateforme (critères, livrables).
+  - **Modale des règles** : tu es en train de la récupérer.
+  - **Divulgation aux auteurs d'ERC-8004** : le dépôt passe public le 12/10. Or il contient la description du contournement du garde-fou et de l'EOA d'upgrade. **Le brouillon (c) de `docs/erc/drafts/` doit donc partir avant le 12/10**, ou ces passages doivent être retirés de la version publique. À trancher.
+  - **Keystore de démo** : à créer avec la commande donnée dans la conversation, puis à alimenter au faucet (au moins 15 MON et 1 USDC de testnet).
+  - **Domaine HTTPS pour Mera** : choisir le nom d'hôte, définitif, puisque le passkey y sera lié.
+
+- [ ] **📅 Ton plan jour par jour (tour 7, D52)** :
+  - **Lun 06/10** :
+    - inscription et projet (track 04, bounties Envio et Mera) ;
+    - recopie de la modale Rules ;
+    - **choisir un éventuel 3ᵉ bounty « All tracks »** (voir ci-dessous) ;
+    - **décision de divulgation**, et envoi du brouillon (c) si oui ;
+    - **soumission d'assurance** avec le dépôt encore privé, si la plateforme l'accepte (sinon, divulgation avant) ;
+    - **keystore chiffré** et faucet testnet (au moins 15 MON et 1 USDC) ;
+    - **domaine HTTPS et `rpId`** pour Mera ;
+    - lancer les sessions 02-bis, 04-bis et 06 (prompts dans `mustdo/prompts/`).
+  - **Mar 07/10** : feu vert pour T1 et MON de testnet à disposition ; **prototype Mera** sur tes deux appareils.
+  - **Mer 08/10** : autoriser le **déploiement sur le testnet** (environ 0,9 MON de testnet).
+  - **Jeu 09/10** : **valider le budget mainnet** (environ 2 MON, ESTIMÉ) puis l'exécution minimale ; **dépôt public et licence** (MIT ou Apache-2.0).
+  - **Ven 10/10** : relire le README et le write-up.
+  - **Sam 11/10** : **voix et tournage** de la vidéo de 3 minutes ; rendre le dépôt public (après la divulgation).
+  - **Dim 12/10** : **soumission finale**. Le lundi 13/10 sert de marge.
+- [ ] **Bounties (D53)** : MetaMask est retiré, puisqu'il est réservé à la track Onchain Finance. **Relève sur la plateforme quels bounties sont marqués « All tracks »** et colle-moi la liste.
+  - Candidats, s'ils sont ouverts à la track 04 :
+    - **Nansen** (5 k$) : des labels de wallets dans le panneau de diagnostics des ancres et l'audit. À viser seulement s'ils changent un résultat ;
+    - **Chainlink CRE** (3 k$) : le certificateur en workflow. Coûteux à 6 jours ;
+    - **Alchemy** (1 k$ en crédits) : quasi gratuit si `rpc1` compte.
+  - **Recommandation** : au plus **un** bounty de plus, et seulement s'il tient en un jour.
+
+- [ ] **⏰ AUJOURD'HUI, 05/10 (veille du 05/10, `docs/ressources/veille-2026-10-05-hackathon.md`)** :
+  - **Connecte-toi à hackathon.monad.xyz**, crée l'équipe et le projet si ce n'est pas fait (la clôture des inscriptions serait le **06/10**, une seule source tierce), et **recopie-moi la modale « Rules & Guidelines »**. Le formulaire de soumission est ouvert depuis le 02/10 et reste modifiable.
+  - ~~**Pose la question MetaMask sur le forum de support**~~ **Réglé le 06/10 : le bounty MetaMask n'est pas ouvert à la track 04 (D53).** (réponse en environ 90 min d'après un participant). D'après la doc officielle `/tracks`, seuls les bounties « All tracks » se combinent avec n'importe quelle track, et celui de MetaMask est en « Onchain Finance & Trading ». **Sans réponse positive, le plugin ne compte pas pour le bounty.** Il reste utile au produit et à la démo.
+  - Option, d'après le même participant : publier un **« progress update »** sur la plateforme, qui donnerait accès aux mentors.
+  - **Divulgation (D29)** : la date recommandée était le 05/10, c'est-à-dire aujourd'hui. Le brouillon (c) est dans `docs/erc/drafts/`.
+
 - [ ] **0. ⏰ S'inscrire AVANT LE 06/10.** Un concurrent qui cite les Rules v3.0 affirme que **les inscriptions ferment le 06/10** et que le formulaire de soumission ouvre le 02/10. C'est NON CONFIRMÉ, mais on ne prend pas le risque : inscris-toi et crée le projet dès maintenant (voir le point 2). Source : README de `precious-akpan/monad-metropolis-merchant-rails`, recopié dans `docs/ressources/design-demo-et-soumission.md` §1.
 
 - [ ] **1. Lire les règles officielles** sur hackathon.monad.xyz, modale « Rules & Guidelines », Rules v3.0.
