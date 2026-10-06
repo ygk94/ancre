@@ -8,6 +8,13 @@
 
 ## 🔴 Cette semaine, parce que ça bloque d'autres chantiers
 
+- [ ] **Chantier 03, brancher l'indexeur Envio sur le contrat déployé (06/10)**. L'audit des certificats en direct est fini et testé (`indexer/src/handlers/ancre.ts`), mais l'adresse du contrat est un **placeholder `0x…01`**. **Juste après le déploiement d'`AnchoredReputation` sur le testnet** (étape du chantier 06) :
+  1. Donne-moi l'**adresse** du contrat et le **bloc de son déploiement** (ou fais-le toi-même : dans `indexer/config.yaml`, chaîne 10143, contrat `AnchoredReputation`, remplacer l'adresse et ajouter `start_block: <bloc>`).
+  2. Ton clone local d'`ancre-indexer` doit pointer vers **`ygk94/ancre-indexer`** : `git -C <clone> remote set-url origin https://github.com/ygk94/ancre-indexer.git` (le script refuse sinon).
+  3. `cd indexer && scripts/publish.sh <clone> --deploy` : publie et redéploie sur Envio Cloud. **C'est le 2ᵉ des 3 déploiements du plan gratuit** : ne le lance qu'une fois l'adresse définitive.
+  4. Vérifie sur envio.dev/app que le déploiement est *synced* ; je contrôle ensuite qu'un certificat de la démo apparaît bien `AUDITED` / `CLEAN` dans `SetHealth`.
+  Même opération pour le mainnet si l'exécution minimale (D40) a lieu : ce serait le 3ᵉ et dernier déploiement.
+
 - [ ] **Chantier 06, acte 2 sur le vrai testnet (06/10)**. Tout est prêt et répété ; **8 scènes PASS en fork**, dont le 2ᵉ saut. Il ne manque que toi. Détail : `demo/RUNBOOK.md` §5 ; coût : `demo/BUDGET.md`.
   1. **Keystore** : `cast wallet new ~/.foundry/keystores`, puis renommer le fichier en `~/.foundry/keystores/ancre-demo`. **Sa clé est la graine de tous les comptes de la démo** (ancres, ferme, fournisseurs) : ne l'utilise pour rien d'autre. Ça peut être le même keystore que celui du plan ci-dessous (« au moins 15 MON ») ; l'acte 2 seul en consomme environ 5.
   2. **Faucets** sur l'adresse affichée : **5 MON** (https://faucet.monad.xyz) et **1 USDC** (https://faucet.circle.com, réseau Monad testnet).
