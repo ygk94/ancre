@@ -154,3 +154,17 @@ Mock d'identité étendu : `getApproved`, `isApprovedForAll`, `approve`, `isAuth
 Le relais vers l'indexeur et le certificateur (04) : avant de soumettre sur un set qui a des faits, rafraîchir les faits périmés.
 
 **Prochaine étape** : `/security-review` (E7, 2/2).
+
+## 2026-10-06 (soir) — E7 (2/2) : `/security-review` sur ce worktree
+
+**Piège AM-02.9 confirmé.** Le contexte git que la commande injecte venait de `/Users/hugo/Projet/ancre` (`main`, propre, diff vide). J'ai lancé la revue sur `/Users/hugo/Projet/ancre-02bis` : diff `bc2d911..HEAD` de `contracts/src` et `contracts/script`, plus les trois fichiers source en entier.
+
+**Résultat.** Aucun constat à confiance ≥ 8. Le seuil du skill étant 8, le rapport final de la revue est vide. Deux candidats MEDIUM, à 6-7 :
+1. **Confiance 7.** `_checkFacts` testait chaque arête positive prouvée et omise **séparément** contre le sPlus déclaré : un seul petit sPlus « couvrait » plusieurs arêtes prouvées, et la dilution prouvée revenait. **Corrigé malgré le seuil**, parce que le correctif est trivial : les omissions sont sommées et doivent tenir sous sPlus. Test : `test_review_omittedProvenEdgesAreSummed`.
+2. **Confiance 6.** Un EOA délégué par EIP-7702 passe `msg.sender == tx.origin` et peut cacher ses lignes dans un appel interne. **Non corrigé.** Refuser `tx.origin.code.length != 0` exclurait aussi tout EOA 7702 légitime, et les lignes restent récupérables en rejouant la transaction sur un fork. Documenté en AM-02bis.6.
+
+**Mesure** (MESURÉ, `ANCRE_VECTORS=.v04bis/solver/vectors/ forge test`) : **188 tests, tous verts**.
+
+**Prochaine étape** : rapport 02bis, puis 🧑 accord de Hugo pour le déploiement testnet.
+
+🧑 BLOQUÉ : accord de Hugo pour déployer sur le testnet. Le script `script/testnet/Deploy.s.sol` est prêt et simulé : 10,58 M gas, soit ≈ 1,06 MON à 100 gwei (2,15 MON au plafond de 203 gwei). Il faut le keystore et du MON de testnet ; le payeur doit être déployé avec trois adresses distinctes (owner, trésorerie, opérateur).

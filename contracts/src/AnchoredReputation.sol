@@ -1322,11 +1322,12 @@ contract AnchoredReputation {
         uint256 self = key >> 248 == KIND_AGENT ? key & ID_MASK : type(uint256).max;
         uint256 eo = sp & type(uint128).max;
         uint256 nE = sp >> 128;
-        uint256 sPos;
+        uint256 sPos; // committed positive sum, then + the proven positive edges left out
         for (uint256 e; e < nE; ++e) {
             int256 w = int16(uint16(bytes2(rows[eo + e * (W + 6) + W:eo + e * (W + 6) + W + 2])));
             if (w > 0) sPos += uint256(w);
         }
+        uint256 sCommitted = sPos;
         for (uint256 f; f < nf; ++f) {
             uint256 j = fa[f];
             if (j == self) continue;
@@ -1343,10 +1344,15 @@ contract AnchoredReputation {
                 }
             }
             if (have == want) continue;
-            // a proven positive edge left out under a declared sPlus that covers it: a declared omission
-            if (have == 0 && want > 0 && sDecl >= sPos + uint256(want)) continue;
+            // a proven positive edge left out under a declared sPlus: a declared omission, if the declared sum
+            // covers ALL the proven positive edges left out (summed, security review of 06/10)
+            if (have == 0 && want > 0) {
+                sPos += uint256(want);
+                continue;
+            }
             revert ProvenRowResubmitted(u);
         }
+        if (sPos > sCommitted && sDecl < sPos) revert ProvenRowResubmitted(u); // no or too small a declaration
     }
 
     /// Key of a source claim (D48-C): node u resolves to `src` (0: source-less), through its wallet or its owner.

@@ -563,4 +563,32 @@ contract BisTest is AncreBase {
         (ok,) = address(ar).call(_cd(setId, g, t, 2));
         assertTrue(ok, "a direct submission is accepted");
     }
+
+    /// security review of 06/10: each proven positive edge was checked alone against sPlus, so one small sPlus
+    /// "covered" several omitted proven edges (the proven dilution came back). They are now summed.
+    function test_review_omittedProvenEdgesAreSummed() public {
+        bytes32 setId = _set(1, 1, false); // attested: no replacement rule in the way
+        address A = _anchors(1)[0];
+        vm.startPrank(A);
+        rep.giveFeedback(101, 50, 0, "vouch", ""); // X +0.5, committed
+        rep.giveFeedback(102, 100, 0, "vouch", ""); // Y +1, omitted
+        rep.giveFeedback(103, 100, 0, "vouch", ""); // Z +1, omitted
+        vm.stopPrank();
+        CertLib.Graph memory g = CertLib.newGraph(4, 1, AN, AD, 4, 4);
+        g.addRow(0, address(0), _one(1), _oneW(5000));
+        g.ownerFp[1] = uint64(uint160(OX));
+        _ok(setId, g, g.fixedPoint(60));
+        ar.proveEdge(setId, _rowRef(g, 0), _none(), "", 102);
+        AnchoredReputation.RowRef memory r = _rowRef(g, 0);
+        r.path = new bytes32[](0);
+        ar.proveEdge(setId, r, _none(), abi.encodePacked(uint32(102), int16(0), int16(10_000)), 103);
+        CertLib.Graph memory h = CertLib.newGraph(4, 1, AN, AD, 4, 4); // sPlus 15 000 covers one, not both
+        h.addRowDecl(0, address(0), _one(1), _oneW(5000), 15_000);
+        h.ownerFp[1] = uint64(uint160(OX));
+        _refused(setId, h, h.fixedPoint(60), 2, abi.encodeWithSelector(PROVEN_ROW, 0));
+        CertLib.Graph memory c = CertLib.newGraph(4, 1, AN, AD, 4, 4); // the true sum declared: accepted
+        c.addRowDecl(0, address(0), _one(1), _oneW(5000), 25_000);
+        c.ownerFp[1] = uint64(uint160(OX));
+        _ok(setId, c, c.fixedPoint(60));
+    }
 }
