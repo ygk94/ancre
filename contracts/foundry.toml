@@ -12,10 +12,10 @@ via_ir = true
 network = "monad"
 gas_limit = "18446744073709551615"
 memory_limit = 2147483648
-fs_permissions = [{ access = "read", path = "./test/diff/vectors" }, { access = "read", path = "./test/fixtures" }, { access = "read", path = "../solver/vectors" }]
+fs_permissions = [{ access = "read", path = "./test/diff/vectors" }, { access = "read", path = "./test/fixtures" }, { access = "read", path = "../solver/vectors" }, { access = "read", path = "./.v04bis" }]
 
 [rpc_endpoints]
-monad = "https://rpc.monad.xyz"
+monad = "https://rpc1.monad.xyz" # full history (measured 27/09): rpc.monad.xyz prunes old state
 monad_testnet = "https://testnet-rpc.monad.xyz"
 
 [fmt]

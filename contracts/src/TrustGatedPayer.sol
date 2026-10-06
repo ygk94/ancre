@@ -31,7 +31,10 @@ interface IPermit2Nonces {
 ///   2. the payer is not paused and the amount is <= maxPerPayment;
 ///   3. the payee is the ERC-8004 agentWallet of the declared agentId;
 ///   4. an operator signed the AncrePayment;
-///   5. `AnchoredReputation.isTrusted(agentId, setId)` is true (D39: never the status alone, AM-6.1).
+///   5. `AnchoredReputation.passesAnchorPolicy(agentId, setId)` is true (D39: never the status alone, AM-6.1;
+///      renamed from isTrusted by D48, AM-9.5).
+/// The set must be in strict transfer mode (D35): in fast mode a sold agent stays OK until someone proves the
+/// transfer, and the payer would pay the buyer's new agentWallet on the seller's reputation (R8, 05/10).
 /// Nothing changes in x402, the facilitator or the token. The only way around the gate is a plain
 /// `transfer` by a key holding USDC (AM-6.9): this contract has no key, and funds only leave it through
 /// a guarded authorisation or `sweep` to the immutable treasury.
@@ -100,7 +103,7 @@ contract TrustGatedPayer {
         WALLET_MISMATCH, // payee != agentWallet(agentId): the server lied about the agent
         BAD_OPERATOR_SIG, // the AncrePayment is not signed by an operator (or high-s / bad v)
         ANCRE_STATUS, // ANCRE cannot conclude: status != OK (NO_CERT, STALE, TRANSFERRED, VETOED, REGISTRY_CHANGED)
-        UNTRUSTED // status OK but isTrusted is false (unknown agent, below theta / rho)
+        UNTRUSTED // status OK but passesAnchorPolicy is false (unknown agent, below theta / rho)
     }
 
     /// A parsed blob. `parse` != OK means the blob is not a payment of this contract for `hash`.
@@ -166,6 +169,8 @@ contract TrustGatedPayer {
     error NotSettleable(); // reportRefusal: already used / cancelled, expired or not yet valid
     error AlreadyReported();
     error TransferFailed();
+    error FastTransferSet(); // R8: the set does not read ownerOf live (strictTransfer = false)
+    error OperatorIsTreasury(); // R8: one key would sign payments AND receive every sweep
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
@@ -185,6 +190,7 @@ contract TrustGatedPayer {
         uint256 maxPerPayment_
     ) {
         if (owner_ == address(0) || treasury_ == address(0) || operator_ == address(0)) revert ZeroAddress();
+        if (operator_ == treasury_) revert OperatorIsTreasury();
         if (address(usdc_).code.length == 0) revert NoCode(address(usdc_));
         if (address(ancre_).code.length == 0) revert NoCode(address(ancre_));
         if ((permit2_ == address(0)) != (uptoProxy_ == address(0))) revert ZeroAddress();
@@ -216,7 +222,7 @@ contract TrustGatedPayer {
         if (p.kind == KIND_CANCEL) return _sigOk(p, blob) ? MAGIC : INVALID; // never moves funds; works when paused
         if (_policy(p.agentId, p.to, p.value) != Reason.OK) return INVALID;
         if (!_sigOk(p, blob)) return INVALID;
-        return _isTrusted(p.agentId) ? MAGIC : INVALID;
+        return _passes(p.agentId) ? MAGIC : INVALID;
     }
 
     // ================================================================== reading (screen, plugin)
@@ -313,6 +319,7 @@ contract TrustGatedPayer {
     // ================================================================== administration
     function setOperator(address op, bool allowed) external onlyOwner {
         if (op == address(0)) revert ZeroAddress();
+        if (allowed && op == treasury) revert OperatorIsTreasury();
         uint256 free = MAX_OPERATORS;
         for (uint256 i; i < MAX_OPERATORS; ++i) {
             address cur = _operators[i];
@@ -367,7 +374,9 @@ contract TrustGatedPayer {
 
     // ================================================================== internals
     function _setPolicy(bytes32 setId_, uint256 maxPerPayment_) internal {
-        if (ancre.policyOf(setId_).theta == 0) revert UnknownSet(); // theta > 0 is enforced at registration
+        AnchoredReputation.Policy memory q = ancre.policyOf(setId_);
+        if (q.theta == 0) revert UnknownSet(); // theta > 0 is enforced at registration
+        if (!q.strictTransfer) revert FastTransferSet();
         setId = setId_;
         maxPerPayment = maxPerPayment_;
         emit PolicySet(setId_, maxPerPayment_);
@@ -505,15 +514,15 @@ contract TrustGatedPayer {
         return address(uint160(w)) == to ? Reason.OK : Reason.WALLET_MISMATCH;
     }
 
-    function _isTrusted(uint256 agentId) internal view returns (bool) {
+    function _passes(uint256 agentId) internal view returns (bool) {
         (bool ok, bytes memory ret) =
-            address(ancre).staticcall(abi.encodeCall(AnchoredReputation.isTrusted, (agentId, setId)));
+            address(ancre).staticcall(abi.encodeCall(AnchoredReputation.passesAnchorPolicy, (agentId, setId)));
         return ok && ret.length == 32 && uint256(bytes32(ret)) == 1; // fail closed
     }
 
     function _ancreReason(AnchoredReputation.Assessment memory a) internal pure returns (Reason) {
         if (a.status != AnchoredReputation.Status.OK) return Reason.ANCRE_STATUS;
-        return a.trusted ? Reason.OK : Reason.UNTRUSTED;
+        return a.passesPolicy ? Reason.OK : Reason.UNTRUSTED;
     }
 
     function _domainOf(address token) internal view returns (bool ok, bytes32 dom) {

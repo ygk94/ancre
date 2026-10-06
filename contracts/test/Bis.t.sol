@@ -114,7 +114,7 @@ contract BisTest is AncreBase {
         g.ownerFp[x + 1] = uint64(uint160(OZ));
         (bool ok,) = _try(setId, g, g.fixedPoint(60), 2);
         assertFalse(ok, "fabricated edge accepted at Registry-verified");
-        assertFalse(ar.isTrusted(103, setId));
+        assertFalse(ar.passesAnchorPolicy(103, setId));
         assertEq(rep.getLastIndex(103, OX), 0, "X never rated Z");
     }
 
@@ -142,7 +142,7 @@ contract BisTest is AncreBase {
     function test_A_anchorAsSourceRefused() public {
         (bytes32 setId, CertLib.Graph memory g) = _anchorAsSource();
         _refused(setId, g, g.fixedPoint(80), 2, abi.encodeWithSelector(ANCHOR_AS_SOURCE, 2));
-        assertFalse(ar.isTrusted(103, setId), "one stolen anchor key must not pass m = 2");
+        assertFalse(ar.passesAnchorPolicy(103, setId), "one stolen anchor key must not pass m = 2");
     }
 
     /// the same at the Submitter-attested level (the rule is a shape rule, no registry read)
@@ -168,7 +168,7 @@ contract BisTest is AncreBase {
         g.ownerFp[2] = uint64(uint160(OX));
         g.ownerFp[4] = uint64(uint160(OZ));
         _ok(setId, g, g.fixedPoint(80));
-        assertFalse(ar.isTrusted(103, setId), "E: one column only, m = 2 refuses");
+        assertFalse(ar.passesAnchorPolicy(103, setId), "E: one column only, m = 2 refuses");
     }
 
     // ================================================================== B (AM-08.15)
@@ -208,9 +208,10 @@ contract BisTest is AncreBase {
         CertLib.Graph memory g = CertLib.newGraph(3, 2, AN, AD, 3, 2);
         g.addRow(0, address(0), _one(2), _oneW(10_000));
         g.addRow(1, address(0), _one(2), _oneW(10_000));
+        g.addRow(2, OX, new uint256[](0), new int256[](0)); // explicit empty row: no truncation margin
         g.ownerFp[2] = uint64(uint160(OX));
         _submit(setId, g, g.fixedPoint(60), type(uint256).max);
-        assertTrue(ar.isTrusted(101, setId));
+        assertTrue(ar.passesAnchorPolicy(101, setId));
     }
 
     /// preventive censorship: approving an anchor BEFORE it slashes silences it in the registry. In strict mode
@@ -221,21 +222,21 @@ contract BisTest is AncreBase {
         AnchoredReputation.Assessment memory x = ar.assess(101, setId, true);
         assertEq(uint8(x.status), uint8(AnchoredReputation.Status.VETOED), "getApproved(j) == anchor: veto");
         assertEq(x.vetoCount, 1);
-        assertFalse(ar.isTrusted(101, setId));
+        assertFalse(ar.passesAnchorPolicy(101, setId));
     }
 
     function test_B_operatorAnchorVetoesStrict() public {
         bytes32 setId = _trustedX(true);
         idr.setOperator(OX, _anchors(2)[0], true);
         assertEq(uint8(ar.assess(101, setId, true).status), uint8(AnchoredReputation.Status.VETOED));
-        assertFalse(ar.isTrusted(101, setId));
+        assertFalse(ar.passesAnchorPolicy(101, setId));
     }
 
     /// fast mode: the same fact is posted by a proof, proveApproval(setId, agentId, anchorIndex)
     function test_B_proveApprovalFastMode() public {
         bytes32 setId = _trustedX(false);
         idr.approve(101, _anchors(2)[1]);
-        assertTrue(ar.isTrusted(101, setId), "fast mode: no live approval read");
+        assertTrue(ar.passesAnchorPolicy(101, setId), "fast mode: no live approval read");
         (bool ok,) = address(ar).call(abi.encodeWithSignature("proveApproval(bytes32,uint256,uint256)", setId, 101, 1));
         assertTrue(ok, "proveApproval");
         assertEq(uint8(ar.assess(101, setId, true).status), uint8(AnchoredReputation.Status.VETOED));

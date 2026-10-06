@@ -180,9 +180,9 @@ contract RegistryBenchTest is AncreBase {
         c.check(ar, agent, sid, false);
         emit log(string.concat("P1|READ|assess no veto, strict", tag, "|marginal=", vm.toString(vm.lastCallGas().gasTotalUsed - base)));
         c.trusted(ar, agent, sid, true);
-        emit log(string.concat("P1|READ|isTrusted, agent with mass", tag, "|marginal=", vm.toString(vm.lastCallGas().gasTotalUsed - base)));
+        emit log(string.concat("P1|READ|passesAnchorPolicy, agent with mass", tag, "|marginal=", vm.toString(vm.lastCallGas().gasTotalUsed - base)));
         c.trusted(ar, 999_999, sid, true);
-        emit log(string.concat("P1|READ|isTrusted, unknown agent (cheap refusal)", tag, "|marginal=", vm.toString(vm.lastCallGas().gasTotalUsed - base)));
+        emit log(string.concat("P1|READ|passesAnchorPolicy, unknown agent (cheap refusal)", tag, "|marginal=", vm.toString(vm.lastCallGas().gasTotalUsed - base)));
     }
 
     function test_bench_small() public {

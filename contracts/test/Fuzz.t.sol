@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import "./Base.t.sol";
 
 /// D37 fuzz: (1) the contract accepts a certificate iff t <= y (CertLib, same arithmetic), and then stores
-/// exactly the reference eUp; (2) assess / isTrusted never revert, whatever the agent, the block or the
+/// exactly the reference eUp; (2) assess / passesAnchorPolicy never revert, whatever the agent, the block or the
 /// state of the registries. Run: forge test --match-contract FuzzTest --fuzz-runs 2000
 contract FuzzTest is AncreBase {
     using CertLib for CertLib.Graph;
@@ -85,7 +85,7 @@ contract FuzzTest is AncreBase {
         uint256 id = mode & 4 == 0 ? 1 + agentId % 8 : agentId;
         ar.assess(id, setId, true);
         ar.assess(id, setId, false);
-        ar.isTrusted(id, setId);
+        ar.passesAnchorPolicy(id, setId);
         ar.assess(id, bytes32(seed), true); // unknown set
     }
 }

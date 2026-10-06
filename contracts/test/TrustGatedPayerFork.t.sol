@@ -197,9 +197,9 @@ contract TrustGatedPayerForkTest is PayerBase {
     // ------------------------------------------------------------------ scenes
     function test_fork_registryFacts() public view {
         assertEq(id8004.getAgentWallet(good), OG, "agentWallet = owner at registration (v2.0.0)");
-        assertTrue(ar.isTrusted(good, setId), "good trusted");
-        assertFalse(ar.isTrusted(farm, setId), "farm not trusted");
-        assertFalse(ar.isTrusted(unknown, setId), "unknown not trusted");
+        assertTrue(ar.passesAnchorPolicy(good, setId), "good trusted");
+        assertFalse(ar.passesAnchorPolicy(farm, setId), "farm not trusted");
+        assertFalse(ar.passesAnchorPolicy(unknown, setId), "unknown not trusted");
         assertEq(uint8(ar.assess(unknown, setId, true).status), uint8(AnchoredReputation.Status.OK), "AM-6.1: unknown is OK");
     }
 

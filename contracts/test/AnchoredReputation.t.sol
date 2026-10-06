@@ -67,7 +67,7 @@ contract AnchoredReputationTest is AncreBase {
         assertEq(x.e, 9);
         assertEq(x.trustLow, t[0][1], "D26: t is the lower bound itself, eLow = 0");
         assertEq(x.distrustUp, 9);
-        assertTrue(x.trusted);
+        assertTrue(x.passesPolicy);
     }
 
     function test_solverMatchesContract() public {
@@ -123,7 +123,7 @@ contract AnchoredReputationTest is AncreBase {
         _submit(setId, g, z, type(uint256).max);
         (, uint256 eZ,,,,,,,) = ar.certificate(setId);
         assertGt(eZ, 9e17);
-        assertFalse(ar.isTrusted(101, setId));
+        assertFalse(ar.passesAnchorPolicy(101, setId));
     }
 
     function test_weightOffGridRejected() public {
@@ -208,7 +208,7 @@ contract AnchoredReputationTest is AncreBase {
         assertEq(uint8(x.status), uint8(AnchoredReputation.Status.VETOED));
         assertEq(x.triggerTag, keccak256("slash"));
         assertEq(x.vetoCount, 1);
-        assertFalse(ar.isTrusted(101, setId));
+        assertFalse(ar.passesAnchorPolicy(101, setId));
 
         // D33: the live veto is the anchor's LAST feedback. A later +1 of the same anchor under another tag
         // lifts the live veto (normative rule: an anchor that posts something else must re-post its veto);
@@ -244,7 +244,7 @@ contract AnchoredReputationTest is AncreBase {
         assertEq(uint8(x.status), uint8(AnchoredReputation.Status.VETOED));
         assertEq(x.triggerTag, bytes32(0));
         assertEq(uint8(ar.assess(102, setId, true).status), uint8(AnchoredReputation.Status.OK));
-        assertTrue(ar.isTrusted(102, setId));
+        assertTrue(ar.passesAnchorPolicy(102, setId));
     }
 
     function test_vetoLastPerTag() public {
@@ -294,7 +294,7 @@ contract AnchoredReputationTest is AncreBase {
         // transfer (D10)
         idr.transfer(102, address(0xDEAD));
         assertEq(uint8(ar.assess(102, setId, true).status), uint8(AnchoredReputation.Status.TRANSFERRED));
-        assertFalse(ar.isTrusted(102, setId));
+        assertFalse(ar.passesAnchorPolicy(102, setId));
 
         // stale
         vm.roll(block.number + 1001);
@@ -318,10 +318,10 @@ contract AnchoredReputationTest is AncreBase {
 
     function test_isTrusted() public {
         bytes32 setId = _certifiedX(1);
-        assertTrue(ar.isTrusted(101, setId), "trust(X) = 0.222 >= theta 0.1");
-        assertFalse(ar.isTrusted(999, setId), "unknown agent: status OK but trust 0 (AM-6.1)");
+        assertTrue(ar.passesAnchorPolicy(101, setId), "trust(X) = 0.222 >= theta 0.1");
+        assertFalse(ar.passesAnchorPolicy(999, setId), "unknown agent: status OK but trust 0 (AM-6.1)");
         assertEq(uint8(ar.assess(999, setId, true).status), uint8(AnchoredReputation.Status.OK));
-        assertFalse(ar.assess(101, setId, false).trusted, "never trusted without the veto check");
+        assertFalse(ar.assess(101, setId, false).passesPolicy, "never trusted without the veto check");
 
         // a stricter policy is another set (D39: thresholds are committed in the setId)
         AnchoredReputation.SetParams memory p = _params(_anchors(1), 1);
@@ -330,7 +330,7 @@ contract AnchoredReputationTest is AncreBase {
         assertTrue(strict != setId);
         ar.addNodes(strict, _agentEntries(101, 2));
         _submit(strict, _chainGraph(true), _handT(), 100);
-        assertFalse(ar.isTrusted(101, strict), "0.222 < theta 0.3");
+        assertFalse(ar.passesAnchorPolicy(101, strict), "0.222 < theta 0.3");
         AnchoredReputation.Policy memory q = ar.policyOf(strict);
         assertEq(q.theta, 3e17);
         assertEq(q.submitters.length, 1);
@@ -348,7 +348,7 @@ contract AnchoredReputationTest is AncreBase {
         g.addRow(2, OX, new uint256[](0), new int256[](0));
         g.ownerFp[2] = uint64(uint160(OX));
         _submit(setId, g, g.fixedPoint(40), type(uint256).max);
-        assertTrue(ar.isTrusted(101, setId));
+        assertTrue(ar.passesAnchorPolicy(101, setId));
         vm.prank(anc[0]);
         rep.giveFeedback(101, -100, 0, "slash", "");
         AnchoredReputation.Assessment memory x = ar.assess(101, setId, true);
@@ -359,7 +359,7 @@ contract AnchoredReputationTest is AncreBase {
         x = ar.assess(101, setId, true);
         assertEq(uint8(x.status), uint8(AnchoredReputation.Status.VETOED));
         assertEq(x.triggerTag, keccak256("slash"), "most negative veto names the reason");
-        assertFalse(ar.isTrusted(101, setId));
+        assertFalse(ar.passesAnchorPolicy(101, setId));
     }
 
     function test_vetoMax() public {
@@ -473,6 +473,7 @@ contract AnchoredReputationTest is AncreBase {
         assertEq(uint8(x.status), uint8(AnchoredReputation.Status.REGISTRY_CHANGED), "fail closed");
         vm.etch(address(idr), hex"fe");
         x = ar.assess(101, setId, false);
-        assertEq(uint8(x.status), uint8(AnchoredReputation.Status.TRANSFERRED), "fail closed");
+        // R6 (02-bis): an unreadable identity registry is not a transferred agent: REGISTRY_CHANGED, still closed
+        assertEq(uint8(x.status), uint8(AnchoredReputation.Status.REGISTRY_CHANGED), "fail closed");
     }
 }

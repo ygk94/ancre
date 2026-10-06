@@ -146,7 +146,7 @@ contract Consumer {
     }
 
     function trusted(AnchoredReputation ar, uint256 id, bytes32 setId, bool) external returns (uint8 st) {
-        st = ar.isTrusted(id, setId) ? 1 : 0;
+        st = ar.passesAnchorPolicy(id, setId) ? 1 : 0;
         emit Seen(st);
     }
 

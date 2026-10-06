@@ -137,7 +137,7 @@ contract TrustGatedPayerTest is PayerBase {
 
     // ------------------------------------------------------------------ accepted payment
     function test_exactPaysTrustedAgent() public {
-        assertTrue(ar.isTrusted(GOOD, setId), "precondition: GOOD trusted by ANCRE");
+        assertTrue(ar.passesAnchorPolicy(GOOD, setId), "precondition: GOOD trusted by ANCRE");
         (Auth memory a, bytes memory blob) = _good(1);
         bytes32 d = _twaDigest(address(usdc), address(payer), a);
         assertEq(payer.isValidSignature(d, blob), bytes4(0x1626ba7e));
@@ -147,7 +147,7 @@ contract TrustGatedPayerTest is PayerBase {
         assertEq(usdc.balanceOf(address(payer)), 10e6 - 10_000);
         (TrustGatedPayer.Reason r,,,,, AnchoredReputation.Assessment memory x) = payer.explain(d, blob);
         assertEq(uint8(r), uint8(TrustGatedPayer.Reason.OK));
-        assertTrue(x.trusted);
+        assertTrue(x.passesPolicy);
     }
 
     function test_replaySameNonceRefusedByToken() public {
@@ -401,7 +401,7 @@ contract TrustGatedPayerTest is PayerBase {
         assertEq(sigOk, rd == TrustGatedPayer.Reason.OK, "decide == isValidSignature");
         assertEq(uint8(rd), uint8(re), "decide reason == explain reason");
         bool walletOk = idr.getAgentWallet(agentId) == to;
-        if (walletOk) assertEq(sigOk, ar.isTrusted(agentId, setId), "payer == ANCRE isTrusted");
+        if (walletOk) assertEq(sigOk, ar.passesAnchorPolicy(agentId, setId), "payer == ANCRE passesAnchorPolicy");
     }
 
     function test_parityAcrossStates() public {
@@ -422,7 +422,7 @@ contract TrustGatedPayerTest is PayerBase {
     function test_decideBeforeSigning() public view {
         (TrustGatedPayer.Reason r, AnchoredReputation.Assessment memory x) = payer.decide(GOOD, OG, 10_000);
         assertEq(uint8(r), uint8(TrustGatedPayer.Reason.OK));
-        assertTrue(x.trusted);
+        assertTrue(x.passesPolicy);
         (r,) = payer.decide(GOOD, OG, 2e6);
         assertEq(uint8(r), uint8(TrustGatedPayer.Reason.OVER_LIMIT));
         (r, x) = payer.decide(UNKNOWN, OU, 0);
@@ -659,7 +659,7 @@ contract TrustGatedPayerTest is PayerBase {
     function test_decideFillsAssessmentOnEarlyRefusal() public view {
         (TrustGatedPayer.Reason r, AnchoredReputation.Assessment memory x) = payer.decide(GOOD, OG, 2e6);
         assertEq(uint8(r), uint8(TrustGatedPayer.Reason.OVER_LIMIT));
-        assertTrue(x.trusted, "trust shown next to OVER_LIMIT");
+        assertTrue(x.passesPolicy, "trust shown next to OVER_LIMIT");
         (r, x) = payer.decide(GOOD, ATTACKER, 0);
         assertEq(uint8(r), uint8(TrustGatedPayer.Reason.WALLET_MISMATCH));
         assertGt(x.trust, 0);
