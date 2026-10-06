@@ -1,0 +1,15 @@
+{
+  "name": "ancre-demo-act2",
+  "private": true,
+  "type": "module",
+  "description": "ANCRE act 2: Sybil farm and demo scenes on a fork of Monad testnet (or the real testnet)",
+  "engines": { "node": ">=23.6" },
+  "scripts": {
+    "demo": "node run.ts",
+    "fork": "node fork.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "viem": "2.38.0"
+  }
+}
