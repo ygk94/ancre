@@ -56,6 +56,7 @@ contract VerifiedTest is AncreBase {
         uint256[][] memory t = g.fixedPoint(60);
         vm.expectRevert(err);
         // with a low-level call, expectRevert does not fail by itself: ok is true iff it reverted with err
+        _direct();
         (bool ok,) = address(ar).call(_cd(setId, g, t));
         assertTrue(ok, "submission did not revert as expected");
     }
@@ -65,9 +66,9 @@ contract VerifiedTest is AncreBase {
         bytes32 setId = _set(true, true);
         CertLib.Graph memory g = _honest();
         uint256[][] memory t = g.fixedPoint(60);
-        vm.prank(address(0xCAFE)); // open submission: anyone
+        vm.prank(address(0xCAFE), address(0xCAFE)); // open submission: anyone (directly, G-11)
         ar.submitCertificate(setId, 4, type(uint256).max, "", CertLib.encodeVectors(g, t), CertLib.encodeRows(g, 2));
-        assertTrue(ar.isTrusted(101, setId));
+        assertTrue(ar.passesAnchorPolicy(101, setId));
         // Z has no mass: its fingerprint is not checked; a wrong one is harmless (never trusted)
     }
 
@@ -110,6 +111,7 @@ contract VerifiedTest is AncreBase {
         g.eW[0] = -4000;
         g.eIdx[0] = 2;
         uint256[][] memory t = g.fixedPoint(60);
+        _direct();
         (bool ok,) = address(ar).call(_cd(setId, g, t));
         assertTrue(ok, "negative dominance, index of the slash");
     }
@@ -143,10 +145,12 @@ contract VerifiedTest is AncreBase {
     }
 
     function _submitOk(bytes32 setId, CertLib.Graph memory g, uint256[][] memory t) internal {
+        _direct();
         ar.submitCertificate(setId, uint32(g.n), type(uint256).max, "", CertLib.encodeVectors(g, t), CertLib.encodeRows(g, 2));
     }
 
     function _submitRefused(bytes32 setId, CertLib.Graph memory g, uint256[][] memory t) internal {
+        _direct();
         (bool ok, bytes memory ret) = address(ar).call(_cd(setId, g, t));
         assertFalse(ok, "replacement must be refused");
         assertEq(bytes4(ret), AnchoredReputation.NotBetter.selector);
@@ -243,6 +247,7 @@ contract VerifiedTest is AncreBase {
         g.ownerFp[3] = uint64(uint160(OZ));
         uint256[][] memory t = g.fixedPoint(80);
         assertTrue(CertLib.isSubSolution(g, t));
+        _direct();
         (bool ok,) = address(ar).call(_cd(setId, g, t));
         assertTrue(ok);
         // Y receives from X and from Z (copy of X's row): (1-a) (t_X + t_Z)
@@ -256,6 +261,7 @@ contract VerifiedTest is AncreBase {
         t = g.fixedPoint(80);
         vm.roll(block.number + 2000);
         vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadRows.selector, 10));
+        _direct();
         (ok,) = address(ar).call(_cd(setId, g, t));
         assertTrue(ok, "alias with another wallet must revert BadRows(10)");
     }
@@ -288,7 +294,7 @@ contract VerifiedTest is AncreBase {
     function test_dilutionProvenWidensLowerBound() public {
         (bytes32 setId, CertLib.Graph memory g, uint256[][] memory t) = _dilutionSetup(0);
         assertEq(t[0][1], 222_222_222_222_222_222, "X inflated: true t*(X) = 0.111");
-        assertTrue(ar.isTrusted(101, setId));
+        assertTrue(ar.passesAnchorPolicy(101, setId));
         ar.proveEdge(setId, _proofA(g), _none(), "", 102);
         // S = B = 1 -> S' = B' = 2: the committed entry halves (dec = 1/2), the new one appears (inc = 1/2)
         // eLow = ceil(t_A (1-a) (1/2) / a) = t_A = 1/3 WAD
@@ -298,7 +304,7 @@ contract VerifiedTest is AncreBase {
         AnchoredReputation.Assessment memory x = ar.assess(101, setId, true);
         assertLe(x.trustLow, 111_111_111_111_111_111, "the lower bound is valid again (<= t*)");
         assertEq(uint8(x.status), uint8(AnchoredReputation.Status.STALE), "eLow > eLowMax: STALE (D36)");
-        assertFalse(ar.isTrusted(101, setId));
+        assertFalse(ar.passesAnchorPolicy(101, setId));
         // the same fact is billed once
         vm.expectRevert(abi.encodeWithSelector(AnchoredReputation.BadProof.selector, 5));
         ar.proveEdge(setId, _proofA(g), _none(), "", 102);
@@ -316,8 +322,14 @@ contract VerifiedTest is AncreBase {
         assertEq(eUpBefore, CertLib.eUp(g, t)[0], "the omitted half is in the margin of eUp");
         ar.proveEdge(setId, _proofA(g), _none(), "", 102);
         (uint256 eUpAfter, uint256 eLow0) = ar.columnBounds(setId, 0);
-        assertEq(eLow0, 0, "omission of a positive edge without dilution: no effect on the lower bound");
-        assertEq(eUpAfter, eUpBefore, "prepaid by the declared-budget margin: not billed twice");
+        // A2b (02-bis, review 06/10): the contract cannot tell this declared omission from a NEW edge (true sum
+        // 3 instead of 2), so it bills the worst case: X's entry 1/2 may be 1/3 (eLow += (1-a) t_A (1/6) / a) and
+        // the omitted mass may still be there (eUp += beyond the prepaid 1/2). Conservative, never unsound.
+        assertEq(eLow0, (t[0][0] * 2 * 166_666_666_666_666_667 + 1e18 - 1) / 1e18, "worst case: the edge is new");
+        assertGt(eUpAfter, eUpBefore);
+        // the honest certificate (same declared omission) still comes back at once: the proven edge (A, Y) is a
+        // fact, and a declared omission that covers it is allowed (ENCODING §3.5)
+        _submitOk(setId, g, t);
     }
 
     // ------------------------------------------------------------------ fabrication (v), revocation (iii), staleness (ii)
@@ -329,12 +341,12 @@ contract VerifiedTest is AncreBase {
         g.ownerFp[1] = uint64(uint160(OX));
         uint256[][] memory t = g.fixedPoint(60);
         _submit(setId, g, t, type(uint256).max);
-        assertTrue(ar.isTrusted(101, setId));
+        assertTrue(ar.passesAnchorPolicy(101, setId));
         ar.proveEdge(setId, _proofA(g), _none(), "", 101);
         (, uint256 eLow0) = ar.columnBounds(setId, 0);
         assertEq(eLow0, (t[0][0] * 2 * 1e18 + 1e18 - 1) / 1e18, "whole row lost: (1-a) t_A / a");
         assertEq(ar.assess(101, setId, true).trustLow, 0);
-        assertFalse(ar.isTrusted(101, setId));
+        assertFalse(ar.passesAnchorPolicy(101, setId));
     }
 
     function test_revocationAndNewerFeedback() public {
@@ -363,7 +375,8 @@ contract VerifiedTest is AncreBase {
         ar.proveEdge(setId, r, _none(), abi.encodePacked(uint32(101), int16(10_000), int16(5000)), 101);
         st = ar.rowStateOf(setId, 0);
         assertEq(st.dim, 5e17, "an increase never lowers the bill");
-        assertEq(st.incP, 5e17);
+        // R3 (02-bis): bounds are measured against the COMMITTED row: back to +1 = the committed state, no excess
+        assertEq(st.incP, 0);
         // revoke the first one too: +1 -> 0, capped at the committed mass (1)
         vm.prank(A);
         rep.revokeFeedback(101, 1);
@@ -415,10 +428,10 @@ contract VerifiedTest is AncreBase {
         vm.expectRevert(AnchoredReputation.NothingToProve.selector);
         ar.proveTransfer(setId, 101);
         idr.transfer(101, address(0xDEAD));
-        assertTrue(ar.isTrusted(101, setId), "fast mode: no live ownerOf until proven");
+        assertTrue(ar.passesAnchorPolicy(101, setId), "fast mode: no live ownerOf until proven");
         ar.proveTransfer(setId, 101);
         assertEq(uint8(ar.assess(101, setId, true).status), uint8(AnchoredReputation.Status.TRANSFERRED));
-        assertFalse(ar.isTrusted(101, setId));
+        assertFalse(ar.passesAnchorPolicy(101, setId));
     }
 
     // ------------------------------------------------------------------ shape (both levels), V13
@@ -474,7 +487,7 @@ contract VerifiedTest is AncreBase {
         assertEq(uint8(ar.assess(102, setId, true).status), uint8(AnchoredReputation.Status.OK), "V13: veto disarmed");
         ar.proveEdge(setId, _proofA(g), _none(), "", 102);
         assertEq(uint8(ar.assess(102, setId, true).status), uint8(AnchoredReputation.Status.VETOED), "bit restored");
-        assertFalse(ar.isTrusted(102, setId));
+        assertFalse(ar.passesAnchorPolicy(102, setId));
     }
 
     // ------------------------------------------------------------------ unified v1 format (integration 02+04)
@@ -614,7 +627,7 @@ contract VerifiedTest is AncreBase {
         g.addRow(1, OX, new uint256[](0), new int256[](0));
         g.ownerFp[1] = uint64(uint160(OX));
         _submitOk(setId, g, g.fixedPoint(60));
-        assertTrue(ar.isTrusted(101, setId));
+        assertTrue(ar.passesAnchorPolicy(101, setId));
         AnchoredReputation.Assessment memory x = ar.assess(102, setId, true);
         assertEq(uint8(x.status), uint8(AnchoredReputation.Status.VETOED));
         assertEq(x.triggerTag, keccak256(bytes(longTag)), "triggerTag = keccak256(tag1)");
@@ -643,8 +656,9 @@ contract VerifiedTest is AncreBase {
         // the omitted edge, proven: no dilution (0.5 < 1), already prepaid by the margin
         ar.proveEdge(setId, _proofA(g), _none(), "", 102);
         (uint256 eUp1, uint256 eLow1) = ar.columnBounds(setId, 0);
-        assertEq(eLow1, 0);
-        assertEq(eUp1, eUp0, "prepaid (sPlus - S0)/B+ = 0.2: not billed twice");
+        assertEq(eLow1, 0, "below GRID the budget does not move: no dilution");
+        // A2b: if the revealed edge is NEW, the declared 0.2 is still omitted elsewhere: excess 0.4, prepaid 0.2
+        assertEq(eUp1 - eUp0, (t[0][0] * 2 * 2e17 + 1e18 - 1) / 1e18, "worst case beyond the prepaid 0.2");
         // a declared sPlus below the committed sum is refused
         g.rowBDecl[0] = 2999;
         vm.roll(5000);
@@ -685,7 +699,11 @@ contract VerifiedTest is AncreBase {
         uint256[][] memory t = g.fixedPoint(60);
         _submitOk(setId, g, t);
         ar.proveEdge(setId, _proofA(g), _none(), "", 102);
-        _submitRefused(setId, g, t);
+        // D48-C (02-bis): the proven row itself is refused, before the replacement rule
+        _direct();
+        (bool ok, bytes memory ret) = address(ar).call(_cd(setId, g, t));
+        assertFalse(ok);
+        assertEq(ret, abi.encodeWithSelector(AnchoredReputation.ProvenRowResubmitted.selector, 0));
         CertLib.Graph memory gh = CertLib.newGraph(4, 1, AN, AD, 4, 4); // the honest one replaces at once
         gh.addRow(0, address(0), _two(1, 2), _twoW(10_000, 10_000));
         gh.addRow(1, OX, new uint256[](0), new int256[](0));
@@ -730,7 +748,9 @@ contract VerifiedTest is AncreBase {
         g.addRow(1, address(0), new uint256[](0), new int256[](0));
         g.ownerFp[1] = uint64(uint160(OX));
         _submitOk(setId, g, g.fixedPoint(60));
-        vm.mockCallRevert(address(idr), abi.encodeWithSelector(idr.getAgentWallet.selector, 101), "burnt");
+        // a real burn (R6, 02-bis): ownerOf reverts ERC721NonexistentToken and getAgentWallet answers 0
+        // (measured on the v2.0.0 registry); a getAgentWallet that reverts is an unreadable registry instead
+        idr.transfer(101, address(0));
         vm.expectRevert(AnchoredReputation.NothingToProve.selector);
         ar.proveWallet(setId, _rowRef(g, 1), _none(), "");
     }

@@ -48,6 +48,7 @@ contract UpgradeTest is AncreBase {
             AnchoredReputation.submitCertificate,
             (setId, uint32(5), type(uint256).max, "", CertLib.encodeVectors(g, t), CertLib.encodeRows(g, 2))
         );
+        _direct();
         (bool ok, bytes memory ret) = address(ar).call(cd);
         if (!ok) {
             assembly {
@@ -119,7 +120,7 @@ contract UpgradeTest is AncreBase {
         assertEq(uint8(ar.assess(3, setId, true).status), uint8(AnchoredReputation.Status.OK));
         assertTrue(ar.checkRegistry(setId));
         assertEq(uint8(ar.assess(3, setId, true).status), uint8(AnchoredReputation.Status.REGISTRY_CHANGED));
-        assertFalse(ar.isTrusted(3, setId));
+        assertFalse(ar.passesAnchorPolicy(3, setId));
 
         // scripted recertification (D28): same graph, re-read through v2.1.0, new version committed
         uint256 billed = _submit(g);

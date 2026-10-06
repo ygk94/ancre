@@ -16,7 +16,7 @@ Wallet) signs one EIP-712 `AncrePayment` per payment. During the facilitator's s
 2. the payer is not paused, and `value` (or the `upto` cap) is `<= maxPerPayment`;
 3. `payTo == IdentityRegistry.getAgentWallet(agentId)`;
 4. an operator signed the `AncrePayment`;
-5. `AnchoredReputation.isTrusted(agentId, setId)` is true. **Never the status alone**: an unknown agent is `OK`
+5. `AnchoredReputation.passesAnchorPolicy(agentId, setId)` is true. **Never the status alone**: an unknown agent is `OK`
    with trust 0 (AM-6.1). θ, ρ, m, q, maxAge and eLowMax are committed in the `setId` (D39); the payer stores
    only `(setId, maxPerPayment)`.
 
@@ -78,7 +78,7 @@ against the real USDC and Permit2 in fork).
 | `WALLET_MISMATCH` | payTo ≠ agentWallet(agentId) | not pay: suspicious offer |
 | `BAD_OPERATOR_SIG` | signer not an operator, high-s, bad v | check the mm login method |
 | `ANCRE_STATUS` | status ≠ OK: `NO_CERT`, `STALE`, `TRANSFERRED`, `VETOED` (`triggerTag` = keccak256(tag1)), `REGISTRY_CHANGED` | not pay |
-| `UNTRUSTED` | status OK but `isTrusted` false (unknown agent, below θ/ρ) | not pay |
+| `UNTRUSTED` | status OK but `passesAnchorPolicy` false (unknown agent, below θ/ρ) | not pay |
 | `DIGEST_MISMATCH`, `BAD_FORMAT`, `BAD_KIND` | not a payment of this payer for this hash | internal error |
 
 ## 5. Gas (MEASURED-FORK, 2026-10-01, testnet block 67 259 340 and mainnet 109 610 142, ±25 gas between them)
@@ -169,3 +169,11 @@ the soft guard (the plugin) and to our own facilitator for the demo.
 - **No refusal event** in the STATICCALL path: `explain` (free) or `reportRefusal` (paid) rebuild it.
 - **Consumer-anchor pattern (D13) not implemented**: the payer does not post ERC-8004 feedback. If added, it
   must be owner-only: an operator endorsing its own farm through an anchor payer would escalate.
+
+
+## 02-bis (2026-10-06) : renommage et deux garde-fous (R8 de la revue maximale du 05/10)
+
+- `AnchoredReputation.isTrusted` devient **`passesAnchorPolicy`**, et `Assessment.trusted` devient `passesPolicy` (D48, AM-9.5). Le payeur appelle le nouveau nom ; l'ABI du payeur ne change pas.
+- **Ensemble en mode rapide refusé** (`FastTransferSet`, au constructeur et à `setPolicy`). En mode rapide, un agent vendu reste OK tant que personne ne prouve le transfert ; l'acheteur pose un nouvel agentWallet, et le payeur le payait sur la réputation du vendeur.
+- **La trésorerie n'est jamais opératrice** (`OperatorIsTreasury`, au constructeur et à `setOperator`). Sinon, une seule clé signe les paiements et reçoit chaque `sweep`.
+- Les scripts de déploiement séparent les trois rôles (owner, trésorerie, opérateur) : `script/t1/T1.s.sol` et `script/testnet/Deploy.s.sol`.

@@ -123,8 +123,20 @@ abstract contract AncreBase is Test {
         a[1] = y;
     }
 
+    /// G-11 (02-bis): open sets accept only a submission sent directly by the transaction origin; in forge's
+    /// isolation mode the origin is the default sender, not the test contract
+    function _direct() internal {
+        vm.prank(address(this), address(this));
+    }
+
     function _submit(bytes32 setId, CertLib.Graph memory g, uint256[][] memory t, uint256 eMax) internal {
-        ar.submitCertificate(setId, uint32(g.n), eMax, "", CertLib.encodeVectors(g, t), CertLib.encodeRows(g, 2));
+        _submitBytes(setId, uint32(g.n), eMax, CertLib.encodeVectors(g, t), CertLib.encodeRows(g, 2));
+    }
+
+    /// separate frame: keeps the callers' stacks shallow under via-IR
+    function _submitBytes(bytes32 setId, uint32 n, uint256 eMax, bytes memory v, bytes memory rows) internal {
+        _direct();
+        ar.submitCertificate(setId, n, eMax, "", v, rows);
     }
 }
 
@@ -146,7 +158,7 @@ contract Consumer {
     }
 
     function trusted(AnchoredReputation ar, uint256 id, bytes32 setId, bool) external returns (uint8 st) {
-        st = ar.isTrusted(id, setId) ? 1 : 0;
+        st = ar.passesAnchorPolicy(id, setId) ? 1 : 0;
         emit Seen(st);
     }
 

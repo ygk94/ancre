@@ -23,6 +23,24 @@
 | F-8 | vectors | `setId` with policy (own generator) | no policy, no `setId` | **every vector carries `set.policy` and `set.setId`** (solver/FORMAT.md §1) |
 | — | replacement rule (AM-04.1) | eUp + eLow, strict | — | **quality (q, mass)**, §5 |
 
+## 0bis. Lot 02-bis (2026-10-06, D48): what changed — INTERFACE
+
+| # | Point | Before (01/10) | **02-bis** |
+|---|---|---|---|
+| G-1 | read function | `isTrusted(agentId, setId)`, `Assessment.trusted` | **`passesAnchorPolicy(agentId, setId)`, `Assessment.passesPolicy`** (AM-9.5) |
+| G-2 | anchor as a source (AM-08.A) | allowed | **`AnchorAsSource(u)`**: no row with SRC ∈ anchors (wallet or VIA_OWNER owner), both levels (§3.2) |
+| G-3 | controller edge rule (AM-08.B) | rejected whatever the sign | **w > 0 rejected, w < 0 KEPT** (§3.4); approved / operator anchor = veto (§6, `proveApproval` §7.4) |
+| G-4 | proven row resubmitted (AM-08.C, R2) | raw (vectorRoot, graphRoot) equality, open sets only, skipped under REGISTRY_CHANGED | **`ProvenRowResubmitted(u)`**: proven edge and source FACTS checked on every later row, both levels, every state (§3.5) |
+| G-5 | canonical form (R4) | SRC bit tested by value; SPLUS ≥ S⁺ | **`NotCanonical(row)`**: SRC ⇒ src ≠ 0; SPLUS ⇒ sPlus > S⁺ (strict); alias ⇒ `ref` is an agent row |
+| G-6 | node table (R1) | `address(0)` node accepted | **refused (`BadNodes`)**; the second pass must end where the first ended (`BadRows(6)`) |
+| G-7 | anchor fingerprint (R5) | unchecked | **`ownerFp = 0` for anchors, both levels** (`EdgeMismatch(2^256−1, a)`); `dryRun` runs every check without registry reads |
+| G-8 | registry failures (R6) | a revert = a burnt agent | **only `ERC721NonexistentToken(uint256)` means "does not exist"**; any other failure: proofs revert `RegistryUnreadable`, `assess` returns `REGISTRY_CHANGED` |
+| G-9 | strict transfer (R7) | live `ownerOf` iff trust ≠ 0 | **iff some t^(a) > 0** (mass) |
+| G-10 | proof amounts (R3) | incremental, budget floor max(GRID, sPlus) kept | **cumulative bounds against the committed row**, budget follows the committed edges (§7.1) |
+| G-11 | submission path (AM-03.3) | — | **open sets: `msg.sender == tx.origin`** (`NotSubmitter`): the rows must be auditable from the transaction calldata (no traces on Monad), or omissions could never be proven. Attested sets: listed submitters, any path |
+
+The solver mirrors G-2, G-3 and G-5 (04-bis: R6 for w < 0, rows of anchors-as-sources dropped); the indexer (`edges.ts`) and the ERC (§3.3) take G-3. Joint vectors: `solver/vectors/common/*.json`, replayed by `test/CommonVectors.t.sol`.
+
 ## 1. Anchor set (`registerAnchorSet`, once, immutable)
 
 ```
@@ -60,7 +78,10 @@ against `computeSetId` on chain by `simulate.py` and `test/SolverVectors.t.sol`)
 
 Node key (bytes32): `kind << 248 | value`, `kind` = 1 agent (agentId), 2 address, 3 anchor. Stable index, written once.
 `newNodes` (argument of `submitCertificate`) and `addNodes(setId, entries)`: entries `0x01 ‖ agentId:u32` or
-`0x02 ‖ address:20`. Canonical order of a first certificate: anchors, agents by increasing agentId, addresses increasing
+`0x02 ‖ address:20` (**`address(0)` is refused**, R1: client 0 marks a source-less row). **On an open set, `newNodes`
+MUST be empty** (`BadNodes`, A1d): anyone may append nodes there, and inline nodes would take the table's indices at
+execution, which an interleaved `addNodes` shifts; the certifier adds its nodes in their own transaction, reads the
+table, then submits. Canonical order of a first certificate: anchors, agents by increasing agentId, addresses increasing
 (solver/FORMAT.md §0). Later nodes are appended at the end. Submitter-attested sets: only listed submitters append.
 
 ## 3. `submitCertificate(setId, nCert:u32, eMax:u256, newNodes, vectors, rows)`
@@ -76,7 +97,9 @@ for i in [0, nCert): t_i^(0):u64 ‖ … ‖ t_i^(k-1):u64 ‖ ownerFp_i:u64
 - `t` in WAD, each `< 2^63` (`ValueTooLarge`). **Sub-solution (D26)**: `t_i^(a) <= y_i^(a)` for every i, a
   (`NotSubSolution(a, i)`). The solver MUST iterate from 0 with the arithmetic of §4 (lemma L3).
 - `ownerFp_i = uint160(ownerOf(agentId)) & (2^63 − 1)` for an agent node; 0 for other nodes. In strict mode an agent of
-  mass > 0 with a wrong or zero fingerprint is `TRANSFERRED`. Registry-verified checks it for every agent of mass > 0.
+  mass > 0 with a wrong or zero fingerprint is `TRANSFERRED`. Registry-verified checks it for every agent of mass > 0
+  and every address node; **anchors (i < k) MUST carry 0 at both levels** (02-bis, R5). The fingerprint of an agent
+  without mass is not checked and has no effect (no reader uses it: G-9).
 - `vectorRoot = keccak256(vectors)`.
 
 ### 3.2 `rows`
@@ -93,8 +116,14 @@ edge  = dst:W ‖ w:int16 ‖ feedbackIndex:u32            (8 bytes if W = 2, 10
 Checked at every submission (revert otherwise):
 - rows by strictly increasing `u`, `u < nCert`, `numRows <= nCert`, exact end of buffer (`BadRows(3..6)`);
 - in a row: `dst < nCert`, `dst != u`, `dst` strictly increasing, `w != 0`, `|w| <= 10 000` (`BadEdge(row)`);
-- **SPLUS**: `sPlus >= max(1, Σ committed w⁺)` (`BadRows(7)`);
-- **ALIAS**: `ref < u`, row `ref` already emitted and not an alias (`BadRows(9)`), `u >= k`, both rows carry SRC and
+- **SPLUS**: `sPlus >= max(1, Σ committed w⁺)` (`BadRows(7)`), and **`sPlus > Σ committed w⁺`** (`NotCanonical(row)`,
+  02-bis: an SPLUS equal to the committed sum is the same row as no SPLUS);
+- **SRC**: the bit carries a non-zero address (`NotCanonical(row)`), and **that address is never an anchor of the set**
+  (`AnchorAsSource(u)`, D48-A: the row would be the anchor's row spread with u's mass in the OTHER columns, which
+  voids the leave-one-out m ≥ 2). This covers the wallet and the VIA_OWNER owner, and aliases (same SRC as `ref`).
+  An agent whose source is an anchor emits no row (it is absorbing and pays the truncation margin);
+- **ALIAS**: `ref < u`, row `ref` already emitted and not an alias (`BadRows(9)`), `ref` is an agent row
+  (`NotCanonical(row)`, R4), `u >= k`, both rows carry SRC and
   it is the same address (`BadRows(10)`), `nE = 0` and no SPLUS (`BadRows(8)`). The alias inherits the edges and the
   sPlus of `ref` and spreads them with **its own mass** t_u; each copy counts its positive edges in E⁺. Its own
   VIA_OWNER bit says how agent u resolves to that source (it may differ from `ref`'s).
@@ -137,10 +166,36 @@ Pairwise `keccak256(left ‖ right)`; an odd last element goes up unchanged; 0 i
 | agent row, SRC without VIA_OWNER (alias included) | `getAgentWallet(u) == SRC` | `EdgeMismatch(row, 256)` |
 | agent row, VIA_OWNER | `getAgentWallet(u) == 0 && ownerOf(u) == SRC` | `EdgeMismatch(row, 256)` |
 | agent row without SRC | `getAgentWallet(u) == 0` | `EdgeMismatch(row, 256)` |
-| each edge of a non-alias row | target is agent j; `isAuthorizedOrOwner(client, j)` false; `getAgentWallet(j) != client`; `(w, feedbackIndex)` = D14 combination re-read (`getLastIndex`, then `readFeedback` from the highest index down until every endorsement tag of the filter has been seen) | `EdgeMismatch(row, rank)` |
+| each edge of a non-alias row | target is agent j (it exists: `isAuthorizedOrOwner` does not revert `ERC721NonexistentToken`); `(w, feedbackIndex)` = D14 combination re-read (`getLastIndex`, then `readFeedback` from the highest index down until every endorsement tag of the filter has been seen); **if w > 0**: `isAuthorizedOrOwner(client, j)` false and `getAgentWallet(j) != client` (D48-B: a current controller's NEGATIVE edge is kept) | `EdgeMismatch(row, rank)` |
 | each agent of mass > 0 | `ownerFp == ownerOf(j) & (2^63−1)`; 0 for other nodes | `EdgeMismatch(2^256−1, node)` |
 
 Not checkable (no per-client index): that a row is complete, and that a declared sPlus is the true sum.
+
+The contract parses the rows twice (the arithmetic pass, then this one); the second pass MUST end exactly at the end of
+`rows` (`BadRows(6)`, R1).
+
+### 3.5 Proven facts (D48-C, revised after the code review of 06/10)
+
+A first version hashed the whole decoded row; the review showed that a content tweak (sPlus = S⁺ + 1, one small
+positive edge dropped) gave a new hash and let an omission come back. The contract now stores the **facts** the proofs
+establish, which no encoding can change:
+```
+edge fact   (setId, client, agentJ) -> w      set by proveEdge: the D14 weight read NOW (D48-B controller rule)
+source fact (setId, keccak(u, src, VIA_OWNER bit))   set by proveWallet: the source claim of node u is false
+```
+At every later submission to the set, at both levels and whatever its state (REGISTRY_CHANGED included), reverts
+`ProvenRowResubmitted(u)`:
+- an agent row whose (u, src, via) is a source fact;
+- a row of client c that does not carry exactly the proven weight w to agentJ, for every edge fact of c (an alias is
+  checked on its ref's edges): absent edge = 0; facts on u's own agent are skipped (no row has a self-loop); a proven
+  POSITIVE edge may be left out only under a declared sPlus ≥ S⁺ + w (a declared omission).
+
+The lookups are skipped while the set has no fact (`facts = 0`): an honest set never pays them. Liveness when the
+registry changes again after a proof: `refreshFact(setId, client, agentJ)` re-reads the edge and updates the fact,
+`clearSourceFact(setId, u, src, via)` clears a source claim that holds again (both permissionless: they only store a
+registry reading). Views: `edgeFact(setId, client, agentJ)`, `provenSource(setId, sourceHash(u, src, hdr))`.
+`proveEdge` refuses an edge to the row's own agent (`BadProof(27)`): with D48-B, a wallet's negative feedback on its own
+agent could otherwise be proven on every certificate, forever.
 
 ## 4. Exact integer arithmetic (what the contract recomputes)
 ```
@@ -160,7 +215,7 @@ T_u     = ⌈ Σ_a λ_a·t_u^(a) / WAD ⌉
 d_v     = Σ_{rows u, w_uv < 0} ⌈ T_u·om·|w_uv| / (alphaD·B⁻_u) ⌉                             (D4, rounded up)
 reading: c_a = ⌊λ_a·t^(a)/WAD⌋ ; trustRobust = Σ c_a − (m−1 largest c_a) ;
          trustLow = trustRobust − eLowEff ; distrustUp = d + eEff
-isTrusted ⇔ status OK ∧ veto checked ∧ trustLow >= θ ∧ ρD·distrustUp <= ρN·trustLow
+passesAnchorPolicy ⇔ status OK ∧ veto checked ∧ trustLow >= θ ∧ ρD·distrustUp <= ρN·trustLow
 ```
 Rounding: every term of y DOWN (error < 1 wei per term, counted in `E⁺ + 1`); margins, eUp, q, eEff, eLow, T, d UP;
 c_a and mass DOWN. Proof sketch: `t <= y <= F_committed(t)` and F is monotone, so t <= t*_committed (L1, L2); if
@@ -180,8 +235,8 @@ x = neutral ⇒ w = 0
 Submitter-attested sets: a listed submitter always replaces (D27). Open (Registry-verified) sets: a new certificate is
 accepted iff
 ```
-REFUSED first: the incumbent was proven wrong (eLowEff > 0 or eEff > eEff at submission) AND the newcomer has the
-         same vectorRoot and graphRoot (resubmitting would erase the proofs: review 01/10)
+REFUSED first (02-bis, §3.5, before this rule and under every state): any row of the newcomer that contradicts a proven fact
+         (this replaces the raw-root comparison of 01/10, which re-encoding and REGISTRY_CHANGED bypassed: AM-08.16, R2)
 then accepted iff:
 no certificate | registryChanged | age > maxAge | eLowEff_cur > eLowMax
 | ( mass_new + eLowEff_cur >= mass_cur  AND  qEff_new <= q_cur  AND  D_new >= D_cur )   at least as good on every side
@@ -216,7 +271,16 @@ otherwise `NotBetter(qNew, qCur, massNew, massCur)`. `quality(setId)` returns (m
 - **Live veto (D33)**: for each anchor, `getLastIndex(j, anchor)` then ONE `readFeedback`; veto iff not revoked, tag
   endorsement in the filter, weight <= vetoMax. `vetoCount` = anchors whose veto holds (live OR certified bit);
   `VETOED` iff `vetoCount >= q`. `Assessment.triggerTag` = **keccak256(tag1)** of the most negative live veto.
-- **Transfer (D35)**: strict = live `ownerOf` for an agent of mass > 0; both modes: proven bit ⇒ `TRANSFERRED`.
+- **Gas of registry reads (E1)**: views (`assess`, `passesAnchorPolicy`) forward at most `VIEW_CALL_GAS` = 120 000 per
+  call; paying paths (submissions, proofs, `refreshFact`) forward all the remaining gas to `readFeedback`, whose cost
+  grows with the tags' length (a client could otherwise make its own pair unreadable with a long `tag2`). Only the head
+  and `tag1` are copied out of the return data.
+- **Veto by approval (D48-B)**, strict mode: an anchor that is `getApproved(j)` or `isApprovedForAll(ownerOf(j), anchor)`
+  cannot post on j (the registry forbids a controller's feedback): it counts as that anchor's veto. Read only for the
+  anchors that do not already veto (one `getApproved`, one `ownerOf`, at most k `isApprovedForAll`). Fast mode: posted by
+  `proveApproval` (§7.4). `triggerTag` stays that of the live feedback veto (0 if none).
+- **Transfer (D35)**: strict = live `ownerOf` for an agent of mass > 0 (some t^(a) > 0, R7); both modes: proven bit ⇒
+  `TRANSFERRED`. `ERC721NonexistentToken` ⇒ `TRANSFERRED`; any other registry failure ⇒ `REGISTRY_CHANGED` (R6).
 
 ## 7. Discrepancy proofs — `proveEdge`, `proveWallet`, `proveTransfer`
 
@@ -226,19 +290,36 @@ Permissionless, the prover pays; on the current certificate (`certNonce`).
 - `r = (pos, row, path)`: the committed row of u and its Merkle path (ignored once amended: `rowState.h =
   keccak(leaf ‖ amends)` holds). `src`: for an alias, the committed source row (path required). `amends`:
   `(agentId:u32 ‖ wCommitted:int16 ‖ wNow:int16)*`.
-- The contract re-reads NOW `wNew` = D14 combination of (client_u → agentJ) (0 if the client is a current controller
-  of agentJ or its agentWallet; 0 if the registry reverts) and compares it with `wOld` (amended, else committed, else 0).
-  `wNew = wOld` ⇒ `NothingToProve`. The row's source must still hold (§3.4 reads, else `BadProof(25)`: use
-  `proveWallet`); a source-less agent row has no edge to prove (`BadProof(7)`).
+- The contract re-reads NOW `wNew` = D14 combination of (client_u → agentJ), with the D48-B rule: 0 if w > 0 and the
+  client is a current controller of agentJ (`isAuthorizedOrOwner`) or its agentWallet (a controller's negative edge is
+  kept); 0 if agentJ does not exist (`ERC721NonexistentToken`); **any other registry failure reverts
+  `RegistryUnreadable`** (R6: an upgrade that exceeds the 120 000 gas per call must not read as burnt agents). It
+  compares `wNew` with `wOld` (amended, else committed, else 0). `wNew = wOld` ⇒ `NothingToProve`. The row's source
+  must still hold (§3.4 reads, else `BadProof(25)`: use `proveWallet`); a source-less agent row has no edge to prove
+  (`BadProof(7)`), and no edge to the row's own agent (`BadProof(27)`). The proof records the edge fact (§3.5).
 - Covers (i) OMISSION with or without dilution, (ii) STALE, (iii) REVOKED, a new controller, (v) FABRICATION / INFLATION.
-- Amount, per side of the normalised row (+ with `G = max(GRID, sPlus)`; − with `G = GRID`), sum S → S' = S − wo + wn,
-  `B = max(G, S)`, `B' = max(G, S')`, `rest = S − wo`:
+- **Amount (02-bis, R3): cumulative bounds of the amended row A against the COMMITTED row C⁰**, billed beyond what the
+  row already paid (`RowState` keeps the largest bound per side). With the amendment list after this proof, entries
+  (wc, wn) (committed, current):
 ```
-dec = ⌈ WAD·[ rest·(B' − B)⁺ + (wo·B' − wn·B)⁺ ] / (B·B') ⌉      inc = ⌈ WAD·[ rest·(B − B')⁺ + (wn·B − wo·B')⁺ ] / (B·B') ⌉
-caps per row (D22): Σ dec⁺ <= ⌈WAD·S⁰/B⁰⌉, Σ inc⁺ <= WAD, Σ inc⁻ <= WAD          (B⁰ = max(GRID, sPlus or S⁰))
-prepaid⁺ = ⌊WAD·(sPlus − S⁰)/B⁰⌋ if sPlus declared (already in eUp's margin): only inc⁺ beyond it is billed
-eLow_a += ⌈ t_u^(a)·om·dec⁺ / (alphaN·WAD) ⌉        eUp_a += ⌈ t_u^(a)·om·(billed inc⁺ + inc⁻) / (alphaN·WAD) ⌉
+S0, N0  = committed positive / |negative| sums        dEff = sPlus if declared, else S0        B0 = max(GRID, dEff)
+cOut = Σ wc⁺   pIn = Σ wn⁺      Scur = S0 − cOut + pIn                    Su = S0 − cOut
+X    = dEff − cOut + pIn = Scur + (dEff − S0)            Bh = max(GRID, X)        (largest possible true positive sum)
+dim  = ⌈ WAD·[ Su·(Bh − B0)⁺ + Σ (wc⁺·Bh − wn⁺·B0)⁺ ] / (B0·Bh) ⌉                  >= Σ_v (C⁰ − C)⁺, positive side
+incP = ⌈ WAD·[ Su·(B0 − Bh)⁺ + Σ (wn⁺·B0 − wc⁺·Bh)⁺ + (X − Scur)·B0 ] / (B0·Bh) ⌉  >= Σ_v (C − C⁰)⁺, omitted mass included
+incN = same as incP on the negative side, no declaration: Bn0 = max(GRID, N0), Bnh = max(GRID, Ncur), no omitted term
+caps (D22): dim <= ⌈WAD·S0/B0⌉, incP <= WAD, incN <= WAD
+prepaid⁺ = ⌊WAD·(sPlus − S0)/B0⌋ if sPlus declared (already in eUp's margin): only incP beyond it is billed
+bill: eLow_a += ⌈ t_u^(a)·om·(dim − billed dim) / (alphaN·WAD) ⌉
+      eUp_a  += ⌈ t_u^(a)·om·[ (incP − prepaid⁺)⁺ − (billed incP − prepaid⁺)⁺ + (incN − billed incN) ] / (alphaN·WAD) ⌉
 ```
+  Why: before 02-bis the positive budget of a declared row stayed at max(GRID, sPlus) when a COMMITTED edge was revoked,
+  so the true budget drop (all other entries, omitted ones included, grow) was never billed to eUp (R3). X follows the
+  committed edges, and **every revealed uncommitted edge may be new** (A2b, review of 06/10: assuming it inside the
+  declared sum let a new positive edge bill nothing to eLow). The contract cannot tell a declared omission from a new
+  edge, so revealing an honest declared omission bills the worst case (conservative; the honest certificate comes back
+  at once, §3.5). Both bounds grow with the budget, so X covers every true sum in [Scur, X] (PROOFS.md L6). Bills are
+  monotone: returning to the committed state bills nothing more and refunds nothing.
 Then eLowEff and eEff are recomputed; `eLowEff > eLowMax` ⇒ `STALE` (D36).
 
 ### 7.2 `proveWallet(setId, r, src, amends)` — (iv) SOURCE
@@ -247,7 +328,16 @@ freezes the OUTGOING edges of a transferred agent, D44), owner of a VIA_OWNER ro
 (D44 (iv-a)), or a source-less row's agent got a wallet (a burnt agent's source-less row has nothing to prove). `src`:
 for an alias, its committed source row (Merkle path), as in `proveEdge`. Billed: eLow += the not-yet-billed part of the
 committed positive mass `⌈WAD·S⁰/B⁰⌉` (of the source row for an alias); eUp += (1 − prepaid⁺) not yet billed on the
-positive side + the rest of 1 on the negative side. The row becomes void.
+positive side + the rest of 1 on the negative side. The row becomes void and its source claim becomes a fact (§3.5). A new
+wallet that is an anchor is covered (the source changed; the next certificate cannot carry the row: `AnchorAsSource`).
+A registry failure other than `ERC721NonexistentToken` reverts `RegistryUnreadable` (R6).
 
 ### 7.3 `proveTransfer(setId, agentId)` — fast mode (D25/D35)
-Certified agent whose `ownerOf` no longer matches `ownerFp`: sets the transfer bit; `assess` returns `TRANSFERRED`.
+Certified agent whose `ownerOf` no longer matches `ownerFp` (or reverts `ERC721NonexistentToken`): sets the transfer
+bit; `assess` returns `TRANSFERRED`. Any other registry failure reverts `RegistryUnreadable` (R6).
+
+### 7.4 `proveApproval(setId, agentId, a)` — veto by approval, fast mode (D48-B)
+Anchor `a` (< k) is `getApproved(agentId)` or `isApprovedForAll(ownerOf(agentId), anchor_a)` for a certified agent:
+sets the certified veto bit a of the agent (flags lane) until the next certificate (the watcher re-proves it after a
+recertification). `NothingToProve` if not approved or the bit is already set. Event `ApprovalProven(setId, agentId, a)`.
+Strict mode reads the same fact live in `assess` (§6).

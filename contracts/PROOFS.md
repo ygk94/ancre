@@ -47,25 +47,48 @@
 **Preuve.** (a) F(t) − t ≥ 0 (L2) et F(t) − t ≤ (y − t) + (erreurs de plancher : < 1 wei par terme positif et par colonne, et < 1 pour le terme α) + (masse des lignes absentes du graphe engagé, au plus (1 − α)t_u chacune) + (masse omise d'une ligne à sPlus déclaré : les entrées omises valent w/B⁺ avec B⁺ = max(10 000, sPlus) = le vrai budget, donc au plus (1 − α)t_u(sPlus − S⁺)/B⁺). Donc ‖F(t) − t‖₁ ≤ r_a. Or t* − t = Σ_{n≥0} ((1 − α)Cᵀ)ⁿ (F(t) − t), vecteurs positifs, et ‖(1 − α)Cᵀx‖₁ ≤ (1 − α)‖x‖₁ pour x ≥ 0 : ‖t* − t‖₁ ≤ r_a/α. (b) d est linéaire en T = Σ λ_a t^(a) avec des coefficients (1 − α)|w|/B⁻ ≤ 1 − α par ligne, arrondis vers le haut. ∎
 **Test.** `test/Diff.t.sol` (⌈Σ(t* − t)⌉ ≤ eUp, 48 cas), `test_truncationMargin`, `test_declaredBudgetOmissionIsSafe`.
 
-## L6 — les preuves d'écart restaurent les bornes (ajout du chantier 02)
+## L6 — les preuves d'écart restaurent les bornes (chantier 02, **réécrit en 02-bis le 06/10, R3**)
 
-**Énoncé.** Soit une ligne u dont le vrai état diffère de l'état engagé (amendements successifs). Pour chaque preuve, avec dec⁺, inc⁺, inc⁻ calculés par ENCODING.md §6.1 : après la preuve, pour le graphe amendé A, ‖(t − t*_A)⁺‖₁ ≤ eLow_a et ‖t*_A − t‖₁ ≤ eUp_a.
-**Preuve (esquisse).** Entre l'état avant et après la preuve, F change seulement par la ligne u : F_après(t) ≥ F_avant(t) − (1 − α)t_u·dec⁺·𝟙 en norme L1 du déficit, et ≤ F_avant(t) + (1 − α)t_u·inc⁺ en norme L1 de l'excédent. Le déficit de sous-solution δ = (t − F_après(t))⁺ vérifie ‖δ‖₁ ≤ Σ des (1 − α)t_u·dec⁺ facturés ; comme au L5, (t − t*)⁺ ≤ Σ_n ((1 − α)Cᵀ)ⁿ δ, d'où ‖(t − t*)⁺‖₁ ≤ ‖δ‖₁/α = Σ ⌈t_u·om·dec⁺/αN⌉. Les montants s'additionnent d'une preuve à l'autre (inégalité triangulaire sur les états successifs) ; les plafonds sont des majorants valides de la variation totale depuis l'état engagé (la masse positive engagée ‖C⁰_u‖₁ = S⁰/B⁰ pour dec⁺, 1 pour chaque inc). ∎
-**Test.** `test/Verified.t.sol` : dilution (V7 : trustLow ≤ t* après preuve), fabrication, péremption, révocation, plafond, wallet.
+**Énoncé.** Soit une ligne u, engagée C⁰ (budget B0 = max(GRID, dEff), dEff = sPlus déclaré sinon S0), dont l'état vrai C diffère de C⁰ par la liste d'amendements prouvés, plus des arêtes omises non révélées. Avec dim, incP, incN calculés par ENCODING.md §7.1 sur la liste après la preuve : ‖(C⁰ − C)⁺‖₁ ≤ dim (côté positif) et ‖(C − C⁰)⁺‖₁ ≤ incP (positif, masse omise comprise) et ≤ incN (négatif). Donc, une fois tout écart prouvé, ‖(t − t*_A)⁺‖₁ ≤ eLow_a et ‖t*_A − t‖₁ ≤ eUp_a.
+**Preuve (esquisse).**
+1. *Somme vraie.* La vraie somme positive X_vrai vaut Scur + U, où U est la masse omise non révélée, U ≤ dEff − S0 sous un sPlus honnête. Une arête non engagée révélée est soit dans la somme déclarée, soit nouvelle ; dans les deux cas X_vrai ≤ X = Scur + (dEff − S0) = dEff − cOut + pIn. Révision A2b du 06/10 : la première version supposait l'arête révélée dans la somme tant qu'elle y tenait, ce qui laissait une arête nouvelle sans facture côté eLow.
+2. *Monotonie en X.* Posons z = 1/max(GRID, X).
+   - Le déficit Σ(c_i − a_i z)⁺ croît quand z décroît.
+   - Pour X ≥ GRID, l'excès vaut Σ(a_i z − c_i)⁺ + U z = 1 − S0/B0 + déficit(z) (calcul direct, avec U = X − Scur). Il croît donc aussi avec X.
+   - Sous GRID, le budget est constant et l'excès croît avec U.
+   - Les deux bornes sont donc maximales en X, et valent pour toute somme vraie dans [Scur, X].
+3. *Contrat.* On mesure directement l'écart à la ligne engagée (pas de somme d'écarts successifs). F_vrai(t) − F_engagé(t) = (1 − α)Σ_u t_u (C_u − C⁰_u), puis on applique L5 pour eUp (facture incP − prépayé, le prépayé (sPlus − S0)/B0 étant déjà dans la marge) et le même argument pour eLow sur le déficit de sous-solution.
+4. *Monotonie des factures.* Le contrat garde la plus grande borne facturée par côté : la facture ne baisse jamais, et elle ne paie qu'au-delà du déjà payé.
+
+∎
+**Ce qui a changé.** L'ancienne formule incrémentale gardait le plancher max(GRID, sPlus) quand une arête **engagée** était révoquée : la vraie somme baisse, toutes les autres entrées montent (les omises comprises), et eUp ne voyait rien (R3, revue maximale du 05/10).
+**Test.**
+- `test/Bis.t.sol::test_R3_revokedEdgeOfDeclaredRowWidensUpperBound` : eUp croît de 1/3 de la ligne ; avant le correctif, il ne croissait pas du tout.
+- `test/Verified.t.sol` : dilution (V7 : trustLow ≤ t* après la preuve), fabrication, péremption, révocation (le retour à l'état engagé ne facture plus rien), plafond, wallet.
+
+## L8 — une ancre n'est jamais la source d'une ligne d'agent (02-bis, D48-A)
+
+**Énoncé.** Sans la règle, une seule ancre compromise a peut faire passer m = 2. Avec `AnchorAsSource`, la contribution d'une clé d'ancre volée reste confinée à sa colonne.
+**Contre-exemple.** La clé de a fait de l'adresse de a l'agentWallet d'un agent U qui a de la masse dans la colonne b ≠ a. La ligne de U est alors la ligne de a (copie D20), étalée avec la masse t_U^(b) : les endossés de a reçoivent de la masse dans la colonne b, et le leave-one-out (L4), qui suppose qu'une colonne ne contamine pas les autres, ne retire que la plus grande contribution.
+**Preuve.**
+- Sans aucune ligne d'agent de source a, toute masse qui transite par une arête de client a part du nœud d'ancre a. Or ce nœud n'a de masse que dans sa colonne : t_a^(b) = 0 pour b ≠ a, car aucune arête ne cible une ancre (règle de forme).
+- Les adresses-nœuds n'ont jamais de masse : les arêtes ne ciblent que des agents.
+- La masse que a injecte reste donc dans la colonne a, que le leave-one-out retire. ∎
+**Test.** `test_A_anchorAsSourceRefused` (les deux niveaux), `CommonVectorsTest::test_common_A_*`, et en fork le vecteur de démo du 01/10 (`AnchorAsSource(5)`).
 
 ## L7 — la règle de remplacement compare des précisions (ajout de l'intégration, 01/10)
 
 **Énoncé.** Si t et t' sont deux sous-solutions du même graphe vrai (t, t' ≤ t* composante par composante, L2), alors ‖t* − t‖₁ = ‖t*‖₁ − ‖t‖₁ par colonne : la plus massive est la plus proche de t* en norme L1. De plus, si ‖(t − t*)⁺‖₁ ≤ eLow (borne prouvée sur le titulaire), alors ‖min(t, t*)‖₁ ≥ ‖t‖₁ − eLow.
 **Preuve.** t* − t ≥ 0 coordonnée par coordonnée, donc sa norme L1 est la somme des différences. Pour la seconde partie, ‖min(t, t*)‖₁ = ‖t‖₁ − ‖(t − t*)⁺‖₁. ∎
 **Conséquence.** La règle « masse_new + eLowEff_cur ≥ masse_cur » (ENCODING.md §5) n'accepte, hors fenêtre de rafraîchissement, qu'un certificat au moins aussi précis que la part prouvée-valide du titulaire, tant que les deux sont dominés par le registre. Une omission (censure) baisse la masse et est refusée ; une dilution peut l'augmenter et passe (AM-02.2, fermée seulement par `proveEdge`). q (eUp sans le plancher d'arrondi E⁺ + 1) borne le côté méfiance : r_a ≥ α‖t*_engagé − t‖₁ − (E⁺ + 1), car ‖(I − (1 − α)Cᵀ)x‖₁ ≥ α‖x‖₁ ; une sous-solution peu massive a donc un q grand (le vecteur nul : q ≈ 1 WAD, AM-5.16).
-Le côté méfiance a aussi sa masse : D = Σ_v d_v. Omettre une arête négative ne change ni la masse ni q, mais baisse D ; la voie rapide exige donc D_new ≥ D_cur (ajout après la revue de code du 01/10). Un certificat déjà prouvé faux ne peut pas revenir à l'identique : ses preuves seraient effacées.
+Le côté méfiance a aussi sa masse : D = Σ_v d_v. Omettre une arête négative ne change ni la masse ni q, mais baisse D ; la voie rapide exige donc D_new ≥ D_cur (ajout après la revue de code du 01/10). Un certificat déjà prouvé faux ne peut pas revenir, même réencodé (02-bis, D48-C) : toute ligne qui contredit un fait prouvé (poids d'une arête (client, agent), ou réclamation de source) est refusée (ENCODING.md §3.5), aux deux niveaux et sous REGISTRY_CHANGED. Un premier essai par hash de ligne se contournait en retouchant le contenu (revue de code du 06/10).
 **Test.** `test/Verified.t.sol::test_openReplacementRule` (censure refusée, croissance acceptée, révocation acceptée après preuve, vecteur nul refusé), `test_replacementRefusesOmittedNegative`, `test_replacementRefusesResubmittingProvenCertificate`.
 
 ## Garanties du contrat v1, et ce qu'elles ne couvrent pas
 
 | Niveau | Fabrication / gonflement | Dilution (sPlus sous-déclaré) | Omission d'arête négative | Changement après la soumission |
 |---|---|---|---|---|
-| Registry-verified | **impossible** à la soumission (chaque arête relue) | possible, **indétectable** à la soumission (pas d'index par client) ; prouvable par `proveEdge` | possible ; prouvable par `proveEdge` (eUp) | prouvable (`proveEdge`, `proveWallet`, `proveTransfer`) |
+| Registry-verified | **impossible** à la soumission (chaque arête relue ; avant le 06/10, un nœud `address(0)` désynchronisait la relecture : R1, corrigé) | possible, **indétectable** à la soumission (pas d'index par client) ; prouvable par `proveEdge` | possible ; prouvable par `proveEdge` (eUp) | prouvable (`proveEdge`, `proveWallet`, `proveTransfer`) |
 | Submitter-attested | possible pour un soumetteur listé ; prouvable par `proveEdge` (preuve (v)) | idem | idem | idem |
 
 Autrement dit, **t ≤ t* n'est garanti qu'après que tout écart existant a été prouvé**. Sans surveillant, la garantie tient à Registry-verified contre la fabrication et le gonflement, pas contre la dilution. Le contrat ne promet pas plus.

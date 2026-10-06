@@ -4,12 +4,12 @@ pragma solidity ^0.8.28;
 import {AnchoredReputation} from "../../src/AnchoredReputation.sol";
 
 /// Stand-in for AnchoredReputation AND the ERC-8004 identity registry, for test T1 only (porte P3):
-/// the real TrustGatedPayer runs unchanged against it, with a configurable gas burn in isTrusted / assess,
+/// the real TrustGatedPayer runs unchanged against it, with a configurable gas burn in passesAnchorPolicy / assess,
 /// so that the facilitator's handling of an expensive ERC-1271 check can be measured without the real
 /// certificate. Never use it as a payer's ancre outside T1.
 contract T1Oracle {
     address public immutable admin;
-    uint256 public burn; // gas burnt by isTrusted / assess (e.g. 78 000 ~ assess without veto, 190 000 with veto)
+    uint256 public burn; // gas burnt by passesAnchorPolicy / assess (e.g. 78 000 ~ assess without veto, 190 000 with veto)
     mapping(uint256 => address) public wallets; // agentId -> agentWallet
     mapping(uint256 => bool) public trusted;
     mapping(uint256 => uint8) public statusOf; // AnchoredReputation.Status (0 = OK)
@@ -44,9 +44,10 @@ contract T1Oracle {
 
     function policyOf(bytes32) external pure returns (AnchoredReputation.Policy memory q) {
         q.theta = 1; // any set id is "registered"
+        q.strictTransfer = true; // the payer refuses fast-transfer-mode sets (R8)
     }
 
-    function isTrusted(uint256 agentId, bytes32) external view returns (bool) {
+    function passesAnchorPolicy(uint256 agentId, bytes32) external view returns (bool) {
         _burn();
         return trusted[agentId] && statusOf[agentId] == 0;
     }
@@ -54,8 +55,8 @@ contract T1Oracle {
     function assess(uint256 agentId, bytes32, bool) external view returns (AnchoredReputation.Assessment memory x) {
         _burn();
         x.status = AnchoredReputation.Status(statusOf[agentId]);
-        x.trusted = trusted[agentId] && statusOf[agentId] == 0;
-        x.trust = x.trusted ? 1e17 : 0;
+        x.passesPolicy = trusted[agentId] && statusOf[agentId] == 0;
+        x.trust = x.passesPolicy ? 1e17 : 0;
         x.trustRobust = x.trust;
         x.trustLow = x.trust;
         x.certBlock = uint64(block.number);
