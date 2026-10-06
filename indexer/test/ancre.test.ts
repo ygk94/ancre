@@ -1,12 +1,13 @@
 // Unit tests on simulated events: the AnchoredReputation handlers (set registration, node table, certificate audit).
 // A tiny registry is simulated on the testnet chain, then real-shaped calldata (encodeFunctionData on the contract ABI)
 // is attached to the ANCRE events, as a direct EOA call would carry it.
-import { describe, it } from "vitest";
+import { afterAll, beforeAll, describe, it } from "vitest";
 import { createTestIndexer } from "envio";
 import { encodeFunctionData, type Hex } from "viem";
 import abi from "../abis/AnchoredReputation.json" with { type: "json" };
 import { decodeRows, graphRoot } from "../src/lib/certificate.js";
 import { decodeSetCall } from "../src/lib/calls.js";
+import { agentKey, startMockRpc, type MockRpc } from "./rpcmock.js";
 
 const CHAIN = 10143;
 const ZERO: Hex = "0x0000000000000000000000000000000000000000";
@@ -49,8 +50,17 @@ const registerInput = encodeFunctionData({ abi, functionName: "registerAnchorSet
 const SET_ID = decodeSetCall(registerInput)!.setId; // computeSetId(p), as the contract emits it
 const CONTRACT: Hex = "0x0000000000000000000000000000000000000001"; // config placeholder on 10143
 const ANCRE = { contract: "AnchoredReputation" as const, srcAddress: CONTRACT };
-const certInput = (rows: Row[]) => encodeFunctionData({ abi, functionName: "submitCertificate",
-  args: [SET_ID, 4, E18, agentNodes(1, 2), "0x", encodeRows(rows)] });
+const certInput = (rows: Row[], newNodes: Hex = agentNodes(1, 2)) => encodeFunctionData({ abi, functionName: "submitCertificate",
+  args: [SET_ID, 4, E18, newNodes, "0x", encodeRows(rows)] });
+const MULTICALL3: Hex = "0xca11bde05977b3631167028862be2a173976ca11";
+const M3 = [{ type: "function", name: "aggregate", stateMutability: "payable", outputs: [],
+  inputs: [{ name: "calls", type: "tuple[]", components: [{ name: "target", type: "address" }, { name: "callData", type: "bytes" }] }] }] as const;
+const multicall = (inner: Hex) => encodeFunctionData({ abi: M3, functionName: "aggregate", args: [[{ target: CONTRACT, callData: inner }]] });
+
+// node-table repair (nodeKeyAt through the Effect API) answered by a local JSON-RPC server
+let rpc: MockRpc;
+beforeAll(async () => { rpc = await startMockRpc(); process.env.ENVIO_MONAD_TESTNET_RPC = rpc.url; });
+afterAll(async () => { await rpc.close(); });
 
 // nodes: 0 = A, 1 = B, 2 = agent #1 (wallet W1), 3 = agent #2
 const HONEST: Row[] = [
@@ -125,18 +135,71 @@ describe("AnchoredReputation handlers", () => {
     t.expect((await ix.Discrepancy.getAll())[0]!.provenAtBlock).toBeDefined();
   });
 
-  it("a relayed call (wrapper calldata, or not addressed to the contract) is never audited", async (t) => {
-    const wrapper = ("0xdeadbeef" + certInput(HONEST).slice(2)) as Hex;
-    const ix = await run([...world(), ...submit(HONEST, wrapper)]);
+  it("a relayed call with no recognisable inner call is never audited (UNDECODABLE)", async (t) => {
+    rpc.keys.set(`${SET_ID.toLowerCase()}-2`, agentKey(1)); rpc.keys.set(`${SET_ID.toLowerCase()}-3`, agentKey(2));
+    const opaque = ("0xdeadbeef" + "00".repeat(64)) as Hex; // e.g. a compressed batch: the rows are nowhere in the input
+    const ix = await run([...world(), ...submit(HONEST, opaque)]);
     t.expect((await ix.Certificate.getAll())[0]!.status).toBe("UNDECODABLE");
     t.expect((await ix.SetHealth.getOrThrow(SET_ID)).status).toBe("UNAUDITED");
-    const set = await ix.AnchorSet.getOrThrow(SET_ID);
-    t.expect([set.decodable, set.nodesComplete]).toEqual([true, false]); // the schema is known; the node table is not
+  });
 
-    const items = submit(HONEST);
-    for (const it of items) (it.transaction as { to: Hex }).to = "0x00000000000000000000000000000000000000ff"; // a forwarder
-    const fwd = await run([...world(), ...items]);
-    t.expect((await fwd.Certificate.getAll())[0]!.status).toBe("UNDECODABLE");
+  it("OUTERCALL: a certificate nested in a wrapper is audited when its rows hash to graphRoot", async (t) => {
+    rpc.keys.set(`${SET_ID.toLowerCase()}-2`, agentKey(1)); rpc.keys.set(`${SET_ID.toLowerCase()}-3`, agentKey(2));
+    const wrapped = multicall(certInput(HONEST));
+    const items = submit(HONEST, wrapped);
+    for (const it of items) (it.transaction as { to: Hex }).to = MULTICALL3;
+    const ix = await run([...world(), ...items]);
+    const [cert] = await ix.Certificate.getAll();
+    t.expect([cert!.status, cert!.graphRootMatches, cert!.discrepancyCount]).toEqual(["AUDITED", true, 0]);
+    const set = await ix.AnchorSet.getOrThrow(SET_ID);
+    t.expect([set.nodesComplete, set.nodeCount]).toEqual([true, 4]); // node table read back from nodeKeyAt
+    t.expect(rpc.calls).toBeGreaterThan(0);
+    // a nested decoy that does not hash to graphRoot is never audited
+    const decoy = multicall(certInput(HONEST.slice(0, 2)));
+    const bad = submit(HONEST, decoy);
+    const ix2 = await run([...world(), ...bad]);
+    t.expect((await ix2.Certificate.getAll())[0]!.status).toBe("ROOT_MISMATCH");
+  });
+
+  it("OUTERCALL: a relayed addNodes leaves no permanent hole (nodeKeyAt repair, retried while the RPC is down)", async (t) => {
+    const add = multicall(encodeFunctionData({ abi, functionName: "addNodes", args: [SET_ID, agentNodes(1, 2)] }));
+    const direct = certInput(HONEST, "0x");
+    const relayedAdd = { ...ANCRE, event: "NodesAdded" as const, transaction: { input: add, to: MULTICALL3 },
+      params: { setId: SET_ID, fromIndex: 2n, count: 2n } };
+    // RPC down at the time of the append and of the first certificate: NODES_MISSING, never a guess
+    rpc.down = true;
+    const ix = await run([...world(), relayedAdd, submit(HONEST, direct)[1]!]);
+    t.expect((await ix.Certificate.getAll())[0]!.status).toBe("NODES_MISSING");
+    t.expect((await ix.AnchorSet.getOrThrow(SET_ID)).nodesComplete).toBe(false);
+    // the RPC is back: the next certificate repairs the table and is audited
+    rpc.down = false;
+    rpc.keys.set(`${SET_ID.toLowerCase()}-2`, agentKey(1)); rpc.keys.set(`${SET_ID.toLowerCase()}-3`, agentKey(2));
+    await ix.process({ chains: { [CHAIN]: { simulate: [submit(HONEST, direct, rootOf(HONEST), "03")[1]!] } } as never });
+    const certs = (await ix.Certificate.getAll()).sort((a, b) => Number(a.blockNumber - b.blockNumber)).map((c) => c.status);
+    t.expect(certs).toEqual(["NODES_MISSING", "AUDITED"]);
+    t.expect((await ix.AnchorSet.getOrThrow(SET_ID)).nodesComplete).toBe(true);
+    const nodes = (await ix.SetNode.getAll()).sort((a, b) => a.index - b.index).map((n) => [n.index, n.kind, n.agentId ?? n.address]);
+    t.expect(nodes).toEqual([[0, "anchor", A], [1, "anchor", B], [2, "agent", "1"], [3, "agent", "2"]]);
+  });
+
+  it("OUTERCALL: a relayed addNodes is repaired at once when the RPC answers", async (t) => {
+    rpc.keys.set(`${SET_ID.toLowerCase()}-2`, agentKey(1)); rpc.keys.set(`${SET_ID.toLowerCase()}-3`, agentKey(2));
+    const add = multicall(encodeFunctionData({ abi, functionName: "addNodes", args: [SET_ID, agentNodes(1, 2)] }));
+    const ix = await run([...world(), { ...ANCRE, event: "NodesAdded" as const, transaction: { input: add, to: MULTICALL3 },
+      params: { setId: SET_ID, fromIndex: 2n, count: 2n } }]);
+    const set = await ix.AnchorSet.getOrThrow(SET_ID);
+    t.expect([set.nodesComplete, set.nodeCount, (await ix.SetNode.getAll()).length]).toEqual([true, 4, 4]);
+  });
+
+  it("OUTERCALL: a set registered through a Safe / Multicall3 gets its schema (params hash to setId)", async (t) => {
+    const items = world();
+    const reg = items[items.length - 1] as { transaction: { input: Hex; to: Hex } };
+    reg.transaction.input = multicall(registerInput);
+    reg.transaction.to = MULTICALL3;
+    const ix = await run([...items, ...submit(HONEST)]);
+    const set = await ix.AnchorSet.getOrThrow(SET_ID);
+    t.expect([set.decodable, set.registryVerified]).toEqual([true, true]);
+    t.expect((await ix.Certificate.getAll())[0]!.status).toBe("AUDITED");
   });
 
   it("set params that do not hash to the event's setId give no schema (UNKNOWN_SET)", async (t) => {
