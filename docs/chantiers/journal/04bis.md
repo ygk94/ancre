@@ -2,3 +2,239 @@
 
 > Une entrée par étape terminée (ou par blocage). Format : date/heure, étape, fait, mesures (statut + commande), décisions et pourquoi, écarts, blocages, prochaine étape.
 
+
+## 2026-10-06 ~11:00 — Démarrage : ce que j'ai compris, mon plan
+
+**Lu** (AM-3.13) : CLAUDE.md, ANCRE.md, CR (D1-D55, tour 7, résultats 08, veille du 05/10), `tour7.md` (D-7.1), ROADMAP, README des chantiers, `solver/` en entier (FORMAT, RESULTS, graph, ppr, export, certifier, watcher, from_indexer, run_mainnet, snapshot, simulate), rapports 04 et intégration, ENCODING.md, veille technique du 05/10, `docs/ressources/alchemy.md`, brief 02-bis, revue maximale partielle.
+
+**Compris**
+- Règle B (D48) : R6 ne rejette un contrôleur que si w > 0 ; un négatif d'un contrôleur sur sa cible est conservé (anti-censure par `setApprovalForAll`, AM-08.B).
+- Règle A côté solveur : une ligne d'agent dont la source (wallet, ou owner si VIA_OWNER) est une ancre de l'ensemble n'est jamais émise (le contrat la refuse, `AnchorAsSource`). L'ancre n'émet que comme nœud-ancre (AM-08.A).
+- AM-9.3 : l'ancien owner qui note juste après le transfert (#10255) est assumé ; diagnostic affiché, sans effet sur les arêtes.
+- Snapshot périmé : 7 avis depuis le bloc 108 835 675 (veille du 05/10), à relire on-chain (`readAllFeedback`), pas 8004scan.
+- Vecteurs communs avec 02-bis : A, B, C, 2ᵉ saut (H1 approuvé par deux ancres, H1 → H2), puis « nœud address(0) » quand R1 de 02-bis est corrigé. `mainnet_slash_anchor` doit changer d'ancres (0xea0b est le wallet de #18, #22, #23).
+- État de 02-bis au démarrage : **aucun commit** sur `chantier/02bis-corrections` (même tête que main, journal vide). Je travaille donc contre ENCODING.md de main et je relirai leur branche avant E3/E4.
+
+**Mesure de départ** : `cd solver && .venv/bin/python -m pytest -q tests` → **135 passed** (MESURÉ, 06/10, venv créé dans le worktree).
+
+**Plan**
+1. E1 : `graph.py` (R6 signé, A, diagnostic AM-9.3) + FORMAT.md + tests ; corriger au passage `replay_identity_events` (A→B→A, constat de la revue) avec un test.
+2. E2 : relecture on-chain des avis depuis le bloc 108 835 675 (`eth_getLogs` rpc1 puis `readAllFeedback`), rejeu de l'identité, nouveau snapshot versionné, acte 1 recalculé.
+3. Alchemy (D55) : récepteur de webhook (HMAC, déduplication, repli sur le sondage), codé contre des événements rejoués ; 🧑 clés et URL de Hugo.
+4. E3 : vecteurs communs v1 + `mainnet_slash_anchor` régénéré ; unification `export.main` / `run_mainnet` (revue).
+5. E4 : renommage `passesAnchorPolicy` dès le commit de 02-bis ; `simulate.py` sur fork contre leur contrat.
+6. E5 : `/code-review high` sur ce worktree. Puis rapport `04bis.md`.
+
+**Prochaine étape** : E1.
+
+## 2026-10-06 ~12:30 — E1 : règles A et B (D48), diagnostic AM-9.3, rejeu A→B→A
+
+**Fait**
+- `graph.py` : **R6 signée (D48-B)** : un contrôleur courant n'est rejeté que si le poids **combiné R5** du couple est > 0 ; son négatif est gardé (compteur `negatif_controleur_garde_<raison>`). Option `reject_controllers="any"` conservée pour mesurer l'ancienne règle.
+- `graph.py` + `ppr.certify` : **règle A (D48-A)** : un agent dont la source (wallet, ou owner sous D44) est une ancre ne porte **aucune ligne, même vide** (`Graph.anchor_sourced`, pas de `row_src`) ; il est listé sans ligne (marge de troncature côté eUp seulement).
+- **Diagnostic AM-9.3** (`Graph.diagnostics`) : couple retenu dont le client est un ancien owner/wallet de la cible, avec « N blocs après le transfert » (`Identity.past_owner_until`, champ optionnel `pastOwnerUntil` d'identity.json). Aucun effet sur les arêtes.
+- **Revue du 05/10** : `apply_transfer` retire le nouveau détenteur des anciens owners (A→B→A ⇒ {B}), comme `load_identity` ; `from_indexer` n'a plus de correction a posteriori. Test croisé `replay_identity_events` / `from_indexer.identity_file`.
+- **Revue du 05/10** : `export.main` réutilise `run_mainnet` (`schema_variant("pre_d15")`, `FARM_FILTER`, `em_schema`, `EM_RATERS`) au lieu de refaire l'expérience à la main.
+- `watcher.audit` : une ligne d'agent dont la source est une ancre est une discordance SOURCE (`proveWallet`).
+- Tests : `tests/test_d48.py` (10 tests). Chaque test de refus montre aussi que l'attaque **réussissait avant** (AM-INT.2) : l'ancre rendue opératrice perd son slash sous l'ancienne règle ; la copie de ligne de l'ancre volée fait passer la ferme au leave-one-out sans A.
+
+**Mesures** (MESURÉ, 06/10, `cd solver && .venv/bin/python -m pytest -q tests` → **146 passed** ; `export.py`, `run_mainnet.py`, snapshot du bloc 108 835 675)
+- Mainnet, schéma de référence : **0 négatif de contrôleur** ; la règle B ne change aucune arête réelle. Schéma stress : 1 (`0x4498…` → #8317, son propre agentWallet, négatif combiné) ; c'est une **boucle** (la ligne du wallet est portée par #8317 lui-même), donc non encodable.
+- Règle A sur le mainnet, ancres {0xea0b, 0x0730} (ancien vecteur de démo) : #18 perd sa copie ; d(#4) passe de 0,1852 à 0,1111, et sous la règle du tour 2, t(#4) dans la colonne 0xea0b passe de 0,049 à 0.
+- `mainnet_em_d44` (D44) : les deux ancres EM sont owners de #10184 et #10181 ⇒ ces agents perdent leur ligne (A par VIA_OWNER, sur données réelles) ; 36 arêtes, 11 lignes (9 VIA_OWNER), e = 1,84e17 / 2,04e17 wei (marge de troncature, côté méfiance seulement), 78 itérations.
+
+**Décisions**
+- Test de signe sur la **combinaison R5**, pas par tag : c'est ce que relit le contrat (une combinaison D14 puis le contrôle). Un vouch +1 et un slash −1 d'un opérateur donnent −1 : gardé.
+- Agent sourcé par une ancre : **pas de ligne du tout** plutôt qu'une ligne vide. Une ligne vide avec SRC = ancre serait refusée (`AnchorAsSource`), et une ligne vide sans SRC exige `agentWallet = 0` (ENCODING §3.4). La marge ne touche que eUp.
+- `mainnet_slash_anchor` : **ancres {0x0730, 0x794c}**. 0x794c n'est le wallet ni l'owner d'aucun agent et approuve #4 (`quality`, filtre `reference`). Le seul négatif utile du mainnet vient de 0xea0b, wallet de #18, #22, #23 : **aucun vecteur mainnet ne peut montrer le bit de veto certifié sans violer A**. Le veto passe donc dans les vecteurs jouets communs (E3). Les 4 vecteurs de violation et `two_omissions` de `simulate.py` sont reconstruits sur ce graphe (le négatif omis est celui de la copie de #18).
+
+**INTERFACE**
+- **Règle d'arête R6 (normative)** : contrôleur rejeté seulement si w combiné > 0. À reporter dans l'indexeur (`edges.ts`, SetEdge : un négatif de contrôleur a `rejected = null`) et dans l'ERC §3.3. FORMAT.md R6, R8, §7 mis à jour.
+- **R8** : aucune ligne d'agent dont la source est une ancre (le solveur ne l'émet pas ; le contrat 02-bis la refuse).
+- **Pour 02-bis** : sous B, un client peut garder un couple négatif vers **l'agent qui porte sa propre ligne** (wallet de l'agent) ; l'arête est une boucle, jamais encodée (dst ≠ u). `proveEdge` ne doit **rien** prouver quand agentJ est l'agent de la ligne (sinon omission prouvable d'une arête impossible à encoder). Le surveillant l'ignore déjà.
+- identity.json : champ optionnel `pastOwnerUntil` (indexeur : bloc du dernier transfert sortant par ancien owner).
+- Vecteurs régénérés : `mainnet_slash_anchor` (nouvelles ancres, nouveau setId), `mainnet_em_d44` (filtre à 8 tags, 2 lignes en moins), `violations/*`.
+
+**Écarts** : la régénération de `mainnet_slash_anchor` (prévue en E3) est faite ici, parce que la règle A rendait l'ancien vecteur invalide pour le surveillant (5 tests rouges sans elle).
+
+**Prochaine étape** : E2, snapshot rafraîchi depuis la chaîne.
+
+## 2026-10-06 ~13:15 — E2 : snapshot rafraîchi depuis la chaîne (AM-9.2), acte 1 recalculé
+
+**Fait**
+- `solver/refresh.py` (nouveau) : `eth_getLogs` sur rpc1 (Reputation : NewFeedback, FeedbackRevoked, Upgraded ; Identity : Transfer, Approval, ApprovalForAll, MetadataSet, Registered, Upgraded) sur (108 835 675, H], puis **relecture complète par `readAllFeedback(agent, [], "", "", true)` au bloc H** de chaque agent touché, dont la liste remplace celle du snapshot (valeurs, décimales, tags, révocations tels que stockés ; les logs ne servent qu'à dater). Contrôle croisé log ↔ registre sur chaque nouvel avis. Identité roulée par `replay_identity_events`. Refus si un `Upgraded` apparaît (D17).
+- Nouveau snapshot versionné `solver/data/mainnet-110994810.{feedbacks,identity}.json.gz` + `mainnet-110994810.refresh.json` (provenance, liste des avis). L'ancien est gardé (base de la provenance).
+- `run_mainnet.BLOCK = 110 994 810` ; acte 1 recalculé (`out/mainnet.md`), nouvelle section **(g) D48** ; les blocs des avis (`b`) sont chargés et exportés par `from_indexer` (diagnostic AM-9.3).
+
+**Mesures** (MESURÉ le 06/10 à 08:50 UTC, `cd solver && .venv/bin/python refresh.py --to-block 110994810`, 3,6 s, 10 appels `eth_getLogs` + 4 `cast call`)
+- **8 nouveaux avis** (la veille du 05/10 en comptait 7 : +1 au bloc 110 872 159, `0x77a5…` → #10280, `agenttrace-outcome` = 100), **0 révocation, 0 `Upgraded`**. Identité : 21 Transfer, 19 Registered, 22 MetadataSet ; 10 281 agents.
+- **Total : 9 291 avis** au bloc 110 994 810 (le « 9 290, NON VÉRIFIÉ » du tour 7 est remplacé). **Part de la ferme : 7 665 / 9 291 = 82,50 %** (7 665 clients distincts vers #182).
+- Arêtes nouvelles au **schéma de référence : 0** (les tags `requester_rating:knowledge_access`, `tab` et `agenttrace-outcome` n'y sont pas). En schéma stress : 4 couples ; en schéma execution.market d'essai : 2 (#10188, #10262, w = 8000). **L'acte 1 ne change pas** : chaîne honnête #18 → {#2, #3}, slash de #4, Eve à 0, fuite du scanner, #8317 — mêmes valeurs (`out/mainnet.md` §a-§e).
+- **AM-9.3 sur données réelles** : `0x4947…` transfère #10255 au bloc 109 331 923 et le note **918 blocs plus tard** (bloc 109 332 841, ≈ 4,6 min à 0,302 s/bloc), 5 avis `tab` = 100. Visible seulement si `tab` propage (schéma stress) ; affiché, sans effet.
+- **Constat** : 0x794c (nouvelle ancre de `mainnet_slash_anchor`) est un **ancien owner de #4** (diagnostic AM-9.3, bloc de transfert inconnu : il précède l'historique daté du snapshot). Il note #4 `quality` = 100. Ce n'est pas un contrôleur courant, donc l'arête est légale sous D20 ; mais ce n'est pas une ancre « exemplaire ». Le vecteur reste un vecteur de test ; la démo positive (acte 2) se fait sur notre trafic.
+
+**Décisions**
+- Relecture **par agent touché** et remplacement de toute sa liste, plutôt qu'un ajout des seuls nouveaux logs : une révocation ou un avis manqué sur cet agent est rattrapé, et ce qui entre dans le snapshot est ce que le registre stocke (règle « readAllFeedback, jamais 8004scan »).
+- Diagnostic AM-9.3 daté sur le **premier** avis du couple après le transfert (918 blocs), pas sur l'avis décisif de la combinaison (le 5ᵉ, 1 161 252 blocs après).
+- `refresh.py` envoie un User-Agent explicite : rpc1 renvoie **HTTP 403** à l'User-Agent par défaut de urllib (MESURÉ).
+
+**Tests** : `.venv/bin/python -m pytest -q tests` → **146 passed** (MESURÉ). Vecteurs mainnet régénérés sur le nouveau snapshot (`mainnet_em_d44` : 14 nœuds, 38 arêtes, 76 itérations ; les autres inchangés en contenu).
+
+**INTERFACE** : `onchain_feedbacks.json` gagne le champ optionnel `b` (bloc du NewFeedback) ; `from_indexer` l'exporte depuis `Feedback.blockNumber`.
+
+**Prochaine étape** : intégration Alchemy (D55), puis E3.
+
+## 2026-10-06 ~14:00 — Intégration Alchemy (D55) : récepteur de Custom Webhook, codé contre des événements rejoués
+
+**Fait** (`solver/alchemy_hook.py`, `solver/tests/test_alchemy.py`, `solver/.env.example`)
+- `query` : le filtre GraphQL du Custom Webhook à coller dans le tableau de bord (un par réseau, 143 et 10143) : Reputation (NewFeedback, FeedbackRevoked), Identity (Transfer, MetadataSet, Approval, ApprovalForAll), Upgraded sur les deux, `CertificateSubmitted` du contrat ANCRE. Topics dérivés des signatures que la boucle de sondage utilise déjà (une seule source).
+- `serve` : récepteur HTTP `POST /alchemy`. **Signature vérifiée avant tout parsing** (HMAC-SHA256 du corps brut, comparaison à temps constant ; 401 sinon), réponse immédiate (Alchemy relance les non-200 pendant 10 min, DOC), traitement dans un thread, **déduplication par (txHash, logIndex)**. Les événements passent par le **même code** que le sondage : `certifier.relevant` → `Certifier.run_once` (recertification), `CertificateSubmitted` du set surveillé → `watcher.watch_once` (audit + preuves). À blanc par défaut, `--send` pour du réel.
+- **Repli conservé** : un sondeur `eth_getLogs` (`poll_once`) couvre en continu les blocs non traités, via le même dédoublonneur (le webhook donne la latence, le sondage la complétude) ; alarme `webhook_silent`.
+- **Mesures journalisées à chaque webhook** : `latencyS` = réception − timestamp du bloc (résolution 1 s) ; **état du bloc à la réception** lu par les étiquettes RPC juste après le POST (`Finalized` si bloc ≤ `finalized`, sinon `notFinalized`), et l'écart à `latest` en blocs. Si l'export de l'indexeur est en retard sur le bloc de l'événement : `data_behind`, rattrapé au tour de sondage suivant.
+- `payloads` / `replay` : charges utiles au format Alchemy **reconstruites à partir de vrais logs du mainnet**, signées et rejouées. Fixture : `tests/fixtures/alchemy/mainnet-108835676-110994810.jsonl`.
+- Secrets : `ALCHEMY_SIGNING_KEY`, `ALCHEMY_NOTIFY_TOKEN`, `ALCHEMY_API_KEY` depuis l'environnement ou `solver/.env` (ignoré par git, `*.env`, vérifié par `git check-ignore`). Aucune clé dans le dépôt.
+
+**Mesures**
+- MESURÉ (06/10, rpc1) : les étiquettes `latest`, `safe`, `finalized` répondent ; à l'instant de la sonde, `safe = latest` et `finalized = latest − 1` (`cast block <tag> --field number`).
+- MESURÉ (06/10) : fixture = **29 blocs, 51 logs** (8 NewFeedback, 21 Transfer, 22 MetadataSet) sur (108 835 675, 110 994 810], en un seul `eth_getLogs` par adresse sur rpc1 (2,6 s). Les 8 NewFeedback décodés = les 8 avis relus par `refresh.py`.
+- MESURÉ (local, à blanc, mainnet 9 291 avis, set honnête 0x0730/0xf7d5, filtre core) : **POST signé → plan du certificateur : médiane 1,2 ms, p90 1,3 ms, max 8,4 ms** sur 20 POST (`run_once` seul : 3,2 ms à froid).
+- **NON MESURÉ** : le délai réel bloc → réception du webhook et l'état du bloc à l'envoi par Alchemy. Il faut le webhook de Hugo (voir blocage). La syntaxe `topics: [[…]]` (OU en position 0) est **NON VÉRIFIÉE** sur Monad tant que « Test Webhook » ne l'a pas acceptée.
+- Tests : `.venv/bin/python -m pytest -q tests` → **155 passed** (dont 9 Alchemy). Le test de refus de signature vérifie aussi que le **même corps est accepté** avec la bonne signature, et qu'un POST refusé n'atteint jamais le dispatcher (AM-INT.2).
+
+**Décisions**
+- Le webhook est un **déclencheur**, pas une source de données : les avis eux-mêmes sont relus depuis l'export de l'indexeur (Envio, 03) ou le registre. Envio reste la base historique et l'auditeur (D42) ; Alchemy pousse l'événement. Les deux rôles ne se recouvrent pas.
+- Réponse 200 **avant** le traitement : une recertification lente ne doit pas provoquer de relances en rafale.
+- État de commit classé en deux valeurs seulement (`Finalized` / `notFinalized`) : le RPC public ne distingue pas Proposed de Voted (`safe = latest` mesuré).
+
+🧑 **BLOQUÉ (Hugo)** : compte Alchemy (offre gratuite, 5 webhooks), app « ANCRE » sur Monad mainnet + testnet, puis : (1) la **clé de signature** du Custom Webhook, (2) le **jeton Notify** (seulement pour créer le webhook par API), (3) une **URL HTTPS publique** pour le récepteur (tunnel pendant la démo, hôte permanent pour le 13 → 27/10). À mettre dans `solver/.env` (jamais commité). Ensuite : `alchemy_hook.py query --chain 10143 --ancre <adresse>` → coller dans le tableau de bord → « Test Webhook » → `serve`, puis mesurer délai et état sur le testnet.
+
+**Phrase pour le README et la vidéo Alchemy** (vérifiable dans `solver/alchemy_hook.py`) :
+> *Every ERC-8004 feedback, transfer or certificate submission on Monad reaches ANCRE through an Alchemy Custom Webhook; the receiver checks the HMAC signature, then recertifies the anchor set or audits the new certificate with the same code as the polling loop, which now only fills gaps.*
+(À compléter par le délai mesuré quand le webhook existe ; ne pas annoncer de chiffre avant.)
+
+**Prochaine étape** : E3, vecteurs communs.
+
+## 2026-10-06 ~15:00 — E3 (en grande partie) : vecteurs communs avec 02-bis — ARRÊT (limite d'usage)
+
+**Fait** : `solver/common_vectors.py` → `solver/vectors/common/*.json` (format v1, re-vérifiés par `export.check_file_obj`). Chaque vecteur est **autonome** : bloc `registry` (agents, opérateurs, avis par ordre d'index, pour les mocks de `contracts/test/utils/Mocks.sol`), `expect.submission` (ACCEPTED ou l'erreur attendue), `expect.read` (contributions, trustRobust, distrust, vetoBits, vetoByApproval, passesAnchorPolicy).
+
+| vecteur | attendu (MESURÉ, solveur, 06/10) |
+|---|---|
+| common_A_anchor_not_source | ACCEPTED ; S (#10, wallet = ancre X) sans ligne ; F (#20) trustRobust 0 |
+| common_A_attack_anchor_copy | **AnchorAsSource(2)** (S porte la ligne de X) |
+| common_A_mainnet_old_slash_anchor | **AnchorAsSource(5)** (vecteur de démo du 01/10 sur le snapshot 110 994 810, fork) |
+| common_B_controller_negative | ACCEPTED ; #30 : négatifs de l'ancre opératrice A2 et de l'approuvé P gardés, d = 0,1111, veto (bit + approbation), refusé ; #31 OK (0,0556) |
+| common_C_proven_row_resubmitted | étape 1 ACCEPTED (attested, arête fabriquée A1→#41), preuve proveEdge, puis `resubmission` (mêmes lignes fausses, ligne vide de #40 retirée) → **ProvenRowResubmitted(u_A1)** ; `control` honnête → ACCEPTED |
+| common_2hop | ACCEPTED ; **H2 (#51) trustRobust 0,0741 > θ : OK**, alors qu'une liste à un saut dit « inconnu » (D50) |
+| common_2hop_one_anchor | H1 approuvé par une seule ancre : H2 = 0, refusé (AM-10.6) |
+
+Tests : **155 passed** (MESURÉ).
+
+**INTERFACE** : nouveaux vecteurs `vectors/common/` ; le test `test_A_mainnetSlashAnchorRefused` de 02-bis doit lire `common_A_mainnet_old_slash_anchor.json` (le `mainnet_slash_anchor.json` a changé d'ancres en E1, il est désormais ACCEPTÉ). Le hash canonique de C n'est pas dans le vecteur (défini par 02-bis).
+
+**Reste à faire** (session interrompue par la limite d'usage) :
+- E3 : vecteur « nœud address(0) » quand R1 est corrigé chez 02-bis ; tests pytest dédiés aux vecteurs communs ; FORMAT.md §8.
+- E4 : renommage `passesAnchorPolicy` (attend le commit de 02-bis ; seul `ppr.is_trusted` est concerné côté solveur), `simulate.py` sur fork contre le contrat corrigé.
+- E5 : `/code-review high` sur ce worktree.
+- Rapport `docs/chantiers/rapports/04bis.md`.
+- 🧑 Alchemy : clé de signature, jeton Notify, URL HTTPS (voir entrée D55).
+
+## 2026-10-06 ~16:00 — E3 fini, renommage solveur (E4, partie solveur)
+
+**Fait**
+- Vecteur **`common_R1_address_zero_node`** (attendu `BadNodes()`, nom relu dans le worktree 02-bis, lecture seule) : le certificat du 2ᵉ saut plus un nœud-adresse 0x0 portant une ligne.
+- Garde-fou solveur : un client `address(0)` est ignoré (aucun avis ne peut en venir ; il marque une ligne sans source dans l'encodage). Un test existant utilisait `0x000…0` comme owner fictif : adresse changée.
+- `tests/test_common_vectors.py` (14 tests) : vecteurs à jour et déterministes, arithmétiquement valides (un refus ne peut venir que de D48/R1), attendus sémantiques (2ᵉ saut OK seulement avec deux ancres, négatifs de contrôleur gardés + veto, l'attaque A ferait vraiment passer F, la resoumission C garde la même ligne fausse avec d'autres octets — vérifié sur le calldata décodé).
+- FORMAT.md §8.
+- **Renommage** : `ppr.is_trusted` → `ppr.passes_anchor_policy`. C'est le seul usage côté solveur : `certifier`, `watcher` et `simulate` n'appellent ni `isTrusted` ni `assess` (vérifié par grep).
+
+**Mesures** : `.venv/bin/python -m pytest -q tests` → **169 passed** (MESURÉ, 06/10).
+
+**Blocage** : le contrat corrigé de 02-bis **n'est pas commité** (journal 02-bis : 7 tests rouges en local). Le rejeu `simulate.py` contre leur contrat attend leur commit ; je rejoue d'abord contre le contrat de `main`.
+
+**Prochaine étape** : `simulate.py` sur fork (contrat de `main`), puis `/code-review high`.
+
+## 2026-10-06 ~17:30 — E4 (partie fork) : rejeu `simulate.py` contre le contrat de `main` (02-bis n'a pas encore commité)
+
+**Fait** : nouveau scénario `common` dans `simulate.py` (vecteurs communs ; jouets au niveau Submitter-attested avec leur propre setId, puisque leurs registres factices ne sont pas sur le fork ; le vecteur mainnet en Registry-verified). Pour C : soumission, preuve `proveEdge` par le surveillant, resoumission, puis certificat de contrôle. Correctifs du vecteur C : la resoumission ne renvoie pas les nœuds (`newNodes = 0x`, sinon `NodeExists`) et porte son propre eEff (sinon `ResidualTooLarge`).
+
+**Mesures** (MESURÉ, 06/10, `anvil --network monad` fork de rpc1 au bloc 110 994 810, `ETH_RPC_TIMEOUT=900`, contrat de `main`)
+- `--scenarios vectors,violations` (4 min 28 s) → `solver/out/simulation.json` : **9/9 vecteurs ACCEPTÉS**, setId, eEff, graphRoot, vectorRoot, masse et q identiques aux attendus ; chaque copie mutée est rejetée (`NotSubSolution`). `mainnet_slash_anchor` (nouvelles ancres) : 1 039 934 gas. Violations : en Registry-verified, fabriquée et gonflée refusées (`EdgeMismatch`), dilution, négatif omis et double omission acceptés puis prouvés ; en Submitter-attested, les 5 acceptées et prouvées.
+- `--scenarios common` → `solver/out/simulation_common.json` : **sur le contrat actuel, toutes les attaques passent** : `common_A_attack_anchor_copy`, `common_A_mainnet_old_slash_anchor` (1 039 953 gas), `common_R1_address_zero_node`, et **C** (preuve FABRICATED à 280 509 gas, puis resoumission de la même ligne fausse **ACCEPTÉE**). C'est l'état « avant correction » attendu ; le contrat 02-bis doit donner `expect.submission`.
+- `--scenarios service,split` → `solver/out/simulation_service.json` : cycle du service complet (premier certificat, recalcul identique ignoré, graphe qui grandit, censure, front-running `addNodes`, rafraîchissement) et premier certificat découpé avec crash. Un premier passage avait échoué sur un `cast send` sans message après 9 min ; le même `giveFeedback` passe en `eth_call` sur le mainnet (estimation 277 933 gas) et le second passage a réussi : c'est le délai d'attente intermittent cast ↔ anvil déjà noté (AM-INT.11).
+
+**Reste pour E4** : rejouer `vectors,violations,common` contre le contrat de 02-bis dès son commit (commande : `cd solver && .venv/bin/python simulate.py --scenarios vectors,violations,common`, en pointant `build_contract` sur leur branche fusionnée).
+
+**Prochaine étape** : E5 `/code-review high`.
+
+## 2026-10-06 ~18:30 — E5 : `/code-review high` sur ce worktree (AM-02.9 : chemin et plage donnés explicitement)
+
+**Fait** : revue de `git -C /Users/hugo/Projet/ancre-04bis diff bc2d911..HEAD -- solver/`. **10 constats, 9 corrigés, 1 relayé** (détail : rapport 04bis §6). Les deux plus graves : (1) le webhook perdait les événements dont la recertification échouait ou rencontrait `data_behind` (le journal D55 affirmait à tort qu'ils étaient rattrapés : c'est maintenant vrai) ; (2) le surveillant cessait d'auditer les arêtes d'une ligne sourcée par une ancre (constat ANCHOR_SOURCE ajouté, non prouvable, arêtes auditées).
+
+**Mesures** : `.venv/bin/python -m pytest -q tests` → **174 passed** (MESURÉ, 06/10), dont 5 de non-régression (`tests/test_review_04bis.py`).
+
+**À relayer (pilote → 03)** : `indexer/src/lib/edges.ts` rejette encore tout contrôleur ; D48-B demande de garder le négatif (SetEdge `rejected = null`, w < 0). La parité réelle avec l'indexeur échouera tant que ce n'est pas porté.
+
+**Fin de session** : rapport `docs/chantiers/rapports/04bis.md`. Reste : rejeu contre le contrat de 02-bis dès son commit, webhook Alchemy réel (🧑).
+
+## 2026-10-07 — Revue maximale complète (relais `revue-vers-04bis.md`) : constats HAUTS + AM-06.1
+
+`git merge main` fait (commit 4aaf785, sans conflit). Constats lus dans `docs/revue/revue-max-2026-10-06-complete.md` §5-§10.
+
+| Id | Correction | Test de non-régression (`tests/test_review_max_04bis.py`) |
+|---|---|---|
+| **TBL** | `certifier.chain_table` lit la table dans le stockage du contrat (`nodeCount`, `nodeKeyAt`, en JSON-RPC direct) au lieu de décoder le calldata derrière chaque `NodesAdded` ; incrémental ; contrôle des ancres. L'ancien lecteur reste sous `chain_table_from_logs` | `test_tbl_…` : une chaîne factice qui lève sur toute lecture de logs ou de calldata |
+| **STUCK** | `run_once` ne saute plus un titulaire **prouvé ou STALE** identique au recalcul ; s'il est prouvé, il soumet une **variante distincte valide** (`distinct_variant` : 1 wei de moins sur un nœud massif qui n'alimente personne : sous-solution, d et graphRoot inchangés, seul vectorRoot change) | `test_stuck_…` ×2 (variante valide ; titulaire prouvé identique → `certified`, au lieu de `skip_identical`) |
+| **THIRD** | `Certifier.contract_changed` : la boucle relit `certificate(setId)` à chaque tour et recalcule dès que (graphRoot, vectorRoot, eLowEff, eEff) bouge sans nous (certificat d'un tiers, preuve) | `test_third_…` |
+| **L3** | `ppr.certify` : le plafond des négatifs est contrôlé **après** le calcul de masse ; seule une ligne massive (ou d'ancre) de plus de ROW_MAX négatifs lève | `test_l3_…` : 257 slashs d'une adresse sans masse ne lèvent plus ; les mêmes par une ancre lèvent |
+| **W1** | `watcher.audit` : dilution décidée **par ligne** (somme des omissions positives) ; preuves enchaînées avec le poids des dilutions restantes (`still_dilutes(…, pending)`) | `test_w1_…` : 9 DILUTION prouvables au lieu de 9 OMITTED_POSITIVE |
+| **W6** (moyenne, liée) | `watcher.side` = transcription exacte de `_side` ; plancher `gP = max(GRID, sPlus déclaré)` (GRID si non déclaré), budget `max(gP, S amendée)` | `test_w6_…` (cas `w6_cycle` : sauté par l'ancienne règle), `test_side_…` |
+| **AMENDS** | `watcher.chain_amends` : amendements reconstruits depuis `EdgeProven` / `RowVoided` du certificat courant, vérifiés contre `rowStateOf(setId, u).h = keccak(leaf ‖ amends)` ; discordances déjà prouvées sautées ; ligne non concordante journalisée et laissée de côté (jamais une preuve vouée à `BadProof(5)`) | `test_amends_…` (#7 prouvé deux fois : remplacé sur place ; hash faux → ligne sautée) |
+| **AM-06.1** | `Signer` : avec Foundry ≥ 1.8, `ETH_PASSWORD` est un **chemin**. Le mot de passe est écrit une fois dans un fichier 0600 d'un répertoire 0700 (supprimé à la sortie) ; une variable `*_FILE` ou `password_file` passe un chemin directement (compatible avec le contournement de `demo/certify.py`). `Chain._run` remonte stdout quand cast `--json` y écrit l'erreur. `Signer.build` : constructeur unique pour les CLI | `test_am061_…` ×2 |
+
+**Vérification AM-INT.2** : les 10 nouveaux tests lancés sur le code **d'avant correction** (`git stash` de certifier/ppr/watcher) : **9 échouent**. Le test W6 initial ne discriminait pas ; il a été réécrit sur le scénario `w6_cycle` du rapport, et il discrimine.
+
+**Mesures** (MESURÉ, 07/10)
+- `.venv/bin/python -m pytest -q tests` → **185 passed**.
+- Fork (`simulate.py --scenarios violations,common`, bloc 110 994 810, contrat de `main`, 53 s) : 10 vecteurs de violation, preuves toutes réussies, **double omission enchaînée sur une ligne** comprise (passe maintenant par `chain_amends`, c'est-à-dire par les vrais `EdgeProven` et `rowStateOf`).
+
+**INTERFACE**
+- Le certificateur et le surveillant lisent `nodeCount`/`nodeKeyAt` et `rowStateOf` (déjà dans le contrat de `main` ; à garder dans 02-bis).
+- Pour 06 : `Signer` accepte maintenant le mot de passe dans une variable (fichier 0600 créé par le solveur), une variable `*_FILE`, ou `password_file` ; le contournement de `demo/certify.py` peut être retiré.
+- Résidu TBL : un `submitCertificate` **relayé** (multisig, 4337) reste « undecodable » pour le surveillant ; il faudrait une trace d'appels, que le RPC public d'Alchemy refuse (`debug_traceTransaction`, `docs/ressources/alchemy.md` §1.1). STUCK côté contrat (REFUSED-first pour un titulaire STALE) relève de 02-bis.
+
+**Prochaine étape** : constats moyens (NODES600, LOGS, CHKREG, DEFER, STALE, DIES, W7, BREAK, SWALLOW, ONCE, A1d, GASCAP, ARGV, HEADREG).
+
+## 2026-10-07 — Revue maximale complète : constats MOYENS (et 3 faibles triviaux)
+
+| Id | Correction | Test (`tests/test_review_max_04bis.py`) |
+|---|---|---|
+| **NODES600** | `add_nodes_per_tx` 600 → **450** (v1 : ≈ 45,9 k gas/nœud, GAS.md 01/10 ; 450 × 45,9 k × 1,075 < 25 M) | `test_nodes600_…` |
+| **LOGS** | `Chain.logs` découpe en 100 blocs (`cast logs --query-size 100`) sur `rpc.monad.xyz` et `testnet-rpc.monad.xyz` ; la table ne lit plus de logs depuis le bloc 0 (TBL) ; stdout dans `ChainError` (AM-06.1) | `test_logs_…` |
+| **CHKREG** | sur `Upgraded` (et `--send`) : `checkRegistry(setId)` ; `registry_changed` fait partie de l'état surveillé (`contract_changed`) : recertification | `test_chkreg_…` |
+| **GASCAP** | `submitCertificate` au-dessus du plafond : nouveau calcul avec troncature croissante (`truncate_levels` 1e12, 1e14, 1e16 WAD : lignes des nœuds les plus légers retirées, t reste une borne inférieure) | `test_gascap_…` |
+| **DIES** | certificateur et surveillant : tête et export lus **dans** le `try` ; `--once` rend 1 sur un tour en échec ; `from_indexer.export` écrit en fichier temporaire + `os.replace` | (code) |
+| **STALE** | si l'export est en retard sur les events (`identity.block` < bloc de l'event) : `data_behind`, la fenêtre n'avance pas | (code ; le webhook avait déjà ce comportement) |
+| **DEFER** | une soumission différée par la règle de remplacement pose `retry_at = head + wait` ; la boucle relance à ce bloc | `test_defer_…` |
+| **A1d** | set ouvert : les nouveaux nœuds ne partent **jamais** dans `submitCertificate` ; `addNodes` seul, puis soumission au tour suivant sur la table relue (`nodes_added`) | `test_plan_splits_…` (assertion A1d) ; fork : cycle du service OK |
+| **W7** | nouveau constat OVERSTATED_NEG (w < q < 0), prouvé par `proveEdge` | `test_w7_…` |
+| **W6** | (traité avec les hauts) | — |
+| **SWALLOW** | une erreur de transport sur `tx_input` remonte (fenêtre gardée) ; « undecodable » réservé à un input récupéré mais indécodable | `test_swallow_…` |
+| **BREAK** | une estimation qui revert (sauf `BadProof(5)`/`(23)`) ne bloque plus la ligne : les preuves suivantes sont tentées | `test_break_…` |
+| **ONCE** | `watch_once(reaudit=True)` : le certificat **courant** est réaudité à chaque tour contre des données fraîches ; les preuves déjà posées sont sautées (AMENDS) | `test_once_…` |
+| **D55** | le webhook s'abonne aussi à `EdgeProven` et `RowVoided` du contrat ; un changement d'état du contrat relance le certificateur (THIRD, ONCE) | tests Alchemy mis à jour |
+| **SIGNER** (faible) | `Signer.build` partout | `test_am061_…` |
+| **MSG** (faible) | message du plafond : « ~600 arêtes par 15 M » (GAS.md) au lieu du chiffre v0 | — |
+| **DEC18**, **DEC28**, **CNT** (faibles) | `quantize` ignore `valueDecimals > 18` (comme le contrat) ; `dec_to_wad` en précision 100 ; commentaire sourcé | `test_dec18_and_dec28` |
+| **HEADREG** | résolu par TBL (plus de reconstruction par logs, donc plus de « node table gap ») | — |
+| **K24**, **K23** | déjà faits le 06/10 (E1) | — |
+
+**Non traités** : **ARGV** (PLAUSIBLE, Linux seulement ; il faudrait signer hors de cast) ; résidu de TBL (`submitCertificate` relayé indécodable sans trace d'appels) ; **REGADDR**, **SRCLESS**, **SYNROWS**, **DEAD**, **K27**, **MERKLE** (faible ou nettoyage, après la soumission).
+
+**Vérification AM-INT.2** : les 9 nouveaux tests des constats moyens, lancés sur le code d'avant correction (`git stash`), **échouent tous les 9**.
+
+**Mesures** (MESURÉ, 07/10)
+- `.venv/bin/python -m pytest -q tests` → **195 passed**.
+- Fork (bloc 110 994 810, contrat de `main`) : `service,split` → `out/simulation_service.json`. Sur set ouvert, chaque certificat avec de nouveaux nœuds passe en deux tours (`nodesAddedFirst`). Le certificat de croissance est en place avant la tentative de censure, qui est maintenant **refusée** (`NotBetter`) ; front-running `addNodes`, rafraîchissement par l'âge et premier certificat découpé (3 `addNodes` de 450 au plus, 3 `reserveCapacity`) OK.
+
+**INTERFACE** : pour 07 et le pilote, un set ouvert produit une action de journal `nodes_added` avant `certified` ; constat OVERSTATED_NEG dans les audits ; webhook Alchemy élargi aux events de preuve du contrat.

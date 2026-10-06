@@ -1,11 +1,12 @@
-"""ANCRE — acte 1 de la démo (D19) sur le mainnet : 9 283 avis, état au bloc 108 835 675 (règles D20, D44).
+"""ANCRE — acte 1 de la démo (D19) sur le mainnet : 9 291 avis, état au bloc 110 994 810 (règles D20, D44, D48).
 
 Usage :
   .venv/bin/python run_mainnet.py            # écrit out/mainnet.md et l'affiche
   .venv/bin/python run_mainnet.py --tags     # inventaire des tag1 et couverture du schéma de référence
 
 Entrées :
-  data/mainnet-108835675.{feedbacks,identity}.json.gz  snapshot versionné, relu on-chain (provenance : snapshot.py)
+  data/mainnet-110994810.{feedbacks,identity}.json.gz  snapshot versionné, relu on-chain (provenance : snapshot.py
+                                                       jusqu'au bloc 108 835 675, puis refresh.py, AM-9.2)
   FB  snapshot 8004scan du 21/09 (vault, lecture seule), seulement pour mesurer ses erreurs de décimales (AM-R4.2)
 """
 from __future__ import annotations
@@ -29,19 +30,22 @@ VAULT = Path("/Users/hugo/Projet/dataBlockchain/2 - EVM/Monad (L1)/Hackathons/_d
 SCR = Path(os.environ.get("ANCRE_SCRATCH", "/private/tmp/claude-501/-Users-hugo-Projet-ancre/"
                                          "d7aaa033-3225-48a1-9564-a90ffb1f1a63/scratchpad"))
 FB = VAULT / "fb.json"
-BLOCK = 108_835_675
+BLOCK = 110_994_810
 FB_ONCHAIN = HERE / "data" / f"mainnet-{BLOCK}.feedbacks.json.gz"
 IDENTITY = HERE / "data" / f"mainnet-{BLOCK}.identity.json.gz"
 
 
 def load_mainnet():
-    """(feedbacks, identity) du snapshot versionné : 9 283 avis, identité au bloc 108 835 675."""
+    """(feedbacks, identity) du snapshot versionné (9 291 avis, identité au bloc 110 994 810)."""
     return load_feedbacks_onchain(FB_ONCHAIN), load_identity_json(IDENTITY)
 
 SCANNER = "0xa06f907f"          # préfixes, résolus en adresses complètes plus bas
 SCANNER2 = "0xc71a15fc"
 HONEST1, HONEST2 = "0x07305360", "0xf7d5543d"
 EA0B = "0xea0b21fb"
+QUALITY4 = "0x794c94f1"         # address node (no agent): `quality` 100 on #4. Anchor of the slash vector (D48-A)
+EM_RATERS = ("0x3aebb73a", "0xaf95b213")   # two execution.market raters (anchors of the D44 measurement)
+FARM_FILTER = ["trust", "liveness", "eve", "plague", "vouch", "review", "slash"]
 EVE = 182
 ALPHA = Fraction(1, 3)          # D2
 
@@ -78,6 +82,20 @@ def stress_schema(fbs) -> dict[str, TagSpec]:
     résistance Sybil vient des ancres et non du schéma. Ce n'est PAS une recommandation."""
     tags = {f.tag1 for f in fbs if f.tag1}
     return {t: TagSpec(dec_to_wad(-100), 0, dec_to_wad(100), "endorsement") for t in tags}
+
+
+def em_schema(fbs, raw_ref: dict) -> tuple[dict[str, TagSpec], list[str]]:
+    """Trial schema of the D44 measurement (tour 6, `nv/impact.py`; NOT normative): every execution.market tag1 as an
+    endorsement on [0, 50, 100], added to the reference schema; filter = the 8 tags of the tour-6 measurement.
+    Shared by the act-1 report (f) and the `mainnet_em_d44` vector (export.py), so that both measure the same thing."""
+    em_tags = sorted({f.tag1 for f in fbs if f.tag1.split(":")[0] in ("executor_rating", "requester_rating",
+                                                                       "buyer_rating", "seller_rating")})
+    ext = json.loads(json.dumps(raw_ref))
+    for t in em_tags:
+        ext["tags"].setdefault(t, {"min": "0", "neutral": "50", "max": "100", "kind": "endorsement"})
+    em_filter = [t for t in em_tags if t not in ("seller_rating:data_collection", "requester_rating:verification",
+                                                  "executor_rating:verification")]
+    return load_schema(ext), em_filter
 
 
 def run(fbs, idn, schema, filt, anchors, alpha=ALPHA, **kw):
@@ -164,7 +182,7 @@ def main():
     h1, h2, ea0b = resolve(HONEST1, fbs), resolve(HONEST2, fbs), resolve(EA0B, fbs)
     w2a = idn.wallet_to_agents()
 
-    P("# ANCRE — acte 1 sur le mainnet (9 283 avis, règles D20 et D44)")
+    P(f"# ANCRE — acte 1 sur le mainnet ({len(fbs)} avis au bloc {idn.block}, règles D20, D44 et D48)")
     P(f"\nCommande : `cd solver && .venv/bin/python run_mainnet.py`. Données : snapshot versionné `data/` ({len(fbs)} avis "
       f"relus on-chain, identité au bloc {idn.block}, {len(idn.owner)} agents, "
       f"{sum(1 for v in w2a.values() if len(v) > 1)} wallets partagés, "
@@ -202,7 +220,7 @@ def main():
            {a for a, o in idn.owner.items() if o in farm_clients}
     P(f"- Région ferme S = #182 ∪ agents dont l'owner ou le wallet a noté #182 : **{len(farm)} agents**.")
     stress = stress_schema(fbs)
-    ffarm = ["eve", "plague", "vouch", "review", "slash", "trust", "liveness"]
+    ffarm = FARM_FILTER
     for vlbl, kw in VARIANTS:
         for lbl, sch in (("référence", ref), ("stress (tout tag = endorsement [-100,0,100])", stress)):
             g, cert, inv = run(fbs, idn, sch, ffarm, [h1, h2], **kw)
@@ -224,7 +242,7 @@ def main():
     sc_t = Counter(f.agent_id in farm for f in sc_fb)
     P(f"- le scanner a posté {len(sc_fb)} avis sur {len({f.agent_id for f in sc_fb})} agents "
       f"(tags {dict(Counter(f.tag1 for f in sc_fb))}) ; {sc_t[True]} avis visent la région S.")
-    fb_filter = ["trust", "liveness", "eve", "plague", "vouch", "review", "slash"]
+    fb_filter = FARM_FILTER
     cases = [("sans D15 (trust, liveness, eve propagent)", schema_variant(ref, "pre_d15")),
              ("avec D15 (schéma de référence)", ref)]
     for anc_lbl, anc in (("{scanner}", [scanner]), ("{scanner, 0x07305360}", [scanner, h1]),
@@ -295,12 +313,7 @@ def main():
     em_new = [f for f in fbs if f.tag1.split(":")[0] in ("executor_rating", "requester_rating", "buyer_rating",
                                                            "seller_rating")]
     em_tags = sorted({f.tag1 for f in em_new})
-    ext = json.loads(json.dumps(raw_ref))
-    for t in em_tags:
-        ext["tags"].setdefault(t, {"min": "0", "neutral": "50", "max": "100", "kind": "endorsement"})
-    ext_s = load_schema(ext)
-    em_filter = [t for t in em_tags if t not in ("seller_rating:data_collection", "requester_rating:verification",
-                                                  "executor_rating:verification")]
+    ext_s, em_filter = em_schema(fbs, raw_ref)
     P(f"- schéma étendu (hypothèse de mesure, NON normatif) : les {len(em_tags)} tag1 execution.market en endorsement "
       f"[0, 50, 100] ; filtre des {len(em_filter)} tags de la mesure du tour 6 (`nv/impact.py`).")
     g44 = build_graph(fbs, idn, ext_s, em_filter, [], owner_fallback=True)
@@ -316,7 +329,7 @@ def main():
       "personne ne note : masse nulle, donc aucune ligne à certifier (D20).")
     em_clients = {f.client for f in em_new}
     cluster = {f.agent_id for f in em_new} | {a for a, o in idn.owner.items() if o in em_clients}
-    a1, a2 = resolve("0x3aebb73a", fbs), resolve("0xaf95b213", fbs)
+    a1, a2 = (resolve(x, fbs) for x in EM_RATERS)
     for vlbl, kw in VARIANTS:
         for anc_lbl, anc in (("honnêtes {0x0730, 0xf7d5}", [h1, h2]), ("2 noteurs EM {0x3aebb73a, 0xaf95b213}", [a1, a2])):
             g, cert, inv = run(fbs, idn, ext_s, em_filter, anc, **kw)
@@ -326,6 +339,49 @@ def main():
             P(f"- {vlbl}, ancres {anc_lbl} : couples = {len(g.pairs)}, arêtes portées par des nœuds-agents = "
               f"**{from_agents}** (lignes via owner : {g.log.get('ligne_owner', 0)}), agents t > 0 = {pos}, "
               f"masse sur le cluster EM ({len(cluster)} agents) = {[fmt(x) for x in m]}, itérations = {cert.iterations}.")
+
+    # ------------------------------------------------------------------ (g) D48
+    P("\n## (g) Tour 7 (D48) : règles A et B, diagnostic AM-9.3, avis récents")
+    P(f"- part de la ferme : {len(eve_fb)} avis vers #182 sur {len(fbs)}, soit **{100 * len(eve_fb) / len(fbs):.2f} %** "
+      f"(clients distincts de #182 : {len(farm_clients)}).")
+    recent = sorted((f for f in fbs if f.block > 108_835_675), key=lambda f: (f.block, f.index))
+    P(f"- avis postérieurs au bloc 108 835 675 (relus par `readAllFeedback`, `data/mainnet-{BLOCK}.refresh.json`) : "
+      f"**{len(recent)}** : " + "; ".join(f"bloc {f.block} {f.client[:10]}→#{f.agent_id} {f.tag1}={f.value}"
+                                          for f in recent) + ".")
+    for lbl, sch, filt in (("référence, filtre reference", ref, filters["reference"]),
+                           ("stress, tous les tags", stress, sorted({f.tag1 for f in recent})),
+                           ("execution.market (em_schema)", *em_schema(fbs, raw_ref))):
+        g = build_graph(fbs, idn, sch, filt, [], owner_fallback=True)
+        new_pairs = sorted({(f.client, f.agent_id) for f in recent} & set(g.pairs))
+        P(f"  - schéma {lbl}, D44 : couples récents qui deviennent des arêtes = **{len(new_pairs)}** "
+          f"{[(c[:10], a, g.pairs[(c, a)].q) for c, a in new_pairs]}")
+    for lbl, sch, filt in (("référence, filtre reference", ref, filters["reference"]),
+                           ("stress, FARM_FILTER + trade_execution", stress, FARM_FILTER + ["trade_execution"])):
+        new = build_graph(fbs, idn, sch, filt, [])
+        old = build_graph(fbs, idn, sch, filt, [], reject_controllers="any")
+        kept = {k: v for k, v in new.log.items() if k.startswith("negatif_controleur_garde")}
+        P(f"- règle B (schéma {lbl}) : négatifs de contrôleurs gardés = {kept or 0} ; couples en plus par rapport à "
+          f"l'ancienne R6 = {sorted((c[:10], a, new.pairs[(c, a)].q) for c, a in set(new.pairs) - set(old.pairs))}.")
+    for anc_lbl, anc in (("{0xea0b, 0x07305360} (ancien vecteur de démo)", [ea0b, h1]),
+                         ("{0x07305360, 0x794c94f1} (nouveau vecteur de démo)", [h1, resolve(QUALITY4, fbs)])):
+        g, cert, inv = run(fbs, idn, ref, filters["reference"], anc)
+        srcd = sorted(g.nodes[u][1] for u in g.anchor_sourced)
+        r4 = node_report(g, cert, inv, [(AGENT, 4), (AGENT, 2)])
+        P(f"- règle A, ancres {anc_lbl} : agents sourcés par une ancre (aucune ligne) = {srcd} ; "
+          + "; ".join(f"#{k[1]} t = {[fmt(x) for x in r['t']] if r else 0}, trustRobust = "
+                      f"{fmt(r['robust']) if r else 0}, distrust = {fmt(r['d']) if r else 0}" for k, r in r4)
+          + f" ; e = {cert.e} wei.")
+    for lbl, sch, filt in (("référence", ref, filters["reference"]),
+                           ("stress (le tag `tab` de #10255 propage)", stress, sorted({f.tag1 for f in recent}))):
+        g = build_graph(fbs, idn, sch, filt, [])
+        dg = [d for d in g.diagnostics if d["kind"] == "pastOwner"]
+        P(f"- AM-9.3, schéma {lbl} : couples retenus dont le client est un ANCIEN owner de la cible = **{len(dg)}** ; "
+          + "; ".join(f"{d['client'][:10]}→#{d['agentId']} (w = {d['w']}, transfert au bloc {d['transferBlock']}, "
+                      f"premier avis après le transfert au bloc {d['firstFeedbackAfterTransfer']} : "
+                      f"**{d['blocksAfterTransfer']} blocs après**, ≈ {d['blocksAfterTransfer'] * 0.302 / 60:.1f} min "
+                      "à 0,302 s/bloc)" if d["blocksAfterTransfer"] is not None else
+                      f"{d['client'][:10]}→#{d['agentId']} (w = {d['w']}, blocs inconnus)" for d in dg[:8])
+          + ". Affiché, sans effet sur l'arête (D48).")
 
     # ------------------------------------------------------------------ angles morts mesurés
     P("\n## Mesures annexes")

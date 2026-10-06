@@ -1,7 +1,8 @@
 """Read the ANCRE indexer (chantier 03, Envio HyperIndex, Hasura GraphQL) into the solver's input files.
 
 Interface: docs/ressources/design-indexeur-envio.md §5 (schema.graphql) and §7. Writes, for a block B:
-  onchain_feedbacks.json  {"block", "feedbacks": [{a, c, i, v, d, t1, t2, r}]}, r = revokedAtBlock <= B
+  onchain_feedbacks.json  {"block", "feedbacks": [{a, c, i, v, d, t1, t2, r, b}]}, r = revokedAtBlock <= B,
+                          b = blockNumber of the NewFeedback (AM-9.3 diagnostic)
                           (read by graph.load_feedbacks_onchain)
   identity.json           {"block", "owner", "wallet", "approved", "operators", "pastOwners", "pastWallets"},
                           rebuilt by replaying OwnerChange / WalletChange / ApprovalChange / OperatorChange <= B
@@ -128,7 +129,7 @@ def feedbacks_file(src, block: int) -> dict:
         rev = r.get("revokedAtBlock")
         fbs.append({"a": int(r["agent_id"]), "c": r["client"].lower(), "i": int(r["feedbackIndex"]),
                     "v": str(int(r["value"])), "d": int(r["valueDecimals"]), "t1": r["tag1"], "t2": r["tag2"],
-                    "r": rev is not None and int(rev) <= block})
+                    "r": rev is not None and int(rev) <= block, "b": int(r["blockNumber"])})
     return {"block": block, "feedbacks": sorted(fbs, key=lambda f: (f["a"], f["c"], f["i"]))}
 
 
@@ -146,15 +147,13 @@ def identity_file(src, block: int) -> dict:
             continue
         a = int(r["agent_id"])
         if kind == "owner":
-            idn.apply_transfer(a, r["from"], r["to"])
+            idn.apply_transfer(a, r["from"], r["to"], int(r["blockNumber"]))
             idn.wallet.setdefault(a, ZERO)
         elif kind == "wallet":
             idn.apply_wallet(a, r["wallet"])
         else:
             idn.apply_approval(a, r["approved"])
-    for a, s in idn.past_owners.items():                  # past holders, excluding the current owner
-        s.discard(idn.owner.get(a))
-    return identity_to_json(idn)
+    return identity_to_json(idn)                          # apply_transfer keeps the current owner out of past owners
 
 
 def set_edges_file(src, set_id: str = "ref") -> list[dict]:
@@ -176,9 +175,12 @@ def export(src, block: int, out: Path, set_id: str = "ref") -> dict[str, Path]:
     out.mkdir(parents=True, exist_ok=True)
     files = {"feedbacks": out / "onchain_feedbacks.json", "identity": out / "identity.json",
              "set_edges": out / "set_edges.json"}
-    files["feedbacks"].write_text(json.dumps(feedbacks_file(src, block)))
-    files["identity"].write_text(json.dumps(identity_file(src, block)))
-    files["set_edges"].write_text(json.dumps(set_edges_file(src, set_id)))
+    import os
+    for k, obj in (("feedbacks", feedbacks_file(src, block)), ("identity", identity_file(src, block)),
+                   ("set_edges", set_edges_file(src, set_id))):
+        tmp = files[k].with_suffix(".tmp")              # review DIES: readers never see a half-written export
+        tmp.write_text(json.dumps(obj))
+        os.replace(tmp, files[k])
     return files
 
 
@@ -236,7 +238,8 @@ def make_stub(fbs: list[Feedback], idn: Identity, pairs: dict[tuple[str, int], P
                               "logIndex": nxt(2)})
     feed = [{"id": f"{f.agent_id}-{f.client}-{f.index}", "agent_id": str(f.agent_id), "client": f.client,
              "feedbackIndex": str(f.index), "value": str(f.value), "valueDecimals": f.decimals, "tag1": f.tag1,
-             "tag2": f.tag2, "blockNumber": "3", "logIndex": nxt(3), "revokedAtBlock": "4" if f.revoked else None}
+             "tag2": f.tag2, "blockNumber": str(f.block or 3), "logIndex": nxt(3),
+             "revokedAtBlock": "4" if f.revoked else None}
             for f in fbs]
     edges = [{"id": f"{set_id}-{p.client}-{p.agent_id}", "set_id": set_id, "client": p.client,
               "agent_id": str(p.agent_id), "w": p.q, "decidingTag": p.tag1, "feedbackIndex": str(p.feedback_index),

@@ -12,9 +12,12 @@ ports them to TypeScript; `tests/test_indexer_parity.py` is the judge. Decisions
   R5 (D14)  Per (client, agent): combine the tags of the filter by negative dominance:
             q = min over tags if some q < 0, else max. q == 0 => no edge. Ties between tags of equal weight:
             the feedback with the HIGHEST feedbackIndex decides (feedbackIndex, decidingTag). Unified v1 (01/10).
-  R6 (D20)  Reject the pair if the client is a CURRENT controller of the target agent:
-            owner, agentWallet, getApproved, or an approved-for-all operator of the owner.
-            (The "past owner" rule of D16 is REMOVED: unverifiable on-chain, false for platforms, AM-4.2.)
+  R6 (D20, D48-B)  If the client is a CURRENT controller of the target agent (owner, agentWallet, getApproved, or an
+            approved-for-all operator of the owner), the pair is rejected ONLY IF its combined weight is POSITIVE
+            (self-endorsement). A NEGATIVE combined weight of a controller is KEPT (AM-08.B: otherwise an owner
+            silences a critic or an anchor with setApprovalForAll). The sign is the one of the R5 combination.
+            (The "past owner" rule of D16 is REMOVED: unverifiable on-chain, false for platforms, AM-4.2. A past
+            controller who rates right after the transfer is only REPORTED, never rejected: AM-9.3, D48.)
   R7 (D20, D44)  Emitter resolution. For an agent j:
                 src(j) = agentWallet(j)            if agentWallet(j) != 0
                        = ownerOf(j)                if agentWallet(j) == 0 and OWNER FALLBACK is on (D44)
@@ -23,8 +26,11 @@ ports them to TypeScript; `tests/test_indexer_parity.py` is the judge. Decisions
             A(c) = {j : src(j) = c}. ROW COPY (D20): every agent j of A(c) that is a node of the graph carries
             the row of c (the combined edges of client c), each with its own mass. No mass is created (D34).
             A client with A(c) empty is an ADDRESS node (never rated, hence never massive unless an anchor).
-  R8 (D9)   Anchor nodes are distinct from agent nodes: the anchor row is the row of the anchor address,
-            carried by the anchor node, in addition to any agent copy.
+  R8 (D9, D48-A)  Anchor nodes are distinct from agent nodes: the anchor row is the row of the anchor address,
+            carried by the anchor node ONLY. An agent whose source src(j) is an anchor of the set NEVER carries a
+            row (no copy of the anchor row, AM-08.A: the copy would import the mass of the OTHER columns into a row
+            the anchor controls, and defeat the leave-one-out). Such an agent is listed without a row (absorbing;
+            the contract refuses its row, AnchorAsSource).
 
 OWNER FALLBACK (D44) is behind the `owner_fallback` flag, default OFF until Hugo confirms (tour 6, conf. 0,65).
 
@@ -93,13 +99,14 @@ def load_feedbacks(path: str | Path) -> list[Feedback]:
 
 
 def load_feedbacks_onchain(path: str | Path) -> list[Feedback]:
-    """Relecture on-chain (readAllFeedback, includeRevoked = true) : {"block", "feedbacks": [{a, c, i, v, d, t1, t2, r}]}.
+    """Relecture on-chain (readAllFeedback, includeRevoked = true) : {"block", "feedbacks": [{a, c, i, v, d, t1, t2, r[, b]}]}
+    (b = bloc du log NewFeedback, quand il est connu ; il ne sert qu'au diagnostic AM-9.3).
     Source à préférer : 8004scan écrit valueDecimals = 0 pour 24 avis qui ont 2 décimales on-chain (AM-R4.2)."""
     p = Path(path)
     with (gzip.open if p.suffix == ".gz" else open)(p, "rt") as fh:
         raw = json.load(fh)
     return [Feedback(agent_id=int(x["a"]), client=x["c"].lower(), index=int(x["i"]), value=int(x["v"]),
-                     decimals=int(x["d"]), tag1=x["t1"], tag2=x["t2"], revoked=bool(x["r"]))
+                     decimals=int(x["d"]), tag1=x["t1"], tag2=x["t2"], revoked=bool(x["r"]), block=int(x.get("b") or 0))
             for x in raw["feedbacks"]]
 
 
@@ -112,6 +119,8 @@ class Identity:
     approved: dict[int, str] = field(default_factory=dict)
     operators: dict[str, set[str]] = field(default_factory=dict)     # owner -> opérateurs actifs
     past_owners: dict[int, set[str]] = field(default_factory=dict)   # agentId -> past holders (reports only, not a rule)
+    past_owner_until: dict[int, dict[str, int]] = field(default_factory=dict)  # agentId -> {past holder: block of
+    #                                                  its LAST transfer out} (AM-9.3 diagnostic only; may be missing)
     past_wallets: dict[int, set[str]] = field(default_factory=dict)  # agentId -> wallets déclarés un jour
     _w2a: dict[str, list[int]] | None = None
 
@@ -125,10 +134,17 @@ class Identity:
         return self._w2a
 
     # --- state transitions (R6/R7 inputs), shared by every replayer (snapshot, indexer export) ---------------
-    def apply_transfer(self, agent_id: int, frm: str, to: str) -> None:
+    def apply_transfer(self, agent_id: int, frm: str, to: str, block: int | None = None) -> None:
+        """Transfer: the previous holder becomes a past owner, the new holder is never one (A -> B -> A leaves {B},
+        as load_identity does). `block` dates the transfer out, for the AM-9.3 diagnostic."""
         frm, to = frm.lower(), to.lower()
         if frm != ZERO:
             self.past_owners.setdefault(agent_id, set()).add(frm)
+            if block is not None:
+                self.past_owner_until.setdefault(agent_id, {})[frm] = block
+        if agent_id in self.past_owners:
+            self.past_owners[agent_id].discard(to)
+            self.past_owner_until.get(agent_id, {}).pop(to, None)
         self.owner[agent_id] = to
         self.approved.pop(agent_id, None)               # ERC-721: a transfer clears getApproved
         self._w2a = None
@@ -198,13 +214,17 @@ def load_identity(state_path, logs_path=None, approved_path=None) -> Identity:
         lg = json.load(open(logs_path))
         key = lambda l: (int(l["blockNumber"], 16), int(l["logIndex"], 16))
         past: dict[int, set[str]] = defaultdict(set)
+        until: dict[int, dict[str, int]] = defaultdict(dict)
         for l in sorted(lg.get("tr", []), key=key):
             frm, to, tid = _topic_addr(l["topics"][1]), _topic_addr(l["topics"][2]), int(l["topics"][3], 16)
             for a in (frm, to):
                 if a != ZERO:
                     past[tid].add(a)
+            if frm != ZERO:
+                until[tid][frm] = key(l)[0]
         # past_owners = détenteurs passés, hors owner courant (qui est déjà un contrôleur)
         idn.past_owners = {t: {a for a in s if a != owner.get(t)} for t, s in past.items()}
+        idn.past_owner_until = {t: {a: b for a, b in d.items() if a != owner.get(t)} for t, d in until.items()}
         ops: dict[tuple[str, str], bool] = {}
         for l in sorted(lg.get("ap", []), key=key):
             ops[(_topic_addr(l["topics"][1]), _topic_addr(l["topics"][2]))] = int(l["data"], 16) != 0
@@ -245,7 +265,7 @@ def replay_identity_events(idn: Identity, events: list[dict], after_block: int, 
             continue
         a = e.get("agent")
         if e["ev"] == "Transfer":
-            idn.apply_transfer(a, e["frm"], e["to"])
+            idn.apply_transfer(a, e["frm"], e["to"], e["block"])
         elif e["ev"] == "MetadataSet" and e.get("key") == "agentWallet":
             idn.apply_wallet(a, e["val"])
         elif e["ev"] == "Approval":                       # approve(approved, tokenId)
@@ -264,7 +284,8 @@ def replay_identity_events(idn: Identity, events: list[dict], after_block: int, 
 def load_identity_json(path_or_obj) -> Identity:
     """identity.json of the indexer interface (design-indexeur-envio.md §7), also the format of the versioned
     snapshot solver/data/: {"block", "owner": {id: addr}, "wallet": {id: addr}, "approved": {id: addr},
-    "operators": {owner: [op]}, "pastOwners": {id: [addr]}, "pastWallets": {id: [addr]}}."""
+    "operators": {owner: [op]}, "pastOwners": {id: [addr]}, "pastWallets": {id: [addr]},
+    "pastOwnerUntil": {id: {addr: block}} (optional: block of the last transfer out, AM-9.3 diagnostic only)}."""
     if isinstance(path_or_obj, (str, Path)):
         p = Path(path_or_obj)
         op = gzip.open if p.suffix == ".gz" else open
@@ -277,6 +298,8 @@ def load_identity_json(path_or_obj) -> Identity:
                     approved={k: v for k, v in lo(obj.get("approved", {})).items() if v != ZERO},
                     operators={o.lower(): {x.lower() for x in ops} for o, ops in obj.get("operators", {}).items() if ops},
                     past_owners={int(k): {x.lower() for x in v} for k, v in obj.get("pastOwners", {}).items()},
+                    past_owner_until={int(k): {x.lower(): int(b) for x, b in v.items()}
+                                      for k, v in obj.get("pastOwnerUntil", {}).items()},
                     past_wallets={int(k): {x.lower() for x in v} for k, v in obj.get("pastWallets", {}).items()})
 
 
@@ -287,6 +310,7 @@ def identity_to_json(idn: Identity) -> dict:
             "approved": {str(k): v for k, v in sorted(idn.approved.items()) if v != ZERO},
             "operators": {o: sorted(s) for o, s in sorted(idn.operators.items()) if s},
             "pastOwners": {str(k): sorted(s) for k, s in sorted(idn.past_owners.items()) if s},
+            "pastOwnerUntil": {str(k): dict(sorted(d.items())) for k, d in sorted(idn.past_owner_until.items()) if d},
             "pastWallets": {str(k): sorted(s) for k, s in sorted(idn.past_wallets.items()) if s}}
 
 
@@ -302,7 +326,11 @@ class TagSpec:
 
 
 def dec_to_wad(s) -> int:
-    d = Decimal(str(s)) * WAD
+    """Exact: the default Decimal context has 28 digits, which ROUNDS a bound like 1e38 x 1e18 (review DEC28)."""
+    from decimal import localcontext
+    with localcontext() as ctx:
+        ctx.prec = 100
+        d = Decimal(str(s)) * WAD
     if d != d.to_integral_value():
         raise ValueError(f"borne non représentable en WAD : {s}")
     return int(d)
@@ -334,8 +362,8 @@ def quantize(value: int, decimals: int, spec: TagSpec) -> int | None:
     w = (v - neutre)/(max - neutre) si v >= neutre, sinon -(neutre - v)/(neutre - min) ;
     q = troncature vers zéro de w * 1e4. Comparaison aux bornes en valeur exacte avant arrondi.
     """
-    if abs(value) > VALUE_ABS_MAX:
-        return None
+    if abs(value) > VALUE_ABS_MAX or not 0 <= decimals <= 18:
+        return None                                     # review DEC18: the contract ignores the tag, it does not revert
     v = value_to_wad(value, decimals)
     if v < spec.min_wad or v > spec.max_wad:
         return None
@@ -384,7 +412,9 @@ class Graph:
     rejected: list[dict]                            # rejected feedback/pairs (reports)
     row_src: dict[int, tuple[str | None, str]] = field(default_factory=dict)  # u -> (client, anchor|address|wallet|owner|none)
     pairs: dict[tuple[str, int], PairEdge] = field(default_factory=dict)
-    r6_pairs: set[tuple[str, int]] = field(default_factory=set)   # (client, agent) rejected by R6 (controllers)
+    r6_pairs: set[tuple[str, int]] = field(default_factory=set)   # (client, agent) rejected by R6 (controllers, w > 0)
+    anchor_sourced: set[int] = field(default_factory=set)         # agent nodes whose source is an anchor: no row (A)
+    diagnostics: list[dict] = field(default_factory=list)         # AM-9.3 past controllers (shown, no effect)
 
     @property
     def n(self) -> int:
@@ -416,9 +446,13 @@ def combine_pairs(feedbacks: list[Feedback], identity: Identity, schema: dict[st
                   filter_tags: list[str] | None, *, selection: str = "latest_then_reject",
                   combine: str = "neg_dominance", reject_controllers: bool = True,
                   log: dict | None = None, rejected: list | None = None,
-                  r6: set | None = None) -> dict[tuple[str, int], PairEdge]:
+                  r6: set | None = None, diagnostics: list | None = None) -> dict[tuple[str, int], PairEdge]:
     """R1-R6: one combined edge per (client, agent). Normative defaults; the options exist only to measure
-    the rules that were replaced (tour 2 `latest_pair`, `latest_valid` reading of proof (ii))."""
+    the rules that were replaced (tour 2 `latest_pair`, `latest_valid` reading of proof (ii), and
+    reject_controllers="any": the pre-D48 R6 that rejected a controller whatever the sign).
+    `diagnostics` receives the AM-9.3 report: retained pairs whose client is a PAST owner or wallet of the target
+    ("past controller, N blocks after the transfer"). It is shown, it changes no edge (D48)."""
+    assert reject_controllers in (True, False, "any")
     if filter_tags is None:
         filter_tags = sorted(schema)
     if len(filter_tags) > TAGS_MAX:
@@ -466,23 +500,47 @@ def combine_pairs(feedbacks: list[Feedback], identity: Identity, schema: dict[st
             continue
         by_pair[(c, a)].append((q, f))
     out: dict[tuple[str, int], PairEdge] = {}
+    blocks_of: dict[tuple[str, int], list[int]] | None = None            # AM-9.3: built once, only if needed
     for (c, a), lst in by_pair.items():
-        if reject_controllers:                                              # R6
-            ctl = identity.controllers(a)
-            if c in ctl:
-                log[f"rejet_controleur_{ctl[c]}"] += 1
-                rejected.append({"raison": "controleur_" + ctl[c], "client": c, "agent": a, "avis": len(lst)})
-                if r6 is not None:
-                    r6.add((c, a))
-                continue
+        if c == ZERO:                                   # no feedback can come from address(0) (msg.sender); it marks a
+            log["client_zero_ignore"] += 1              # source-less row in ENCODING and is refused as a node (R1)
+            continue
         neg = [x for x in lst if x[0] < 0]                                  # R5
         # ties between tags of equal weight: the HIGHEST feedbackIndex (unified v1, F-6: the contract stores only
         # tag hashes, so it cannot compare tag strings; it scans from the last index down and keeps the first)
         q, f = min(neg, key=lambda x: (x[0], -x[1].index)) if neg else max(lst, key=lambda x: (x[0], x[1].index))
+        if reject_controllers:                                              # R6 on the COMBINED sign (D48-B)
+            ctl = identity.controllers(a)
+            if c in ctl:
+                if q > 0 or reject_controllers == "any":
+                    log[f"rejet_controleur_{ctl[c]}"] += 1
+                    rejected.append({"raison": "controleur_" + ctl[c], "client": c, "agent": a, "avis": len(lst)})
+                    if r6 is not None:
+                        r6.add((c, a))
+                    continue
+                if q < 0:
+                    log[f"negatif_controleur_garde_{ctl[c]}"] += 1
         if q == 0:
             log["poids_nul"] += 1
             continue
         out[(c, a)] = PairEdge(c, a, q, f.tag1, f.index)
+        if diagnostics is not None and c not in identity.controllers(a):    # AM-9.3: report only
+            kind = ("pastOwner" if c in identity.past_owners.get(a, ()) else
+                    "pastWallet" if c in identity.past_wallets.get(a, ()) else None)
+            if kind:
+                tb = identity.past_owner_until.get(a, {}).get(c) if kind == "pastOwner" else None
+                if blocks_of is None:                   # feedbacks that can make an edge: non-revoked, endorsement
+                    blocks_of = defaultdict(list)       # tags of the filter (the ones R3 looked at)
+                    for x in feedbacks:
+                        if x.block and not x.revoked and x.tag1 in ftags and x.tag1 in schema \
+                                and schema[x.tag1].kind == "endorsement":
+                            blocks_of[(x.client, x.agent_id)].append(x.block)
+                after = [b for b in blocks_of.get((c, a), ()) if tb is not None and b >= tb]
+                first = min(after) if after else None
+                diagnostics.append({"kind": kind, "client": c, "agentId": a, "w": q, "tag1": f.tag1,
+                                    "feedbackIndex": f.index, "feedbackBlock": f.block or None, "transferBlock": tb,
+                                    "firstFeedbackAfterTransfer": first,
+                                    "blocksAfterTransfer": first - tb if first is not None else None})
     log["aretes_couple"] = len(out)
     return out
 
@@ -503,8 +561,10 @@ def build_graph(feedbacks: list[Feedback], identity: Identity, schema: dict[str,
     rejected: list[dict] = []
     anchors = sorted({a.lower() for a in anchors})     # contract: anchor addresses strictly increasing
     r6: set[tuple[str, int]] = set()
+    diag: list[dict] = []
     pairs = combine_pairs(feedbacks, identity, schema, filter_tags, selection=selection, combine=combine,
-                          reject_controllers=reject_controllers, log=log, rejected=rejected, r6=r6)
+                          reject_controllers=reject_controllers, log=log, rejected=rejected, r6=r6, diagnostics=diag)
+    anchor_set = set(anchors)
 
     out_rows: dict[str, list[PairEdge]] = defaultdict(list)                # client -> combined edges
     for (c, _), pe in pairs.items():
@@ -514,6 +574,8 @@ def build_graph(feedbacks: list[Feedback], identity: Identity, schema: dict[str,
     carriers: dict[str, list[tuple[int, str]]] = defaultdict(list)
     sources = {j: identity.source_of(j, owner_fallback) for j in rated}
     for j, (s, via) in sources.items():
+        if s in anchor_set:                             # D48-A: an anchor address never emits through an agent
+            continue
         if s is not None and s in out_rows:
             carriers[s].append((j, via))
     # a client is an address node iff A(c) is empty over ALL agents (not only rated ones)
@@ -523,7 +585,7 @@ def build_graph(feedbacks: list[Feedback], identity: Identity, schema: dict[str,
     # R8: an anchor address is carried by its anchor node, never by an extra address node
     addrs = sorted(c for c in out_rows if c not in has_agent and c not in anchors)
     for c in out_rows:
-        if c in has_agent and c not in carriers:
+        if c in has_agent and c not in carriers and c not in anchor_set:
             log["emetteur_agents_non_notes"] += 1       # row of c carried by nobody: its agents have no mass
     nodes: list[tuple[str, object]] = [(ANCHOR, a) for a in anchors]
     nodes += [(AGENT, a) for a in rated] + [(ADDR, c) for c in addrs]
@@ -533,16 +595,22 @@ def build_graph(feedbacks: list[Feedback], identity: Identity, schema: dict[str,
         r = []
         for pe in out_rows[c]:
             v = index[(AGENT, pe.agent_id)]
-            if v == u:                                  # impossible under R6 (src(j) controls j); kept as a guard
-                log["boucle_ignoree"] += 1
-                continue
+            if v == u:                                  # a client rating the very agent that carries its row: under
+                log["boucle_ignoree"] += 1              # D48-B only a NEGATIVE self-pair survives R6 (src(j) controls j);
+                continue                                # it is never encodable (dst != u) and never provable
             r.append(Edge(v, pe.q, c, pe.agent_id, pe.tag1, pe.feedback_index))
         return sorted(r, key=lambda e: e.dst)
 
     rows: dict[int, list[Edge]] = {}
     row_src: dict[int, tuple[str, str]] = {}
+    anchor_sourced: set[int] = set()
     for j, (s, via) in sources.items():                 # every agent node records src(j), even with an empty row:
-        row_src[index[(AGENT, j)]] = (s, via) if s is not None else (None, "none")   # it stays challengeable (SRC)
+        u = index[(AGENT, j)]                           # it stays challengeable (SRC)
+        if s in anchor_set:                             # D48-A: listed WITHOUT a row (no row_src: never encodable)
+            anchor_sourced.add(u)
+            log["agent_source_ancre_sans_ligne"] += 1
+            continue
+        row_src[u] = (s, via) if s is not None else (None, "none")
     for a in anchors:                                   # R8; every anchor has a row_src, even with an empty row
         u = index[(ANCHOR, a)]
         row_src[u] = (a, "anchor")
@@ -564,4 +632,4 @@ def build_graph(feedbacks: list[Feedback], identity: Identity, schema: dict[str,
             log["lignes_sup_ROW_MAX"] += 1
     return Graph(nodes=nodes, index=index, rows=rows, anchors=[index[(ANCHOR, a)] for a in anchors],
                  log=dict(log), rejected=rejected if keep_detail else [], row_src=row_src, pairs=pairs,
-                 r6_pairs=r6)
+                 r6_pairs=r6, anchor_sourced=anchor_sourced, diagnostics=diag)

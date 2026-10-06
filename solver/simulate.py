@@ -200,15 +200,16 @@ def _prove_all(chain, contract, cfg, set_id, nodes, fbs, idn, start) -> dict:
 
 
 def two_omissions_vector(fbs, idn) -> dict:
-    """The anchor row of 0xea0b with BOTH its slash (#4) and its vouch (#2) omitted: two proofs on one row, the
-    second one chained with the amendments of the first (review E5, finding 7)."""
+    """#18's copy of 0xea0b's row (D20) with BOTH its slash (#4) and its vouch (#2) omitted: two proofs on one row,
+    the second one chained with the amendments of the first (review E5, finding 7). Anchors 0x0730 / 0xf7d5: no
+    anchor is an agent's wallet (D48-A)."""
     from graph import build_graph, load_schema
     from ppr import certify
     raw = json.load(open(HERE / "schema_reference.json"))
     ref, core = load_schema(raw), raw["filters"]["core"]
-    ea0b, h1 = R.resolve(R.EA0B, fbs), R.resolve(R.HONEST1, fbs)
-    g = copy.deepcopy(build_graph(fbs, idn, ref, core, [ea0b, h1]))
-    ua, n2, n4 = g.index[(ANCHOR, ea0b)], g.index[(AGENT, 2)], g.index[(AGENT, 4)]
+    h1, h2 = R.resolve(R.HONEST1, fbs), R.resolve(R.HONEST2, fbs)
+    g = copy.deepcopy(build_graph(fbs, idn, ref, core, [h1, h2]))
+    ua, n2, n4 = g.index[(AGENT, 18)], g.index[(AGENT, 2)], g.index[(AGENT, 4)]
     g.rows[ua] = [e for e in g.rows[ua] if e.dst not in (n2, n4)]
     return export_certificate(g, certify(g, Fraction(1, 3)), idn, schema=ref, filter_tags=core, label="two_omissions",
                               policy=reference_policy(2, registry_verified=True),
@@ -241,6 +242,52 @@ def scenario_violations(chain: C.Chain, contract: str) -> list[dict]:
     return out
 
 
+def scenario_common(chain: C.Chain, contract: str) -> list[dict]:
+    """Common vectors 02-bis / 04-bis (vectors/common/). The toy registries are not on the fork, so the toys run at the
+    Submitter-attested level (own setId); the mainnet one runs Registry-verified. Against the contract of `main` this
+    records the state BEFORE the D48/R1 fixes (attacks expected to pass); against 02-bis, `expect.submission` holds."""
+    import common_vectors as CV
+    out = []
+    for p in sorted((HERE / "vectors" / "common").glob("*.json")):
+        obj = json.loads(p.read_text())
+        name = p.stem
+        real = name == "common_A_mainnet_old_slash_anchor"
+        cfg = cfg_from_vector(obj, name) if real else cfg_from_vector(
+            obj, "att_" + name, registry_verified=False, submitters=[DEV_ADDR],
+            tag_schema_hash=vector_schema_hash("attested:" + name))
+        row = {"vector": name, "level": "Registry-verified" if real else "Submitter-attested",
+               "expectAfterFix": obj["expect"]["submission"]}
+        try:
+            set_id, _ = register(chain, contract, cfg)
+            start = chain.block_number()
+            r = submit_vector(chain, contract, set_id, obj, cfg)
+            row.update(result=r["result"], reason=r.get("reason"), gasUsed=r.get("gasUsed"))
+            if "resubmission" in obj and r["result"] == "ACCEPTED":      # C: prove the false row, then resubmit
+                fbs, idn = CV.Reg.from_block(obj["registry"]).build()
+                _, nodes, _ = vector_calldata(obj)
+                row["proof"] = _prove_all(chain, contract, cfg, set_id, nodes, fbs, idn, start)["proofs"]
+                again = {**obj, "calldata": obj["resubmission"]["calldata"], "nCert": obj["resubmission"]["nCert"],
+                         "expected": {**obj["expected"], **obj["resubmission"]["expected"]}}
+                r2 = submit_vector(chain, contract, set_id, again, cfg)
+                row["resubmission"] = {"result": r2["result"], "reason": r2.get("reason"),
+                                       "expectAfterFix": obj["expect"]["resubmission"]}
+                ctl = submit_vector(chain, contract, set_id, {**obj, "calldata": obj["control"]["calldata"]}, cfg)
+                row["control"] = {"result": ctl["result"], "reason": ctl.get("reason"), "expectAfterFix": "ACCEPTED"}
+        except Exception as e:                                           # one vector never stops the scenario
+            row.update(result="ERROR", reason=C.revert_reason(str(e)) if isinstance(e, C.ChainError) else str(e)[:300])
+        out.append(row)
+    return out
+
+
+def _run(svc: C.Certifier, *args, **kw) -> dict:
+    """run_once as the service loop does it: on an open set new nodes go first (review A1d), the certificate follows
+    at the next round, on the re-read table."""
+    r = svc.run_once(*args, **kw)
+    if r.get("action") == "nodes_added":
+        r = {**svc.run_once(*args, **kw), "nodesAddedFirst": r["newNodes"]}
+    return r
+
+
 def scenario_service(chain: C.Chain, contract: str) -> list[dict]:
     fbs, idn = R.load_mainnet()
     h1, h2 = R.resolve(R.HONEST1, fbs), R.resolve(R.HONEST2, fbs)
@@ -255,8 +302,8 @@ def scenario_service(chain: C.Chain, contract: str) -> list[dict]:
     jr = SCR / "journal_service.jsonl"
     jr.unlink(missing_ok=True)
     svc = C.Certifier(cfg, chain, contract, set_id, st, C.Journal(jr))
-    out = [reg, svc.run_once(fbs, idn, reason="first certificate")]
-    out.append(svc.run_once(fbs, idn, reason="recompute, nothing changed"))
+    out = [reg, _run(svc, fbs, idn, reason="first certificate")]
+    out.append(_run(svc, fbs, idn, reason="recompute, nothing changed"))
     # growing graph (AM-04.1): a new vouch from anchor 0x0730 to #22 (a support client), written in the fork's registry
     other = C.Chain(chain.rpc, C.Signer(OTHER_ADDR))
     rc = C.Chain(chain.rpc, C.Signer(h1)).send(REPUTATION, "giveFeedback(uint256,int128,uint8,string,string,string,"
@@ -268,11 +315,11 @@ def scenario_service(chain: C.Chain, contract: str) -> list[dict]:
                    tag2="", revoked=False)
     out.append({"trigger": "NewFeedback 0x0730 -> #22",
                 "relevant": C.relevant({"kind": "NewFeedback", "client": h1, "agentId": 22}, svc.support)})
-    r = svc.run_once(fbs + [ev1], idn, reason="growing graph: new feedback by an anchor (AM-04.1)")
+    r = _run(svc, fbs + [ev1], idn, reason="growing graph: new feedback by an anchor (AM-04.1)")
     out.append(r)
     if r["action"] == "deferred_replacement_rule":        # wait out the window on the fork, then retry
         chain._run("rpc", "anvil_mine", hex(r["waitBlocks"]))
-        out.append(svc.run_once(fbs + [ev1], idn, reason="retry after the wait"))
+        out.append(_run(svc, fbs + [ev1], idn, reason="retry after the wait"))
     # a third party resubmits the previous graph (without the new endorsement of #22). In this graph that omission
     # is a DILUTION (0x0730's row has S+ >= GRID): same mass, q = 0, so the replacement rule cannot see it (AM-02.2).
     # The defense loop: the watcher proves it (proveEdge), which credits eLow, and the honest service replaces at once.
@@ -288,7 +335,7 @@ def scenario_service(chain: C.Chain, contract: str) -> list[dict]:
                     "watcher": [d["kind"] for e in ev for d in e.get("discrepancies", [])],
                     "proofs": [{k: p.get(k) for k in ("kind", "fn", "status", "gasUsed")} for e in ev
                                for p in e.get("proofs", [])], "eLowEffAfter": oc.e_low_eff, "massCur": oc.mass})
-        out.append(svc.run_once(fbs + [ev1], idn, reason="honest certificate after the dilution proof"))
+        out.append(_run(svc, fbs + [ev1], idn, reason="honest certificate after the dilution proof"))
     # a feedback by the scanner (zero mass in this set): the trigger filter ignores it
     sc = R.resolve(R.SCANNER, fbs)
     out.append({"trigger": "NewFeedback scanner -> #2", "relevant": C.relevant(
@@ -305,10 +352,10 @@ def scenario_service(chain: C.Chain, contract: str) -> list[dict]:
                                           "0x" + "00" * 32, gas_limit=1_000_000)
     ev2 = Feedback(agent_id=23, client=h2, index=_last_index(chain, 23, h2), value=100, decimals=0, tag1="vouch",
                    tag2="", revoked=False)
-    out.append(svc.run_once(fbs + [ev1, ev2], idn, reason="after a third-party addNodes"))
+    out.append(_run(svc, fbs + [ev1, ev2], idn, reason="after a third-party addNodes"))
     # nothing changes for maxAge − refreshLead blocks: the identical graph is republished (refresh)
     chain._run("rpc", "anvil_mine", hex(cfg.max_age - cfg.refresh_lead + 1))
-    out.append(svc.run_once(fbs + [ev1, ev2], idn, reason="age refresh, identical graph"))
+    out.append(_run(svc, fbs + [ev1, ev2], idn, reason="age refresh, identical graph"))
     out.append({"journal": [json.loads(l) for l in jr.read_text().splitlines()]})
     return out
 
@@ -406,7 +453,7 @@ def main(argv=None):
     ap.add_argument("--fork-url", default="https://rpc1.monad.xyz")
     ap.add_argument("--fork-block", type=int, default=R.BLOCK)
     ap.add_argument("--out", default=str(HERE / "out" / "simulation.json"))
-    ap.add_argument("--scenarios", default="vectors,violations,service,split")
+    ap.add_argument("--scenarios", default="vectors,violations,common,service,split")
     args = ap.parse_args(argv)
     todo = args.scenarios.split(",")
     SCR.mkdir(parents=True, exist_ok=True)
@@ -421,7 +468,7 @@ def main(argv=None):
         report = {"fork": {"url": args.fork_url, "block": args.fork_block, "network": "monad (anvil)"},
                   "contract": contract}
         for name, fn in (("vectors", scenario_vectors), ("violations", scenario_violations),
-                         ("service", scenario_service), ("split", scenario_split)):
+                         ("common", scenario_common), ("service", scenario_service), ("split", scenario_split)):
             if name in todo:
                 report[name] = fn(chain, contract)
     finally:

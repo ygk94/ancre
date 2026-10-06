@@ -61,7 +61,9 @@ class GasPolicy:
     margin_abs: int = 5_000          # between estimate and inclusion; a fork cannot measure that drift
     tx_cap: int = 25_000_000         # never send a transaction above this limit
     inline_nodes_max: int = 100      # new nodes carried by submitCertificate itself (29.1 k/node, GAS.md)
-    add_nodes_per_tx: int = 600      # ~17.5 M per full addNodes chunk
+    add_nodes_per_tx: int = 450      # review NODES600: addNodes costs ~45.9 k/node in v1 (GAS.md, MEASURED 01/10):
+    #                                  450 x 45.9 k = 20.7 M, x 1.075 + margin = 22.2 M < tx_cap (600 gave 29.6 M)
+    truncate_levels: tuple = (0, 10**12, 10**14, 10**16)   # review GASCAP: rows of nodes of mass <= level dropped
     reserve_slots_per_tx: int = 800  # 17.5 k per 0→x slot (GAS.md): ~14 M per reserveCapacity chunk
 
     def limit(self, estimate: int) -> int:
@@ -184,32 +186,74 @@ def revert_reason(err: str) -> str:
 
 @dataclass
 class Signer:
-    """Who signs. `unlocked`: an anvil dev account (local fork only). `keystore`: an encrypted keystore file,
-    password in the env var `password_env`, handed to cast through the CHILD environment (ETH_PASSWORD), so the
-    secret never appears on a command line (`ps`) nor in a log."""
+    """Who signs. `unlocked`: an anvil dev account (local fork only). `keystore`: an encrypted keystore file.
+
+    AM-06.1: Foundry >= 1.8 reads ETH_PASSWORD as a password FILE PATH (`--password-file`, env ETH_PASSWORD), not as
+    the password. The password is therefore given either as a 0600 file (`password_file`, or an env var whose name
+    ends in `_FILE` holding that path), or as the password itself in the env var `password_env`, which this class
+    writes ONCE to a 0600 file in a private 0700 temp dir (removed at exit). Only the PATH reaches cast, through the
+    CHILD environment: the secret never appears on a command line (`ps`) nor in a log."""
     address: str
     mode: str = "unlocked"          # "unlocked" | "keystore"
     keystore: str = ""
     password_env: str = ""
+    password_file: str = ""
+    _tmp: str = field(default="", repr=False)
+
+    @classmethod
+    def build(cls, address: str | None, keystore: str | None = None, password_env: str | None = None,
+              password_file: str | None = None) -> "Signer | None":
+        """The one constructor of the CLIs (certifier, watcher, alchemy_hook: review SIGNER)."""
+        if not address:
+            return None
+        if keystore:
+            return cls(address.lower(), "keystore", keystore, password_env or "", password_file or "")
+        return cls(address.lower())
 
     def args(self) -> list[str]:
         if self.mode == "unlocked":
             return ["--unlocked", "--from", self.address]
         return ["--keystore", self.keystore]
 
+    def _path(self) -> str:
+        if self.password_file:
+            return self.password_file
+        if self.password_env.endswith("_FILE"):        # the variable already holds a file path
+            p = os.environ.get(self.password_env, "")
+            if not p or not os.path.isfile(p):
+                raise RuntimeError(f"env var {self.password_env} is not a password file path")
+            return p
+        if not self._tmp:
+            pw = os.environ.get(self.password_env, "")
+            if not pw:
+                raise RuntimeError(f"env var {self.password_env} not set")
+            import atexit
+            import shutil
+            import tempfile
+            d = tempfile.mkdtemp(prefix="ancre-pw-")    # 0700
+            path = os.path.join(d, "pw")
+            with os.fdopen(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as fh:
+                fh.write(pw)
+            atexit.register(shutil.rmtree, d, True)
+            self._tmp = path
+        return self._tmp
+
     def env(self) -> dict:
         if self.mode != "keystore":
             return {}
-        pw = os.environ.get(self.password_env, "")
-        if not pw:
-            raise RuntimeError(f"env var {self.password_env} not set")
-        return {"ETH_PASSWORD": pw}
+        return {"ETH_PASSWORD": self._path()}
+
+
+PUBLIC_RANGE_100 = ("rpc.monad.xyz", "testnet-rpc.monad.xyz")   # eth_getLogs <= 100 blocks (CLAUDE.md §7, MEASURED)
 
 
 class Chain:
-    def __init__(self, rpc: str, signer: Signer | None = None, cast: str | None = None):
+    def __init__(self, rpc: str, signer: Signer | None = None, cast: str | None = None, log_chunk: int | None = None):
         self.rpc, self.signer = rpc, signer
         self.cast = cast or os.path.expanduser("~/.foundry/bin/cast")
+        # review LOGS: split eth_getLogs on the public RPCs (range limited to 100 blocks, error -32614)
+        self.log_chunk = log_chunk if log_chunk is not None else (
+            100 if any(h in rpc for h in PUBLIC_RANGE_100) and "rpc1" not in rpc else 0)
 
     def _run(self, sub: str, *args: str, sign: bool = False) -> str:
         """`cast <sub> --rpc-url RPC [signer options] <args>`. Callers pass their options before the positionals
@@ -222,8 +266,8 @@ class Chain:
             env.update(self.signer.env())
         p = subprocess.run([self.cast, sub, "--rpc-url", self.rpc, *sig, *args], capture_output=True, text=True,
                            env=env)
-        if p.returncode != 0:
-            raise ChainError(p.stderr.strip()[-2000:])
+        if p.returncode != 0:                           # with --json cast writes some errors on STDOUT (AM-06.1)
+            raise ChainError((p.stderr.strip() or p.stdout.strip())[-2000:] or f"cast {sub} exited {p.returncode}")
         return p.stdout.strip()
 
     @property
@@ -255,9 +299,15 @@ class Chain:
 
     def logs(self, address: str, event_sig: str, from_block: int, *topics: str,
              to_block: int | str = "latest") -> list[dict]:
+        chunk = ["--query-size", str(self.log_chunk)] if self.log_chunk else []
         out = self._run("logs", "--address", address, "--from-block", str(from_block), "--to-block", str(to_block),
-                        "--json", event_sig, *topics)
+                        *chunk, "--json", event_sig, *topics)
         return json.loads(out) if out else []
+
+    def eth_call(self, to: str, data: str) -> str:
+        """Raw eth_call through the solver's JSON-RPC client (no process per call: the node table can be long)."""
+        from refresh import Rpc
+        return Rpc(self.rpc)("eth_call", [{"to": to, "data": data}, "latest"])
 
     def tx_input(self, tx_hash: str) -> str:
         return self._run("tx", tx_hash, "input")
@@ -291,10 +341,44 @@ def anchor_table(anchors: list[str]) -> list[NodeKey]:
     return [(ANCHOR, a) for a in sorted(x.lower() for x in anchors)]
 
 
+def key_to_node(key: int) -> NodeKey:
+    """bytes32 node key of the contract (kind << 248 | agentId or address) -> NodeKey."""
+    kind, val = key >> 248, key & ((1 << 160) - 1)
+    if kind == 1:
+        return (AGENT, val)
+    if kind == 2:
+        return (ADDR, "0x" + f"{val:040x}")
+    if kind == 3:
+        return (ANCHOR, "0x" + f"{val:040x}")
+    raise ValueError(f"unknown node kind {kind}")
+
+
 def chain_table(chain: Chain, contract: str, set_id: str, anchors: list[str], from_block: int = 0,
                 to_block: int | str = "latest", table: list[NodeKey] | None = None) -> list[NodeKey]:
-    """The on-chain node table, rebuilt from NodesAdded logs and the calldata of their transactions (addNodes or
-    submitCertificate newNodes), checked for continuity. Incremental: pass the table known up to from_block − 1.
+    """The on-chain node table, read from the contract's own storage (`nodeCount`, `nodeKeyAt`): review TBL, an
+    `addNodes` relayed through a multisig, Multicall3, a 4337 account or a 7702 EOA no longer stops the service (the
+    old version decoded the calldata behind each NodesAdded and raised on anything but a direct call). Incremental:
+    pass the table known so far; only the new indices are read. `from_block` / `to_block` are kept for the callers
+    (the table is append-only, so the latest state is the right one)."""
+    fresh = table is None
+    table = list(table) if table is not None else anchor_table(anchors)
+    sid = set_id[2:].rjust(64, "0")
+    count = int(chain.eth_call(contract, "0x" + keccak(b"nodeCount(bytes32)").hex()[:8] + sid), 16)
+    key_at = lambda i: key_to_node(int(chain.eth_call(
+        contract, "0x" + keccak(b"nodeKeyAt(bytes32,uint256)").hex()[:8] + sid + f"{i:064x}"), 16))
+    if count < len(table):
+        raise RuntimeError(f"node table shrank: {count} on chain < {len(table)} known (wrong set or contract)")
+    if fresh and count:                                 # the anchors are nodes 0..k-1 of the registered set
+        if [key_at(i) for i in range(len(table))] != table:
+            raise RuntimeError("anchor nodes of the chain differ from the set configuration")
+    for i in range(len(table), count):
+        table.append(key_at(i))
+    return table
+
+
+def chain_table_from_logs(chain: Chain, contract: str, set_id: str, anchors: list[str], from_block: int = 0,
+                          to_block: int | str = "latest", table: list[NodeKey] | None = None) -> list[NodeKey]:
+    """Former reader (NodesAdded logs + calldata of their transactions), kept for contracts without nodeKeyAt.
     A transaction that is not a direct call to the contract (multisig, router) cannot be decoded and raises."""
     table = list(table) if table is not None else anchor_table(anchors)
     if isinstance(to_block, int) and from_block > to_block:     # nothing new since the last sync
@@ -394,7 +478,8 @@ def relevant(ev: dict, sup: Support) -> bool:
     if k in ("MetadataSet", "Transfer", "Approval"):
         return int(ev["agentId"]) in sup.agents
     if k == "ApprovalForAll":
-        return True                     # operator of an owner: rare (32 on the mainnet), cheap to recompute
+        return True                     # operator of an owner: rare (32 active operators on the mainnet, MEASURED
+        #                                 06/10 in out/mainnet.md, snapshot 110 994 810), cheap to recompute
     return False
 
 
@@ -419,6 +504,9 @@ def plan(cfg: SetConfig, set_id: str, al: Aligned, enc: dict, reserved_nodes: in
     stride = al.cert.k + 3
     unreserved_slots = max(0, (n + 3) // 4 - (reserved_nodes + 3) // 4) * stride
     large = len(al.appended) > cfg.gas.inline_nodes_max or unreserved_slots > cfg.gas.reserve_slots_per_tx
+    open_set = not cfg.submitters
+    if open_set and al.appended:      # review A1d: inline newNodes land at the CURRENT nodeCount; a third-party
+        large = True                  # addNodes in between shifts every index. Add them in their own transactions
     txs: list[Tx] = []
     inline = al.new_nodes
     if large:
@@ -521,6 +609,26 @@ def replacement_wait(oc: OnChain, head: int, q_new: int, mass_new: int, cfg: Set
     return max(0, min(waits))
 
 
+def distinct_variant(cert: Certificate) -> Certificate | None:
+    """A DIFFERENT valid certificate of the same graph (review STUCK): 1 wei less on a massive node that feeds nobody
+    (no row, or an empty row). t stays a sub-solution (t_v only decreases and no y depends on it), d and every root
+    but vectorRoot are unchanged, the mass drops by at most 1 wei. None if no such node exists."""
+    for v in range(cert.k, cert.n):
+        if cert.rows.get(v):
+            continue
+        for a in range(cert.k):
+            if cert.t[a][v] > 0:
+                t = [list(col) for col in cert.t]
+                t[a][v] -= 1
+                out = Certificate(n=cert.n, anchors=cert.anchors, alphaN=cert.alphaN, alphaD=cert.alphaD,
+                                  lambdas=cert.lambdas, rows=cert.rows, splus=cert.splus, t=t, node_map=cert.node_map,
+                                  mode=cert.mode, row_src=cert.row_src, iterations=cert.iterations)
+                out.r, out.e, out.d, errs = verify(out)
+                if not errs and out.d == cert.d:
+                    return out
+    return None
+
+
 class Certifier:
     def __init__(self, cfg: SetConfig, chain: Chain | None, contract: str, set_id: str, state_path: Path,
                  journal: Journal):
@@ -530,6 +638,15 @@ class Certifier:
         self.support: Support | None = None
         self._table: list[NodeKey] | None = None        # node table known up to self._table_block (append-only)
         self._table_block = -1
+        self.last_seen: tuple | None = None             # (graphRoot, vectorRoot, eLowEff, eEff) after our last look
+
+    def contract_changed(self, oc: "OnChain") -> bool:
+        """Review THIRD: the certificate or its proofs changed on chain since our last look (a third-party certificate,
+        a proof that widened the incumbent, a RowVoided): recompute now instead of waiting for the age refresh."""
+        cur = (oc.graph_root, oc.vector_root, oc.e_low_eff, oc.e_eff, oc.registry_changed)   # + CHKREG
+        changed = self.last_seen is not None and cur != self.last_seen
+        self.last_seen = cur
+        return changed
 
     def table(self, head: int) -> list[NodeKey]:
         """Incremental sync of the append-only node table: only the NodesAdded logs after the last sync."""
@@ -538,10 +655,10 @@ class Certifier:
         self._table_block = head
         return self._table
 
-    def compute(self, fbs, idn: Identity, table: list[NodeKey], prev_ncert: int):
+    def compute(self, fbs, idn: Identity, table: list[NodeKey], prev_ncert: int, truncate_below: int = 0):
         g = build_graph(fbs, idn, self.cfg.schema(), self.cfg.filter_tags, self.cfg.anchors,
                         owner_fallback=self.cfg.owner_fallback)
-        cert = certify(g, self.cfg.alpha, lambdas=self.cfg.lambdas)
+        cert = certify(g, self.cfg.alpha, lambdas=self.cfg.lambdas, truncate_below=truncate_below)
         al = align(g, cert, table, prev_ncert)
         enc = encode(al.cert, al.nodes, idn)
         self.support = Support.of(g, cert)
@@ -555,40 +672,67 @@ class Certifier:
     def due_refresh(self, oc: OnChain, head: int) -> bool:
         return oc.cert_block > 0 and head - oc.cert_block > self.cfg.max_age - self.cfg.refresh_lead
 
-    def run_once(self, fbs, idn: Identity, *, reason: str, block: int | None = None, dry: bool = False) -> dict:
+    def run_once(self, fbs, idn: Identity, *, reason: str, block: int | None = None, dry: bool = False,
+                 _level: int = 0) -> dict:
         t0 = time.perf_counter()
+        self.retry_at = None
         if self.chain is None or dry:
             table, oc, head = anchor_table(self.cfg.anchors), None, None
         else:
             head = self.chain.block_number()
             table = self.table(head)
             oc = OnChain.read(self.chain, self.contract, self.set_id)
-        g, al, enc = self.compute(fbs, idn, table, oc.n_cert if oc else 0)
+        trunc = self.cfg.gas.truncate_levels[_level]
+        g, al, enc = self.compute(fbs, idn, table, oc.n_cert if oc else 0, trunc)
         gr, vr = "0x" + enc["graphRoot"].hex(), "0x" + enc["vectorRoot"].hex()
         e_max = e_eff(al.cert)
         q_new, mass_new, d_new = quality(al.cert)
         base = dict(set=self.cfg.name, reason=reason, block=block, nCert=al.cert.n, rows=len(al.cert.rows),
                     newNodes=len(al.appended), eEff=e_max, qEff=q_new, mass=mass_new, iterations=al.cert.iterations,
-                    graphRoot=gr, computeMs=round((time.perf_counter() - t0) * 1000, 1))
+                    graphRoot=gr, computeMs=round((time.perf_counter() - t0) * 1000, 1),
+                    **({"truncateBelow": trunc} if trunc else {}))
         reserved = max(self.state.reserved, oc.n_cert if oc else 0)
         txs = plan(self.cfg, self.set_id, al, enc, reserved, e_max)
         if oc is None:
             return self.journal.log(action="planned", txs=[t.fn for t in txs], **base)
         refresh = self.due_refresh(oc, head)
-        if (gr, vr) == (oc.graph_root, oc.vector_root) and not refresh and not oc.registry_changed:
+        same = (gr, vr) == (oc.graph_root, oc.vector_root)
+        stale = oc.cert_block > 0 and head - oc.cert_block > self.cfg.max_age
+        hurt = oc.proven or oc.e_low_eff > 0 or stale    # review STUCK: never skip a proven or stale incumbent
+        if same and not refresh and not oc.registry_changed and not hurt:
             return self.journal.log(action="skip_identical", **base)
-        wait = replacement_wait(oc, head, q_new, mass_new, self.cfg, d_new, (gr, vr) == (oc.graph_root, oc.vector_root))
+        if same and oc.proven:                          # the same content would be refused: submit a distinct one
+            var = distinct_variant(al.cert)
+            if var is None:
+                return self.journal.log(action="stuck_identical_proven", **base)
+            al = Aligned(var, al.nodes, al.appended)
+            enc = encode(al.cert, al.nodes, idn)
+            vr = "0x" + enc["vectorRoot"].hex()
+            q_new, mass_new, d_new = quality(al.cert)
+            e_max = e_eff(al.cert)
+            txs = plan(self.cfg, self.set_id, al, enc, reserved, e_max)
+            base.update(variant="1 wei below the fixed point (STUCK)", mass=mass_new, eEff=e_max, qEff=q_new)
+            same = False
+        wait = replacement_wait(oc, head, q_new, mass_new, self.cfg, d_new, same)
         if wait:                                        # the contract would revert NotBetter: do not pay for it
+            self.retry_at = head + wait                 # review DEFER: the loop retries at that block
             return self.journal.log(action="deferred_replacement_rule", waitBlocks=wait, qCur=oc.q_cur,
                                     massCur=oc.mass, eLowCur=oc.e_low_eff, head=head, **base)
         self.check_submitter()
+        split = not self.cfg.submitters and bool(al.appended)
+        if split:                                       # open set: the nodes go alone, never with the certificate
+            txs = [t for t in txs if t.fn != "submitCertificate"]
         last = None
         for tx in txs:
             est = self.chain.estimate(self.contract, tx.sig, *tx.args)
             lim = self.cfg.gas.limit(est)
             if lim > self.cfg.gas.tx_cap:
-                raise RuntimeError(f"{tx.fn}: gas limit {lim} > cap {self.cfg.gas.tx_cap} (GAS.md: an update breaks "
-                                   "around 12 k edges at k = 3; beyond, the verification must be split)")
+                if tx.fn == "submitCertificate" and _level + 1 < len(self.cfg.gas.truncate_levels):
+                    # review GASCAP: drop the rows of the lightest nodes (truncation margin, t stays a lower bound)
+                    self.journal.log(action="gas_cap_truncate", gasLimit=lim, nextLevel=_level + 1, **base)
+                    return self.run_once(fbs, idn, reason=reason, block=block, dry=dry, _level=_level + 1)
+                raise RuntimeError(f"{tx.fn}: gas limit {lim} > cap {self.cfg.gas.tx_cap} (review MSG: a Registry-"
+                                   "verified update re-reads every edge, ~600 edges per 15 M, contracts/GAS.md)")
             rc = self.chain.send(self.contract, tx.sig, *tx.args, gas_limit=lim)
             ok = rc["ok"]
             last = self.journal.log(action=tx.fn, note=tx.note, estimate=est, gasLimit=lim,
@@ -600,8 +744,13 @@ class Certifier:
             self.state.save(self.state_path)            # progress is on chain; the cache follows every step
             if not ok:
                 raise ChainError(f"{tx.fn} reverted: {rc.get('transactionHash')}")
+        if split:                                       # review A1d: submit next round, on the RE-READ table
+            self.state.save(self.state_path)
+            self.retry_at = head
+            return self.journal.log(action="nodes_added", txs=len(txs), **base)
         self.state.reserved = max(self.state.reserved, al.cert.n)
         self.state.save(self.state_path)
+        self.contract_changed(OnChain.read(self.chain, self.contract, self.set_id))   # our own change is not news
         return self.journal.log(action="certified", latencyMs=round((time.perf_counter() - t0) * 1000, 1),
                                 txs=len(txs), refresh=refresh, lastTx=last["tx"], txBlock=last["txBlock"], **base)
 
@@ -664,29 +813,46 @@ def main(argv=None):
     ap.add_argument("--once", action="store_true")
     a = ap.parse_args(argv)
     cfg = SetConfig.load(a.set_config)
-    signer = Signer(a.sender, "keystore", a.keystore, a.password_env) if a.send else (
-        Signer(a.sender) if a.sender else None)
+    signer = Signer.build(a.sender, a.keystore if a.send else None, a.password_env)
     chain = Chain(a.rpc, signer)
     jr = Journal(Path(a.journal))
     svc = Certifier(cfg, chain, a.contract, a.set_id, Path(a.state), jr)
+    svc.retry_at = None
     load = lambda: (load_feedbacks_onchain(Path(a.data) / "onchain_feedbacks.json"),
                     load_identity_json(Path(a.data) / "identity.json"))
-    frm, first = a.from_block, True
+    frm, first, head, failed = a.from_block, True, None, False
     while True:
-        head = chain.block_number()
-        try:
+        try:                                            # review DIES: everything inside, a 429 never kills the loop
+            head = chain.block_number()
             evs = [] if first else [e for e in registry_events(chain, a.identity, a.reputation, frm, head)
                                     if svc.support is None or relevant(e, svc.support)]
-            due = svc.due_refresh(OnChain.read(chain, a.contract, a.set_id), head)
-            if first or evs or due:
+            if any(e["kind"] == "Upgraded" for e in evs) and a.send:
+                # review CHKREG: nobody else calls checkRegistry; it flags REGISTRY_CHANGED, then we recertify
+                rc = chain.send(a.contract, "checkRegistry(bytes32)", a.set_id, gas_limit=300_000)
+                jr.log(action="checkRegistry", set=cfg.name, tx=rc.get("transactionHash"), status=rc["ok"])
+            oc = OnChain.read(chain, a.contract, a.set_id)
+            due = svc.due_refresh(oc, head)
+            moved = svc.contract_changed(oc)            # review THIRD / CHKREG: a third-party move, REGISTRY_CHANGED
+            retry = svc.retry_at is not None and head >= svc.retry_at          # review DEFER / A1d
+            if first or evs or due or moved or retry:
                 fbs, idn = load()
-                svc.run_once(fbs, idn, reason="start" if first else ("refresh" if due and not evs else
-                             f"{len(evs)} relevant event(s)"), block=head, dry=not a.send)
-            frm, first = head + 1, False
+                behind = max((e["block"] for e in evs), default=0)
+                if idn.block < behind:                  # review STALE: the export lags the events: keep the window
+                    jr.log(action="data_behind", set=cfg.name, dataBlock=idn.block, eventBlock=behind)
+                    failed = True
+                    if a.once:
+                        return 1
+                    time.sleep(a.interval)
+                    continue
+                svc.run_once(fbs, idn, reason="start" if first else (
+                    f"{len(evs)} relevant event(s)" if evs else "contract state changed" if moved else
+                    "retry (replacement rule / nodes added)" if retry else "refresh"), block=head, dry=not a.send)
+            frm, first, failed = head + 1, False, False
         except Exception as e:                          # journal, keep the window, retry next round
+            failed = True
             jr.log(action="error", set=cfg.name, error=str(e)[:500], fromBlock=frm, head=head)
         if a.once:
-            return 0
+            return 1 if failed else 0
         time.sleep(a.interval)
 
 

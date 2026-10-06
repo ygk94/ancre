@@ -1,0 +1,275 @@
+{
+ "format": "ancre-cert-v1",
+ "label": "common_A_anchor_not_source",
+ "notes": "D48-A: X is an anchor and the agentWallet of S (#10). The solver gives S NO row (listed, absorbing, truncation margin on eUp only). F (#20) is endorsed by X alone: mass in X's column only, trustRobust(F) = 0.",
+ "alignedWith": "contracts/ENCODING.md unified v1 (2026-10-01), AnchoredReputation v1 (integration 02+04)",
+ "identityBlock": 0,
+ "set": {
+  "anchors": [
+   "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "0xa3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3"
+  ],
+  "lambdas": [
+   "500000000000000000",
+   "500000000000000000"
+  ],
+  "alphaN": 1,
+  "alphaD": 3,
+  "minAnchors": 2,
+  "tagSchemaHash": "0x802236a607d7ee9cf6999aa20c93df86e87e25379362df4a735e109b44ee1566",
+  "tags": [
+   {
+    "tag": "vouch",
+    "min": "0",
+    "neutral": "0",
+    "max": "100000000000000000000",
+    "kind": 0
+   },
+   {
+    "tag": "review",
+    "min": "-1000000000000000000",
+    "neutral": "0",
+    "max": "1000000000000000000",
+    "kind": 0
+   },
+   {
+    "tag": "slash",
+    "min": "-100000000000000000000",
+    "neutral": "0",
+    "max": "0",
+    "kind": 0
+   }
+  ],
+  "policy": {
+   "theta": "1000000000000000",
+   "rhoN": 1,
+   "rhoD": 2,
+   "minAnchors": 2,
+   "vetoQuorum": 1,
+   "vetoMax": -1,
+   "maxAge": 288000,
+   "minRefresh": 600,
+   "slackRefresh": "0",
+   "eLowMax": "10000000000000000",
+   "strictTransfer": true,
+   "registryVerified": true,
+   "ownerFallback": false,
+   "submitters": []
+  },
+  "setId": "0xb7f077ee0b4cda99da94d881a79d5a7963a44f0638d8e91ed51d56da090c3bd9"
+ },
+ "nCert": 4,
+ "nodes": [
+  {
+   "i": 0,
+   "kind": "anchor",
+   "address": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "hasRow": true
+  },
+  {
+   "i": 1,
+   "kind": "anchor",
+   "address": "0xa3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3",
+   "hasRow": true
+  },
+  {
+   "i": 2,
+   "kind": "agent",
+   "agentId": 10,
+   "owner": "0x000000000000000000000000000000000000b00a",
+   "agentWallet": "0xa3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3",
+   "hasRow": false
+  },
+  {
+   "i": 3,
+   "kind": "agent",
+   "agentId": 20,
+   "owner": "0x000000000000000000000000000000000000b014",
+   "agentWallet": "0x000000000000000000000000000000000000c014",
+   "hasRow": true
+  }
+ ],
+ "rows": [
+  {
+   "u": 0,
+   "source": null,
+   "via": "anchor",
+   "aliasOf": null,
+   "sPlus": 10000,
+   "bPlus": 10000,
+   "bMinus": 10000,
+   "edges": [
+    {
+     "dst": 2,
+     "w": 10000,
+     "feedbackIndex": 1,
+     "client": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+     "agentId": 10,
+     "tag1": "vouch"
+    }
+   ]
+  },
+  {
+   "u": 1,
+   "source": null,
+   "via": "anchor",
+   "aliasOf": null,
+   "sPlus": 10000,
+   "bPlus": 10000,
+   "bMinus": 10000,
+   "edges": [
+    {
+     "dst": 3,
+     "w": 10000,
+     "feedbackIndex": 1,
+     "client": "0xa3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3",
+     "agentId": 20,
+     "tag1": "vouch"
+    }
+   ]
+  },
+  {
+   "u": 3,
+   "source": "0x000000000000000000000000000000000000c014",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 0,
+   "bPlus": 10000,
+   "bMinus": 10000,
+   "edges": []
+  }
+ ],
+ "vectors": {
+  "t": [
+   [
+    "333333333333333333",
+    "0",
+    "222222222222222222",
+    "0"
+   ],
+   [
+    "0",
+    "333333333333333333",
+    "0",
+    "222222222222222222"
+   ]
+  ],
+  "ownerFp": [
+   "0",
+   "0",
+   "45066",
+   "45076"
+  ]
+ },
+ "expected": {
+  "residualMode": "contract",
+  "subSolution": true,
+  "iterationsFromZero": 3,
+  "r": [
+   "148148148148148151",
+   "3"
+  ],
+  "e": [
+   "444444444444444453",
+   "9"
+  ],
+  "eEff": "222222222222222232",
+  "qEff": "222222222222222222",
+  "mass": "555555555555555554",
+  "distrustMass": "0",
+  "d": [
+   "0",
+   "0",
+   "0",
+   "0"
+  ],
+  "graphRoot": "0x9bd44c781aa1062f4cd62dd49fd868100fead03ed9784adfa9d428b625974154",
+  "vectorRoot": "0x6285fc63e5d9dfbf6727004196539cd360f9eb1dbc01b42fbec497d41d1b0040",
+  "tight": {
+   "r": [
+    "148148148148148149",
+    "1"
+   ],
+   "e": [
+    "444444444444444447",
+    "3"
+   ]
+  }
+ },
+ "calldata": {
+  "W": 2,
+  "newNodes": "0x010000000a0100000014",
+  "vectors": "0x04a03ce68d21555500000000000000000000000000000000000000000000000004a03ce68d215555000000000000000003157def08c0e38e0000000000000000000000000000b00a000000000000000003157def08c0e38e000000000000b014",
+  "rows": "0x020000000300000001000227100000000100010001000327100000000100038000000000000000000000000000000000000000c014"
+ },
+ "registry": {
+  "agents": [
+   {
+    "agentId": 10,
+    "owner": "0x000000000000000000000000000000000000b00a",
+    "agentWallet": "0xa3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3",
+    "approved": "0x0000000000000000000000000000000000000000"
+   },
+   {
+    "agentId": 20,
+    "owner": "0x000000000000000000000000000000000000b014",
+    "agentWallet": "0x000000000000000000000000000000000000c014",
+    "approved": "0x0000000000000000000000000000000000000000"
+   }
+  ],
+  "operators": [],
+  "feedbacks": [
+   {
+    "client": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "agentId": 10,
+    "value": 100,
+    "decimals": 0,
+    "tag1": "vouch",
+    "tag2": "",
+    "revoked": false
+   },
+   {
+    "client": "0xa3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3",
+    "agentId": 20,
+    "value": 100,
+    "decimals": 0,
+    "tag1": "vouch",
+    "tag2": "",
+    "revoked": false
+   }
+  ]
+ },
+ "expect": {
+  "submission": "ACCEPTED",
+  "read": {
+   "10": {
+    "contributions": [
+     "111111111111111111",
+     "0"
+    ],
+    "trustRobust": "0",
+    "distrust": "0",
+    "vetoBits": [
+     false,
+     false
+    ],
+    "vetoByApproval": [],
+    "passesAnchorPolicy": false
+   },
+   "20": {
+    "contributions": [
+     "0",
+     "111111111111111111"
+    ],
+    "trustRobust": "0",
+    "distrust": "0",
+    "vetoBits": [
+     false,
+     false
+    ],
+    "vetoByApproval": [],
+    "passesAnchorPolicy": false
+   }
+  }
+ }
+}

@@ -1,0 +1,108 @@
+{
+ "from": 108835675,
+ "to": 110994810,
+ "seconds": 3.6,
+ "rpcCalls": 10,
+ "reputationLogs": {
+  "NewFeedback": 8
+ },
+ "identityLogs": {
+  "Transfer": 21,
+  "Registered": 19,
+  "MetadataSet": 22
+ },
+ "touchedAgents": [
+  10188,
+  10255,
+  10262,
+  10280
+ ],
+ "feedbacks": {
+  "before": 9283,
+  "after": 9291
+ },
+ "revoked": 0,
+ "agents": 10281,
+ "newFeedbacks": [
+  {
+   "block": 108878432,
+   "agent": 10188,
+   "client": "0x945659f0eb9c34487b0c0f61ed7e9d279ace8f09",
+   "idx": 1,
+   "value": 90,
+   "dec": 0,
+   "tag1": "requester_rating:knowledge_access",
+   "tag2": "0x945659f0"
+  },
+  {
+   "block": 108878568,
+   "agent": 10262,
+   "client": "0x5975442e9608f71cea6e9b1f3841b5a045e0500d",
+   "idx": 1,
+   "value": 90,
+   "dec": 0,
+   "tag1": "requester_rating:knowledge_access",
+   "tag2": "0x5975442e"
+  },
+  {
+   "block": 109332841,
+   "agent": 10255,
+   "client": "0x49472ef9ed99f30d4ead45ac9e1c16c31f70783a",
+   "idx": 1,
+   "value": 100,
+   "dec": 0,
+   "tag1": "tab",
+   "tag2": "settled"
+  },
+  {
+   "block": 109332855,
+   "agent": 10255,
+   "client": "0x49472ef9ed99f30d4ead45ac9e1c16c31f70783a",
+   "idx": 2,
+   "value": 100,
+   "dec": 0,
+   "tag1": "tab",
+   "tag2": "settled"
+  },
+  {
+   "block": 109379905,
+   "agent": 10255,
+   "client": "0x49472ef9ed99f30d4ead45ac9e1c16c31f70783a",
+   "idx": 3,
+   "value": 100,
+   "dec": 0,
+   "tag1": "tab",
+   "tag2": "settled"
+  },
+  {
+   "block": 110475270,
+   "agent": 10255,
+   "client": "0x49472ef9ed99f30d4ead45ac9e1c16c31f70783a",
+   "idx": 4,
+   "value": 100,
+   "dec": 0,
+   "tag1": "tab",
+   "tag2": "settled"
+  },
+  {
+   "block": 110493175,
+   "agent": 10255,
+   "client": "0x49472ef9ed99f30d4ead45ac9e1c16c31f70783a",
+   "idx": 5,
+   "value": 100,
+   "dec": 0,
+   "tag1": "tab",
+   "tag2": "settled"
+  },
+  {
+   "block": 110872159,
+   "agent": 10280,
+   "client": "0x77a55a4980769f543ea5bb799f4f49a8c1cd0d85",
+   "idx": 1,
+   "value": 100,
+   "dec": 0,
+   "tag1": "agenttrace-outcome",
+   "tag2": "0x52c98d5058fc9a180a5270aeea72698600f5c6c181d7723a1f503fcdab4c6d5e"
+  }
+ ]
+}

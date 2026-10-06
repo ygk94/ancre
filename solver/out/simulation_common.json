@@ -1,0 +1,94 @@
+{
+ "fork": {
+  "url": "https://rpc1.monad.xyz",
+  "block": 110994810,
+  "network": "monad (anvil)"
+ },
+ "contract": "0x3c2bafebbb0c8c58f39a976e725cd20d611d01e9",
+ "common": [
+  {
+   "vector": "common_2hop",
+   "level": "Submitter-attested",
+   "expectAfterFix": "ACCEPTED",
+   "result": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 512242
+  },
+  {
+   "vector": "common_2hop_one_anchor",
+   "level": "Submitter-attested",
+   "expectAfterFix": "ACCEPTED",
+   "result": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 509995
+  },
+  {
+   "vector": "common_A_anchor_not_source",
+   "level": "Submitter-attested",
+   "expectAfterFix": "ACCEPTED",
+   "result": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 506593
+  },
+  {
+   "vector": "common_A_attack_anchor_copy",
+   "level": "Submitter-attested",
+   "expectAfterFix": "AnchorAsSource(2)",
+   "result": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 512261
+  },
+  {
+   "vector": "common_A_mainnet_old_slash_anchor",
+   "level": "Registry-verified",
+   "expectAfterFix": "AnchorAsSource(5)",
+   "result": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 1039953
+  },
+  {
+   "vector": "common_B_controller_negative",
+   "level": "Submitter-attested",
+   "expectAfterFix": "ACCEPTED",
+   "result": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 531429
+  },
+  {
+   "vector": "common_C_proven_row_resubmitted",
+   "level": "Submitter-attested",
+   "expectAfterFix": "ACCEPTED",
+   "result": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 514099,
+   "proof": [
+    {
+     "kind": "FABRICATED",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 280509,
+     "error": null,
+     "reason": null
+    }
+   ],
+   "resubmission": {
+    "result": "ACCEPTED",
+    "reason": null,
+    "expectAfterFix": "ProvenRowResubmitted(0)"
+   },
+   "control": {
+    "result": "ACCEPTED",
+    "reason": null,
+    "expectAfterFix": "ACCEPTED"
+   }
+  },
+  {
+   "vector": "common_R1_address_zero_node",
+   "level": "Submitter-attested",
+   "expectAfterFix": "BadNodes()",
+   "result": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 651263
+  }
+ ]
+}

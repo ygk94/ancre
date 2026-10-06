@@ -196,8 +196,7 @@ def test_quantize_rules():
     assert quantize(1, 6, S["vouch"]) == 0                      # 1e-6/100 -> 0 (grille 1e-4)
     assert quantize(40, 0, S["starred"]) == -2000               # sous le neutre : négatif
     assert quantize(77777, 3, S["starred"]) == 5555             # 77,777 -> 0,55554 -> 5555
-    with pytest.raises(ValueError):
-        quantize(1, 19, S["vouch"])
+    assert quantize(1, 19, S["vouch"]) is None                  # review DEC18: ignored, as by the contract
 
 
 def ident(owner, wallet, **kw):
@@ -209,7 +208,7 @@ def fb(agent, client, idx, value, tag, dec=0, revoked=False):
 
 
 def test_graph_rules_d14_d15_d20():
-    A, B, C, D, E, O, OP, AP, PO = ("0x" + c * 40 for c in "abcde0f12")
+    A, B, C, D, E, O, OP, AP, PO = ("0x" + c * 40 for c in "abcde3f12")
     idn = ident(owner={1: O, 2: B, 3: B, 4: E}, wallet={1: O, 2: B, 3: B, 4: E},
                 operators={O: {OP}}, approved={1: AP}, past_owners={1: {PO}})
     fbs = [
@@ -232,9 +231,13 @@ def test_graph_rules_d14_d15_d20():
     assert g.pairs[(PO, 1)].q == GRID and (PO, ADDR) in by_client     # D20: no past-owner rejection
     assert (B, 1) in g.pairs and not any(e.client == B for _, e in g.edges())
     assert g.log["emetteur_agents_non_notes"] == 1                    # B's agents #2, #3 have no mass
-    assert (E, AGENT) in by_client and (E, ANCHOR) in by_client       # anchor node distinct from agent node #4
-    assert g.nodes[[u for u, e in g.edges() if e.client == E and g.nodes[u][0] == AGENT][0]] == (AGENT, 4)
-    assert by_client[(E, AGENT)].q == 5000
+    # D48-A: E is an anchor AND the wallet of #4: the anchor row is carried by the anchor node only, #4 carries none
+    assert (E, ANCHOR) in by_client and (E, AGENT) not in by_client
+    assert by_client[(E, ANCHOR)].q == 5000
+    u4 = g.index[(AGENT, 4)]
+    assert g.anchor_sourced == {u4} and u4 not in g.rows and u4 not in g.row_src
+    c = certify(g, Fraction(1, 3))
+    assert u4 in c.node_map and c.node_map.index(u4) not in c.rows      # listed (massive), no row, not even empty
     assert g.log["rejet_measurement_D15"] == 1
     assert sum(v for k, v in g.log.items() if k.startswith("rejet_controleur")) == 3
     # alternative selection: latest VALID -> the C = 100 edge comes back
