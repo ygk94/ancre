@@ -274,7 +274,7 @@ export const payerAbi = [
             "internalType": "uint256"
           },
           {
-            "name": "trusted",
+            "name": "passesPolicy",
             "type": "bool",
             "internalType": "bool"
           }
@@ -398,7 +398,7 @@ export const payerAbi = [
             "internalType": "uint256"
           },
           {
-            "name": "trusted",
+            "name": "passesPolicy",
             "type": "bool",
             "internalType": "bool"
           }
@@ -965,6 +965,11 @@ export const payerAbi = [
   },
   {
     "type": "error",
+    "name": "FastTransferSet",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "NoCode",
     "inputs": [
       {
@@ -998,6 +1003,11 @@ export const payerAbi = [
   {
     "type": "error",
     "name": "NotSettleable",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "OperatorIsTreasury",
     "inputs": []
   },
   {
@@ -1105,7 +1115,7 @@ export const ancreAbi = [
             "internalType": "uint256"
           },
           {
-            "name": "trusted",
+            "name": "passesPolicy",
             "type": "bool",
             "internalType": "bool"
           }
@@ -1129,7 +1139,7 @@ export const ancreAbi = [
   },
   {
     "type": "function",
-    "name": "isTrusted",
+    "name": "passesAnchorPolicy",
     "inputs": [
       {
         "name": "agentId",

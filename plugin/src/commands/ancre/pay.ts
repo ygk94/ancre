@@ -1,5 +1,5 @@
 import { type CommandIO, InputFieldType, type InputSchema, PluginCommand, schemaToArgs, schemaToFlags } from "@metamask/agent-wallet/plugin";
-import { parseUsdc, resolveConfig } from "../../lib/config.js";
+import { optionalUsdc, resolveConfig } from "../../lib/config.js";
 import { type PayResult, payFlow } from "../../lib/flows.js";
 import { hostDeps, toCommandError } from "../../lib/host.js";
 import { fileJournal } from "../../lib/journal.js";
@@ -28,7 +28,7 @@ export default class AncrePay extends PluginCommand<PayResult> {
       const d = { ...(await hostDeps(this.ctx, io, cfg, inp.confirm ? "ancre:pay" : null)), journal: fileJournal() };
       return await payFlow(d, cfg, inp.url, {
         agentId: inp.agentId,
-        maxAmount: inp.maxAmount ? parseUsdc(inp.maxAmount) : undefined,
+        maxAmount: optionalUsdc(inp.maxAmount),
         confirm: Boolean(inp.confirm),
       });
     } catch (e) {
@@ -37,10 +37,10 @@ export default class AncrePay extends PluginCommand<PayResult> {
   }
 
   override successHint(r: PayResult): string {
-    if (r.outcome === "PAID") return `Paid ${r.offer.amountUsdc} USDC to agent #${r.agentId} (tx ${r.transaction})`;
+    if (r.outcome === "PAID") return `Paid ${r.offer.amountUsdc} USDC to agent #${r.agentId} (${r.transaction ? `tx ${r.transaction}` : "authorisation nonce used on-chain"})`;
     if (r.outcome === "NOT_SIGNED") return `Not paid, nothing signed: ${r.verdict}. ${r.action} ${r.humanOverride ?? ""}`;
     const live = r.liveAuthorization ? ` The signed authorisation stays valid until ${r.liveAuthorization.validBefore}: do not sign again before.` : "";
-    if (r.outcome === "UNKNOWN") return `Payment outcome UNKNOWN (HTTP ${r.settlementError?.httpStatus}, no settlement proof). Tell the human, do not retry.${live}`;
+    if (r.outcome === "UNKNOWN") return `Payment outcome UNKNOWN (HTTP ${r.settlementError?.httpStatus}, no settlement proof, nonce ${r.nonceUsed === false ? "unused so far" : "unreadable"}). It may still be paid: tell the human, do not retry.${live}`;
     return `Not paid: refused (${r.explainAfterFailure?.verdict ?? `HTTP ${r.settlementError?.httpStatus}`}). ${r.explainAfterFailure?.action ?? ""}${live}`;
   }
 }

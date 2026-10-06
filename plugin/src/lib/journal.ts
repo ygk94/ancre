@@ -3,13 +3,14 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
 /**
- * Append-only journal of every ANCRE refusal and every human override (D47), one JSON object per line.
+ * Append-only journal of every exit of `pay` and `override` (D47, M1), one JSON object per line: refusals,
+ * payments, unknown outcomes, aborted attempts (pay_aborted: RPC or HTTP error, wallet refusal, non-operator signer).
  * The demo screen (chantier 07) tails this file, or reads `mm ancre journal --json`.
  * Location: ANCRE_JOURNAL, default ~/.ancre/journal.jsonl (never under ~/.metamask).
  */
 export type JournalEntry = {
   kind:
-    | "refusal" | "paid" | "settlement_refused" | "unknown"
+    | "refusal" | "paid" | "settlement_refused" | "unknown" | "pay_aborted"
     | "override_requested" | "override_refused" | "override_declined" | "override_signed" | "override_paid" | "override_failed" | "override_unknown";
   url: string;
   agentId: string;

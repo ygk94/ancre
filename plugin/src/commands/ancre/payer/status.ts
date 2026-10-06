@@ -1,7 +1,7 @@
 import { type CommandIO, InputFieldType, type InputSchema, PluginCommand, schemaToFlags } from "@metamask/agent-wallet/plugin";
 import { resolveConfig } from "../../../lib/config.js";
 import { type StatusResult, statusFlow } from "../../../lib/flows.js";
-import { hostDeps, selectedWallet, toCommandError } from "../../../lib/host.js";
+import { allWalletAddresses, hostDeps, selectedWallet, toCommandError } from "../../../lib/host.js";
 
 const inputs = {
   payer: { type: InputFieldType.Text, flag: "payer", message: "TrustGatedPayer address (or ANCRE_PAYER)", required: false, prompt: false },
@@ -23,13 +23,16 @@ export default class AncrePayerStatus extends PluginCommand<StatusResult> {
       const inp = await io.resolveInputs(inputs);
       const cfg = resolveConfig({ chainId: inp.chainId, payer: inp.payer });
       const d = await hostDeps(this.ctx, io, cfg, null, inp.rpcUrl ?? process.env.ANCRE_RPC_URL);
-      let w;
+      let w: ReturnType<typeof selectedWallet>;
+      let all: ReturnType<typeof allWalletAddresses> = [];
       try {
-        w = selectedWallet(await this.ctx.walletStateManager.read());
+        const snap = await this.ctx.walletStateManager.read();
+        w = selectedWallet(snap);
+        all = allWalletAddresses(snap); // K21: every host address, not only the selected one
       } catch {
         w = undefined; // not initialized: status still works
       }
-      return await statusFlow(d, cfg, w?.address, w?.mode);
+      return await statusFlow(d, cfg, w?.address, w?.mode, all);
     } catch (e) {
       return toCommandError(e);
     }

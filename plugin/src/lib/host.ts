@@ -1,23 +1,39 @@
 import { CommandError, type CommandIO, type PluginCommandContext } from "@metamask/agent-wallet/plugin";
 import { type Address, bytesToHex, createPublicClient, getAddress, type Hex, http, isAddress } from "viem";
+import { execFile } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { ConfigError, type Config } from "./config.js";
-import { type Deps, FlowError } from "./flows.js";
-import { X402Error } from "./x402.js";
+import type { Config } from "./config.js";
+import { AncreError } from "./errors.js";
+import type { Deps } from "./flows.js";
+
+export type HostDeps = Deps & { chainId: () => Promise<number> };
 
 /**
  * Builds the flow dependencies from the host context. Reads: ctx.publicClient (authenticated host gateway), or a
  * plain RPC when --rpc-url / ANCRE_RPC_URL is given (read-only commands work without `mm login`, e.g. for a jury).
+ * Either way the reader's eth_chainId must be cfg.chainId, checked once here (K20).
  * Signatures and transactions: ctx.walletExecutor ONLY (MetaMask policy and MFA); the plugin never holds a key.
  */
-export async function hostDeps(ctx: PluginCommandContext, io: CommandIO, cfg: Config, commandId: string | null, rpcUrl?: string): Promise<Deps> {
+export async function hostDeps(ctx: PluginCommandContext, io: CommandIO, cfg: Config, commandId: string | null, rpcUrl?: string): Promise<HostDeps> {
   const client = rpcUrl ? createPublicClient({ transport: http(rpcUrl) }) : ctx.publicClient(cfg.chainId);
-  const deps: Deps = {
+  let id: number;
+  try {
+    id = await client.getChainId();
+  } catch (e) {
+    throw new AncreError("ANCRE_RPC_ERROR", `eth_chainId failed on ${rpcUrl ? rpcUrl : "the MetaMask gateway"}: ${(e as Error).message}`,
+      rpcUrl ? "Check --rpc-url / ANCRE_RPC_URL" : "Run `mm login`, or pass --rpc-url for a read-only command");
+  }
+  if (id !== cfg.chainId) {
+    throw new AncreError("ANCRE_WRONG_CHAIN", `The RPC is on chain ${id}, not on --chain-id ${cfg.chainId}`,
+      "Use an RPC of the chain you ask about (check ANCRE_RPC_URL and ANCRE_CHAIN_ID)");
+  }
+  const deps: HostDeps = {
     readContract: (a) => client.readContract(a as never),
+    chainId: () => client.getChainId(),
     fetch: globalThis.fetch.bind(globalThis),
     nowSec: () => Math.floor(Date.now() / 1000),
     random32: () => bytesToHex(randomBytes(32)),
-    signal: (io as unknown as { signal?: AbortSignal }).signal,
+    signal: io.signal,
   };
   if (commandId) {
     const execute = await ctx.walletExecutor(io, commandId);
@@ -27,7 +43,7 @@ export async function hostDeps(ctx: PluginCommandContext, io: CommandIO, cfg: Co
         { signal: deps.signal } as never,
       )) as { kind: string; signature?: string; status?: string; failureCode?: string };
       if (r.kind !== "signature" || !r.signature) {
-        throw new FlowError(
+        throw new AncreError(
           "ANCRE_SIGN_FAILED",
           `The wallet did not sign (status ${r.status ?? "?"}${r.failureCode ? `, ${r.failureCode}` : ""})`,
           "If it is AWAITING_MFA, approve it; the x402 window may have expired: run inspect again, never loop",
@@ -70,10 +86,30 @@ export function selectedAddress(snapshot: unknown): Address | undefined {
   return a && isAddress(a) ? getAddress(a) : undefined;
 }
 
-/** Library errors -> host CommandError (code, message, hint). */
+/**
+ * Library errors -> host CommandError (code, message, hint). A host CommandError passes through; anything else
+ * becomes ANCRE_INTERNAL, so the host never suggests "run the command again" for an error of ours (SIMP7).
+ */
 export function toCommandError(e: unknown): never {
-  if (e instanceof FlowError || e instanceof X402Error || e instanceof ConfigError) throw new CommandError(e.code, e.message, e.hint);
-  throw e;
+  if (e instanceof CommandError) throw e;
+  if (e instanceof AncreError) throw new CommandError(e.code, e.message, e.hint);
+  const msg = e instanceof Error ? e.message : String(e);
+  throw new CommandError("ANCRE_INTERNAL", msg, "Do not retry automatically: tell the human what happened");
+}
+
+/**
+ * The Guard Mode policy of the selected server wallet, as the host itself prints it (`mm wallet policy get --json`),
+ * run with the same Node and the same mm entry point as this process (not a `mm` found on PATH). The policy lives
+ * in MetaMask's backend; changing it goes through the host's policy flow (2FA in Guard Mode, per the host's docs).
+ */
+export function readGuardPolicy(signal?: AbortSignal): Promise<string> {
+  const entry = process.argv[1];
+  if (!entry) return Promise.reject(new Error("the mm entry point is unknown"));
+  return new Promise((resolve, reject) => {
+    execFile(process.execPath, [entry, "wallet", "policy", "get", "--json"],
+      { timeout: 30_000, maxBuffer: 1 << 20, signal, env: process.env },
+      (err, stdout, stderr) => (err ? reject(new Error(`${err.message}${stderr ? `: ${String(stderr).slice(0, 300)}` : ""}`)) : resolve(String(stdout))));
+  });
 }
 
 /** Every address the host wallet manages (selected or not): none of them may sign a human override. */
