@@ -1474,3 +1474,55 @@ Délibération complète en annexe : `docs/conseil/tour7.md`. Décisions renumé
 | AM-10.7 | Une soumission d'assurance avec un dépôt public exposerait le contournement avant la divulgation | dépôt privé, ou divulgation d'abord |
 | AM-10.8 | Les coûts du veto par approbation et de C ne sont pas mesurés | mesures dans 02-bis |
 | AM-10.9 | **La revue maximale du code (05/10) a été interrompue par la limite d'usage**, avant tout résultat | remplacée par `/code-review high` et `/security-review` dans 02-bis, et sur chaque lot |
+
+---
+
+# Résultats des chantiers 03, 06 et 07 (autre machine) — 2026-10-06
+
+Rapports : `docs/chantiers/rapports/03.md`, `06.md` et `07.md`, fusionnés sur `main` par la session de l'autre machine (commits `c098414`, `f578f4e` et `df0fddf`).
+
+**06, la ferme et les scènes de l'acte 2** (MESURÉ en fork du testnet, avec les vrais registres ERC-8004, le vrai USDC et notre contrat)
+- **8 scènes vertes.** Le jeu de démo : 3 ancres « demo », dont aucune n'est le wallet d'un agent (AM-08.A) ; m = 2, q = 1 ; Registry-verified ; soumetteur attesté ; maxAge = minRefresh.
+
+  | Scène | Résultat |
+  |---|---|
+  | Fournisseurs honnêtes | payés (masse robuste 3,46 % et 3,95 %) |
+  | **2ᵉ saut (D50)** | masse 2,30 % > θ, **payé** |
+  | Ferme | moyenne naïve 100, masse 0, refusée ; avec une **ancre compromise** : trustRobust = 0, toujours refusée |
+  | La ferme se paie vraiment (D45) | 5 reçus vrais sur 5, refus maintenu |
+  | Disjoncteur | `VETOED` **dès le paiement suivant, 0 bloc après l'inclusion du slash** (fork) |
+  | Anti-effacement (D33) | toujours refusé après le +1 d'un tiers |
+  | Certificat fabriqué | `EdgeMismatch` à la soumission |
+
+- **Budget** : environ 3,11 MON de frais (4,1 avec la marge), 2,25 MON prêtés dont environ 0,8 récupérés, 0,11 USDC, 98 events Envio.
+- **Démo figée** hors réseau. Un clone neuf passe au vert en **78 s**. La répétition générale du testnet sur fork passe en 166 s.
+
+**07, l'écran de démo** (Vite, React, viem)
+- **Acte 1** sur les vraies données de Monad 143 : Envio en direct, 8004scan cité, deux colonnes (explorateur et contrat) et un sélecteur d'ancres.
+- **Acte 2** en live sur fork, et en **rejeu hors ligne** vérifié.
+- Verdict affiché seulement une fois le bloc **Finalized** (`monadNewHeads`, MESURÉ sur le testnet).
+- Plan de tournage : `demo/VIDEO-SHOTS.md`, 11 plans en 2:55.
+- **L'hébergement attend Hugo.**
+
+**03, l'indexeur**
+- Handlers `AnchoredReputation` et **audit des certificats en direct** (SCHEMA v2), avec correction de la revue de code.
+- **L'adresse du contrat reste un placeholder**, en attente du déploiement.
+
+## Décision prise par le chantier 06
+
+| # | Sujet | Décision | Source | Confiance |
+|---|---|---|---|---|
+| D56 | **θ de la démo = 1 %** (0,01 WAD) | À 5 %, les fournisseurs honnêtes étaient refusés (3,46 % et 3,95 %, MESURÉ). Le plus faible des honnêtes est le 2ᵉ saut, à 2,30 % : 1 % laisse une marge de ×2,3, et la ferme est à 0. **C'est un paramètre de la démo, pas une recommandation normative** | chantier 06 | 0,8 |
+
+## Angles morts des chantiers 03, 06 et 07 (les principaux ; liste complète dans les rapports)
+
+| Id | Angle mort | Suite |
+|---|---|---|
+| **AM-06.1** | **Le mode keystore du certificateur (chantier 04) est cassé avec Foundry ≥ 1.8** : `ETH_PASSWORD` y est un chemin de fichier. Contourné dans `demo/certify.py` | **à corriger dans 04-bis** (relais par Hugo) |
+| AM-06.2 / 06.3 | L'écart d'estimation de gas et la règle de réserve Monad ne sont **pas émulés par anvil** | à observer à la première exécution sur le testnet |
+| AM-06.6 | La « moyenne naïve » est **notre** définition (moyenne brute) ; la formule de 8004scan n'est pas documentée | l'écran et le pitch écrivent « naive average » |
+| AM-06.7 | Une ferme à owner unique est triviale à repérer par provenance. Ce que la démo montre en plus : **même sans heuristique de provenance**, la masse reste à 0 | à dire dans le pitch |
+| AM-07.1 / 07.7 | L'acte 1 est figé au bloc 108 835 675, et le registre compte maintenant **9 291 avis**. L'instantané 8004scan bouge | **ré-export au tournage** |
+| **AM-07.5** | **La latence du disjoncteur sur Monad n'est pas mesurée** : le « bloc N+1, 300 ms » du storyboard reste à mesurer sur le testnet | run testnet du 06 |
+| AM-07.3 | Pas de `monadLogs` ; les refus viennent du journal du 06. L'écran ne s'abonne pas aux `RefusalReported` | à décider (07) |
+| AM-07.8 | La page publique ne fait que du rejeu ; le live n'existe qu'en local | assumé |

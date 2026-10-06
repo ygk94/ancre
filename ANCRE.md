@@ -1,6 +1,6 @@
 # ANCRE — le projet en un seul document
 
-> **État au 2026-09-27.** Ce document résume tout, mais il ne remplace pas les sources.
+> **État au 2026-10-06** (section 0 ; le reste du document décrit la solution). Ce document résume tout, mais il ne remplace pas les sources.
 > - Décisions détaillées : `docs/conseil/CR-conseil.md` (journal D1 à D38).
 > - Faits techniques sourcés : `docs/ressources/`.
 > - Travail à faire : `docs/chantiers/`.
@@ -10,6 +10,25 @@
 > ANCRE est un nom provisoire.
 
 ---
+
+## 0. Où on en est (06/10)
+
+- **Code livré et testé sur `main`** :
+  - contrat v1 et payeur (147 tests) ;
+  - solveur, certificateur et surveillant (135 tests) ;
+  - indexeur Envio avec audit des certificats en direct (28 tests, parité exacte sur 3 chaînes) ;
+  - plugin MetaMask (48 tests, hors bounty, D53) ;
+  - **acte 2 : 8 scènes vertes en fork, dont le 2ᵉ saut**, et démo figée hors réseau ;
+  - **écran de démo** : acte 1 en direct sur Monad, acte 2 en live et en rejeu ;
+  - draft d'ERC (lint à 0 erreur).
+- **En cours** :
+  - **02-bis** : un **défaut critique** trouvé par la revue (un nœud `address(0)` laisse passer une arête fabriquée en Registry-verified), les corrections A, B et C (D48) et le renommage `isTrusted` → `passesAnchorPolicy` ;
+  - **04-bis** : alignement du solveur et webhook Alchemy ;
+  - **09** : préparation de la soumission ;
+  - **revue maximale** : vérification des constats.
+- **Bounties visés : Envio, Mera, Alchemy** (D54). MetaMask est abandonné, puisqu'il est réservé à une autre track (D53).
+- **Intégration Alchemy (D55)** : un webhook qui déclenche la recertification, et la Transfers API qui explique les scores. **MESURÉ** : 150 noteurs d'Eve tirés au hasard ont tous reçu leur premier MON de son propriétaire.
+- **Ordre critique** : 02-bis → acte 2 sur le testnet → indexeur sur l'adresse déployée → tournage le 11/10 → soumission le 12/10. Détail : `docs/chantiers/ROADMAP.md`, et les actions de Hugo dans `mustdo/MUSTDO.md`.
 
 ## 1. En une phrase
 
