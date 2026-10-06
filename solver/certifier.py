@@ -166,7 +166,9 @@ ERROR_SIGS = ["BadParams(uint256)", "AlreadyRegistered()", "UnknownSet()", "Node
               "BadNCert()", "BadVectors()", "BadRows(uint256)", "BadEdge(uint256)", "NotSubSolution(uint256,uint256)",
               "EdgeMismatch(uint256,uint256)", "ValueTooLarge()", "RegistryUnreadable()",
               "ResidualTooLarge(uint256,uint256)", "NotBetter(uint256,uint256,uint256,uint256)", "NoCert()",
-              "BadProof(uint256)", "NothingToProve()", "NotSubmitter()"]
+              "BadProof(uint256)", "NothingToProve()", "NotSubmitter()",
+              # 02-bis (review 06/10): anchor used as a row source, non-canonical row/node order, proven row resubmitted
+              "AnchorAsSource(uint256)", "NotCanonical(uint256)", "ProvenRowResubmitted(uint256)"]
 
 
 def _selector(sig: str) -> str:

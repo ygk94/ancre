@@ -1,4 +1,5 @@
 """Offline tests of the certifier service (no chain): alignment, planning, triggers, replacement rule."""
+import json
 import sys
 from fractions import Fraction
 from pathlib import Path
@@ -172,3 +173,14 @@ def test_encode_refuses_row_without_source():
     cert.row_src.pop(0)
     with pytest.raises(X.NotEncodable):
         X.encode(cert, [g.nodes[i] for i in cert.node_map], None)
+
+
+def test_error_sigs_cover_compiled_abi():
+    """Every custom error of the compiled AnchoredReputation decodes by name (02-bis added three; a silent hex
+    selector in the service log is how a refusal gets misread)."""
+    art = Path(__file__).resolve().parents[2] / "contracts/out/AnchoredReputation.sol/AnchoredReputation.json"
+    if not art.exists():
+        pytest.skip("contracts not built (forge build)")
+    abi = json.loads(art.read_text())["abi"]
+    sigs = {e["name"] + "(" + ",".join(i["type"] for i in e["inputs"]) + ")" for e in abi if e["type"] == "error"}
+    assert sigs <= set(C.ERROR_SIGS), sorted(sigs - set(C.ERROR_SIGS))
