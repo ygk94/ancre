@@ -9,3 +9,10 @@
 4. **Les tags sont stockés sous forme de hash** (AM-04.2) : `triggerTag` et les identifiants de tags côté contrat sont des `keccak256(tag)`, sans limite de longueur. L'indexeur doit faire le lien entre le texte du tag et son hash.
 5. **Parité** : utilise `solver/from_indexer.py` et `solver/tests/test_indexer_parity.py`. Dépose un dump de l'indexeur dans `solver/tests/fixtures/indexer/` : le test se branche alors tout seul.
 6. **Audit** (D42) : les preuves sont maintenant `proveEdge` et `proveWallet` (contrat v1). En Registry-verified, fabrication et gonflement sont refusés dès la soumission. L'audit sert donc surtout à détecter la **dilution** et le **négatif omis** (AM-INT.1).
+
+
+## Relais du 06/10 : constats de la revue maximale du 05/10 (docs/revue/revue-max-2026-10-05-partielle.md)
+
+1. **`indexer/scripts/check.ts` pagine mal** : il s'arrête dès qu'une page est incomplète, alors que `from_indexer.py:81` et FORMAT.md §146 imposent de s'arrêter sur une page **vide**. Corrige, et ajoute un test.
+2. Le format d'id `Operator` est écrit à 3 endroits, et `state.isOperator` double `storeView.isOperator` : nettoyage.
+3. **Le contrat corrige un défaut critique** (nœud `address(0)` qui fait sauter la relecture du registre) **et change sa règle d'arête** (D48-B : on conserve les négatifs des contrôleurs). Il est aussi renommé : `isTrusted` devient `passesAnchorPolicy`. Le handler `CertificateSubmitted` doit attendre l'ABI de la branche `chantier/02bis-corrections`.

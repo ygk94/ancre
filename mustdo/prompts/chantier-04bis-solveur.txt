@@ -56,3 +56,10 @@ Tu n'attends de réponse de personne. La session pilote suit sans intervenir.
 - ce qui reste à faire.
 
 Commence par lire, puis écris la première entrée du journal (« démarrage : ce que j'ai compris, mon plan »), puis attaque la première étape.
+
+
+=== CONSTATS DE LA REVUE MAXIMALE DU 05/10 (docs/revue/revue-max-2026-10-05-partielle.md), qui te concernent ===
+- export.main refait à la main l'expérience execution.market D44 et le schéma pre-D15, alors qu'il importe déjà run_mainnet : unifie.
+- replay_identity_events ne retire pas l'owner courant des anciens owners, contrairement à load_identity et from_indexer.identity_file. Sur l'historique A→B→A, les exports produisent un pastOwners différent : corrige, et ajoute un test.
+- synthetic.py réimplémente le solveur PPR en flottants et redéfinit WAD : nettoyage optionnel.
+- Le contrat a un défaut critique (nœud address(0), R1 du chantier 02-bis). Une fois qu'il est corrigé, ajoute un vecteur « nœud address(0) » au jeu commun.

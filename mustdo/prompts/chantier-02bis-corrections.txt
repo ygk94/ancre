@@ -58,3 +58,18 @@ Tu n'attends de réponse de personne. La session pilote suit sans intervenir.
 - ce qui reste à faire.
 
 Commence par lire, puis écris la première entrée du journal (« démarrage : ce que j'ai compris, mon plan »), puis attaque la première étape.
+
+
+=== CONSTATS DE LA REVUE MAXIMALE DU 05/10 (5 agents sur 20 ont fini ; docs/revue/revue-max-2026-10-05-partielle.md). À TRAITER EN PRIORITÉ, AVANT E1 ===
+R1. CRITIQUE, trouvé par deux agents indépendants et confirmé par un test (scratchpad .../angleD/contracts/test/PocD.t.sol) : dans _verifyRows (environ l. 1120), `if (client == address(0)) continue;` n'avance pas `off` au-delà des arêtes de la ligne. Or _appendNodes accepte un nœud address(0), y compris via addNodes ouvert à tous. Toutes les lignes suivantes échappent à la relecture du registre : **une arête fabriquée est acceptée en Registry-verified**, ce qui annule la garantie de D32.
+    Correction : avancer off (ou refuser nE != 0 si client == 0), refuser address(0) dans _appendNodes, require(off == rows.length) en fin de _verifyRows. Vérifier aussi l'ordre de u et u < n. Test de non-régression obligatoire, à partir du PoC.
+R2. La garde « REFUSED first » se contourne en réencodant (elle compare des racines brutes) : c'est AM-08.C, corrigé par ta forme canonique (D48-C). Elle est aussi sautée quand registryChanged est vrai, alors qu'ENCODING §5 la place avant toutes les clauses d'acceptation.
+R3. Lignes à sPlus déclaré : eUp est sous-estimé quand une arête positive engagée est révoquée, à cause de la formule §7.1 elle-même (budget gardé à max(GRID, sPlus)). Corrige la formule, PROOFS.md et un test.
+R4. La règle de forme est testée sur la valeur décodée, pas sur le bit SRC : des lignes d'ancre ou d'adresse avec SRC = 0 passent, et une ligne d'adresse peut servir d'alias (_clientRare, environ l. 1179 ; le contrôle d'alias, environ l. 1014, compare le SRC brut). À traiter avec ta forme canonique.
+R5. _verifyOwners ne contrôle pas l'empreinte des ancres (« 0 pour les autres nœuds ») ni celle des agents sans masse. dryRun saute la règle de forme et la borne 2^63 sur ownerFp.
+R6. Un échec de lecture du registre est interprété comme un agent brûlé (proveEdge, environ l. 1652 ; _sourceHolds, environ l. 1830). Une upgrade UUPS qui dépasse le plafond de 120 k gas suffirait à mettre tous les sets en STALE. Distingue l'échec de lecture d'une vraie réponse.
+R7. Transfert en mode strict : le contrôle dépend de trust ≠ 0 au lieu de « masse > 0 » (effet limité au statut affiché).
+R8. TrustGatedPayer, qui a passé l'audit :
+    - un set avec strictTransfer = false paie l'acheteur d'un agent vendu (confirmé) : interdis-le à setPolicy, ou documente-le ;
+    - si la trésorerie est aussi opératrice, une seule clé vide tout par sweep (confirmé). Le script script/t1/T1.s.sol déploie exactement comme ça (owner = trésorerie = opérateur) : sépare les rôles dans les scripts de déploiement.
+R9. Nettoyage, optionnel : le calcul d'adresse des lanes est recopié 5 fois (vectorAt existe), l'en-tête de ligne est décodé 3 fois, R6 et R7 sont codées deux fois, ownerFingerprint est réécrit 3 fois. À traiter seulement si /simplify le justifie, et après les corrections.
