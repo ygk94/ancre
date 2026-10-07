@@ -52,7 +52,8 @@
      ```
      cd demo && npm ci && node run.ts --rehearse-testnet --keystore ~/.foundry/keystores/ancre-demo --sweep
      ```
-2. [x] **Test T1 (porte P3)** ✅ 07/10 : **ouverte pour `exact`**. Le vrai facilitator a réglé avec la garde à 78 k puis à 190 k, et a refusé l'agent non fiable ainsi que le disjoncteur. Il reste le rejeu de `upto` seul, après correction de notre script (nonce en décimal). Détails dans le CR, « Porte P3 ».
+1b. [ ] **Changer le mot de passe du keystore** : il a été tapé par erreur dans la conversation le 07/10. Commande, dans Terminal.app : `~/.foundry/bin/cast wallet change-password ancre-demo`.
+2. [x] **Test T1 (porte P3)** ✅ 07/10 : **ouverte, en `exact` comme en `upto`**. Le vrai facilitator a réglé avec la garde à 78 k puis à 190 k, ainsi qu'en `upto` (après correction de notre script), et a refusé l'agent non fiable ainsi que le disjoncteur. Détails dans le CR, « Porte P3 ».
 3. [ ] **Acte 2 sur le vrai testnet**, après la répétition, T1 et ton feu vert. **Indispensable d'après les règles** (§9.2, §9.4) : il faut des adresses ou des hashes de transaction, et une vidéo qui montre de vraies interactions avec Monad. Une démo en fork seule risque de ne pas compter. Commande :
    ```
    node run.ts --network testnet --keystore ~/.foundry/keystores/ancre-demo --sweep

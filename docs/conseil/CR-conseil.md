@@ -1586,9 +1586,9 @@ Sur le testnet Monad (10143), le vrai facilitator `x402-facilitator.molandak.org
 | T1-6 `exact`, garde à 190 k (veto, k = 8) | **vérifié puis réglé** (tx `0x2d53…6035`) | 398 955 |
 | T1-8 agent non fiable | **refusé à /verify** (`FiatTokenV2: invalid signature`, HTTP 500 `unexpected_error`) | — |
 | T1-9 disjoncteur : non fiable entre verify et settle | **refusé au settle**, aucune transaction diffusée (`facilitatorNonceDelta = 0`) | — |
-| T1-11 `upto` | ❌ **refusé à /verify pour un format invalide**. Notre script envoyait le nonce Permit2 en hexadécimal, alors que x402-rs attend un décimal. C'est un bug du script de test, pas de l'architecture. Corrigé, rejeu de T1-11 seul (`--only-upto`) en attente | — |
+| T1-11 `upto` | Au premier passage, **refusé à /verify pour un format invalide** : notre script envoyait le nonce Permit2 en hexadécimal, alors que x402-rs attend un décimal. C'était un bug du script de test. **Rejoué seul après correction : vérifié puis réglé** (plafond 5 000, montant réglé 1 000 ; tx `0xeaa5…2270`, `live-1791368426440.json`) | 440 500 |
 
-**Verdict** : la **porte P3 est ouverte pour `exact`**. Le facilitator avance le gas d'un `isValidSignature` qui appelle ANCRE, jusqu'à 190 k au moins, et ne met aucune limite de gas sous 400 k (MESURÉ). La garde dure on-chain tient : un refus au verify ne laisse aucune trace, et le disjoncteur entre verify et settle ne diffuse rien. Le mode `upto` reste à confirmer.
+**Verdict** : la **porte P3 est ouverte, pour `exact` comme pour `upto`**. Le facilitator avance le gas d'un `isValidSignature` qui appelle ANCRE, jusqu'à 190 k au moins, et ne met aucune limite de gas sous 400 k (MESURÉ). La garde dure on-chain tient : un refus au verify ne laisse aucune trace, et le disjoncteur entre verify et settle ne diffuse rien.
 
 Ce qu'on apprend en plus :
 - Le facilitator renvoie un **HTTP 500 `unexpected_error`** sur un refus de signature, et non un `invalidReason` propre. L'écran et le plugin doivent l'interpréter comme un refus et l'expliquer avec `explain()` (AM-6.8).

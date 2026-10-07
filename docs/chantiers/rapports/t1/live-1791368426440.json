@@ -1,0 +1,32 @@
+[
+  {
+    "scene": "T1-11 upto, cap 5000, settle 1000 (re-run)",
+    "at": "2026-10-07T10:20:26.439Z",
+    "verify": {
+      "ok": true,
+      "phase": "verify",
+      "httpStatus": 200,
+      "response": {
+        "isValid": true,
+        "payer": "0xb2FC0298Ec2F58f80180F95Ae36E6b5fc5175b07"
+      }
+    },
+    "settle": {
+      "ok": true,
+      "phase": "settle",
+      "httpStatus": 200,
+      "response": {
+        "amount": "1000",
+        "network": "eip155:10143",
+        "payer": "0xb2FC0298Ec2F58f80180F95Ae36E6b5fc5175b07",
+        "success": true,
+        "transaction": "0xeaa5addd258d71aa803a488a8440a4fa9be19db34c6af20dc1c78706ae312270"
+      },
+      "hash": "0xeaa5addd258d71aa803a488a8440a4fa9be19db34c6af20dc1c78706ae312270",
+      "gasLimit": "440500",
+      "gasUsed": "440500",
+      "status": "success",
+      "facilitatorNonceDelta": 1
+    }
+  }
+]
