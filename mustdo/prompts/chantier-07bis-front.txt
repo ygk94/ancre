@@ -1,0 +1,57 @@
+Tu es la session du CHANTIER 07-bis d'ANCRE : la REFONTE du front (l'écran de démo, app/). Le chantier 07 a livré un écran qui marche mais que Hugo trouve surchargé. Tu travailles en autonomie : les choix de design et techniques sont les tiens, tu les justifies par écrit. Réponds en français (code, commentaires et textes de l'interface en anglais).
+
+=== OÙ TU TRAVAILLES ===
+- Dossier : /Users/hugo/Projet/ancre-07bis, un worktree git sur la branche chantier/07bis-front, créé depuis main le 07/10 (contrat 02-bis, solveur 04-bis, démo adaptée, netlify.toml). Travaille UNIQUEMENT ici.
+- Outils : Node/npm dans /usr/local/bin ; git : export PATH=/usr/bin:$PATH ; Foundry : export PATH="$PATH:$HOME/.foundry/bin" ; python du solveur : /Users/hugo/Projet/ancre/solver/.venv/bin/python.
+- Le site est publié par Netlify à chaque push sur main (https://ancre-xyz.netlify.app, protégé par mot de passe pour l'instant) via netlify.toml : base app, publish dist. Tu ne pousses pas.
+
+=== À LIRE AVANT DE CODER ===
+1. CLAUDE.md, puis ANCRE.md (le projet en entier)
+2. docs/chantiers/rapports/07.md et docs/chantiers/journal/07.md (ce qui existe, d'où viennent les données, ce qui est réel ou mocké), demo/SCREEN.md, demo/VIDEO-SHOTS.md (le plan de tournage dépend de l'écran : à mettre à jour)
+3. docs/conseil/CR-conseil.md : D1 à D56 en tête, surtout D47 (override humain), D49 (poids effectif d'une revue, À FAIRE dans l'écran), D50 (2ᵉ saut, À FAIRE), D51 (vidéo de 3 min), D55 (Alchemy), D56 (θ = 1 %) ; la section « Revue maximale du 06/10 »
+4. docs/ressources/regles-metropolis-v3.md : la vidéo doit montrer le produit en fonctionnement réel et de vraies interactions Monad (§9.4)
+5. app/ en entier (Act1.tsx, Act2.tsx, App.tsx, core/, sources/, scripts/), indexer/ (schéma GraphQL v3 : ce que l'API Envio sait servir), demo/lib/ancre.ts (assess → passesPolicy)
+
+=== CE QUE HUGO VEUT (ses mots, 07/10) ===
+« Trop gros la page de droite, c'est quoi ces infos en énorme ? Trop d'infos en tout aussi, c'est surchargé. Sur la gauche pour les menus des agents pourquoi pas, mais limite fais un feed des dernières transactions qui inclut ERC-8004, qu'on récupère via API. Ça ressemble pas vraiment à 8004scan.io, mais pas grave : on fait juste sur la partie de droite un front qui montre notre plus-value, et je dirai en vidéo que le but est de s'ajouter à 8004scan.io. Donc page globale du début : discover des agents qui sont bien sous notre norme. En haut leaderboard et donation. Tu peux aussi faire Network, dans lequel tu mets Monad testnet ; mainnet tu mets soon, et pareil pour Eth. Et après, quand tu cliques sur un agent, là on récupère les stats plus spécifiques, qui s'organisent un peu de cette façon : https://8004scan.io/agents/bsc/365534 — donc dans notre cas on mettra que ce qu'on ressort, pas ces infos-là. »
+
+Traduction en cahier des charges (à affiner, justifie tes écarts) :
+1. MOINS, ET PLUS PETIT. Hiérarchie typographique sobre, pas de chiffres géants, une seule information principale par bloc. Ce qui n'aide pas le juré à comprendre en 5 secondes la plus-value d'ANCRE disparaît ou passe dans un détail repliable.
+2. EN-TÊTE : navigation « Discover » (accueil), « Leaderboard », « Donation » ⟦Hugo a écrit « leaderboard et donation » : DEMANDE-LUI ce qu'il entend par « Donation » avant de le coder (page de soutien ? autre mot ?), et avance sur le reste en attendant⟧, et un sélecteur « Network » : Monad testnet (actif), Monad mainnet (« soon », désactivé), Ethereum (« soon », désactivé).
+   ⚠️ Tension à trancher avec Hugo, sans bloquer : les données réelles les plus fortes (la ferme d'Eve, 7 665 avis, 117 notes à 1e38) sont sur le MAINNET 143, alors que notre contrat sera d'abord déployé sur le TESTNET. Propose une solution honnête (par exemple : testnet = certificats on-chain vérifiables ; l'analyse du mainnet présentée comme « lecture du registre mainnet par notre solveur, certification on-chain soon »), et ne présente jamais un chiffre mainnet comme certifié on-chain s'il ne l'est pas.
+3. COLONNE DE GAUCHE : un FEED des dernières transactions ERC-8004 (NewFeedback, FeedbackRevoked, Registered, transferts, et nos propres events : certificat soumis, preuve d'écart, veto), récupérées par API. Source préférée : notre indexeur Envio (bounty Envio) ; Alchemy en complément ou pour le temps réel (bounty Alchemy, clé dans solver/.env côté serveur seulement : JAMAIS de clé dans le bundle du front). Chaque ligne courte, cliquable vers l'agent concerné.
+4. PARTIE DE DROITE, page d'accueil « Discover » : les agents qui passent la norme (passesPolicy sous l'ensemble d'ancres choisi), avec seulement ce qu'ANCRE ajoute : statut (OK / VETOED / STALE / NO_CERT…), part de masse robuste (leave-one-out), distrust, et un repère « reachable from the anchors ». Le message central : 8004scan liste tout le monde, ANCRE dit qui est atteignable depuis des ancres qu'on choisit, et le prouve on-chain. L'écran doit le faire SENTIR (contraste ferme d'Eve : énorme sur 8004scan, 0 chez nous), pas l'expliquer en paragraphes.
+5. PAGE AGENT (au clic) : organisée comme la fiche agent de 8004scan (en-tête d'identité puis sections/onglets ; ouvre https://8004scan.io/agents/bsc/365534 dans un navigateur headless si possible — la page est rendue en JavaScript, un simple fetch ne voit rien — sinon demande une capture à Hugo), MAIS avec uniquement nos sorties :
+   - verdict passesPolicy et la politique engagée (θ, ρ, ensemble d'ancres) ; statut et veto (tag déclencheur) ;
+   - trust, trustRobust, trustLow, distrust, borne d'erreur e, bloc du certificat ;
+   - D49 : le poids effectif de chaque revue (pourquoi une note compte ou ne compte pas : ancre, 1 saut, 2 sauts, ferme à masse nulle, valeur hors bornes rejetée) ;
+   - D50 : la vue du 2ᵉ saut (chemin ancres → H1 → H2) ;
+   - les preuves d'écart et l'historique des certificats s'il y en a ;
+   - la décision du payeur (decide / explain) quand un paiement est en jeu.
+   Pas de copie des champs de 8004scan (description, services, etc.) sauf l'identité minimale (id, nom, owner, wallet) et un lien « view on 8004scan ».
+6. L'ACTE 2 (démo live et rejeu, Act2.tsx) reste accessible, sur sa propre route (« Live demo »), allégé selon les mêmes règles : c'est lui que filme la vidéo. Le rejeu hors ligne doit continuer à marcher.
+7. Le site a déjà une page à venir /mera (prototype Mera, chantier à part, en pause) : ne casse pas la redirection SPA de netlify.toml, et prévois que /mera puisse être ajoutée plus tard.
+
+=== MÉTHODE ===
+- Commence par un plan d'écrans (wireframes ASCII ou HTML statique) dans ton journal, avant de coder. Le design est le tien : sobre, lisible en vidéo 1080p, thème clair et sombre, utilisable sur mobile (Hugo testera aussi sur iPhone).
+- Utilise le skill frontend-design s'il est disponible ; /code-review high à la fin de chaque étape (vérifie qu'il porte sur /Users/hugo/Projet/ancre-07bis).
+- Données : rien d'inventé. Chaque chiffre affiché vient d'une source nommée (Envio, contrat via assess/decide, solveur de référence, 8004scan cité comme tel) ; un chiffre non disponible s'affiche « — », jamais une valeur de démonstration présentée comme réelle.
+- Garde les tests existants verts et ajoute-en pour la logique nouvelle (feed, filtre « passe la norme », vue agent). npm run build, npx tsc -b et npm test verts avant chaque commit. Vérifie le rendu avec des captures (navigateur headless) en 1920×1080 et en largeur iPhone, rangées dans docs/chantiers/rapports/07bis/.
+- Mets demo/VIDEO-SHOTS.md à jour pour le nouvel écran (3 min au plus, D51).
+
+=== COMMUNICATION ===
+- JOURNAL, canal unique : à la fin de chaque étape ou dès qu'un blocage survient, une entrée en bas de docs/chantiers/journal/07bis.md (date et heure, étape, ce qui est fait, décisions et leur raison, AM-07bis.n, blocages, prochaine étape), puis commit sur ta branche.
+- Tu ne modifies que app/, demo/VIDEO-SHOTS.md, demo/SCREEN.md, netlify.toml si nécessaire, et ton journal/rapport. Pas contracts/, solver/, indexer/ (un besoin côté indexeur ou solveur va dans le journal, sous « INTERFACE »).
+- Un besoin qui ne relève que de Hugo (le sens de « Donation », la tension testnet/mainnet, une capture) : demande-le-lui directement dans cette conversation, note-le « 🧑 BLOQUÉ : … » dans le journal, et avance sur le reste.
+
+=== RÈGLES ===
+- Sourcer et dater chaque chiffre (MESURÉ / DOC / CALCULÉ / ESTIMÉ / NON VÉRIFIÉ).
+- Les décisions D1 à D56 ne se rouvrent pas. Un agent ne peut JAMAIS forcer un paiement (D47) : aucun bouton d'override côté agent.
+- (consigne interne retirée de la version publique)
+- Les adresses de tiers (owner d'Eve, scanner…) sont des faits on-chain, jamais des accusations.
+- Commits sur ta branche uniquement. PAS de push, PAS de déploiement, PAS de transaction réelle.
+
+=== FIN DE SESSION ===
+Écris docs/chantiers/rapports/07bis.md et commite-le : ce qui est livré (avec captures), les sources de chaque donnée affichée, ce qui reste mocké ou « — », les décisions et leurs raisons, les AM-07bis.n, l'état de VIDEO-SHOTS.md, les questions pour Hugo.
+
+Commence par lire, puis écris la première entrée du journal (« démarrage : ce que j'ai compris, mon plan d'écrans »), pose à Hugo la question sur « Donation », puis attaque.
