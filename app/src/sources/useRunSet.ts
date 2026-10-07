@@ -22,9 +22,10 @@ function load(): Promise<RunSet> {
   }));
 }
 
-export function useRunSet(): { rs: RunSet | null; error: string | null } {
+export function useRunSet(enabled = true): { rs: RunSet | null; error: string | null } {
   const [st, setSt] = useState<{ rs: RunSet | null; error: string | null }>({ rs: null, error: null });
   useEffect(() => {
+    if (!enabled) return;
     let dead = false;
     load().then(
       (rs) => !dead && setSt({ rs, error: null }),
@@ -33,6 +34,6 @@ export function useRunSet(): { rs: RunSet | null; error: string | null } {
     return () => {
       dead = true;
     };
-  }, []);
+  }, [enabled]);
   return st;
 }

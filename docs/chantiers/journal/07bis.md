@@ -104,3 +104,28 @@ PAGE AGENT (clic sur une ligne du feed ou de Discover)
 - Alchemy (D55) : la Transfers API exige la clé, donc un serveur ; une fonction Netlify (`ALCHEMY_KEY` en variable d'environnement Netlify) serait la voie la plus courte. Non fait.
 
 **Prochaine étape** : `/code-review high`, corrections, puis VIDEO-SHOTS.md et SCREEN.md.
+
+---
+
+## 2026-10-07 13:00 — `/code-review high` de l'étape 1 : 10 constats, tous corrigés ; VIDEO-SHOTS et SCREEN réécrits — ✅
+
+**Constats et corrections**
+1. **Mémo d'atteignabilité dépendant de l'ordre** (`runset.ts`) : un agent pouvait être gardé « unreachable » à tort sur un cycle. → `reachOf` unique dans `core/path.ts`, BFS depuis la cible sans mémo, partagé par testnet et mainnet (`mainnetReach` réduit à un appel). Test sur un cycle A → p1 → p2 ⇄ p3.
+2. **Révocations et lots ignorés** : les events `revoke` et `feedback-batch` (EVENTS.md §3.2) sont maintenant appliqués avant la classification D49. Test.
+3. **Auto-contrôle de l'export toujours vrai** (`assert … or (…)`, tuple non vide) : remplacé par un vrai contrôle avec une tolérance d'arrondi ; l'export repasse (contributions = masse brute certifiée pour tous les agents exportés).
+4. **`inbound` tronqué à 8** alors que l'écran en tire l'atteignabilité et D50 : liste complète.
+5. **⌘-clic sur un nom** : ouvrait l'onglet ET naviguait la page. → `rowClick` ignore les clics tombés sur un lien.
+6. **Égalité R5 par ordre d'insertion** : départagée par le `feedbackIndex` le plus haut (FORMAT.md R5). Test.
+7. Gras sur tous les certificats sans bloc quand l'agent n'a pas de certificat : corrigé.
+8. Logique d'atteignabilité dupliquée : voir 1.
+9. **Run chargé sur toutes les pages** : `useDataset` ne le charge que sur le testnet, et pas sur Live demo (qui a son propre chargeur).
+10. **CLAUDE.md §6** (« ne pas annoncer un classement positif des agents honnêtes à partir du graphe réel ») : sur le mainnet, la section s'appelle « Reached from these anchors · of 10,281 agents: every other one is unknown to them », avec la phrase « Not a ranking of honest agents… the positive demo is our own traffic, on Monad testnet » (Discover et Leaderboard).
+
+**Ajouts**
+- Discover mainnet : « Mass reaching Eve's farm (7,666 agents): 34.56 % » sous la lentille du scanner, 0 sous D15 (CALCULÉ, `massOnFarmWeighted` de l'export) : le plan 3 de l'ancien acte 1 retrouve son chiffre.
+- `sync-runs.mjs` : un run `testnet` passe devant les runs `fork` dans `index.json` (c'est le premier run que Discover affiche).
+- `demo/VIDEO-SHOTS.md` réécrit pour le nouvel écran (11 plans, 2:55, indices `at=` du run `run-20261006T121308Z`, checklist d'honnêteté) ; `demo/SCREEN.md` réécrit (routes, source et statut de chaque chiffre, mocks, clés).
+
+**Vérifié** : `tsc -b`, **27/27 tests**, build ; captures 1920×1080 refaites, 0 erreur de console.
+
+**Prochaine étape** : rapport `docs/chantiers/rapports/07bis.md`.

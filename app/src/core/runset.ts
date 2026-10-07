@@ -7,7 +7,8 @@
 //    rules R2-R6 of solver/FORMAT.md, and the author's mass from its own last assess(): CALCULATED by the screen.
 //    The contribution of each rating is NOT computed here (the log has no B+): it shows "—".
 import { reduceAll, type DemoEvent, type Header, type ScreenState, type TagRow } from "./demo";
-import type { AgentRow, Policy, Reach, ReviewGroup, Status, Why } from "./model";
+import type { AgentRow, Policy, ReviewGroup, Status, Why } from "./model";
+import { reachOf, type Source } from "./path";
 
 const GRID = 10_000n; // int16 weights on a 1e-4 grid (D18)
 
@@ -62,6 +63,7 @@ export type RunSet = {
   certificates: RunCertificate[];
   lastBlock: number;
   reviewsOf: (agentId: string) => ReviewGroup[];
+  inboundOf: (agentId: string) => Source[];
   labelOf: (addressOrId: string) => string;
 };
 
@@ -103,7 +105,9 @@ export function classifyRatings(rs: RunRating[], ctx: Ctx): ReviewGroup[] {
     if (q === null) continue;
     const k = lc(r.client);
     const p = decide.get(k);
-    const better = !p || (q < 0 && (p.q >= 0 || q < p.q)) || (q >= 0 && p.q >= 0 && q > p.q);
+    // most negative, else highest; ties: the HIGHEST feedbackIndex decides (solver/FORMAT.md R5, F-6)
+    const later = !p || r.feedbackIndex > p.r.feedbackIndex || (r.feedbackIndex === p.r.feedbackIndex && r.seq > p.r.seq);
+    const better = !p || (q < 0 ? p.q >= 0 || q < p.q || (q === p.q && later) : p.q >= 0 && (q > p.q || (q === p.q && later)));
     if (better) decide.set(k, { r, q });
   }
   return rs.map((r) => {
@@ -167,20 +171,21 @@ export function buildRunSet(lines: (Header | DemoEvent)[]): RunSet | null {
   const labelOf = (x: string) =>
     screen.agents[x]?.label ?? anchors.get(lc(x)) ?? people.get(lc(x)) ?? (byWallet.get(lc(x)) ? `wallet of ${byWallet.get(lc(x))!.map((id) => screen.agents[id]?.label ?? `#${id}`).join(", ")}` : x);
 
+  // ratings as the registry holds them at the end of the run: `feedback`, the farm's `feedback-batch` (one
+  // rating per client, index unknown), minus every `revoke` (R3: only non-revoked feedback counts)
+  const revoked = new Set(events.filter((e) => e.kind === "revoke" && e.agentId && e.data?.client).map((e) => `${e.agentId}|${lc(e.data!.client)}|${e.data!.feedbackIndex}`));
   const ratings: RunRating[] = events
-    .filter((e) => e.kind === "feedback" && e.agentId && e.data?.client)
-    .map((e) => ({
-      seq: e.seq,
-      block: e.block,
-      scene: e.scene,
-      agentId: e.agentId!,
-      client: e.data!.client,
-      tag: e.data!.tag1,
-      value: String(e.data!.value),
-      decimals: Number(e.data!.decimals ?? 0),
-      feedbackIndex: Number(e.data!.feedbackIndex ?? 0),
-      tx: e.tx?.hash ?? null,
-    }));
+    .flatMap((e): RunRating[] => {
+      if (!e.agentId || !e.data) return [];
+      const one = (client: string, feedbackIndex: number): RunRating => ({
+        seq: e.seq, block: e.block, scene: e.scene, agentId: e.agentId!, client, tag: e.data!.tag1, value: String(e.data!.value),
+        decimals: Number(e.data!.decimals ?? 0), feedbackIndex, tx: e.tx?.hash ?? null,
+      });
+      if (e.kind === "feedback" && e.data.client) return [one(e.data.client, Number(e.data.feedbackIndex ?? 0))];
+      if (e.kind === "feedback-batch" && Array.isArray(e.data.clients)) return e.data.clients.map((c: string) => one(c, 0));
+      return [];
+    })
+    .filter((r) => !revoked.has(`${r.agentId}|${lc(r.client)}|${r.feedbackIndex}`));
 
   const massOf = (id: string) => BigInt(screen.agents[id]?.contract.trust ?? "0");
   const memo = new Map<string, ReviewGroup[]>();
@@ -193,24 +198,8 @@ export function buildRunSet(lines: (Header | DemoEvent)[]): RunSet | null {
     return v;
   };
 
-  const reachMemo = new Map<string, Reach>();
-  const reachOf = (id: string, seen = new Set<string>()): Reach => {
-    const hit = reachMemo.get(id);
-    if (hit) return hit;
-    const gs = reviewsOf(id);
-    const direct = new Set(gs.filter((g) => g.why === "anchor").map((g) => lc(g.author ?? "")));
-    let r: Reach = { kind: "unreachable" };
-    if (direct.size) r = { kind: "anchors", count: direct.size };
-    else {
-      const via = [...new Set(gs.filter((g) => g.why === "hop").flatMap((g) => g.via))].filter((v) => !seen.has(v));
-      const next = new Set([...seen, id]);
-      const hops = via.map((v) => reachOf(v, next)).map((x) => (x.kind === "anchors" ? 1 : x.kind === "hops" ? x.hops : Infinity));
-      const best = Math.min(...hops);
-      if (via.length && Number.isFinite(best)) r = { kind: "hops", hops: best + 1, via };
-    }
-    reachMemo.set(id, r);
-    return r;
-  };
+  const inboundOf = (id: string): Source[] =>
+    reviewsOf(id).flatMap((g): Source[] => (g.why === "anchor" && g.author ? [{ kind: "anchor", id: g.author }] : g.why === "hop" ? g.via.map((v) => ({ kind: "agent" as const, id: v })) : []));
 
   const rows: AgentRow[] = Object.values(screen.agents)
     .map((a) => {
@@ -230,7 +219,7 @@ export function buildRunSet(lines: (Header | DemoEvent)[]): RunSet | null {
         e: c.e,
         certBlock: c.certBlock || null,
         vetoTag: c.status === "VETOED" ? c.triggerTagName : null,
-        reach: reachOf(a.agentId),
+        reach: reachOf(a.agentId, inboundOf),
         explorer: { ratings: a.explorer.feedbackCount, raters: a.explorer.clientCount, naive: a.explorer.naiveAverage },
         owner: actor?.owner ?? null,
         wallet: actor?.wallet ?? null,
@@ -296,6 +285,7 @@ export function buildRunSet(lines: (Header | DemoEvent)[]): RunSet | null {
     certificates,
     lastBlock: screen.block,
     reviewsOf,
+    inboundOf,
     labelOf,
   };
 }

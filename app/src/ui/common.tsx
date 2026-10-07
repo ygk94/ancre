@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import type { AgentRow } from "../core/model";
 import { big, pctU, short } from "../lib/format";
 import { onLink } from "../router";
@@ -99,4 +99,10 @@ export function SourceLine({ status, text, detail }: { status: string; text: str
       <span className="pill status-word">{status}</span> {text}
     </div>
   );
+}
+
+/** A table row opens its agent, except when the click landed on a link (the link handles it, ⌘-click included). */
+export function rowClick(e: MouseEvent, go: () => void) {
+  if ((e.target as HTMLElement).closest("a")) return;
+  go();
 }

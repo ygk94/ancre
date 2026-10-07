@@ -5,7 +5,7 @@
 import { useMemo } from "react";
 import act1Json from "../data/act1.json";
 import scan from "../data/scan-snapshot.json";
-import { groupsOf, mainnetPolicy, mainnetRows, type Act1, type ExportLens } from "../core/mainnet";
+import { groupsOf, mainnetInbound, mainnetPolicy, mainnetRows, type Act1, type ExportLens } from "../core/mainnet";
 import type { AgentRow, NetId, Policy, ReviewGroup } from "../core/model";
 import type { Source } from "../core/path";
 import type { RunSet } from "../core/runset";
@@ -29,6 +29,8 @@ export type Dataset = {
   /** D49 complement (mainnet): the same anchors with every tag accepted */
   permissiveOf: (id: string) => ReviewGroup[] | null;
   inboundOf: (id: string) => Source[];
+  /** mainnet: share of the anchors' mass that reaches Eve's farm region (Σλ_a t^(a)(S)), WAD, and its size */
+  farm: { mass: string; agents: number } | null;
   run: RunSet | null;
 };
 
@@ -37,8 +39,8 @@ const scanNames: Record<string, string> = Object.fromEntries(
 );
 export const mainnetName = (id: string) => scanNames[id] ?? `Agent #${id}`;
 
-export function useDataset(net: NetId, lensId: string | null): { ds: Dataset | null; error: string | null } {
-  const { rs, error } = useRunSet();
+export function useDataset(net: NetId, lensId: string | null, enabled = true): { ds: Dataset | null; error: string | null } {
+  const { rs, error } = useRunSet(enabled && net === "testnet");
   const ds = useMemo(() => (net === "mainnet" ? mainnetDataset(lensId) : rs ? runDataset(rs) : null), [net, lensId, rs]);
   return { ds, error: net === "mainnet" ? null : error };
 }
@@ -62,11 +64,8 @@ function mainnetDataset(lensId: string | null): Dataset {
     reviewsOf: (id) => groupsOf(lens.reviews[id]),
     reviewsTotal: (id) => lens.reviews[id]?.total ?? null,
     permissiveOf: (id) => (lens.id === "independent" && act1.permissive.reviews[id] ? groupsOf(act1.permissive.reviews[id]) : null),
-    inboundOf: (id) =>
-      (lens.reviews[id]?.inbound ?? [])
-        .filter((x) => BigInt(x.contribution) > 0n)
-        .map((x) => (x.from === "anchor" ? { kind: "anchor" as const, id: x.client } : { kind: "agent" as const, id: x.from.replace(/^agent:/, "") }))
-        .filter((s) => s.kind === "anchor" || s.id !== "address"),
+    inboundOf: mainnetInbound(lens),
+    farm: { mass: lens.massOnFarmWeighted, agents: act1.farm.agents },
     run: null,
   };
 }
@@ -92,10 +91,8 @@ function runDataset(rs: RunSet): Dataset {
     reviewsOf: rs.reviewsOf,
     reviewsTotal: (id) => rs.ratings.filter((r) => r.agentId === id).length,
     permissiveOf: () => null,
-    inboundOf: (id) =>
-      rs.reviewsOf(id).flatMap((g): Source[] =>
-        g.why === "anchor" && g.author ? [{ kind: "anchor", id: g.author }] : g.why === "hop" ? g.via.map((v) => ({ kind: "agent" as const, id: v })) : [],
-      ),
+    inboundOf: rs.inboundOf,
+    farm: null,
     run: rs,
   };
 }

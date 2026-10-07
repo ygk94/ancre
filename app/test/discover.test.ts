@@ -6,7 +6,7 @@ import { parseRun } from "../src/core/demo";
 import { fbKey, fromEnvio, fromRun, mergeFeed, ratingValue, type FeedItem } from "../src/core/feed";
 import { groupsOf, mainnetReach, mainnetRows, type Act1 } from "../src/core/mainnet";
 import { trustRoutes, type Source } from "../src/core/path";
-import { buildRunSet, quantize } from "../src/core/runset";
+import { buildRunSet, classifyRatings, quantize } from "../src/core/runset";
 import { href, parseRoute } from "../src/router";
 
 const index = JSON.parse(readFileSync(new URL("../public/runs/index.json", import.meta.url), "utf8"));
@@ -142,5 +142,42 @@ describe("routes", () => {
     expect(href({ page: "leaderboard" }, cur)).toBe("/leaderboard?network=mainnet&anchors=inside-farm");
     expect(href({ page: "agent", net: "mainnet", id: "182", tab: "path" } as never, cur)).toBe("/agent/mainnet/182?anchors=inside-farm&tab=path");
     expect(href({ page: "live" }, cur)).toBe("/live");
+  });
+});
+
+describe("review fixes (07-bis code review)", () => {
+  it("reach does not depend on visiting order, even with a cycle", async () => {
+    const { reachOf } = await import("../src/core/path");
+    // A -> p1 -> p2 -> p3, and p3 rates p2 back
+    const g: Record<string, Source[]> = {
+      p1: [{ kind: "anchor", id: "0xA" }],
+      p2: [{ kind: "agent", id: "p1" }, { kind: "agent", id: "p3" }],
+      p3: [{ kind: "agent", id: "p2" }],
+    };
+    const inb = (id: string) => g[id] ?? [];
+    expect(reachOf("p2", inb)).toEqual({ kind: "hops", hops: 2, via: ["p1"] });
+    expect(reachOf("p3", inb)).toEqual({ kind: "hops", hops: 3, via: ["p2"] });
+    expect(reachOf("p1", inb)).toEqual({ kind: "anchors", count: 1 });
+  });
+
+  it("a revoked rating no longer counts, and a farm batch is one rating per client", () => {
+    const ev = lines.filter((l) => l.type === "event") as any[];
+    const vouch = ev.find((e) => e.step === "1.vouch:A->p1");
+    const p1 = byName("provider-1").id;
+    const revoke = { ...vouch, seq: 10_000, kind: "revoke", step: "x.revoke", data: { client: vouch.data.client, feedbackIndex: vouch.data.feedbackIndex } };
+    const batch = { ...vouch, seq: 10_001, kind: "feedback-batch", agentId: byName("farm target").id, data: { count: 2, clients: ["0x1", "0x2"], tag1: "vouch", value: "100", decimals: 0 } };
+    const rs2 = buildRunSet([...lines, revoke, batch])!;
+    expect(rs2.reviewsOf(p1).filter((g) => g.why === "anchor")).toHaveLength(1);
+    expect(rs2.reviewsOf(byName("farm target").id).filter((g) => g.why === "unreachable")).toHaveLength(12);
+  });
+
+  it("R5: between two tags of equal weight, the higher feedbackIndex decides", () => {
+    const vouch = { tag: "vouch", hash: "", kind: "endorsement", min: "0", neutral: "0", max: (100n * 10n ** 18n).toString() };
+    const other = { ...vouch, tag: "other" };
+    const mk = (tag: string, idx: number, seq: number) => ({ seq, block: 1, scene: 1, agentId: "9", client: "0xc", tag, value: "50", decimals: 0, feedbackIndex: idx, tx: null });
+    const gs = classifyRatings([mk("vouch", 2, 1), mk("other", 1, 2)], {
+      anchors: new Map([["0xc", "A"]]), tags: new Map([["vouch", vouch], ["other", other]]), byWallet: new Map(), massOf: () => 0n, controllers: new Set(),
+    });
+    expect(gs.map((g) => g.why)).toEqual(["anchor", "combined"]);
   });
 });

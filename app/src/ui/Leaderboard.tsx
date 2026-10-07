@@ -5,7 +5,7 @@ import { reachText } from "../core/model";
 import { fmtDate, int } from "../lib/format";
 import { href, navigate, type Route } from "../router";
 import { act1, type Dataset } from "../sources/useDataset";
-import { Mass, SourceLine, StatusChip } from "./common";
+import { Mass, rowClick, SourceLine, StatusChip } from "./common";
 import { AgentCell, PolicyBar } from "./Discover";
 
 export function Leaderboard({ route, ds, error }: { route: Route; ds: Dataset | null; error: string | null }) {
@@ -42,7 +42,7 @@ export function Leaderboard({ route, ds, error }: { route: Route; ds: Dataset | 
           </thead>
           <tbody>
             {ranked.map((r, i) => (
-              <tr key={r.id} onClick={() => navigate(href({ page: "agent", net: r.net, id: r.id }, route))}>
+              <tr key={r.id} onClick={(e) => rowClick(e, () => navigate(href({ page: "agent", net: r.net, id: r.id }, route)))}>
                 <td className="r muted num">{i + 1}</td>
                 <td>
                   <AgentCell r={r} route={route} />
@@ -65,6 +65,11 @@ export function Leaderboard({ route, ds, error }: { route: Route; ds: Dataset | 
           </tbody>
         </table>
         {ranked.length === 0 && <div className="empty">Nobody is reachable from these anchors.</div>}
+        {ds.net === "mainnet" && ranked.length > 0 && (
+          <div className="card-b note" style={{ marginTop: 0 }}>
+            Mainnet preview: not a ranking of honest agents. Under independent anchors almost every agent is unknown; the farm is at 0.
+          </div>
+        )}
       </section>
 
       {ds.net === "mainnet" && (
@@ -87,7 +92,7 @@ export function Leaderboard({ route, ds, error }: { route: Route; ds: Dataset | 
               {scan.top.slice(0, 10).map((a, i) => {
                 const r = ds.rows.find((x) => x.id === a.agentId);
                 return (
-                  <tr key={a.agentId} onClick={() => navigate(href({ page: "agent", net: "mainnet", id: a.agentId }, route))}>
+                  <tr key={a.agentId} onClick={(e) => rowClick(e, () => navigate(href({ page: "agent", net: "mainnet", id: a.agentId }, route)))}>
                     <td className="r muted num">{i + 1}</td>
                     <td>
                       {ds.nameOf(a.agentId)} <span className="muted small">#{a.agentId}</span>

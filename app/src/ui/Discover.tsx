@@ -3,10 +3,10 @@
 // for contrast only (muted): it is what an explorer ranks by.
 import type { AgentRow } from "../core/model";
 import { reachText } from "../core/model";
-import { int } from "../lib/format";
+import { int, pctU } from "../lib/format";
 import { href, navigate, type Route } from "../router";
-import type { Dataset } from "../sources/useDataset";
-import { Avatar, BigNum, Link, Mass, SourceLine, StatusChip } from "./common";
+import { act1, type Dataset } from "../sources/useDataset";
+import { Avatar, BigNum, Link, Mass, rowClick, SourceLine, StatusChip } from "./common";
 
 export function Discover({ route, ds, error }: { route: Route; ds: Dataset | null; error: string | null }) {
   if (!ds) return <div className="empty">{error ? `Anchor set unavailable: ${error}` : "Loading the anchor set…"}</div>;
@@ -29,9 +29,11 @@ export function Discover({ route, ds, error }: { route: Route; ds: Dataset | nul
       <section className="card">
         <div className="card-h">
           <h2>
-            Pass <span className="muted num">{pass.length}</span>
+            {ds.net === "mainnet" ? "Reached from these anchors" : "Pass"} <span className="muted num">{pass.length}</span>
           </h2>
-          <span className="muted small">ranked by leave-one-out mass</span>
+          <span className="muted small">
+            {ds.net === "mainnet" ? `of ${int(act1.snapshotAgents)} agents: every other one is unknown to them` : "ranked by leave-one-out mass"}
+          </span>
         </div>
         {pass.length ? (
           <table className="tbl">
@@ -46,7 +48,7 @@ export function Discover({ route, ds, error }: { route: Route; ds: Dataset | nul
             </thead>
             <tbody>
               {pass.map((r) => (
-                <tr key={r.id} onClick={() => open(r)}>
+                <tr key={r.id} onClick={(e) => rowClick(e, () => open(r))}>
                   <td>
                     <AgentCell r={r} route={route} />
                   </td>
@@ -64,7 +66,14 @@ export function Discover({ route, ds, error }: { route: Route; ds: Dataset | nul
               ))}
             </tbody>
           </table>
-        ) : (
+        ) : null}
+        {ds.net === "mainnet" && pass.length > 0 && (
+          <div className="card-b note" style={{ marginTop: 0 }}>
+            Not a ranking of honest agents: real reputation on mainnet is almost empty (a handful of useful edges). What ANCRE shows here is that
+            the farm gets nothing. The positive demo is our own traffic, on Monad testnet.
+          </div>
+        )}
+        {pass.length === 0 && (
           <div className="empty">No agent passes under these anchors: every one is unknown to them (mass 0).</div>
         )}
       </section>
@@ -86,7 +95,7 @@ export function Discover({ route, ds, error }: { route: Route; ds: Dataset | nul
           </thead>
           <tbody>
             {refused.map((r) => (
-              <tr key={r.id} onClick={() => open(r)}>
+              <tr key={r.id} onClick={(e) => rowClick(e, () => open(r))}>
                 <td>
                   <AgentCell r={r} route={route} />
                 </td>
@@ -186,6 +195,12 @@ export function PolicyBar({ route, ds }: { route: Route; ds: Dataset }) {
       {ds.lenses.length > 0 && (
         <div className="card-b muted small" style={{ paddingTop: 0 }}>
           {ds.lenses.find((l) => l.id === ds.lensId)?.blurb}
+          {ds.farm && (
+            <>
+              {" "}
+              Mass reaching Eve's farm ({int(ds.farm.agents)} agents): <b className="num">{pctU(ds.farm.mass)}</b>.
+            </>
+          )}
         </div>
       )}
     </div>

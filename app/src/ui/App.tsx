@@ -12,8 +12,8 @@ import { Live } from "./Live";
 
 export function App() {
   const route = useRoute();
-  const { ds, error } = useDataset(route.network, route.lens);
   const withFeed = route.page === "discover" || route.page === "leaderboard" || route.page === "agent";
+  const { ds, error } = useDataset(route.network, route.lens, withFeed);
 
   // old links of the chantier 07 screen (?act=1 / ?act=2): rewrite the address bar once
   useEffect(() => {

@@ -2,7 +2,7 @@
  "format": "ancre-screen-act1-v1",
  "status": "COMPUTED by the reference solver (not deployed on mainnet), reproducible",
  "command": "cd app && ../solver/.venv/bin/python scripts/export_act1.py",
- "solverCommit": "6c453dc",
+ "solverCommit": "9cdb448",
  "chainId": 143,
  "featured": [
   "182",
@@ -1590,6 +1590,132 @@
        "w": 10000,
        "tag": "eve",
        "client": "0x7c26cfb8ffc3afc2e58175b33955252afadbcc95"
+      },
+      {
+       "from": "agent:4557",
+       "contribution": "5803038061102576",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0xe4040b00ea4b4765de13abcf983f054ae334b982"
+      },
+      {
+       "from": "agent:5117",
+       "contribution": "5803038061102576",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0x857f4d0bf5bc7ff549a7af95dfcb9f7539d75dcb"
+      },
+      {
+       "from": "agent:5720",
+       "contribution": "5803038061102576",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0x3b3639a93757a37c70a4320806bdabdd0622ad8d"
+      },
+      {
+       "from": "agent:5957",
+       "contribution": "5803038061102576",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0xf755796c4558a7aa8b0a444e4b31e1a6aaf05128"
+      },
+      {
+       "from": "agent:6149",
+       "contribution": "5803038061102576",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0x59de0ec4e62fc31e36fc5682e2c3afdf99d31a4d"
+      },
+      {
+       "from": "agent:6618",
+       "contribution": "5803038061102576",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0x222f2b06c530a9a1404bb7adbb117ffaa633c3a0"
+      },
+      {
+       "from": "agent:6906",
+       "contribution": "5803038061102576",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0xa9936226bcec34914988d9cd0f3d6780b569b630"
+      },
+      {
+       "from": "agent:7222",
+       "contribution": "5803038061102576",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0x73cc5c553985fd3eadbafc140e9d5554274a108a"
+      },
+      {
+       "from": "agent:7362",
+       "contribution": "5803038061102576",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0xb9e9bbd21f62153ea7e4f83d67ff81938f9309c6"
+      },
+      {
+       "from": "agent:7657",
+       "contribution": "5803038061102576",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0x27b7cd80d61dbf3fa34f7c6e55d8f0b53c8c3aef"
+      },
+      {
+       "from": "agent:8095",
+       "contribution": "5803038061102576",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0x449d490f6a76cafcfff1babeff839d4a5dee139c"
+      },
+      {
+       "from": "agent:8220",
+       "contribution": "5803038061102576",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0xcf0d7186f3db8b185ae928106c47832a44ce3176"
+      },
+      {
+       "from": "agent:6238",
+       "contribution": "4096262160778289",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0xd85978134ec38ae5899748f76624614bd9644524"
+      },
+      {
+       "from": "agent:7537",
+       "contribution": "4096262160778289",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0x72f9cd551d3d34b2f0fc734df394ee0a639f5b57"
+      },
+      {
+       "from": "agent:5710",
+       "contribution": "2048131080389144",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0x943b8e7a92dd1a4bc4ee96ea6337a6f208412d00"
+      },
+      {
+       "from": "agent:5779",
+       "contribution": "2048131080389144",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0x481d84086a5aa4971b284d916c0e78d8888a881e"
+      },
+      {
+       "from": "agent:8216",
+       "contribution": "2048131080389144",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0x091825387d8f0f1966eed2ad6c8efb7ab876ad62"
+      },
+      {
+       "from": "agent:1829",
+       "contribution": "682710360129714",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0xb420dd543a9a68138be740ac2ec3f44b43cc9fc1"
       }
      ]
     },

@@ -3,6 +3,7 @@
 // file, under the anchors of one "lens". Names are quoted from 8004scan's public API (dated snapshot).
 import type { AgentRow, Policy, Reach, ReviewGroup, Why } from "./model";
 import { rowOrder } from "./runset";
+import { reachOf, type Source } from "./path";
 
 export type ExportGroup = { why: string; tag: string; via: string | null; count: number; contribution: string; w: number | null; sampleRater: string };
 export type ExportReviews = { total: number; groups: ExportGroup[]; groupsOmitted: number; inbound: { from: string; contribution: string; w: number; tag: string; client: string }[] };
@@ -32,6 +33,7 @@ export type Act1 = {
   registry: Record<string, RegistrySnap>;
   featured: string[];
   lenses: ExportLens[];
+  farm: { agents: number; eveFeedbacks: number };
   permissive: { schema: string; filter: string[]; edges: number; reviews: Record<string, ExportReviews> };
   command: string;
   source: string;
@@ -64,16 +66,12 @@ export const groupsOf = (r: ExportReviews | undefined): ReviewGroup[] =>
     block: null,
   }));
 
-export function mainnetReach(l: ExportLens, id: string, seen = new Set<string>()): Reach {
-  const inb = l.reviews[id]?.inbound.filter((x) => BigInt(x.contribution) > 0n) ?? [];
-  const anchors = new Set(inb.filter((x) => x.from === "anchor").map((x) => x.client));
-  if (anchors.size) return { kind: "anchors", count: anchors.size };
-  const via = [...new Set(inb.filter((x) => x.from.startsWith("agent:")).map((x) => x.from.slice(6)))].filter((v) => !seen.has(v));
-  const next = new Set([...seen, id]);
-  const hops = via.map((v) => mainnetReach(l, v, next)).map((r) => (r.kind === "anchors" ? 1 : r.kind === "hops" ? r.hops : Infinity));
-  const best = Math.min(...hops);
-  return via.length && Number.isFinite(best) ? { kind: "hops", hops: best + 1, via } : { kind: "unreachable" };
-}
+export const mainnetInbound = (l: ExportLens) => (id: string): Source[] =>
+  (l.reviews[id]?.inbound ?? [])
+    .filter((x) => BigInt(x.contribution) > 0n && x.from !== "address")
+    .map((x) => (x.from === "anchor" ? { kind: "anchor" as const, id: x.client } : { kind: "agent" as const, id: x.from.replace(/^agent:/, "") }));
+
+export const mainnetReach = (l: ExportLens, id: string): Reach => reachOf(id, mainnetInbound(l));
 
 export function mainnetRows(a: Act1, l: ExportLens, nameOf: (id: string) => string): AgentRow[] {
   const ids = new Set([...a.featured, ...l.ranking.map((r) => r.agentId), ...Object.keys(l.reviews)]);

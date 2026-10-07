@@ -393,7 +393,7 @@ function Certificates({ row, ds }: { row: AgentRow | null; ds: Dataset | null })
         </thead>
         <tbody>
           {certs.map((c) => (
-            <tr key={c.seq} style={{ cursor: "default", fontWeight: c.certBlock === row?.certBlock ? 600 : undefined }}>
+            <tr key={c.seq} style={{ cursor: "default", fontWeight: c.certBlock !== null && c.certBlock === row?.certBlock ? 600 : undefined }}>
               <td>
                 {c.action === "certified" ? "✓ accepted" : c.action === "rejected" ? `✕ rejected · ${c.error}` : "◇ skipped (graph unchanged)"}
                 <div className="muted small">{c.trigger ?? (c.action === "rejected" ? "fabricated edge, simulated: nothing broadcast" : "")}</div>

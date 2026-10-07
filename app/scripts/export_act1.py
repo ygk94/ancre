@@ -140,15 +140,19 @@ def reviews_of(g, cert, inv, fbs_of, schema, filt, agent_id: int) -> dict:
     out = sorted(groups.values(), key=lambda x: (-abs(x["contribution"]), -x["count"]))
     for x in out:
         x["contribution"] = wad_str(x["contribution"])
-    # self-check: retained positive contributions = certified raw mass (up to integer rounding)
+    # self-check: the positive contributions of the retained edges ARE the certified raw mass, up to the integer
+    # rounding of each term (one wei per anchor column and per edge)
     if gj is not None and gj in inv:
         raw = sum(contributions(cert, inv[gj]))
         pos = sum(c for lst in edge_src.values() for _, c, q, _ in lst if q > 0)
-        assert abs(raw - pos) <= 10 ** 6 * (1 + len(edge_src)) or (agent_id in (), raw), (agent_id, raw, pos)
+        n_terms = sum(1 for lst in edge_src.values() for *_, q, _ in lst if q > 0)
+        if abs(raw - pos) > (cert.k + 1) * (n_terms + 1) * 10:
+            raise AssertionError(f"D49 contributions of #{agent_id} sum to {pos}, certified raw mass {raw}")
     inbound = [{"from": s, "contribution": wad_str(c), "w": q, "tag": tg, "client": cl}
                for cl, lst in edge_src.items() for s, c, q, tg in lst if c]
     inbound.sort(key=lambda x: -abs(int(x["contribution"])))
-    return {"total": len(fl), "groups": out[:12], "groupsOmitted": max(0, len(out) - 12), "inbound": inbound[:8]}
+    # every non-zero inbound edge: the screen derives reach and trust paths from this list (never truncated)
+    return {"total": len(fl), "groups": out[:12], "groupsOmitted": max(0, len(out) - 12), "inbound": inbound}
 
 
 def lens(lid, title, blurb, fbs, idn, schema, filt, anchors, anchor_labels, farm, _schema_name="", **kw):
