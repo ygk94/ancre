@@ -50,10 +50,10 @@ chains:
         address: "0x8004a818bfb912233c491871b3d84c89a494bd9e"
       - name: ReputationRegistry
         address: "0x8004b663056a597dffe9eccc1965a193b7388713"
-      # ANCRE_TESTNET_ADDRESS: placeholder (0x…01 has no code, emits nothing) until the testnet deployment.
-      # At deploy time, set the real address and its deployment block (start_block), then republish.
+      # ANCRE_TESTNET_ADDRESS: official testnet instance = the one deployed by the real act 2 run of 07/10
+      # (run-20261007T131141Z, deploy tx 0xe8ce…147f, block 68 978 842; the chain start_block above covers it).
       - name: AnchoredReputation
-        address: "0x0000000000000000000000000000000000000001"
+        address: "0x8be6d3dd7f20b94cd9b1ec51de199291b109da9b"
   - id: 10                          # Optimism: 3rd chain (chantier 03 recommendation 28/09, reversible; see journal E1b)
     start_block: 147514947          # Identity proxy deployment, MESURÉ 27/09
     max_reorg_depth: 200            # Envio defaults to 0 (no rollback) on OP chains

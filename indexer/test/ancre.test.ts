@@ -48,7 +48,7 @@ const registerInput = encodeFunctionData({ abi, functionName: "registerAnchorSet
   anchors: [A, B], lambdas: [E18 / 2n, E18 / 2n], alphaN: 1, alphaD: 3, tagSchemaHash: ("0x" + "00".repeat(32)) as Hex,
   tags: [{ tag: "vouch", min: 0n, neutral: 0n, max: 100n * E18, kind: 0 }], policy }] });
 const SET_ID = decodeSetCall(registerInput)!.setId; // computeSetId(p), as the contract emits it
-const CONTRACT: Hex = "0x0000000000000000000000000000000000000001"; // config placeholder on 10143
+const CONTRACT: Hex = "0x8be6d3dd7f20b94cd9b1ec51de199291b109da9b"; // official testnet instance (config.yaml, 07/10)
 const ANCRE = { contract: "AnchoredReputation" as const, srcAddress: CONTRACT };
 const certInput = (rows: Row[], newNodes: Hex = agentNodes(1, 2)) => encodeFunctionData({ abi, functionName: "submitCertificate",
   args: [SET_ID, 4, E18, newNodes, "0x", encodeRows(rows)] });

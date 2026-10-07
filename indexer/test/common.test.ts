@@ -17,7 +17,7 @@ const SOLVER = process.env.ANCRE_VECTORS ? pathToFileURL(process.env.ANCRE_VECTO
 const DIR = new URL("vectors/common/", SOLVER);
 const FILES = existsSync(DIR) ? readdirSync(DIR).filter((f) => f.endsWith(".json")) : [];
 const CHAIN = 10143;
-const CONTRACT = "0x0000000000000000000000000000000000000001";
+const CONTRACT = "0x8be6d3dd7f20b94cd9b1ec51de199291b109da9b"; // official testnet instance (config.yaml, 07/10)
 const ANCRE = { contract: "AnchoredReputation", srcAddress: CONTRACT };
 const ZERO = "0x0000000000000000000000000000000000000000";
 
