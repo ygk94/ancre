@@ -69,12 +69,12 @@
 4. [ ] **Prototype Mera sur tes deux appareils (porte P4).**
    - Appareils : un Mac sous macOS 15 et un iPhone sous iOS 18.4 ou plus, avec le même trousseau iCloud.
    - Il se fait sur le domaine du point 4.
-5. [ ] **Relancer une session pour l'écran (chantier 07).**
+5. [x] **Session 07-bis, la refonte du front** ✅ lancée le 07/10 (`chantier-07bis-front.txt`, worktree `../ancre-07bis`).
    - **Refonte du front** demandée par Hugo le 07/10.
    - Ce qui reste aussi : D49, le poids effectif d'une revue (à faire en premier), puis D50, la vue du 2ᵉ saut.
    - Le site se met à jour à chaque push sur `main` (`ancre-xyz.netlify.app`).
    - L'écran est déjà adapté au contrat corrigé.
-6. [ ] **Relancer une session pour la norme (chantier 08).** Elle doit mettre l'ERC à jour avec :
+6. [x] **Session 08-bis, la norme** ✅ lancée le 07/10 (`chantier-08bis-norme.txt`, worktree `../ancre-08bis`). Elle doit mettre l'ERC à jour avec :
    - les décisions D48 à D56 ;
    - le renommage `passesAnchorPolicy` / `passesPolicy` ;
    - la formule §7.1 (K8, A2b) ;
