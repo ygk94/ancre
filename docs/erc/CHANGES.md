@@ -292,3 +292,20 @@ Abstract : « exact » retiré, veto « sans recertification ». §1 : masse, pl
 | 11.8 | Brouillon (d) | Demandes 2 et 4 sous marqueur ; demande 6 (ordre des events) ; correspondance de numérotation avec l'ERC | REGCB |
 
 **Relu on-chain par 08-bis (MESURÉ, 07/10, `cast`, `rpc.monad.xyz`, bloc 111 299 306)** : propriétaire des deux proxys inchangé, toujours une EOA sans code ; `getVersion()` = 2.0.0 ; valeur de la note G1 inchangée.
+
+## 12. Traitement des ⟦OPEN⟧ (E4, 2026-10-07)
+
+| ⟦OPEN⟧ | Où | Traitement | Raison |
+|---|---|---|---|
+| Tour 5, désaccord 2 : veto au dernier avis contre dominance par tag | §8 | **retiré** (tranché par le CR) | D33 fixe la règle (« le dernier avis de l'ancre fait foi »), et D1-D56 ne se rouvrent pas. L'écart qui reste est écrit en §9 et en Security, et posé comme question 2 du brouillon (a) |
+| D9 / D43, pré-rotation des clés d'ancre | §11 | **maintenu** | Décidées, pas implémentées. La porte P4 (Mera) n'est pas passée au 07/10. Le `setId` v1 n'a pas de champ pour elles |
+| Tour 2, désaccord 1 : vivacité | Security | **maintenu** | Aucun tour ne l'a tranché ; D27 dit qui paie, pas ce qui arrive s'il ne paie plus |
+| Tour 3, désaccord 1 : négatif permanent | Security | **maintenu** | Idem |
+| **Nouveau** : A1b, zone de transit D23 | Security | **ouvert** | Le CR (« Ce qui reste ouvert après la revue ») le laisse à Hugo ou au conseil. Le code contredit D23 |
+| **Nouveau** : EFF1, fenêtre `scanMax` | Security | **ouvert** | Idem. Ce serait un changement de la règle d'arête normative |
+
+**Bilan** : cinq ⟦OPEN⟧ dans le texte, contre quatre au 01/10 (un retiré, deux nouveaux). Ils correspondent aux questions 1 à 6 du brouillon (a), la question 2 étant la limite du veto.
+
+**Hors ⟦OPEN⟧, mais à décider (🧑)** : le passage des vecteurs et des preuves sous la licence de l'ERC (CC0) si le contrat est copié dans `assets/` ; et la mise sous marqueur, ou non, du 3ᵉ point de la divulgation (approbations).
+
+**D49 ajoutée en E4** (oubli de E1, le brief ne la citait pas) : §11 *Bonded vouching*, *Trust domains*, *Validation registry*.

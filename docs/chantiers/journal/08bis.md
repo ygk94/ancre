@@ -148,3 +148,25 @@
 **🧑 BLOQUÉ (décision de Hugo, j'avance sans elle)** : la mise sous silence par approbation, 3ᵉ point de la divulgation (c), doit-elle elle aussi attendre la divulgation ? Si oui, il faut encadrer le paragraphe de motivation du §3.3 (règle 4), la phrase du Rationale « Approvals » et le paragraphe Security « Approvals ». Cela représente trois blocs, et sans eux la règle B reste normative, mais sans justification.
 
 **Prochaine étape** : E4 (les ⟦OPEN⟧).
+
+## 2026-10-07 17:30 — E4 : ⟦OPEN⟧
+
+**Fait** (détail : CHANGES §12). Il reste **cinq ⟦OPEN⟧** :
+- D9/D43 ;
+- vivacité ;
+- négatif permanent ;
+- A1b ;
+- EFF1.
+
+Un est **retiré** : le désaccord 2 du tour 5 (veto au dernier avis), tranché par D33 et documenté comme limite. Le brouillon (a) pose les six questions correspondantes à la communauté.
+
+**Décisions de rédaction.**
+1. **Retrait du désaccord 2 du tour 5.** Le 01/10, le 08 l'avait gardé en le jugeant « non tranché », mais D33 est une décision du journal, et le brief interdit de rouvrir D1-D56. Le désaccord ne porte plus sur la règle, seulement sur son incohérence apparente avec D14 : c'est une limite à écrire, pas un choix normatif en attente.
+2. **A1b et EFF1 en ⟦OPEN⟧**, pas en limite simple. Le CR les dit « à trancher », et leur résolution change soit le code (zone de transit), soit la règle normative (`scanMax`).
+3. **Pas de crochets ⟦⟧ imbriqués dans les notes.** Un « ⟦OPEN⟧ » écrit à l'intérieur d'une note casse `strip-notes.py`. Je l'ai remplacé par « marqueur OPEN ».
+4. **D49 ajoutée** en §11 (VouchBond, TrustDomain, registre Validation). Elle avait échappé à E1 : le brief ne la citait pas, mais elle fait partie de « ce qui a changé depuis le 01/10 ».
+
+**Incohérence.**
+- **AM-08bis.9** : le flux VouchBond d'ARCHITECTURE.md fait poster le parrainage par **un** contrat VouchBond partagé (`giveFeedback` appelé par le contrat). Avec le §3.5, ce client est un nœud-adresse sans masse : le parrainage ne propagerait **rien**. Il faut un client qui se résout vers le parrain (par exemple un contrat par parrain, posé comme `agentWallet` de l'agent du parrain). C'est écrit dans l'ERC (§11) ; à relayer si VouchBond est un jour codé (→ pilote).
+
+**Prochaine étape** : E5, le lint (eipw par docker si disponible) et `verify.py`.

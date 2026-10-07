@@ -11,7 +11,7 @@ created: 2026-10-01
 requires: 721, 8004
 ---
 
-⟦Texte du chantier 08, 2026-10-01, réécrit à partir du draft R6 (27/09) pour l'aligner sur les décisions D20 à D46 du CR et sur l'implémentation v1 ; **mis à jour par le chantier 08-bis le 2026-10-07** pour D47 à D56, le lot 02-bis (corrections A, B, C, R1 à R8, renommage), la revue maximale du 06/10 et les relais de 04-bis (`contracts/ENCODING.md` §0bis, `solver/FORMAT.md` R1 bis, R6, R8). Les notes en français entre ⟦ ⟧ sont internes et DOIVENT être retirées avant soumission (`drafts/strip-notes.py`). ⟦OPEN⟧ marque un point que le CR n'a pas tranché. Les blocs `<!-- DISCLOSURE-GATE:start -->` … `<!-- DISCLOSURE-GATE:end -->` contiennent ce qui dépend de la divulgation aux mainteneurs d'ERC-8004 (D29, non encore envoyée au 07/10) : ils restent hors de toute version publique tant que Hugo ne l'a pas faite. La correspondance ancien texte → nouveau texte est dans `docs/erc/CHANGES.md` (sections 08 et 08-bis). Avant soumission : `author` (🧑 Hugo), `discussions-to` (fil dédié à ouvrir, voir `drafts/`), numéro attribué par les éditeurs.⟧
+⟦Texte du chantier 08, 2026-10-01, réécrit à partir du draft R6 (27/09) pour l'aligner sur les décisions D20 à D46 du CR et sur l'implémentation v1 ; **mis à jour par le chantier 08-bis le 2026-10-07** pour D47 à D56, le lot 02-bis (corrections A, B, C, R1 à R8, renommage), la revue maximale du 06/10 et les relais de 04-bis (`contracts/ENCODING.md` §0bis, `solver/FORMAT.md` R1 bis, R6, R8). Les notes en français entre ⟦ ⟧ sont internes et DOIVENT être retirées avant soumission (`drafts/strip-notes.py`). marqueur OPEN marque un point que le CR n'a pas tranché. Les blocs `<!-- DISCLOSURE-GATE:start -->` … `<!-- DISCLOSURE-GATE:end -->` contiennent ce qui dépend de la divulgation aux mainteneurs d'ERC-8004 (D29, non encore envoyée au 07/10) : ils restent hors de toute version publique tant que Hugo ne l'a pas faite. La correspondance ancien texte → nouveau texte est dans `docs/erc/CHANGES.md` (sections 08 et 08-bis). Avant soumission : `author` (🧑 Hugo), `discussions-to` (fil dédié à ouvrir, voir `drafts/`), numéro attribué par les éditeurs.⟧
 
 ## Abstract
 
@@ -120,7 +120,7 @@ setId = keccak256(abi.encode(anchors, lambdas, alphaN, alphaD, tagSchemaHash, ta
 - This ERC defines **no default anchor set**.
 - An anchor address MAY also be the source (§3.5) of agents. Such agents emit no row (§3.5): an anchor speaks only through its anchor node, in its own column.
 
-⟦08-bis : le SHOULD NOT « ancre ≠ source d'un agent » du 01/10 devient une règle du graphe (§3.5) et un refus du contrat (`AnchorAsSource`, §5.6), D48-A, PROOFS L8. D1, D24, D39. Le préimage est celui de l'implémentation v1 (`computeSetId`, ENCODING §1), pas celui du draft R6 (`chainId`, registres, `metadataURI`, `edgeFilterId`, `anchorKeyRegistry`) : AM-08.1. α par ensemble : D24, ce qui ferme le désaccord 6 du tour 2 (⟦OPEN⟧ retiré). TAGS_MAX = 16 : D24. `K_MAX = 16`, `SUBMITTERS_MAX = 8` : constantes v1.⟧
+⟦08-bis : le SHOULD NOT « ancre ≠ source d'un agent » du 01/10 devient une règle du graphe (§3.5) et un refus du contrat (`AnchorAsSource`, §5.6), D48-A, PROOFS L8. D1, D24, D39. Le préimage est celui de l'implémentation v1 (`computeSetId`, ENCODING §1), pas celui du draft R6 (`chainId`, registres, `metadataURI`, `edgeFilterId`, `anchorKeyRegistry`) : AM-08.1. α par ensemble : D24, ce qui ferme le désaccord 6 du tour 2 (marqueur OPEN retiré). TAGS_MAX = 16 : D24. `K_MAX = 16`, `SUBMITTERS_MAX = 8` : constantes v1.⟧
 
 #### 2.2 Policy
 
@@ -319,7 +319,7 @@ eLowEff = Σ_a ⌈λ_a · eLow_a / WAD⌉
 
 Both are global over the set: a widening on one row lowers `trustLow`, or raises `distrustUp`, for every agent of the set.
 
-⟦D26 (sous-solution), D32 (domination), D37 (lemmes L1-L5 de PROOFS.md, L6-L7 ajoutés par 02 et l'intégration). Le désaccord 5 du tour 2 (borne globale) est en partie tranché par D26 : la borne inférieure de confiance est exacte par agent à la soumission. Il reste global après une preuve (eLow, AM-02.4) : écrit en Security, ⟦OPEN⟧ retiré. La méfiance est calculée sur T combiné (ENCODING §4), pas colonne par colonne comme dans R6 : d n'a plus de colonnes.⟧
+⟦D26 (sous-solution), D32 (domination), D37 (lemmes L1-L5 de PROOFS.md, L6-L7 ajoutés par 02 et l'intégration). Le désaccord 5 du tour 2 (borne globale) est en partie tranché par D26 : la borne inférieure de confiance est exacte par agent à la soumission. Il reste global après une preuve (eLow, AM-02.4) : écrit en Security, marqueur OPEN retiré. La méfiance est calculée sur T combiné (ENCODING §4), pas colonne par colonne comme dans R6 : d n'a plus de colonnes.⟧
 
 ### 5. Certificates
 
@@ -554,7 +554,7 @@ The registries are typically upgradeable proxies, and a contract cannot read ano
 
 An upgrade that keeps the same version string is invisible on-chain (Security Considerations).
 
-⟦D17. `checkRegistry` est par ensemble dans la v1 (R6 : global) : une upgrade doit être signalée ensemble par ensemble (AM-08.5). `getVersion()` ne fait pas partie de l'interface ERC-8004 (AM-R6.10) : demande 4 en Backwards Compatibility. Le désaccord 2 du tour 3 (suffisance de la vérification de version) est maintenu en Security comme limite, sans marqueur ⟦OPEN⟧ : le texte ne prend aucune position qu'un tour ultérieur pourrait renverser.⟧
+⟦D17. `checkRegistry` est par ensemble dans la v1 (R6 : global) : une upgrade doit être signalée ensemble par ensemble (AM-08.5). `getVersion()` ne fait pas partie de l'interface ERC-8004 (AM-R6.10) : demande 4 en Backwards Compatibility. Le désaccord 2 du tour 3 (suffisance de la vérification de version) est maintenu en Security comme limite, sans marqueur marqueur OPEN : le texte ne prend aucune position qu'un tour ultérieur pourrait renverser.⟧
 
 ### 8. Reading
 
@@ -603,7 +603,7 @@ A payer MUST NOT authorize a transfer of value on a set whose `minAnchors` is be
 
 ⟦08-bis : renommage (D48, AM-9.5 : `trustset` utilisait aussi `isTrusted` ; le nom dit « passe la politique de ces ancres », pas « digne de confiance »). Veto par approbation (D48-B) : lu en direct quand `strictTransfer` est vrai (le code lie le « mode strict » des deux lectures à ce seul champ), posé par `proveApproval` sinon ; +41,6 k gas par `assess` avec veto, MESURÉ 06/10. R7 : transfert strict déclenché par la masse. R6 : seule `ERC721NonexistentToken` vaut « inexistant », un `ownerOf` illisible donne `REGISTRY_CHANGED` (avant 02-bis : `TRANSFERRED`, AM-08.6 corrigé). SHOULD NOT sur le mode rapide : R8 du lot 02-bis, que le payeur de référence applique comme un refus (`FastTransferSet`) ; AM-02bis.7. D21 et D33 (veto au dernier avis + bit certifié), D35, D39.⟧
 
-⟦OPEN — tour 5, désaccord 2 : pour une même ancre, le veto en direct ne lit que le DERNIER avis (tous tags confondus), tandis que le graphe et le bit certifié appliquent la dominance du négatif par tag (D14). Un avis ultérieur de l'ancre, même de mesure, lève le veto en direct (AM-02.6) ; seul le bit certifié le maintient jusqu'au certificat suivant. Le texte suit D33 (le dernier avis fait foi en direct) et compense par la règle normative du §9. Non tranché par le conseil.⟧
+⟦08-bis (E4) : marqueur OPEN du tour 5, désaccord 2, **retiré** comme marqueur. La règle normative est tranchée par D33 (« le dernier avis de l'ancre lu dans le registre fait foi ; le bit certifié est un complément ; règle normative pour les ancres »), et les décisions D1-D56 ne se rouvrent pas. Ce qui reste du désaccord, c'est-à-dire l'écart entre le veto en direct (dernier avis, tous tags) et D14 (dominance par tag) pour une même ancre, est écrit comme limite (§9, Security *Anchors*) et posé comme question à la communauté dans le brouillon (a), question 2.⟧
 
 ### 9. Obligations of anchors
 
@@ -733,7 +733,15 @@ Implementations MAY add functions (for example a dry run, capacity reservation, 
 
 **Edge filters.** See §3.8.
 
-⟦OPEN — D9 (identité d'ancre à pré-rotation, confiance 0,6) et D43 (concept Mera : clés d'époque pré-rotées, `rotateBySig`) sont décidées mais pas implémentées : la v1 nomme les ancres par adresse, et le `setId` n'a pas de champ pour un registre de clés. Réintroduire `IAnchorKeyRegistry` dans le texte normatif contredirait le code ; le retirer contredirait D9. Je le mets en extension future, avec la forme décidée, en attendant 02-E8 (`AnchorRegistry`, conditionné par la porte P4 Mera). AM-08.8. À trancher par le pilote ou le conseil : (a) attendre 02-E8 et réintégrer, (b) publier la v1 avec ancres par adresse.⟧
+**Bonded vouching.** A sponsor that the anchors already reach can lock a bond in a contract that posts an endorsement on a new agent and revokes it if the bond is slashed. This version needs nothing new for it: the endorsement is an ordinary feedback, and its weight is the sponsor's mass along the edge. The client of that feedback has to resolve to the sponsor (§3.5), for example a contract per sponsor set as the `agentWallet` of the sponsor's agent; a shared bond contract would be an address node without mass, and its endorsements would propagate nothing. A bond makes the sponsor economically accountable. It does not bound what a dishonest sponsor can pass on beyond §4, which stays the only algorithmic guarantee.
+
+**Trust domains.** A `setId` already commits anchors, schema and policy. A future version MAY add a membership list (for example a Merkle root of the agents a domain admits), committed in the schema document (§2.4), so that a payer decides with `member ∧ passesAnchorPolicy`.
+
+**Validation registry.** ERC-8004 also defines a Validation Registry. Its responses could become a source of edges in a future version, with their own kind and bounds. This version reads the Reputation Registry only.
+
+⟦08-bis : D49 (tour 7, D-7.2) : VouchBond et TrustDomain en extension, avec la limite de VouchBond (responsabilité économique, pas algorithmique) ; registre Validation en une ligne. La contrainte « le client doit se résoudre vers le parrain » vient du §3.5 et n'était pas dans ARCHITECTURE.md (AM-08bis.9).⟧
+
+⟦OPEN — **maintenu le 07/10** : la porte P4 (prototype Mera sur deux appareils, MUSTDO n° 4) n'est pas passée, donc 02-E8 n'est pas fait. D9 (identité d'ancre à pré-rotation, confiance 0,6) et D43 (concept Mera : clés d'époque pré-rotées, `rotateBySig`) sont décidées mais pas implémentées : la v1 nomme les ancres par adresse, et le `setId` n'a pas de champ pour un registre de clés. Réintroduire `IAnchorKeyRegistry` dans le texte normatif contredirait le code ; le retirer contredirait D9. Je le mets en extension future, avec la forme décidée, en attendant 02-E8 (`AnchorRegistry`, conditionné par la porte P4 Mera). AM-08.8. À trancher par le pilote ou le conseil : (a) attendre 02-E8 et réintégrer, (b) publier la v1 avec ancres par adresse.⟧
 
 ## Rationale
 
@@ -1188,9 +1196,9 @@ Chains with a lower per-transaction gas cap (for example 2²⁴ under [EIP-7825]
 
 ⟦08-bis, sources des paragraphes nouveaux ou réécrits (chiffres MESURÉS par la revue maximale du 06/10, sauf mention) :
 - *Open sets* : la garde à l'octet près (AM-08.16) est remplacée par les faits (D48-C). Le reste vaut toujours : AM-02.2, AM-INT.1, la dilution d'une autre paire à chaque tour.
-- *Node-table inflation* : A1b. 3 975 et 1 608 gas par nœud parasite (k = 3) ; ≈ 45,9 k gas par nœud ajouté (GAS.md, scénario D) ; 2 100 à 7 500 nœuds, CALCULÉ par la revue. La zone de transit D23 n'est pas implémentée : ⟦OPEN⟧ ci-dessous.
+- *Node-table inflation* : A1b. 3 975 et 1 608 gas par nœud parasite (k = 3) ; ≈ 45,9 k gas par nœud ajouté (GAS.md, scénario D) ; 2 100 à 7 500 nœuds, CALCULÉ par la revue. La zone de transit D23 n'est pas implémentée : marqueur OPEN ci-dessous.
 - *Bounds* : facture au pire cas (formule X, ENCODING §7.1). ALT8 (griefing par des preuves honnêtes) : 02-bis l'a traité ; avec les faits, le titulaire honnête revient tout de suite.
-- *Cost asymmetries* : EFF1. 12,9 k gas par avis empilé ; 640 avis pour le certificat de démo sous le plafond de 25 M du certificateur (CALCULÉ ; 1 900 pour un petit certificat). Coût des preuves : GAS.md, après 02-bis (+26 à +29 %, MESURÉ 06/10, remesuré à l'identique par 08-bis le 07/10). La fenêtre `scanMax` normative proposée par la revue n'est pas tranchée : ⟦OPEN⟧ ci-dessous.
+- *Cost asymmetries* : EFF1. 12,9 k gas par avis empilé ; 640 avis pour le certificat de démo sous le plafond de 25 M du certificateur (CALCULÉ ; 1 900 pour un petit certificat). Coût des preuves : GAS.md, après 02-bis (+26 à +29 %, MESURÉ 06/10, remesuré à l'identique par 08-bis le 07/10). La fenêtre `scanMax` normative proposée par la revue n'est pas tranchée : marqueur OPEN ci-dessous.
 - *Anchors* : D48-A, L8, vecteur `common_A_attack_anchor_copy` (`AnchorAsSource(2)`).
 - *Liveness of proven facts* : AM-02bis.2 ; question de Hugo n° 3 du rapport 02-bis (permissionless ou réservé aux soumetteurs) : le texte suit le code (permissionless).
 - *Approvals* : D48-B ; AM-02bis.1 (l'approbation ne vaut veto que pour une adresse déjà ancre ; la scène « approbation préventive » n'est pas encore jouée sur le vrai registre) ; AM-02bis.7 (mode rapide).
