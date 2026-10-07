@@ -1049,7 +1049,7 @@ The first sequence fixes formula X. Keeping the declared budget when the committ
 
 ### TC-9 Refusals (§5.1, §5.3, §5.4): `refusals.json`
 
-Each case changes the certificate of `common_2hop` in one way, and MUST be refused:
+Each case changes the certificate of `common_2hop` in one way. A conforming aggregator refuses every one of them (§5):
 
 | change | expected |
 |---|---|

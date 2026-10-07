@@ -170,3 +170,22 @@ Un est **retiré** : le désaccord 2 du tour 5 (veto au dernier avis), tranché 
 - **AM-08bis.9** : le flux VouchBond d'ARCHITECTURE.md fait poster le parrainage par **un** contrat VouchBond partagé (`giveFeedback` appelé par le contrat). Avec le §3.5, ce client est un nœud-adresse sans masse : le parrainage ne propagerait **rien**. Il faut un client qui se résout vers le parrain (par exemple un contrat par parrain, posé comme `agentWallet` de l'agent du parrain). C'est écrit dans l'ERC (§11) ; à relayer si VouchBond est un jour codé (→ pilote).
 
 **Prochaine étape** : E5, le lint (eipw par docker si disponible) et `verify.py`.
+
+## 2026-10-07 18:00 — E5 : lint et vérificateur
+
+**Fait.**
+- **eipw 0.11.0**, la même version que le 01/10. Docker est arrêté et cargo absent, donc j'ai utilisé le paquet npm `eipw-lint-js` 0.11.0 (eipw compilé en WebAssembly, dépôt ethereum/eipw), dans un dossier isolé du scratchpad.
+  - Configuration : `config/eipw.toml` d'ethereum/ERCs (master du 07/10), convertie de TOML en options (`default_lints`, `default_modifiers` : 51 lints, 2 modificateurs).
+  - Propositions citées copiées comme le fait la CI : ERC-165, 721, 1967, 6093, 8004 depuis ethereum/ERCs ; EIP-170, 7702, 7825 depuis ethereum/EIPs.
+  - Numéro provisoire 9999, pour que le nom de fichier corresponde.
+  - Script reproductible : `docs/erc/drafts/lint.sh`.
+- **Résultats (MESURÉ le 07/10)** :
+  - premier passage avec `eip: 0000` : 1 erreur, `preamble-file-name`, attendue tant qu'aucun numéro n'est attribué ;
+  - avec 9999 : **0 diagnostic**, pour le texte sans les blocs gated **et** pour le texte avec (`--keep-gated`) ;
+  - **contrôle négatif** (lien du premier « ERC-721 » retiré) : 5 erreurs `markdown-link-first`. Le linter détecte donc bien.
+- **Vérification manuelle d'EIP-1, hors eipw** : aucun mot-clé RFC 2119 hors de la Specification. Un « MUST » s'était glissé dans TC-9 : il est reformulé.
+- **`verify.py`** : **27 fichiers, 0 échec** (MESURÉ, 07/10).
+
+**Décision.** Le lint passe par la version WebAssembly plutôt que de rester bloqué sur docker. C'est le même code d'eipw (même version), avec la même configuration, mais par un autre point d'entrée que la CI d'ethereum/ERCs (binaire `eipw`). C'est noté comme tel dans le rapport.
+
+**Prochaine étape** : E6, la relecture adversariale (`/llm-council`).
