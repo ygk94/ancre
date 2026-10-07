@@ -1,6 +1,6 @@
 # Brouillon (a) : PR sur `ethereum/ERCs`
 
-> **NE PAS ENVOYER.** Brouillon du chantier 08, 2026-10-01. Publication = étape R10, sur décision de Hugo.
+> **NE PAS ENVOYER.** Brouillon du chantier 08, 2026-10-01, mis à jour par le chantier 08-bis le 2026-10-07 (renommage, D50, demande 6, compte GitHub). Publication = étape R10, sur décision de Hugo.
 > Règles vérifiées le 2026-10-01 (agent web, sources lues : EIP-1 au commit du 2026-09-16, `config/eipw.toml` d'ethereum/ERCs au 2026-08-10, PR #2037, #2012 et #1935).
 
 ## Préalables, dans l'ordre (aucun n'est fait)
@@ -10,12 +10,12 @@
    - Les éditeurs demandent que le fil existe **avant** la PR (PR #1935 : « Please create actual discussions topic on Eth Magicians »).
    - Le fil d'ERC-8004 (#25098) ne convient pas.
    - Premier message proposé : le texte de la section « Message d'ouverture du fil » ci-dessous.
-2. 🧑 Renseigner `author` : au moins un auteur avec un pseudo GitHub, par exemple `Hugo Thomas (@hugothomas9)`, plus les co-auteurs de l'équipe s'ils le souhaitent.
+2. 🧑 Renseigner `author` : au moins un auteur avec un pseudo GitHub, par exemple `Hugo Thomas (@ygk94)` (le compte s'appelle `ygk94` depuis le 05/10), plus les co-auteurs de l'équipe s'ils le souhaitent.
 3. 🧑 Décider de la visibilité du code de référence :
    - soit le dépôt devient public ;
    - soit on copie `AnchoredReputation.sol` dans `assets/erc-0000/`.
    EIP-1 n'autorise pas de lien vers GitHub dans le texte.
-4. Retirer toutes les notes ⟦ ⟧ et les ⟦OPEN⟧ du fichier.
+4. Retirer toutes les notes internes (entre crochets doubles) et les marqueurs OPEN du fichier (`strip-notes.py`).
    - Les points encore ouverts passent dans le premier message du fil, comme questions à la communauté.
 5. Copier les fichiers dans un fork d'`ethereum/ERCs` :
    - `ERCS/erc-0000.md` (ce texte, avec `eip: 0000`) ;
@@ -38,12 +38,13 @@ Discussion: https://ethereum-magicians.org/t/<slug>/<id>
 
 ERC-8004 records feedback about agents but leaves aggregation and Sybil filtering to readers (`getSummary` requires a caller-supplied list of clients). This ERC standardizes that layer for contracts:
 
+- **Beyond one hop, with a bound.** Trust propagates along endorsement chains from the reader's anchors (personalized PageRank), with a bound on what a Sybil region captures. A list of trusted raters, which is what `getSummary` accepts, only answers one hop deep.
 - **Reader-chosen anchors.** An anchor set (anchors, weights, tag schema, policy) is immutable and content-addressed by its `setId`. There is no global score and no default set.
 - **Sub-solution certificates.** Per anchor, a personalized-PageRank column over the ERC-8004 feedback graph. The aggregator accepts it only if `t ≤ F(t)` coordinate by coordinate, which makes every value a lower bound of the true trust, with no error term, as long as the committed graph is dominated by the registry. At the `RegistryVerified` level, every committed edge is re-read in the registry at submission.
-- **Discrepancy proofs.** Omitted, diluted or outdated edges can be proven by anyone. A proof widens the certificate's bounds and never moves funds.
-- **A non-reverting read for paying contracts.** `isTrusted(agentId, setId)` applies the committed policy: leave-one-anchor-out trust, distrust ratio, live anchor veto, freshness and transfer.
+- **Discrepancy proofs.** Omitted, diluted or outdated edges can be proven by anyone. A proof widens the certificate's bounds, records the proven fact so that the false row can never be resubmitted, and never moves funds.
+- **A non-reverting read for paying contracts.** `passesAnchorPolicy(agentId, setId)` applies the committed policy: leave-one-anchor-out trust, distrust ratio, live anchor veto, freshness and transfer.
 
-Test vectors (`assets/erc-0000/`) come with a standard-library Python checker that recomputes every expected value from the text, including exact-rational checks of `t ≤ t*`. A reference implementation passes all of them. The ERC also lists five requests for a future ERC-8004 revision (Backwards Compatibility).
+Test vectors (`assets/erc-0000/`) come with a standard-library Python checker that recomputes every expected value from the text, including exact-rational checks of `t ≤ t*`. A reference implementation passes all of them. The ERC also lists six requests for a future ERC-8004 revision (Backwards Compatibility).
 
 Prior art is cited in the Rationale: OpenRank's on-chain EigenTrust verification, the trustgraphs project, and x402 issue 2641.
 ```
@@ -62,11 +63,16 @@ Open questions where feedback is most useful:
 2. The live veto reads only an anchor's latest feedback (O(1)), while the graph applies negative dominance per tag. Is the rule "an anchor posts nothing after a veto" acceptable, or should a dedicated `veto` tag be read instead?
 3. Should certificates have a degraded mode when nobody recertifies before `maxAge`, or should they always fail closed?
 4. Negative feedback is permanent if its author loses its key. Should the standard define an expiry, knowing that an attacker would then wait it out?
+5. On open sets, anyone can append nodes to the table, which every later certificate has to cover. Should nodes enter only through an accepted certificate, or against a deposit?
+6. Re-reading a pair edge scans the pair's whole history. Should the policy commit a re-read window (the latest `scanMax` feedback of the pair), at the cost of a different edge rule?
 
 Measurements behind the design (one production ERC-8004 v2.0.0 deployment, dated):
 - 83 % of 9,188 feedback entries came from one farm (2026-09-21);
 - a naive mean of about 1.5 × 10³⁶ for its target;
-- 78 entries posted to one agent by its own `agentWallet` (2026-09-27).
+- 83 % of the feedback still came from that farm on 2026-10-06 (9,291 entries);
+<!-- DISCLOSURE-GATE:start — keep only once the ERC-8004 maintainers have been notified (decision D29) -->
+- 78 entries posted to one agent by its own `agentWallet` (2026-09-27, unchanged on 2026-10-07).
+<!-- DISCLOSURE-GATE:end -->
 ```
 
 ⟦Notes pour Hugo :

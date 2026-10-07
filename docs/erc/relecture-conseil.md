@@ -191,3 +191,104 @@ REMPLACEMENT (ensemble ouvert) :
 2. **Le dépôt devient-il public le 12/10** (règles Metropolis, NON CONFIRMÉ) ? Si oui, la question « PR avant ou après » ne porte plus sur l'exposition, seulement sur la visibilité.
 3. **Qui surveille les ensembles ouverts pendant le jugement ?** D1, D2-b et la dilution exigent un surveillant, ou des soumetteurs listés.
 4. **Faut-il une interface lecteur minimale séparée** (`isTrusted`, `assess`), stable, que les intégrateurs pourraient adopter avant que la partie certification ne soit figée ?
+
+---
+
+# Relecture adversariale du chantier 08-bis (`/llm-council`, 2026-10-07)
+
+**Protocole.** Phase 1 : cinq agents séparés ont lu eux-mêmes le texte, le code de `main` (identique à celui du worktree : diff vide, vérifié par A), les vecteurs et les brouillons, en lecture seule. Les rôles :
+- A, théoricien ;
+- B, ingénieur EVM ;
+- C, éditeur EIP ;
+- D, attaquant ;
+- E, intégrateur.
+
+Phases 2 et 3 : jouées par la session, comme le 01/10. L'indépendance de la phase 1 est réelle (cinq contextes distincts). Celle de la phase 2 ne l'est pas : c'est une discipline d'écriture. Le prompt rempli n'a pas été soumis à Hugo avant exécution (personne ne répond pendant la session, brief 08-bis).
+
+Avant de conclure, la session a revérifié dans le code les constats qui changent le texte normatif :
+- un alias est validé avec son propre `u` : l'arête héritée vers son agent donne `BadEdge` ;
+- `_checkFacts` reçoit le `sDecl` propre à l'alias, c'est-à-dire 0 ;
+- `_verifyOwners` appelle `ownerOf` en direct ;
+- `s.facts` n'est jamais décrémenté ;
+- la formule de `_bill` borne à zéro ;
+- le calcul de A sur §4.5 (ligne `{j: +5000}` révoquée : `dim = 0,5`, `incP = 0`), refait à la main.
+
+## Phase 1 : ce que chacun a vu (résumé)
+
+- **A** :
+  - fidèle sur A, B, C, X et R1 bis ;
+  - **§4.5 faux après une preuve de baisse** : `eUp` ne borne que `(t* − t)⁺` ;
+  - **portée de la règle A** : une clé d'ancre contrôle aussi les agents que l'ancre possède, via `setAgentWallet` ;
+  - **marge de la règle A** : elle rend `mainnet_em_d44` inutilisable (`distrustUp` ≥ 0,19 WAD) ;
+  - une omission honnête peut être révélée de nouveau à chaque certificat ;
+  - DISCLOSURE-GATE inopérant hors de `docs/erc/`.
+- **B** :
+  - interface et refus conformes ;
+  - **règle d'alias non écrite** (`dst ≠ u` sur les arêtes héritées) ;
+  - **⁺ manquants au §6.1** ;
+  - l'alias vers une ligne non agent donne `BadRows`, pas `NotCanonical` ;
+  - `_verifyOwners` hors R6 ;
+  - **section Gas fausse** : `3k + 2` appels, environ 6 M, et non `2k + 1` ;
+  - coût des faits non chiffré ;
+  - « +27 % depuis les faits » mal attribué ;
+  - fuite de #8317 dans `demo/` et `app/`.
+- **C** :
+  - **RFC 8785 non reproductible** : entiers au-delà de 2⁵³, tags qui ne sont pas de l'UTF-8 ;
+  - MUST impossibles (§8.4 « ne revert jamais », §5.2 `tx.origin`) ;
+  - MUST adressé aux ancres (§9) ;
+  - `F_bas` non défini ;
+  - Monad hors de la Motivation (« priced per page », « monad-agent-trust ») ;
+  - **marqueurs à l'intérieur des blocs à coller** ;
+  - `strip-notes.py` qui échoue sur (b) et (d) ;
+  - A1b présenté à tort comme ouvert ;
+  - texte trop long.
+- **D** :
+  - **un négatif omis peut ne pas baisser D**, puisque B⁻ renormalise ;
+  - « only the client creates facts » est faux : l'owner peut en créer via une approbation ;
+  - faits sur des agents hors table ;
+  - alias et omission déclarée ;
+  - **une seule preuve peut faire passer l'ensemble ouvert STALE**, ce qui ouvre le remplacement ;
+  - coût permanent des faits ;
+  - griefing rejouable ;
+  - le DISCLOSURE-GATE inopérant ; **mettre aussi sous marqueur la mise sous silence par approbation**.
+- **E** :
+  - **la clé de cache du payeur laisse passer un veto en direct ou `REGISTRY_CHANGED`** ;
+  - §2.4 contredit §3.1 ;
+  - auto-boucle par alias ;
+  - faits implicites (source nulle, agent hors table) ;
+  - events `Approval` et `ApprovalForAll` absents de Backwards Compatibility ;
+  - `RowVoided` sans `src` ;
+  - vecteurs manquants ;
+  - les ⟦OPEN⟧ disparaissent de la PR avec `strip-notes`.
+
+## Phase 2 : relecture croisée (la session)
+
+- **A est relu par D** : la portée de la règle A est juste, et pire qu'écrit, puisque `ownerOf` ne change pas et que le mode strict ne voit rien. En revanche, la « marge inutile » est un choix de code (02), pas une erreur du texte. La faute du texte serait de la taire.
+- **B est relu par C** : la règle d'alias et les ⁺ sont des défauts normatifs réels, au sens où deux implémentations divergeraient. « Gas fausse » : exact. Le constat « l'alias donne `BadRows` » ne change rien, puisque le refus est normatif et son nom seulement recommandé.
+- **C est relu par E** : RFC 8785 est le constat le plus sous-estimé de toute la relecture, parce qu'il rend la vérification du `setId` à partir du document impossible. Le reproche fait à A1b est trop dur : D23 est décidée mais **non implémentée**, comme D9. Marquer l'écart ouvert n'est pas rouvrir D23, c'est constater que le code n'est pas conforme.
+- **D est relu par A** : la renormalisation de B⁻ est juste (`Σ_j d_uj = T·(1−α)·S⁻/max(GRID, S⁻)`, constante dès que S⁻ ≥ GRID). C'est un défaut de la **règle de remplacement** (code et D), pas du texte, qui doit l'avouer. Le STALE ouvert par une seule preuve est juste, et c'est un argument de plus pour les soumetteurs listés. En revanche, mettre la mise sous silence par approbation sous marqueur est trop prudent : elle découle du garde-fou public, et elle fonde une règle normative.
+- **E est relu par B** : le cache est juste et grave, c'est un MUST qui mène à un paiement fautif. Le constat « strip-notes cache les ⟦OPEN⟧ » est faux sur le fond : le brouillon (a) les reprend comme questions dans le fil. Il est juste sur l'effet : la PR seule ne les montre pas.
+- **Point commun, et oubli de tous sauf A et D** : les constats D (D sans les négatifs) et A (ancre propriétaire) touchent la **garantie centrale** (le leave-one-out, la méfiance). Ce ne sont pas des imprécisions de rédaction. Ils relèvent du conseil et du code.
+
+## Phase 3 : synthèse tranchée
+
+| Q | Décision | Argument qui l'emporte | Ce qu'on perd | Confiance |
+|---|---|---|---|---|
+| Q1 Fidélité | **Fidèle sur toute la mécanique.** Il reste 9 écarts de rédaction, corrigés dans la foulée : alias, ⁺, §4.5, §5.2, faits implicites, alias et omission déclarée, `ResidualTooLarge`, `F_bas`, nombre d'appels | 5 sur 5 confirment A, B, C, X, R1 bis et les refus. Les écarts portent sur ce que le texte ne dit pas | — | 0,85 |
+| Q2 Security | **Honnête mais incomplète.** Ajouts faits : portée de la règle A, sa marge, D absorbé par B⁻, faits créés par l'owner, STALE ouvert par une preuve, preuve rejouable, coût permanent des faits, cache contre veto, `3k + 2` appels. **Deux défauts de conception** relèvent du code et du conseil : AM-08bis.11 et .12 | Une Security qui tait un contournement du leave-one-out serait trompeuse | La simplicité du message « une clé volée ne fait pas payer », qu'il faut nuancer | 0,8 |
+| Q3 PR | **Pas prête. Aucune PR avant le 13/10.** Ouvrir la PR au plus tôt après la divulgation et son délai, et après la décision du conseil sur AM-08bis.11 et .12. Le jugement (jusqu'au 27/10) n'exige pas de PR | 4 experts sur 5 disent « après » (C : « avant seulement si (c) part le 08/10 avec 72 h de délai »). La PR exposerait deux défauts de garantie et A1b/EFF1 encore ouverts | L'antériorité publique de quelques jours ; le « PR scheduled » de la soumission compense | 0,75 |
+| Q4 DISCLOSURE-GATE | **Complets dans `docs/erc/`**, vérifiés par 4 experts et par script, mais **inopérants pour le dépôt** : `README.md`, `app/src/ui/Act1.tsx`, `demo/JUDGES.md` et `ANCRE.md` publient les mêmes faits sans marqueur. La divulgation doit partir **avant** la mise en public (12/10), ERC ou pas. **La mise sous silence par approbation n'est pas mise sous marqueur** | Elle fonde la règle B, normative ; la masquer rend le texte incohérent avec le code. Il faut en revanche que (c) la présente avant toute version publique | Le « premier avertissement » privé sur ce point, si (c) ne part pas avant | 0,7 |
+
+## Désaccords non résolus
+
+1. **Mise sous silence par approbation sous marqueur** : D dit oui, A, B, C et E disent non.
+2. **Date de la PR** : C dit avant le 13/10 si la divulgation part le 08/10 ; A, B, D et E disent après.
+3. **A1b** : C dit qu'il ne faut pas de marqueur OPEN (D23 est décidée) ; la session et E disent qu'il en faut un, parce que le code ne suit pas D23.
+4. **Marge de la règle A** : A la juge inutile et propose de la supprimer dans le code ; personne d'autre ne s'est prononcé, à trancher par le 02.
+5. **Longueur** (C : environ 17 000 mots) : déplacer les tableaux de mesures et les TC détaillés dans `assets/` avant la PR. Ce n'est pas fait, pour garder les chiffres sous les yeux du conseil.
+
+## Ce qu'on aurait dû demander
+
+- Si la garantie « une ancre compromise ne fait pas payer » tient quand l'ancre possède des agents. Ce n'était pas dans les questions, et A l'a trouvé seul.
+- Si la règle de remplacement protège un **veto** précis, et pas seulement l'agrégat D (D l'a vu).
+- Si un payeur qui met en cache peut encore respecter le « bloc suivant » du disjoncteur (E l'a vu, et cela touche directement la promesse de la démo).

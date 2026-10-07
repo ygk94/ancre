@@ -1,0 +1,109 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+import "./CommonVectors.t.sol";
+
+/// 08-bis (scratch only): proof sequences and refusals of docs/erc/drafts/measurements/x08/, replayed on mocks.
+/// Logs "X08|<vector>|<step>|<key>|<value>" lines that build-assets.py turns into measured values.
+contract X08VectorsTest is CommonVectorsTest {
+    string constant DIR = "/Users/hugo/Projet/ancre-08bis/docs/erc/drafts/measurements/x08/";
+
+    function _log(string memory v, uint256 i, string memory key, string memory val) internal {
+        emit log(string.concat("X08|", v, "|", vm.toString(i), "|", key, "|", val));
+    }
+
+    function _state(string memory v, uint256 i, bytes32 setId) internal {
+        (, uint256 eEff, uint256 eLowEff,,,,,,) = ar.certificate(setId);
+        _log(v, i, "eLowEff", vm.toString(eLowEff));
+        _log(v, i, "eEff", vm.toString(eEff));
+    }
+
+    function _seq(string memory name) internal {
+        string memory j = vm.readFile(string.concat(DIR, name, ".json"));
+        _registry(j);
+        AnchoredReputation.SetParams memory p = _params(j);
+        bytes32 setId = ar.registerAnchorSet(p);
+        assertEq(setId, vm.parseJsonBytes32(j, ".set.setId"), "setId");
+        address who = _submitter(p);
+        uint256 n = vm.parseJsonUint(j, ".nCert");
+        bytes memory rows = vm.parseJsonBytes(j, ".calldata.rows");
+        uint256 ns;
+        while (vm.keyExistsJson(j, string.concat(".sequence[", vm.toString(ns), "]"))) ++ns;
+        AnchoredReputation.RowRef memory none;
+        for (uint256 i; i < ns; ++i) {
+            string memory b = string.concat(".sequence[", vm.toString(i), "]");
+            bytes32 op = keccak256(bytes(vm.parseJsonString(j, string.concat(b, ".op"))));
+            if (op == keccak256("submit")) {
+                (bool ok, bytes memory ret) = _call(j, ".calldata", setId, who, n);
+                _log(name, i, "submit", ok ? "ACCEPTED" : vm.toString(ret));
+                if (ok) _state(name, i, setId);
+            } else if (op == keccak256("revoke")) {
+                vm.prank(vm.parseJsonAddress(j, string.concat(b, ".client")));
+                rep.revokeFeedback(vm.parseJsonUint(j, string.concat(b, ".agentId")), uint64(vm.parseJsonUint(j, string.concat(b, ".index"))));
+            } else if (op == keccak256("feedback")) {
+                vm.prank(vm.parseJsonAddress(j, string.concat(b, ".client")));
+                rep.giveFeedback(
+                    vm.parseJsonUint(j, string.concat(b, ".agentId")),
+                    int128(vm.parseJsonInt(j, string.concat(b, ".value"))),
+                    uint8(vm.parseJsonUint(j, string.concat(b, ".decimals"))),
+                    vm.parseJsonString(j, string.concat(b, ".tag1")),
+                    ""
+                );
+            } else if (op == keccak256("setWallet")) {
+                idr.setWallet(vm.parseJsonUint(j, string.concat(b, ".agentId")), vm.parseJsonAddress(j, string.concat(b, ".wallet")));
+            } else if (op == keccak256("proveEdge")) {
+                AnchoredReputation.RowRef memory r = _rowRef(rows, vm.parseJsonUint(j, string.concat(b, ".pos")));
+                uint256 g0 = gasleft();
+                (bool ok, bytes memory ret) = address(ar).call(abi.encodeCall(AnchoredReputation.proveEdge,
+                    (setId, r, none, vm.parseJsonBytes(j, string.concat(b, ".amends")), vm.parseJsonUint(j, string.concat(b, ".agentId")))));
+                _log(name, i, "proveEdge", ok ? "OK" : vm.toString(ret));
+                _log(name, i, "gasApprox", vm.toString(g0 - gasleft()));
+                _state(name, i, setId);
+            } else if (op == keccak256("proveWallet")) {
+                AnchoredReputation.RowRef memory r = _rowRef(rows, vm.parseJsonUint(j, string.concat(b, ".pos")));
+                (bool ok, bytes memory ret) = address(ar).call(abi.encodeCall(AnchoredReputation.proveWallet,
+                    (setId, r, none, vm.parseJsonBytes(j, string.concat(b, ".amends")))));
+                _log(name, i, "proveWallet", ok ? "OK" : vm.toString(ret));
+                _state(name, i, setId);
+            } else if (op == keccak256("clearSourceFact")) {
+                (bool ok, bytes memory ret) = address(ar).call(abi.encodeCall(AnchoredReputation.clearSourceFact,
+                    (setId, vm.parseJsonUint(j, string.concat(b, ".node")), vm.parseJsonAddress(j, string.concat(b, ".src")),
+                        vm.parseJsonBool(j, string.concat(b, ".viaOwner")))));
+                _log(name, i, "clearSourceFact", ok ? "OK" : vm.toString(ret));
+            }
+        }
+    }
+
+    function test_x08_declaredOmission() public {
+        _seq("seq_declared_omission");
+    }
+
+    function test_x08_proveWallet() public {
+        _seq("seq_prove_wallet");
+    }
+
+    function test_x08_refusals() public {
+        string memory base = vm.readFile("/Users/hugo/Projet/ancre-08bis/solver/vectors/common/common_2hop.json");
+        string memory j = vm.readFile(string.concat(DIR, "refusals.json"));
+        uint256 nc;
+        while (vm.keyExistsJson(j, string.concat(".cases[", vm.toString(nc), "]"))) ++nc;
+        for (uint256 c; c < nc; ++c) {
+            string memory b = string.concat(".cases[", vm.toString(c), "]");
+            _registry(base);
+            AnchoredReputation.SetParams memory p = _params(base);
+            bytes32 setId = ar.registerAnchorSet(p);
+            bytes memory nodes = vm.parseJsonBytes(base, ".calldata.newNodes");
+            bytes memory inl;
+            if (vm.keyExistsJson(j, string.concat(b, ".newNodes"))) inl = nodes;
+            else ar.addNodes(setId, nodes);
+            bytes memory vec = vm.keyExistsJson(j, string.concat(b, ".vectors"))
+                ? vm.parseJsonBytes(j, string.concat(b, ".vectors"))
+                : vm.parseJsonBytes(base, ".calldata.vectors");
+            vm.prank(address(0xCAFE), address(0xCAFE));
+            (bool ok, bytes memory ret) = address(ar).call(abi.encodeCall(AnchoredReputation.submitCertificate,
+                (setId, uint32(vm.parseJsonUint(base, ".nCert")), type(uint256).max, inl, vec,
+                    vm.parseJsonBytes(j, string.concat(b, ".rows")))));
+            _log(vm.parseJsonString(j, string.concat(b, ".id")), c, "submit", ok ? "ACCEPTED" : vm.toString(ret));
+        }
+    }
+}

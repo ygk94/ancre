@@ -11,7 +11,7 @@
 |---|---|---|---|---|
 | Préambule : `requires: 8004`, `created: 2026-09-21` | `requires: 165, 721, 8004`, `created: 2026-09-27`, description réécrite (114 car.) | L'ERC s'appuie désormais sur ERC-165 et ERC-721 (`ownerOf`, `getApproved`, `isApprovedForAll`) | Lecture des contrôleurs et pause sur transfert | D10, D16 |
 | Abstract : score relatif + deux niveaux `Verified` / `Optimistic` avec caution | Part de masse, méfiance, borne qui ne fait que croître, statuts qui ne revert pas, veto des ancres | Réécriture complète | Nouveau modèle de certificat | D1, D4, D6, D11 |
-| Motivation : chiffres du 21/09 (9 188 avis, 83 %, 117 × 1e38, 1,5e36) | Mêmes chiffres, datés et marqués mesuré ; ajouts : garde-fou contourné (78), 178 wallets partagés par 1 773 agents, 72 transferts avec effacement, fuite par un scanner, 84 agents notés dont 10 hors index, registre dormant depuis le 10/09, 3 arêtes utiles | Les faits du tour 3 sont intégrés. Monad n'est pas nommé : « chain ID 143 » seulement | Tour 3, « Changements », Motivation ; norme chain-agnostique | CLAUDE.md §5, D19 |
+| Motivation : chiffres du 21/09 (9 188 avis, 83 %, 117 × 1e38, 1,5e36) | Mêmes chiffres, datés et marqués mesuré ; ajouts : un constat sur le garde-fou (note G1 sous le tableau), 178 wallets partagés par 1 773 agents, 72 transferts avec effacement, fuite par un scanner, 84 agents notés dont 10 hors index, registre dormant depuis le 10/09, 3 arêtes utiles | Les faits du tour 3 sont intégrés. Monad n'est pas nommé : « chain ID 143 » seulement | Tour 3, « Changements », Motivation ; norme chain-agnostique | CLAUDE.md §5, D19 |
 | §1 *Node* = agent ou adresse d'ancre | §1.1 : trois types `AGENT` / `ADDRESS` / `ANCHOR`, `nodeKey` normatif | Nœud-adresse sans masse pour un wallet ambigu ; nœud-ancre toujours distinct | AM-3.4, tour 2 Q2 | D9, D16 |
 | §1 *Controller* = owner + agentWallet | §1 : contrôleurs = owner, agentWallet, approved, opérateurs ; anciens owners définis à part | Liste élargie | AM-3.3 | D16 |
 | §1 *Anchor set* = liste de nœuds, `anchorSetId = keccak(nodes)` | §5 `AnchorSet` : ancres par `anchorId`, poids λ, α, `schemaHash`, `edgeFilterId`, `Policy`, registres, `metadataURI` ; `setId` immuable | Le setId engage toute la politique | AM-1.1, tour 2 Q2 | D1, D9, D12 |
@@ -37,10 +37,14 @@
 | §6 fraîcheur laissée au consommateur, pas de `maxAge` normé | §5 : `maxAge` dans la politique engagée (utilisé aussi par la règle de remplacement) ; le consommateur peut être plus strict | Déplacé dans le setId | Tour 2, « Changements », Politique | D1, D6 |
 | §6 : ne pas servir un certificat en fenêtre de contestation | Supprimé (plus de fenêtre) | — | — | D6 |
 | Rationale : ancres, PPR, linéarité, deux niveaux, rejet sans plafonnement, antériorités | Rationale : mêmes points, plus part de masse, convention absorbante, budgets séparés, méfiance à un saut, veto, leave-one-out, borne unique pour t et d, borne croissante, lecture stockée, quantification, kinds, unité d'arête, émetteur, pré-rotation, trois niveaux | Étendu | — | D1 à D18 |
-| Backwards Compatibility : demande `block.number` par avis | + garde-fou étendu à `agentWallet`, unicité du wallet et index inverse, timelock d'upgrade ; + proposition R6 : normaliser `getVersion()` | 3 demandes du CR + 1 proposition R6 | Tour 3 Q3 C | D17 |
+| Backwards Compatibility : demande `block.number` par avis | + une demande sur le garde-fou (note G1), unicité du wallet et index inverse, timelock d'upgrade ; + proposition R6 : normaliser `getVersion()` | 3 demandes du CR + 1 proposition R6 | Tour 3 Q3 C | D17 |
 | (absent) | Test Cases : vecteurs normatifs TC-1 à TC-8, TC-9 informatif (mainnet) | Nouveau | Tour 2 Q5 (relecture C→A) | D12 |
 | Reference Implementation : Verified, déployé sur Monad | Note interne : niveau ResidualVerified, preuve (i) seule, chantiers R4 et R5 en cours, aucun chiffre de gas avant mesure | Monad hors texte normatif | CLAUDE.md §5 ; AM-3.6 | D18 |
-| Security : capture d'ancre, trou de complétude, lectures périmées, changements de contrôleur, le paiement n'est pas l'honnêteté, arrondi, gas | + `minAnchors` ≥ 2 **MUST**, clé d'ancre volée, consommateur-ancre, surveillants, borne globale, vivacité, rachat, gouvernance du registre (EOA unique), contournement du garde-fou, wallets partagés, négatif permanent et recours `appendResponse`, oracle de refus, fuite par les mesures, lignes d'ancre > rowMax, même chaîne | Étendu | Tours 2 et 3, « Changements », Security | D8, D10, D14, D16, D17 |
+| Security : capture d'ancre, trou de complétude, lectures périmées, changements de contrôleur, le paiement n'est pas l'honnêteté, arrondi, gas | + `minAnchors` ≥ 2 **MUST**, clé d'ancre volée, consommateur-ancre, surveillants, borne globale, vivacité, rachat, gouvernance du registre et garde-fou (note G1), wallets partagés, négatif permanent et recours `appendResponse`, oracle de refus, fuite par les mesures, lignes d'ancre > rowMax, même chaîne | Étendu | Tours 2 et 3, « Changements », Security | D8, D10, D14, D16, D17 |
+
+<!-- DISCLOSURE-GATE:start — keep only once the ERC-8004 maintainers have been notified (decision D29) -->
+**Note G1.** Le garde-fou de `giveFeedback` ne rejette pas l'`agentWallet` de l'agent (78 avis de son propre wallet sur #8317, MESURÉ le 27/09, inchangé le 07/10), et les deux proxys des registres ont pour owner une seule EOA, `0x5472…2603`, sans timelock (relu le 07/10, bloc 111 299 306).
+<!-- DISCLOSURE-GATE:end -->
 
 **Points ⟦OPEN⟧ repris dans le texte** : les 9 désaccords normatifs listés ci-dessous, sans les trancher.
 - **Tour 2** :
@@ -197,3 +201,136 @@ Ce ne sont pas des désaccords du CR. Chacun est marqué d'une note dans le text
 ## 8. Corrections du texte après la relecture (01/10)
 
 Abstract : « exact » retiré, veto « sans recertification ». §1 : masse, plages u32, `getVersion` requis, agrégateur non upgradable, préséance. §2.1 : recommandation « ancre ≠ source ». §2.4 : `setParams` dans le document, RFC 8785, plus d'`edgeFilterId`. §3.3 : renvoi vers D2-a. §3.8 : aucun champ. §4.2 : SHOULD. §4.4 : plafond de d en 63 bits. §4.5 : bornes qualifiées. §5.1 : soumetteurs listés à tous les niveaux. §5.3 : u64 < 2⁶³. §5.4 : alias seulement vers une ligne d'agent, forme canonique. §5.7 : « address node », agents brûlés. §5.9 : portée du refus. §6 : ordre des amendements, ligne sans source. §7 : `getVersion` requis. §8.2 : égalité et timing. §8.3 : `payTo`, clé de cache, m ≥ 2 non appliqué, agrégateur épinglé. §8.4 : 120 000 gas. §10 : types déclarés, `identity`, `reputation`, `nodeCount`, `nodeKeyAt`. §11 : ancres en compte-contrat. Rationale : Cheng-Friedman, linéarité, limites de L7 et de « Two bounds ». Security : AM-08.14 à .19, compromission d'un nœud, concentration de méfiance, rachat discret, empoisonnement de paire, disponibilité des données, coût d'un registre hostile, EIP-7825. TC-3 : écart avec §2.1 signalé.
+
+# Chantier 08-bis (2026-10-07) : alignement sur 02-bis, 04-bis et la revue maximale du 06/10
+
+- **Ancien texte** : celui du chantier 08 (01/10), commit `0376a56` de la branche `chantier/08bis-norme` (identique à `main` du 07/10).
+- **Sources** : CR (D47 à D56, « Revue maximale du 06/10 : corrections fusionnées sur main »), rapports 02-bis (§1, §3, §4, §8) et 04-bis (§6 bis, §7, §8), `docs/revue/revue-max-2026-10-06-complete.md`, `contracts/ENCODING.md` (§0bis G-1 à G-11, §3.5, §7.1 formule X, §7.4), `contracts/PROOFS.md` (L6 réécrit, L8), `contracts/GAS.md` (lot 02-bis), `solver/FORMAT.md` (R1 bis, R6, R8, §7 REGCB, §8), `AnchoredReputation.sol` de `main`.
+- **Principe inchangé** : le texte normatif décrit le code de `main`. Un écart entre le CR et le code est noté AM-08bis.n (section 11) et dans une note ⟦ ⟧.
+
+## 9. Changements du texte (une entrée par changement)
+
+| # | Où | Changement | Source |
+|---|---|---|---|
+| 9.1 | Abstract, §2.2, §8.3, §8.4, §10, TC-6 | `isTrusted` → `passesAnchorPolicy` ; `Assessment.trusted` → `passesPolicy`. Le §2.2 précise que la réponse dit « passe la politique de ces ancres », pas « digne de confiance » | D48, AM-9.5, ENCODING G-1 |
+| 9.2 | Abstract, Motivation (« One hop is not enough »), Rationale (« Beyond one hop, with a bound ») | La propagation au-delà d'un saut, avec une borne Sybil et un certificat vérifié on-chain, passe en avant ; renvoi aux vecteurs du 2ᵉ saut (TC-7) | D50, AM-10.6 |
+| 9.3 | Motivation | Chiffres roulés au 06/10 : 9 291 avis, 82,5 % pour la ferme, aucune arête nouvelle ; 150 noteurs de la ferme financés par l'owner de la cible (sans adresse ni montant) ; puce « wallets partagés » séparée de celle du garde-fou | 04-bis E2, D55 |
+| 9.4 | Motivation, Backwards Compatibility (demande 2), Security (gouvernance, garde-fou) | Passages relevant de la divulgation (note G1 du §1) encadrés par `DISCLOSURE-GATE` | D29, consigne du brief 08-bis |
+| 9.5 | §1 | Nouvelle convention « Registry answers » : seule `ERC721NonexistentToken` (ERC-6093) dit qu'un agent n'existe pas ; tout autre échec = registre illisible | R6 du lot 02-bis, ENCODING G-8 |
+| 9.6 | §2.1, §3.5, §5.4, §5.6, §5.7, Security (Anchors), Rationale | « Ancre ≠ source » : de SHOULD NOT à règle du graphe (l'agent dont la source est une ancre n'émet aucune ligne) et à refus du contrat (`AnchorAsSource`) ; Rationale du leave-one-out | D48-A, AM-08.14, PROOFS L8, FORMAT R8 |
+| 9.7 | §2.2 (θ), Rationale (*Constants*) | θ sans valeur recommandée ; la démo (1 %) est citée comme mesure datée, pas comme recommandation | D56 |
+| 9.8 | §3.1 | Identité d'un tag = keccak256 de ses octets ; interdiction d'apparier par un texte décodé ou tronqué ; NUL et UTF-8 invalide permis | R1 bis (solver-relais), revue NUL, LONGTAG |
+| 9.9 | §3.3 | Règle B : seul le positif d'un contrôleur est rejeté, sur le signe de la combinaison ; existence de la cible ; paragraphe de motivation | D48-B, AM-08.15, FORMAT R6 (relais 04-bis) |
+| 9.10 | §3.4, §5.1 | Adresse nulle jamais un nœud (`BadNodes`) | R1 (revue du 05/10, K6/L1) |
+| 9.11 | §5.1 | `newNodes` doit être vide sur un ensemble ouvert ; procédure `addNodes` puis `nodeKeyAt` puis soumission | A1d |
+| 9.12 | §5.2 | Ensemble ouvert : soumission en appel de premier niveau par un EOA (`msg.sender == tx.origin`) ; les soumetteurs listés passent par n'importe quel chemin | G-11, AM-03.3 |
+| 9.13 | §5.3 | Empreinte d'ancre non nulle refusée aux deux niveaux | R5 |
+| 9.14 | §5.4 | Forme canonique : de SHOULD à MUST pour SRC non nul, SPLUS strictement supérieur à S⁺, alias vers une ligne d'agent (`NotCanonical`) ; W = 4 reste accepté ; « aucune règle ne dépend des octets » | R4, D48-C, rapport 02-bis §3 décision 2 |
+| 9.15 | §5.7 | Règle B dans la table de relecture ; passes multiples sur les mêmes octets ; gas non plafonné vers `readFeedback` sur les chemins payants ; agents inexistants et registre illisible | E1 et K6 (revue), R6 |
+| 9.16 | §5.9, §5.10 (nouveau), Rationale (*Facts instead of bytes*), Security (*Open sets*) | La garde « racines brutes égales » est remplacée par les **faits prouvés** (arête, source), vérifiés aux deux niveaux sous tout état ; `refreshFact` et `clearSourceFact` | D48-C, AM-08.16, K7, K10, ENCODING §3.5 |
+| 9.17 | §6 (préambule), §6.1 | Registre illisible ⇒ la preuve revert ; pas de preuve vers l'agent de la ligne ; enregistrement du fait | R6, AM-04bis.1 (`BadProof(27)`) |
+| 9.18 | §6.1 | Montant des preuves : formule X d'ENCODING §7.1 (bornes cumulées contre la ligne engagée, toute arête révélée supposée nouvelle) ; Rationale (*Two bounds*) | R3, K8, A2b, PROOFS L6 |
+| 9.19 | §6.2 | Le fait de source est enregistré ; le nouveau wallet devenu ancre est couvert | D48-A, D48-C |
+| 9.20 | §6.3 | « ownerOf reverts » → « l'agent n'existe plus » | R6 |
+| 9.21 | §6.4 (nouveau) | `proveApproval` (mode rapide du veto par approbation) | D48-B, ENCODING §7.4 |
+| 9.22 | §8.1 | Transfert strict déclenché par la masse ; registre illisible ⇒ `REGISTRY_CHANGED` (plus de `TRANSFERRED` sur un `ownerOf` illisible) | R7, R6 ; AM-08.6 fermé |
+| 9.23 | §8.2 | Troisième forme de veto : l'approbation d'une ancre (en direct si `strictTransfer`, sinon par `proveApproval`) | D48-B |
+| 9.24 | §8.3 | SHOULD NOT pour un payeur sur un ensemble en mode rapide | R8 du lot 02-bis, AM-02bis.7 |
+| 9.25 | §10 | `proveApproval`, faits (`edgeFact`, `sourceHash`, `provenSource`, `refreshFact`, `clearSourceFact`), events `ApprovalProven`, `EdgeFact`, `SourceFactCleared`, erreurs nommées (SHOULD) | ENCODING §0bis, contrat de `main` |
+| 9.26 | Backwards Compatibility | Demande 6 : émettre les events de `register()` dans l'ordre de l'état | REGCB |
+| 9.27 | Reference Implementation | Gas après 02-bis (démo RV 15 024 552, SA 1 449 205, `assess` avec veto 180 758 à 208 728, preuves 340 800 à 392 502), taille 39 261 octets ; note sur la licence MIT et CC0 | GAS.md (MESURÉ 06/10), simulate.py et `forge build --sizes` (MESURÉ 07/10 par 08-bis) |
+| 9.28 | Security | Réécrite : ensembles ouverts (faits), inflation de la table (A1b, chiffrée), bornes globales (facture au pire cas), asymétries (EFF1, chiffrées, coût des preuves), ancres (règle A), vivacité des faits, approbations (règle B), gouvernance (R6, DISCLOSURE-GATE), disponibilité des données (G-11, EIP-7702), indexeurs (REGCB, NUL, LONGTAG) | revue du 06/10, AM-02bis.1, .2, .6, .7 |
+| 9.29 | Test Cases (TC-2, TC-3, TC-4, TC-5, TC-6, TC-7 à TC-9 nouveaux) | TC-2 : 4 cas (règle B ×2, NUL, tag de 33 octets). TC-3 réécrit sur le nouveau `mainnet_slash_anchor` (ancres 0x0730 / 0x794c, plus aucune ancre source d'un agent). TC-4 : `mainnet_em_d44` (14 nœuds, 38 arêtes, règle A par l'owner). TC-5 : 5ᵉ violation (deux omissions sur une ligne, amendements chaînés). TC-6 : n° 8 « réencodé, aussi sous REGISTRY_CHANGED », n° 10 (veto par approbation) et n° 11 (G-11). TC-7 : vecteurs communs autonomes. TC-8 : séquences de preuves (formule X, `proveWallet`, `clearSourceFact`). TC-9 : refus (forme canonique, A1d, empreinte d'ancre) | E2 08-bis, AM-08.22 |
+| 9.30 | Security (*Bounds are global*) | Le chiffre du 01/10 (18 wei → 0,556 WAD, ancien vecteur) est remplacé par celui du nouveau TC-5 (16 wei → 0,222 WAD), avec le calcul de ce qu'il faut pour passer | E2 08-bis |
+
+## 10. Vecteurs (E2, 2026-10-07)
+
+**Ce qui est fait.** `docs/erc/assets/erc-0000/` régénéré par `drafts/build-assets.py`, qui lit `solver/vectors/` (lecture seule) et les mesures du 07/10. **27 fichiers, 0 échec** (MESURÉ, `python3 verify.py`).
+
+| Dossier | Contenu | Source | Rejoué sur le contrat de `main` |
+|---|---|---|---|
+| `certificates/` (9) | les 9 vecteurs du solveur ; `mainnet_slash_anchor` et `mainnet_em_d44` changent (règle A) | `solver/vectors/` (04-bis, 06/10) | fork du bloc 110 994 810, 07/10 : 9/9, racines, masse et q identiques |
+| `violations/` (5) | les 4 du 01/10, plus `two_omissions_one_row` | `solver/vectors/violations/`, `simulate.two_omissions_vector` | fork, 07/10 : montants des preuves au wei près |
+| `common/` (8) | vecteurs communs 02-bis / 04-bis, avec leur registre | `solver/vectors/common/` | fork (07/10) et mocks (`CommonVectors.t.sol`, 06/10) |
+| `sequences/` (2) | **nouveaux** : formule X (K8, A2b, omission déclarée révélée, resoumission refusée) ; `proveWallet`, fait de source et `clearSourceFact` | `drafts/build-x08.py` (pipeline du solveur) | mocks, copie de travail du contrat (`drafts/measurements/X08Vectors.t.sol.txt`, journal `forge-08bis-2026-10-07.log`) |
+| `refusals.json` (4 cas) | **nouveaux** : SPLUS = S⁺, SRC nul (`NotCanonical`), `newNodes` sur ensemble ouvert (`BadNodes`), empreinte d'ancre non nulle | idem | idem |
+
+**`verify.py` réécrit** (toujours bibliothèque standard seule) :
+- identité des tags par keccak (§3.1) ;
+- règle B (§3.3) ;
+- formule X (§6.1) et `proveWallet` (§6.2) ;
+- décodage des lignes depuis le calldata ;
+- refus dans l'ordre du contrat (§5.1, §5.4, §5.6, §5.7, §3.5, §5.10) ;
+- modèle de registre, relecture RV et lectures du §8 ;
+- faits prouvés ;
+- borne L6 en fractions exactes après chaque preuve d'une séquence.
+
+**Contrôle des contrôles (MESURÉ 07/10).** Sept mutations du vérificateur ou des données, chacune détectée :
+- règle B coupée → 3 échecs ;
+- `AnchorAsSource` coupé → 2 ;
+- formule X remplacée par « arête révélée dans la déclaration » → 1 (A2b) ;
+- faits ignorés → 3 ;
+- tag apparié sans ses NUL → 1 ;
+- valeur mesurée altérée d'un wei → 1 ;
+- budget déclaré conservé quand une arête engagée tombe (K8) → 15.
+
+**L'ancienne formule du 01/10**, appliquée à la séquence, laisse eEff à 0,111 WAD après la révocation (le contrat mesure 0,333, c'est K8). Elle laisse aussi eLowEff à 0,2222 après l'arête nouvelle (le contrat mesure 0,2444, c'est A2b).
+
+**Format** : `calldata.nodeEntries` (nouveau) porte les entrées de nœuds, et `calldata.newNodes` est vide sur un ensemble ouvert (A1d).
+
+## 11. DISCLOSURE-GATE et brouillons (E3, 2026-10-07)
+
+| # | Où | Changement | Source |
+|---|---|---|---|
+| 11.1 | ERC, CHANGES, brouillons (a), (b), (d) ; (c) en entier | Marqueurs `DISCLOSURE-GATE` autour de tout ce qui relève de la note G1 (§1) ; notes internes reformulées pour ne plus le décrire ; contrôle par script : aucune occurrence hors marqueurs, marqueurs appariés | D29, brief 08-bis |
+| 11.2 | ERC, Backwards Compatibility | Demande sur le garde-fou déplacée en n° 6 (sous marqueur) ; renvois « request 5 » → « request 4 » | pour que le retrait du bloc ne casse pas la liste |
+| 11.3 | ERC, Security | Titre « The registry guard and shared wallets » → « Controllers, former owners and shared wallets » (lisible sans le bloc gated) | idem |
+| 11.4 | `drafts/strip-notes.py` | Retire par défaut les notes **et** les blocs gated ; `--keep-gated` après la divulgation ; auteur `@ygk94` | D29, CLAUDE.md (compte renommé) |
+| 11.5 | Brouillon (a) | `passesAnchorPolicy`, D50 en tête, faits prouvés, six demandes, deux questions ouvertes nouvelles (A1b, EFF1), `@ygk94` | D48, D50, revue |
+| 11.6 | Brouillon (b) | Puce garde-fou isolée sous marqueur (le message reste envoyable sans elle) ; phrase D50 | D29, D50 |
+| 11.7 | Brouillon (c) | Faits relus le 07/10 (bloc 111 299 306) ; description de notre réponse mise à jour (règle B, veto par approbation) ; tout le document sous marqueur | D48-B, relecture on-chain 08-bis |
+| 11.8 | Brouillon (d) | Demandes 2 et 4 sous marqueur ; demande 6 (ordre des events) ; correspondance de numérotation avec l'ERC | REGCB |
+
+**Relu on-chain par 08-bis (MESURÉ, 07/10, `cast`, `rpc.monad.xyz`, bloc 111 299 306)** : propriétaire des deux proxys inchangé, toujours une EOA sans code ; `getVersion()` = 2.0.0 ; valeur de la note G1 inchangée.
+
+## 12. Traitement des ⟦OPEN⟧ (E4, 2026-10-07)
+
+| ⟦OPEN⟧ | Où | Traitement | Raison |
+|---|---|---|---|
+| Tour 5, désaccord 2 : veto au dernier avis contre dominance par tag | §8 | **retiré** (tranché par le CR) | D33 fixe la règle (« le dernier avis de l'ancre fait foi »), et D1-D56 ne se rouvrent pas. L'écart qui reste est écrit en §9 et en Security, et posé comme question 2 du brouillon (a) |
+| D9 / D43, pré-rotation des clés d'ancre | §11 | **maintenu** | Décidées, pas implémentées. La porte P4 (Mera) n'est pas passée au 07/10. Le `setId` v1 n'a pas de champ pour elles |
+| Tour 2, désaccord 1 : vivacité | Security | **maintenu** | Aucun tour ne l'a tranché ; D27 dit qui paie, pas ce qui arrive s'il ne paie plus |
+| Tour 3, désaccord 1 : négatif permanent | Security | **maintenu** | Idem |
+| **Nouveau** : A1b, zone de transit D23 | Security | **ouvert** | Le CR (« Ce qui reste ouvert après la revue ») le laisse à Hugo ou au conseil. Le code contredit D23 |
+| **Nouveau** : EFF1, fenêtre `scanMax` | Security | **ouvert** | Idem. Ce serait un changement de la règle d'arête normative |
+
+**Bilan** : cinq ⟦OPEN⟧ dans le texte, contre quatre au 01/10 (un retiré, deux nouveaux). Ils correspondent aux questions 1 à 6 du brouillon (a), la question 2 étant la limite du veto.
+
+**Hors ⟦OPEN⟧, mais à décider (🧑)** : le passage des vecteurs et des preuves sous la licence de l'ERC (CC0) si le contrat est copié dans `assets/` ; et la mise sous marqueur, ou non, du 3ᵉ point de la divulgation (approbations).
+
+**D49 ajoutée en E4** (oubli de E1, le brief ne la citait pas) : §11 *Bonded vouching*, *Trust domains*, *Validation registry*.
+
+## 13. Corrections après la relecture adversariale (E6, 2026-10-07)
+
+| # | Où | Correction | Expert |
+|---|---|---|---|
+| 13.1 | §2.4 | Document de schéma : entiers en chaînes décimales, adresses et `bytes32` en hex minuscule, tag non UTF-8 en `{"bytes": "0x…"}`, valeur nulle de `tagSchemaHash` explicite (RFC 8785 sérialise les nombres en doubles) | C, E |
+| 13.2 | §4.2, Rationale | `F_bas` → `F_floor`, défini ; « requires » → « recommends » | C |
+| 13.3 | §4.5, Rationale *Two bounds* | Après une preuve, `eUp` ne borne que `‖(t* − t)⁺‖₁` ; la surestimation est bornée par `eLow` (contre-exemple de A, refait à la main) ; `verify.py` vérifie désormais la partie positive | A |
+| 13.4 | §5.2 | Normatif aligné sur le code : refuser si `msg.sender ≠ tx.origin` (et non « MUST be the top-level call »), avec renvoi à EIP-7702 | A, C |
+| 13.5 | §5.4 | Règle d'alias écrite : les arêtes héritées sont contrôlées avec le `u` de l'alias ; un alias dont la ligne `ref` vise l'agent `u` est refusé | A, B, E |
+| 13.6 | §5.9, Rationale, Security *Open sets* | D ne protège pas tout négatif : une ligne dont les autres négatifs totalisent encore au moins GRID absorbe l'omission (renormalisation de B⁻), et les bits de veto ne sont pas dans D | D |
+| 13.7 | §5.10 | Fait de source d'une ligne sans SRC (`src` nul) ; un alias ne peut pas omettre un positif prouvé ; un fait vers un agent hors de `[0, nCert)` rend les lignes du client invalides | B, D, E |
+| 13.8 | §6.1 | `incN` écrit en entier (`nOut`, `nIn`, `Ncur`) ; parties positives `(·)⁺` des facturations ; « billed » défini comme état | B, C |
+| 13.9 | §8.2 | `getLastIndex = 0` ⇒ pas de veto en direct ; « bloc suivant » vrai pour un lecteur sans cache | C, E |
+| 13.10 | §8.3 | Cache du payeur : clé avec `vectorRoot` ; un cache ne voit ni veto, ni approbation, ni transfert, ni changement de registre pendant sa durée ; cette durée est le délai de veto accepté | E |
+| 13.11 | §8.4 | « Ne revert pas » sous réserve d'un gas suffisant (`3k + 2` appels plafonnés) ; lecture des données de retour avec contrôle de longueur | C, E |
+| 13.12 | §9 | MUST NOT (adressé aux ancres, invérifiable) → SHOULD NOT | C |
+| 13.13 | §10 | `ResidualTooLarge` ajoutée ; le commentaire d'`EdgeMismatch` couvre forme, empreinte et relecture | A, B |
+| 13.14 | Backwards Compatibility | Events `Approval`, `ApprovalForAll` et effacement de `agentWallet` dans la liste des lectures des certificateurs | E |
+| 13.15 | Rationale | Neutralité de chaîne : « storage priced per page » retiré ; projet de provenance désigné par son auteur, et non par un nom de dépôt qui contient « monad » | C |
+| 13.16 | Security | Ajouts : portée de la règle A (une ancre propriétaire d'agents), marge de la règle A (0,19 WAD sur `mainnet_em_d44`), faits créés par l'owner via une approbation, preuve d'omission rejouable à chaque certificat, STALE ouvert par une seule preuve, coût permanent des faits ; section Gas `3k + 2` appels (≈ 6 M à k = 16, CALCULÉ) ; « +27 % » attribué au lot 02-bis | A, B, D |
+| 13.17 | Brouillons | (d) : un marqueur de fin isolé sur sa ligne ; (a) et (b) : textes qui ne cassent plus `strip-notes.py` ; README : coller la sortie de `strip-notes.py`, jamais le fichier brut | C |
+| 13.18 | `verify.py` | En-tête `SPDX-License-Identifier: CC0-1.0` ; borne L6 sur la partie positive | C, A |
+
+**Lint après corrections (MESURÉ le 07/10)** : 1 erreur `markdown-link-first` (EIP-7702 désormais cité d'abord au §5.2), corrigée, puis **0 erreur** avec et sans les blocs gated. **`verify.py` : 27 fichiers, 0 échec.**

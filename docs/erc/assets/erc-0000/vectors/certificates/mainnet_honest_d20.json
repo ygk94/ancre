@@ -1,18 +1,19 @@
 {
  "format": "anchored-reputation-cert-v1",
  "id": "mainnet_honest_d20",
- "description": "Real registry state (chain 143, identity block in `identityBlock`). Two demo anchors; the client 0xea0b... is the agentWallet of agent 18 and endorses agents 2 and 3: row copy (section 3.5) gives agent 18 that row, which restores the only honest two-hop chain. Registry-verified, open.",
+ "description": "Real registry state (chain 143, identity block in `identityBlock`). Two demo anchors, neither of which is the source of an agent. The client 0xea0b... is the agentWallet of agent 18 (and of two other agents) and endorses agents 2 and 3, and slashes agent 4: row copy (section 3.5) gives agent 18 that row, which restores the only honest two-hop chain. Registry-verified, open.",
  "level": "RegistryVerified",
  "acceptedBy": {
-  "implementation": "reference AnchoredReputation v1",
+  "implementation": "reference AnchoredReputation (lot 02-bis, main of 2026-10-07)",
   "network": "anvil fork of chain 143",
-  "block": 108835675,
-  "date": "2026-10-01",
-  "submitCertificateGas": 1028760,
+  "block": 110994810,
+  "date": "2026-10-07",
+  "submitCertificateGas": 836469,
   "eEffOnChain": "16",
+  "rootsMassAndQEqual": true,
   "mutatedVectorRejected": "rejected: NotSubSolution(0, 5)"
  },
- "identityBlock": 108835675,
+ "identityBlock": 110994810,
  "set": {
   "anchors": [
    "0x0730536018541c5149a049d35528a76c2c8f1e6b",
@@ -261,12 +262,23 @@
    "0"
   ],
   "graphRoot": "0x202e848c99665e17fb9a3d736394b98b794356f8ed7edca925639d24a6db69cd",
-  "vectorRoot": "0x9255fe39a677acc00375ee988cae98d10ee55f55ff8935a031b4b29e13a548e1"
+  "vectorRoot": "0x9255fe39a677acc00375ee988cae98d10ee55f55ff8935a031b4b29e13a548e1",
+  "tight": {
+   "r": [
+    "1",
+    "1"
+   ],
+   "e": [
+    "3",
+    "3"
+   ]
+  }
  },
  "calldata": {
   "W": 2,
-  "newNodes": "0x0100000002010000000301000000040100000012",
+  "newNodes": "0x",
   "vectors": "0x04a03ce68d21555500000000000000000000000000000000000000000000000004a03ce68d2155550000000000000000010729fa58404bda010729fa58404bda29b258b3ff958ec1010729fa58404bda010729fa58404bda31a68ab9a4c2d7b50000000000000000000000000000000034245dd312ddf13403157def08c0e38e03157def08c0e38e34d478235605816b",
-  "rows": "0x0200000005000000010005271000000001000100010005271000000001000280008df64bacf6b70f7787f8d14429b258b3ff958ec100038000e4cdd1ad7fae7d54441ef12db1a68ab9a4c2d7b500058003ea0b21fb2441464f4920ce3e34d478235605816b000227100000000100032710000000010004d8f000000001"
+  "rows": "0x0200000005000000010005271000000001000100010005271000000001000280008df64bacf6b70f7787f8d14429b258b3ff958ec100038000e4cdd1ad7fae7d54441ef12db1a68ab9a4c2d7b500058003ea0b21fb2441464f4920ce3e34d478235605816b000227100000000100032710000000010004d8f000000001",
+  "nodeEntries": "0x0100000002010000000301000000040100000012"
  }
 }
