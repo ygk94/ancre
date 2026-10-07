@@ -129,3 +129,9 @@ PAGE AGENT (clic sur une ligne du feed ou de Discover)
 **Vérifié** : `tsc -b`, **27/27 tests**, build ; captures 1920×1080 refaites, 0 erreur de console.
 
 **Prochaine étape** : rapport `docs/chantiers/rapports/07bis.md`.
+
+---
+
+## 2026-10-07 13:15 — Fin de session : rapport `docs/chantiers/rapports/07bis.md` — ✅
+
+Rapport écrit (livrables, captures, sources, mocks et « — », décisions, AM-07bis.1 à 6, INTERFACE, état de VIDEO-SHOTS, questions). 🧑 en attente : run de l'acte 2 sur le vrai testnet, choix de la lentille « inside the farm », fonction Netlify pour Alchemy, fusion dans `main`.
