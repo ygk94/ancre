@@ -1,0 +1,60 @@
+Tu es la session du CHANTIER 08-bis d'ANCRE : mettre la norme ERC « Anchored Reputation for Trustless Agents » à jour avec tout ce qui a changé depuis le chantier 08 (01/10). Tu travailles en autonomie : les choix de rédaction sont les tiens, et tu les justifies. Réponds en français. Le texte normatif de l'ERC est en ANGLAIS ; les notes internes sont en français entre ⟦ ⟧.
+
+=== OÙ TU TRAVAILLES ===
+- Dossier : /Users/hugo/Projet/ancre-08bis, un worktree git sur la branche chantier/08bis-norme, créé depuis main le 07/10 (02-bis, 04-bis et les corrections de la revue sont fusionnés). Travaille UNIQUEMENT ici.
+- Outils : python3 (3.14) ; export PATH="$PATH:$HOME/.foundry/bin" (forge, pour rejouer un vecteur) ; git : export PATH=/usr/bin:$PATH ; WebFetch / WebSearch pour EIP-1 et les règles actuelles de ethereum/ERCs.
+- L'identité git du dépôt est déjà réglée (hugo.thomas.perso@gmail.com) : ne la change pas.
+
+=== À LIRE AVANT D'ÉCRIRE ===
+1. CLAUDE.md, puis ANCRE.md
+2. docs/chantiers/rapports/08.md et docs/chantiers/journal/08.md : où le chantier 08 s'est arrêté, ses ⟦OPEN⟧, ses AM-08.n
+3. docs/conseil/CR-conseil.md : le journal D1 à D56 en tête (surtout D48 à D56), puis les sections « Revue maximale du 06/10 : corrections fusionnées sur main » et les angles morts des chantiers 02 et 04
+4. docs/chantiers/rapports/02bis.md (en entier, surtout « changements d'interface » et §8), docs/chantiers/rapports/04bis.md (§6 bis, §7, §8)
+5. docs/revue/revue-max-2026-10-06-complete.md : les constats qui touchent la norme (K8, A2b, A1b, EFF1, K6/L1, A1d, NUL, LONGTAG, REGCB, G-11)
+6. Le code tel qu'il est maintenant, qui fait foi pour l'implémentation de référence :
+   - contracts/src/AnchoredReputation.sol (passesAnchorPolicy, Assessment.passesPolicy, edgeFact / refreshFact / clearSourceFact / proveApproval, erreurs AnchorAsSource, NotCanonical, ProvenRowResubmitted)
+   - contracts/ENCODING.md (dont §0bis, §3.5, §7 et la formule X de §7.1), contracts/PROOFS.md (L6, L8), contracts/GAS.md (gas des preuves après 02-bis)
+   - solver/FORMAT.md (règles d'arêtes, règle B, R1 bis : un tag est identifié par le keccak de ses octets)
+7. docs/erc/anchored-reputation.md, docs/erc/CHANGES.md, docs/erc/assets/
+8. docs/ressources/regles-metropolis-v3.md (règles officielles du hackathon, recopiées le 07/10)
+
+=== TON TRAVAIL, DANS L'ORDRE ===
+E1. Mettre le texte normatif à jour, sans jamais contredire le code de main :
+    - le renommage isTrusted → passesAnchorPolicy et Assessment.trusted → passesPolicy (D48, AM-9.5) ;
+    - le lot de correction 02-bis (D48 : corrections A, B et C) et les nouvelles règles de soumission :
+      refus d'une ancre comme source de ligne, forme canonique (NotCanonical), refus du nœud address(0),
+      newNodes interdit sur un ensemble ouvert (A1d), une ligne prouvée ne se resoumet pas telle quelle (ProvenRowResubmitted) ;
+    - les faits prouvés (edgeFact, refreshFact, clearSourceFact, proveApproval) et leur sémantique ;
+    - la formule X de ENCODING §7.1 (K8, A2b) : la révélation d'une omission déclarée facture le pire cas ;
+    - R1 bis : identité d'un tag = keccak256 de ses octets, jamais son texte (NUL, LONGTAG) ;
+    - la règle B des arêtes (relais 04-bis vers l'ERC §3.3) ;
+    - D50 (propagation au-delà d'un saut, en avant dans la Motivation et le Rationale), D56 (θ est un paramètre de politique ; 1 % n'est que la valeur de la démo, pas une recommandation normative).
+    Mets docs/erc/CHANGES.md à jour (une entrée par changement, avec sa source D-n ou constat).
+E2. Les vecteurs de test normatifs (docs/erc/assets/) : régénère ou complète-les depuis solver/vectors/, solver/vectors/violations/ et les vecteurs communs, pour qu'ils couvrent les nouveaux refus. Toujours lisibles sans notre code (JSON + description), en fractions exactes.
+E3. Security Considerations :
+    - les points de la revue laissés ouverts, présentés honnêtement : A1b (zone de transit D23), EFF1 (fenêtre scanMax), G-11 (EOA déléguées EIP-7702 sur un ensemble ouvert), la liveness des faits ;
+    - REGCB : la particularité du registre ERC-8004 v2.0.0 (MetadataSet(agentWallet) émis après le callback ERC-721) que tout indexeur doit gérer ;
+    - le coût des preuves (+26 à +29 % après 02-bis, MESURÉ, contracts/GAS.md).
+    ⚠️ DIVULGATION NON ENCORE ENVOYÉE (Hugo l'enverra plus tard) : tout ce qui décrit le contournement du garde-fou (78 cas sur #8317) et l'EOA d'upgrade 0x5472… doit être encadré par des marqueurs <!-- DISCLOSURE-GATE:start --> / <!-- DISCLOSURE-GATE:end -->, comme dans README.md (ligne 57). Il n'y en a pas encore dans docs/erc/ : repère ces passages, encadre-les, et n'en ajoute aucun hors de ces marqueurs.
+E4. Traite chaque ⟦OPEN⟧ restant : tranché par le CR, maintenu ouvert explicitement, ou retiré.
+E5. Lint : eipw s'il est disponible (le chantier 08 l'avait fait passer à 0 erreur), sinon vérification manuelle d'EIP-1, documentée. Relance le vérificateur indépendant des vecteurs s'il existe dans docs/erc/assets/.
+E6. Relecture adversariale du texte complet avec /llm-council. Consigne le verdict.
+
+=== COMMUNICATION ===
+Personne ne te répond ; la session pilote suit sans intervenir.
+- JOURNAL, canal unique : à la fin de chaque étape ou dès qu'un blocage survient, une entrée en bas de docs/chantiers/journal/08bis.md (date et heure, étape, ce qui est fait, décisions de rédaction et leur raison, incohérences CR / code / texte numérotées AM-08bis.n, blocages, prochaine étape), puis commit sur ta branche.
+- Tu ne modifies QUE docs/erc/ et ton journal/rapport. Une incohérence dans le code va dans ton journal (le pilote relaie).
+- Un besoin qui ne relève que de Hugo : « 🧑 BLOQUÉ : … » dans le journal, puis avance.
+
+=== RÈGLES ===
+- Chaque chiffre garde sa date et son statut (MESURÉ / DOC / ESTIMÉ / NON VÉRIFIÉ).
+- Monad n'apparaît dans le texte normatif que comme exemple daté, dans la Motivation (norme indépendante de la chaîne).
+- Les décisions D1 à D56 ne se rouvrent pas.
+- Commits sur ta branche uniquement. PAS de push.
+- AUCUNE publication externe : ni PR, ni post, ni message envoyé (brouillons seulement, dans docs/erc/drafts/).
+- (consigne interne retirée de la version publique)
+
+=== FIN DE SESSION ===
+Écris docs/chantiers/rapports/08bis.md et commite-le : l'état du texte, ce qui a changé (renvoi à CHANGES.md), les ⟦OPEN⟧ restants et pourquoi, les AM-08bis.n, l'état du lint, le verdict de la relecture adversariale, ce qu'il faut pour publier, les questions pour Hugo.
+
+Commence par lire, puis écris la première entrée du journal (« démarrage : ce que j'ai compris, mon plan »), puis attaque E1.
