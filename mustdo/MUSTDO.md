@@ -22,7 +22,7 @@
    ```
    - La commande demande un mot de passe et n'affiche que l'adresse.
    - **C'est la graine de tous les comptes de la démo** : ne t'en sers pour rien d'autre.
-3. [ ] **Faucet testnet sur `0x810724967b0d895d087b991304385720d4903c3F`**, à faire au fur et à mesure (07/10 : **15 MON ✅**, **0 USDC : reste à faire** sur faucet.circle.com, réseau Monad Testnet) :
+3. [ ] **Faucet testnet sur `0x810724967b0d895d087b991304385720d4903c3F`**, à faire au fur et à mesure (07/10 : **15 MON ✅**, **20 USDC ✅**) :
    - au moins **15 MON** sur https://faucet.monad.xyz ;
    - **1 USDC** sur https://faucet.circle.com (réseau Monad testnet).
 4. [x] **Hébergement et domaine HTTPS.** ✅ 07/10 : **`https://ancre-xyz.netlify.app`** (Netlify, déployé depuis `main` par `netlify.toml`, qui ne publie que `app/dist`).
@@ -58,12 +58,12 @@
 4. [ ] **Prototype Mera sur tes deux appareils (porte P4).**
    - Appareils : un Mac sous macOS 15 et un iPhone sous iOS 18.4 ou plus, avec le même trousseau iCloud.
    - Il se fait sur le domaine du point 4.
-5. [x] **Session 07-bis, la refonte du front** ✅ lancée le 07/10 (`chantier-07bis-front.txt`, worktree `../ancre-07bis`).
+5. [x] **Session 07-bis, la refonte du front** ✅ finie, fusionnée et poussée le 07/10 (Discover, Leaderboard, page agent D49/D50, feed, Live demo). L'écran affiche le **vrai run testnet** (on-chain). À retoucher plus tard si besoin. Lancée le 07/10 (`chantier-07bis-front.txt`, worktree `../ancre-07bis`).
    - **Refonte du front** demandée par Hugo le 07/10.
    - Ce qui reste aussi : D49, le poids effectif d'une revue (à faire en premier), puis D50, la vue du 2ᵉ saut.
    - Le site se met à jour à chaque push sur `main` (`ancre-xyz.netlify.app`).
    - L'écran est déjà adapté au contrat corrigé.
-6. [x] **Session 08-bis, la norme** ✅ lancée le 07/10 (`chantier-08bis-norme.txt`, worktree `../ancre-08bis`). Elle doit mettre l'ERC à jour avec :
+6. [x] **Session 08-bis, la norme** ✅ finie, fusionnée et poussée le 07/10 (texte aligné sur 02-bis, eipw à 0 erreur, vecteurs 27/0, relecture adversariale). Lancée le 07/10 (`chantier-08bis-norme.txt`, worktree `../ancre-08bis`). Elle doit mettre l'ERC à jour avec :
    - les décisions D48 à D56 ;
    - le renommage `passesAnchorPolicy` / `passesPolicy` ;
    - la formule §7.1 (K8, A2b) ;
@@ -71,30 +71,18 @@
 
    Prompt : `mustdo/prompts/chantier-08-norme.txt`.
 
-## 🟡 Mer 08/10 : le déploiement persistant sur le testnet
+## 🟡 Mer 08/10 (avancé au 07/10) : l'instance officielle du testnet
 
-1. [ ] **Choisir les trois adresses du payeur : owner, trésorerie, opérateur, toutes distinctes.**
-   - Pourquoi distinctes : la revue a montré qu'une trésorerie aussi opératrice vide le payeur en une transaction.
-   - L'owner est **le seul qui pourra signer un override (D47)**. Ce doit être un compte de ton extension MetaMask, distinct du wallet de l'agent, et sans délégation EIP-7702.
-2. [ ] **Autoriser le déploiement du contrat sur le testnet** : environ 0,9 MON de testnet.
-3. [ ] **Brancher et redéployer l'indexeur Envio**, juste après le déploiement :
-   1. Donne-moi l'adresse du contrat et son bloc de déploiement.
-   2. Fais pointer ton clone vers le bon dépôt :
-      ```
-      git -C <clone> remote set-url origin https://github.com/ygk94/ancre-indexer.git
-      ```
-   3. **Utilise un nouveau token Envio** : l'ancien est apparu en clair (AM-03.7).
-   4. Publie et redéploie :
-      ```
-      cd indexer && scripts/publish.sh <clone> --deploy
-      ```
-      Ce déploiement embarque aussi le **nouveau schéma v3** de la revue : l'endpoint actuel ne marche plus avec le solveur. C'est le **2ᵉ des 3 déploiements gratuits**.
-   5. Vérifie « synced » sur envio.dev/app, puis donne-moi l'URL GraphQL.
-
-4. [ ] **Webhook Alchemy**, après le déploiement :
-   - Crée un **Custom Webhook** sur Monad testnet, sur l'adresse d'`AnchoredReputation` et sur le registre de réputation (`0x8004B663…`).
-   - Colle dans `solver/.env` le **jeton Notify** (*Webhooks → Auth token*) et la **clé de signature** du webhook.
-   - **L'URL** : un tunnel vers la machine qui fait tourner le certificateur, pas Netlify. Je te prépare la commande ce jour-là.
+1. [x] **Instance officielle = celle de l'acte 2** ✅ validée par Hugo le 07/10 : ANCRE `0x8bE6D3DD7F20b94cD9B1Ec51De199291B109da9B` (bloc 68 978 842), payeur `0xC9Db7a72960189e933a6B876A9359b5c605a5870`. Pas de redéploiement. Le payeur à trois adresses distinctes ne sera nécessaire que pour le mainnet (D40).
+2. [x] **Indexeur branché sur cette adresse** ✅ 07/10 (`indexer/config.yaml`, 75 tests verts, poussé).
+3. [ ] **Publier et redéployer l'indexeur sur Envio Cloud** : c'est le 2ᵉ des 3 déploiements gratuits, et il embarque aussi le schéma v3.
+   - (a) **Régénère ton token Envio** sur envio.dev/app/api-tokens, car l'ancien est apparu en clair (AM-03.7). Si le déploiement Cloud en a besoin, mets le nouveau dans ses variables d'environnement, jamais dans le dépôt.
+   - (b) **Ton feu vert**, puis je fais le reste : je clone `ygk94/ancre-indexer`, je lance `scripts/publish.sh <clone> --deploy`, qui publie le code et déclenche le déploiement, et je vérifie.
+   - (c) Vérifie « synced » sur envio.dev/app, puis donne-moi l'URL GraphQL.
+4. [ ] **Webhook Alchemy** (après le point 3) :
+   - Crée un Custom Webhook sur Monad testnet, sur `0x8bE6…da9B` et sur le registre de réputation `0x8004B663…`.
+   - Mets le jeton Notify et la clé de signature dans `solver/.env`.
+   - L'URL du webhook est un tunnel vers le certificateur ; je te donne la commande.
 
 ## Jeu 09/10 : le mainnet et le dépôt public
 
