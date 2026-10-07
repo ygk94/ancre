@@ -1,6 +1,7 @@
 // Envio HyperIndex (Hasura GraphQL) client. Schema: indexer/SCHEMA.md. CORS is open (measured 06/10).
 // No aggregates are exposed on the public endpoint (Feedback_aggregate is absent): we page by id, 1 000 rows.
 import { ENVIO_GRAPHQL } from "../config/networks";
+import type { EnvioActivity } from "../core/feed";
 
 // Short-lived memo: Act 1 unmounts on every switch to act 2; coming back within a minute must not re-page 7,665
 // feedback rows (8 sequential requests). Past a minute the next view is fetched live again.
@@ -109,4 +110,90 @@ async function fetchAgentRegistryView(chainId: number, agentId: string): Promise
     owner: a.Agent[0]?.owner ?? null,
     wallet: a.Agent[0]?.wallet ?? null,
   };
+}
+
+// ---------------------------------------------------------------- activity feed (left column)
+
+/** Latest registry activity of a chain: new ratings, revocations, registrations and transfers. Never memoised:
+ *  the feed polls it. Also returns the indexer's head, shown next to the feed. */
+export async function latestActivity(chainId: number, n = 25): Promise<EnvioActivity & { head: number }> {
+  const d = await gql<{
+    Feedback: EnvioActivity["feedbacks"];
+    revoked: EnvioActivity["revoked"];
+    OwnerChange: EnvioActivity["owners"];
+    chain_metadata: { latest_processed_block: number }[];
+  }>(
+    `query($c: Int!, $n: Int!) {
+      Feedback(where: {chainId: {_eq: $c}}, order_by: [{blockNumber: desc}, {logIndex: desc}], limit: $n) {
+        id agent_id client feedbackIndex value valueDecimals tag1 blockNumber logIndex
+      }
+      revoked: Feedback(where: {chainId: {_eq: $c}, revokedAtBlock: {_is_null: false}}, order_by: {revokedAtBlock: desc}, limit: 8) {
+        id agent_id client feedbackIndex tag1 revokedAtBlock
+      }
+      OwnerChange(where: {chainId: {_eq: $c}}, order_by: [{blockNumber: desc}, {logIndex: desc}], limit: 12) {
+        id agent_id from to isMint blockNumber logIndex
+      }
+      chain_metadata(where: {chain_id: {_eq: $c}}) { latest_processed_block }
+    }`,
+    { c: chainId, n },
+  );
+  return { feedbacks: d.Feedback, revoked: d.revoked, owners: d.OwnerChange, head: d.chain_metadata[0]?.latest_processed_block ?? 0 };
+}
+
+/** Agent name from its registration URI, decoded locally when the URI is a data: URL (no request to any
+ *  explorer, no fetch of a remote URI). null when the name is not readable that way. */
+export function nameFromUri(uri: string | null | undefined): string | null {
+  if (!uri || !uri.startsWith("data:")) return null;
+  try {
+    const comma = uri.indexOf(",");
+    const meta = uri.slice(5, comma);
+    const body = uri.slice(comma + 1);
+    const text = meta.endsWith(";base64") ? new TextDecoder().decode(Uint8Array.from(atob(body), (c) => c.charCodeAt(0))) : decodeURIComponent(body);
+    const name = JSON.parse(text)?.name;
+    return typeof name === "string" && name.trim() ? name.trim().slice(0, 48) : null;
+  } catch {
+    return null;
+  }
+}
+
+export type AgentIdentity = { id: string; owner: string; wallet: string; name: string | null; registeredBlock: string | null };
+
+/** Identity of a few agents (owner, wallet, decoded name). 1 min memo per (chain, id). */
+export async function agentIdentities(chainId: number, ids: string[]): Promise<Record<string, AgentIdentity>> {
+  const want = [...new Set(ids)].filter(Boolean);
+  const out: Record<string, AgentIdentity> = {};
+  const missing: string[] = [];
+  for (const id of want) {
+    const hit = idMemo.get(`${chainId}:${id}`);
+    if (hit && Date.now() - hit.at < TTL_MS) out[id] = hit.v;
+    else missing.push(id);
+  }
+  if (missing.length) {
+    const d = await gql<{ Agent: { id: string; owner: string; wallet: string; uri: string; registeredBlock: string | null }[] }>(
+      `query($c: Int!, $ids: [String!]!) { Agent(where: {chainId: {_eq: $c}, id: {_in: $ids}}) { id owner wallet uri registeredBlock } }`,
+      { c: chainId, ids: missing },
+    );
+    for (const a of d.Agent) {
+      const v = { id: a.id, owner: a.owner, wallet: a.wallet, name: nameFromUri(a.uri), registeredBlock: a.registeredBlock };
+      idMemo.set(`${chainId}:${a.id}`, { at: Date.now(), v });
+      out[a.id] = v;
+    }
+  }
+  return out;
+}
+const idMemo = new Map<string, { at: number; v: AgentIdentity }>();
+
+export type EnvioRating = { id: string; client: string; value: string; valueDecimals: number; tag1: string; blockNumber: string; revokedAtBlock: string | null; feedbackIndex: string };
+
+/** The latest ratings of one agent (for an agent page outside a certified set: listed, not weighted). */
+export async function agentRatings(chainId: number, agentId: string, n = 50): Promise<EnvioRating[]> {
+  const d = await gql<{ Feedback: EnvioRating[] }>(
+    `query($c: Int!, $a: String!, $n: Int!) {
+      Feedback(where: {chainId: {_eq: $c}, agent_id: {_eq: $a}}, order_by: [{blockNumber: desc}, {logIndex: desc}], limit: $n) {
+        id client value valueDecimals tag1 blockNumber revokedAtBlock feedbackIndex
+      }
+    }`,
+    { c: chainId, a: agentId, n },
+  );
+  return d.Feedback;
 }

@@ -13,6 +13,7 @@ const files = process.argv.slice(2).length
   : [join(src, "sample/run-fork.json"), join(src, "out/latest.json")].filter(existsSync);
 
 const dst = join(here, "public/runs");
+const RANK = { testnet: 0, fork: 1, frozen: 2 };
 for (const f of files) {
   const j = JSON.parse(readFileSync(f, "utf8"));
   if (j.header?.format !== "ancre-demo-events-v1") throw new Error(`${f}: unexpected format ${j.header?.format}`);
@@ -27,6 +28,7 @@ const index = readdirSync(dst)
     return { file: f, runId: j.header.runId, mode: j.header.network.mode, chainId: j.header.network.chainId,
              startedAt: j.header.startedAt, events: ev.length, firstBlock: ev[0]?.block ?? null, lastBlock: ev.at(-1)?.block ?? null };
   })
-  .sort((a, b) => (a.mode === "fork" ? -1 : 1) - (b.mode === "fork" ? -1 : 1) || b.startedAt.localeCompare(a.startedAt));
+  // first = the run Discover shows: a real testnet run, else a fork run, else a frozen one; newest first within each
+  .sort((a, b) => RANK[a.mode] - RANK[b.mode] || b.startedAt.localeCompare(a.startedAt));
 writeFileSync(join(dst, "index.json"), JSON.stringify({ source: "chantier 06 demo/ (ancre-demo-events-v1)", syncedAt: new Date().toISOString(), runs: index }, null, 1) + "\n");
 console.log(`index: ${index.length} run(s)`);

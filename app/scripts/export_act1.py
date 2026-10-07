@@ -3,7 +3,7 @@
 Usage (from app/):  ../solver/.venv/bin/python scripts/export_act1.py   ->  src/data/act1.json
 
 Nothing is deployed on mainnet: every number written here is COMPUTED by the reference solver
-(solver/graph.py + solver/ppr.py, rules D20) on solver/data/mainnet-108835675.*, reproducible with this
+(solver/graph.py + solver/ppr.py, rules D20) on the versioned snapshot of run_mainnet.BLOCK, reproducible with this
 command. The screen must say so ("computed by the reference solver, reproducible"), never "certified on-chain".
 This script only imports the solver; it changes nothing in solver/.
 """
@@ -21,14 +21,14 @@ SOLVER = HERE.parent.parent / "solver"
 sys.path.insert(0, str(SOLVER))
 
 import run_mainnet as rm  # noqa: E402
-from graph import AGENT, WAD, load_schema  # noqa: E402
-from ppr import contributions, distrust, e_eff, is_trusted, trust_robust  # noqa: E402
+from graph import ANCHOR, AGENT, WAD, _tag_resolver, load_schema, quantize  # noqa: E402
+from ppr import contributions, distrust, e_eff, passes_anchor_policy, trust_robust  # noqa: E402
 
 OUT = HERE.parent / "src" / "data" / "act1.json"
 ALPHA = rm.ALPHA
 M = 2
-THETA = WAD // 50  # 2 %: the theta committed by the chantier 06 demo set (header.set.theta), used as a policy illustration
-RHO_N, RHO_D = 1, 2  # solver/ppr.is_trusted defaults (the pay bit itself comes from is_trusted)
+THETA = WAD // 100  # 1 %: the theta committed by the chantier 06 demo set (D56, header.set.theta), a policy illustration
+RHO_N, RHO_D = 1, 2  # solver/ppr.passes_anchor_policy defaults (the pay bit itself comes from passes_anchor_policy)
 
 # Agents the screen features (ids on Monad 143), in display order. The ONE list: written to act1.json["featured"],
 # read by scripts/snapshot-8004scan.mjs and by the screen.
@@ -50,10 +50,10 @@ def node_stats(g, cert, inv, agent_id: int):
 
 
 def verdict(cert, ci, st) -> dict:
-    """Pay bit from the reference solver (ppr.is_trusted, D26 reading); the detail is display text only."""
+    """Pay bit from the reference solver (ppr.passes_anchor_policy, D26 reading); the detail is display text only."""
     if cert.k < M:
         return {"pay": False, "reason": "UNTRUSTED", "detail": f"one anchor: leave-one-out (m = {M}) leaves 0"}
-    if ci is not None and is_trusted(cert, ci, theta=THETA, m=M, rhoN=RHO_N, rhoD=RHO_D):
+    if ci is not None and passes_anchor_policy(cert, ci, theta=THETA, m=M, rhoN=RHO_N, rhoD=RHO_D):
         return {"pay": True, "reason": "OK", "detail": "trustLow >= theta, distrust within rho"}
     tl = int(st["trustRobust"])
     if tl >= THETA:
@@ -69,8 +69,98 @@ def verdict(cert, ci, st) -> dict:
     return {"pay": False, "reason": "UNTRUSTED", "detail": detail}
 
 
+def reviews_of(g, cert, inv, fbs_of, schema, filt, agent_id: int) -> dict:
+    """D49: the effective weight of every non-revoked rating of `agent_id` under this lens, grouped by reason.
+    Mirrors solver/graph.combine_pairs (R1-R6) rating by rating, then reads each retained edge's contribution in
+    the certificate: (1 - alpha) * sum_a lambda_a t_a[u] * q / B+_u (q > 0; distrust uses B-_u). The sum of the
+    contributions is checked against the certified raw mass (they are the same certificate)."""
+    tag_of = _tag_resolver(set(filt), schema)
+    one_minus_a = Fraction(cert.alphaD - cert.alphaN, cert.alphaD)
+    bplus = cert.bplus
+    bminus = {u: max(10_000, sum(-q for _, q, _ in row if q < 0)) for u, row in cert.rows.items()}
+    mass_of = lambda ci: sum(cert.lambdas[a] * cert.t[a][ci] for a in range(cert.k)) // WAD  # noqa: E731
+    fl = fbs_of.get(agent_id, [])
+    latest = {}
+    for f in fl:
+        t = tag_of(f)
+        if t is not None and schema[t].kind == "endorsement":
+            k = (f.client, t)
+            if k not in latest or f.index > latest[k].index:
+                latest[k] = f
+    # retained edges into the agent, with their source nodes and contribution
+    gj = g.index.get((AGENT, agent_id))
+    edge_src = {}  # client -> [(source label, contribution WAD, sign)]
+    for u, row in g.rows.items():
+        for e in row:
+            if e.agent_id != agent_id:
+                continue
+            kind, key = g.nodes[u]
+            cu = inv.get(u)
+            m = mass_of(cu) if cu is not None else 0
+            if e.q > 0:
+                contrib = int(one_minus_a * m * e.q / bplus.get(cu, 10_000)) if cu is not None else 0
+            else:
+                contrib = -int(one_minus_a * m * (-e.q) / bminus.get(cu, 10_000)) if cu is not None else 0
+            src = "anchor" if kind == ANCHOR else ("agent:" + str(key) if kind == AGENT else "address")
+            edge_src.setdefault(e.client, []).append((src, contrib, e.q, e.tag1))
+    groups = {}
+    for f in fl:
+        t = tag_of(f)
+        via, contrib, w = None, 0, None
+        if t is None:
+            why = "outside"
+        elif schema[t].kind != "endorsement":
+            why = "measurement"
+        elif latest.get((f.client, t)) is not f:
+            why = "superseded"
+        elif quantize(f.value, f.decimals, schema[t]) is None:
+            why = "out_of_bounds"
+        elif (f.client, agent_id) in g.r6_pairs:
+            why = "controller"
+        elif (f.client, agent_id) not in g.pairs:
+            why = "zero_weight"
+        elif g.pairs[(f.client, agent_id)].tag1 != t:
+            why = "combined"
+        else:
+            srcs = edge_src.get(f.client, [])
+            w = g.pairs[(f.client, agent_id)].q
+            contrib = sum(c for _, c, _, _ in srcs)
+            if any(s == "anchor" for s, *_ in srcs):
+                why = "anchor" if w > 0 else "anchor_negative"
+            elif contrib != 0:
+                why = "hop" if w > 0 else "hop_negative"
+                via = ",".join(sorted({s.split(":")[1] for s, c, *_ in srcs if c and s.startswith("agent:")}))
+            else:
+                why = "unreachable"
+        k = (why, t or f.tag1[:40], via)
+        gr = groups.setdefault(k, {"why": why, "tag": t or f.tag1[:40], "via": via, "count": 0, "contribution": 0,
+                                   "w": w, "sampleRater": f.client})
+        gr["count"] += 1
+        gr["contribution"] += contrib
+    out = sorted(groups.values(), key=lambda x: (-abs(x["contribution"]), -x["count"]))
+    for x in out:
+        x["contribution"] = wad_str(x["contribution"])
+    # self-check: the positive contributions of the retained edges ARE the certified raw mass, up to the integer
+    # rounding of each term (one wei per anchor column and per edge)
+    if gj is not None and gj in inv:
+        raw = sum(contributions(cert, inv[gj]))
+        pos = sum(c for lst in edge_src.values() for _, c, q, _ in lst if q > 0)
+        n_terms = sum(1 for lst in edge_src.values() for *_, q, _ in lst if q > 0)
+        if abs(raw - pos) > (cert.k + 1) * (n_terms + 1) * 10:
+            raise AssertionError(f"D49 contributions of #{agent_id} sum to {pos}, certified raw mass {raw}")
+    inbound = [{"from": s, "contribution": wad_str(c), "w": q, "tag": tg, "client": cl}
+               for cl, lst in edge_src.items() for s, c, q, tg in lst if c]
+    inbound.sort(key=lambda x: -abs(int(x["contribution"])))
+    # every non-zero inbound edge: the screen derives reach and trust paths from this list (never truncated)
+    return {"total": len(fl), "groups": out[:12], "groupsOmitted": max(0, len(out) - 12), "inbound": inbound}
+
+
 def lens(lid, title, blurb, fbs, idn, schema, filt, anchors, anchor_labels, farm, _schema_name="", **kw):
     g, cert, inv = rm.run(fbs, idn, schema, filt, anchors, **kw)
+    fbs_of = {}
+    for f in fbs:
+        if not f.revoked:
+            fbs_of.setdefault(f.agent_id, []).append(f)
     eeff = e_eff(cert)
     agents = {}
     for a in FEATURED:
@@ -92,6 +182,8 @@ def lens(lid, title, blurb, fbs, idn, schema, filt, anchors, anchor_labels, farm
         ranking.append(st)
     ranking.sort(key=lambda r: (-int(r["trustRobust"]), -int(r["trust"]), int(r["agentId"])))
     mass = rm.mass_in(g, cert, inv, farm)
+    shown = {int(a) for a in agents} | {int(r["agentId"]) for r in ranking}
+    reviews = {str(a): reviews_of(g, cert, inv, fbs_of, schema, filt, a) for a in sorted(shown)}
     return {
         "id": lid, "title": title, "blurb": blurb,
         "anchors": [{"address": a, "label": l} for a, l in zip(anchors, anchor_labels)],
@@ -101,7 +193,7 @@ def lens(lid, title, blurb, fbs, idn, schema, filt, anchors, anchor_labels, farm
         "e": [wad_str(x) for x in cert.e], "eEff": wad_str(eeff),
         "massOnFarm": [wad_str(x) for x in mass],  # per anchor column t^(a)(S)
         "massOnFarmWeighted": wad_str(sum(cert.lambdas[a] * mass[a] // WAD for a in range(cert.k))),  # Σλ_a t^(a)(S)
-        "agents": agents, "ranking": ranking,
+        "agents": agents, "ranking": ranking, "reviews": reviews,
     }
 
 
@@ -154,6 +246,17 @@ def main():
              [a[:6] + "…" + a[-4:] for a in farm_anchors], farm, _schema_name="stress (every tag = endorsement)"),
     ]
 
+    # D49 complement: the same two independent anchors with EVERY tag read as an endorsement in [-100, 100]
+    # (stress schema). Shown only as "even if every tag counted": who would still count for 0, and why.
+    # filter: the 16 (TAGS_MAX) most frequent tags among the featured agents' ratings
+    tag_freq = Counter(f.tag1 for f in fbs if f.agent_id in FEATURED and not f.revoked)
+    perm_filter = [t for t, _ in tag_freq.most_common(16)]
+    perm = lens("independent-any-tag", "Two independent raters, every tag accepted", "", fbs, idn,
+                rm.stress_schema(fbs), perm_filter, [h1, h2], ["0x0730…", "0xf7d5…"],
+                farm, _schema_name="stress (every tag = endorsement)")
+    permissive = {"schema": perm["schema"], "filter": perm_filter, "edges": perm["edges"],
+                  "reviews": {a: perm["reviews"][a] for a in perm["reviews"] if a in {str(x) for x in FEATURED}}}
+
     # #8317: what the registry accepted vs what ANCRE keeps (reference schema)
     g8317 = rm.build_graph(fbs, idn, ref, ["trade_execution"], [])
     self_rating = {"received": reg["8317"]["feedbacks"],
@@ -171,7 +274,7 @@ def main():
         "snapshotBlock": idn.block,
         "snapshotFeedbacks": len(fbs),
         "snapshotAgents": len(idn.owner),
-        "source": "solver/data/mainnet-108835675.{feedbacks,identity}.json.gz (re-read on-chain, solver/snapshot.py)",
+        "source": f"solver/data/mainnet-{rm.BLOCK}.{{feedbacks,identity}}.json.gz (re-read on-chain, solver/snapshot.py)",
         "rules": "D20, alpha = 1/3, m = 2, uniform lambdas, integer certificate from 0 (D26)",
         "policy": {"theta": wad_str(THETA), "thetaPct": THETA / WAD * 100, "rhoN": RHO_N, "rhoD": RHO_D,
                    "note": "theta of the chantier 06 demo set, applied off-chain to illustrate the payment verdict"},
@@ -180,6 +283,7 @@ def main():
         "selfRating8317": self_rating,
         "registry": reg,
         "lenses": lenses,
+        "permissive": permissive,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(doc, indent=1) + "\n")

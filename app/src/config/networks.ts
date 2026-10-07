@@ -11,13 +11,31 @@ export const NETWORKS = {
   testnet: {
     http: env.VITE_TESTNET_RPC ?? "https://testnet-rpc.monad.xyz", // 50 rps (CLAUDE.md §8)
     ws: env.VITE_TESTNET_WSS ?? "wss://testnet-rpc.monad.xyz",
+    // ERC-8004 v2.0.0 registries on Monad testnet 10143 (CLAUDE.md §3, getVersion() = 2.0.0 checked 27/09)
+    identity: "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+    reputation: "0x8004B663056A597Dffe9eCcC1965A193B7388713",
   },
   mainnet: {
+    ws: env.VITE_MAINNET_WSS ?? "wss://rpc.monad.xyz",
     // ERC-8004 v2.0.0 registries on Monad 143 (CLAUDE.md §3, verified 27/09)
     identity: "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
     reputation: "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63",
   },
 } as const;
+
+/** The network selector. Testnet: where ANCRE's anchor set is certified. Mainnet: a PREVIEW, read by the
+ *  reference solver, no certificate on-chain yet. Ethereum: soon (not indexed by us). */
+export const NETWORK_CHOICES = [
+  { id: "testnet", label: "Monad testnet", chainId: 10143, state: "active" },
+  { id: "mainnet", label: "Monad mainnet", chainId: 143, state: "preview" },
+  { id: "ethereum", label: "Ethereum", chainId: 1, state: "soon" },
+] as const;
+
+export const chainIdOf = (n: "testnet" | "mainnet") => (n === "mainnet" ? 143 : 10143);
+
+/** "view on 8004scan" (URL scheme read on 8004scan.io on 07/10: /agents/monad/182, testnet subdomain). */
+export const scanUrl = (n: "testnet" | "mainnet", id: string) =>
+  n === "mainnet" ? `https://8004scan.io/agents/monad/${id}` : `https://testnet.8004scan.io/agents/monad-testnet/${id}`;
 
 export const ENVIO_GRAPHQL =
   env.VITE_ENVIO_GRAPHQL ?? "https://indexer.dev.hyperindex.xyz/433cc83/v1/graphql"; // indexer/SCHEMA.md
