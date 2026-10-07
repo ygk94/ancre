@@ -1,0 +1,821 @@
+{
+  "version": 1,
+  "mode": "testnet",
+  "chainId": 10143,
+  "operator": "0x810724967b0d895d087b991304385720d4903c3F",
+  "runId": "run-20261007T131141Z",
+  "agents": {
+    "provider-1 (demo)": {
+      "agentId": "2050",
+      "owner": "0x810724967b0d895d087b991304385720d4903c3F",
+      "wallet": "0xbd2AeDcAb8FCBa9Ee0c036110ac168bbC525DAE8",
+      "role": "provider"
+    },
+    "provider-2 (demo)": {
+      "agentId": "2051",
+      "owner": "0x810724967b0d895d087b991304385720d4903c3F",
+      "wallet": "0x4e8403c151018ae8614Bbcb593dB756189C8EA05",
+      "role": "provider"
+    },
+    "provider-3 (demo)": {
+      "agentId": "2052",
+      "owner": "0x810724967b0d895d087b991304385720d4903c3F",
+      "wallet": "0x1b61453d07D8594F2672C9C91e56fF5ac1d15D36",
+      "role": "provider"
+    },
+    "farm target (demo)": {
+      "agentId": "2053",
+      "owner": "0x1aa060c5604a6b4318765Ff83ef4cd79FA679965",
+      "wallet": "0x8cD2B9cF49e330d3147448567a04bb2bc8aB9327",
+      "role": "farm-target"
+    },
+    "farm-01 (demo)": {
+      "agentId": "2054",
+      "owner": "0x1aa060c5604a6b4318765Ff83ef4cd79FA679965",
+      "wallet": "0xC88d66Cd0D0707da8Fa7Feb0fB57aAF72B4e33a0",
+      "role": "farm"
+    },
+    "farm-02 (demo)": {
+      "agentId": "2055",
+      "owner": "0x1aa060c5604a6b4318765Ff83ef4cd79FA679965",
+      "wallet": "0x21BA62B5115111BE4Fd435Ad882e462598Af81A4",
+      "role": "farm"
+    },
+    "farm-03 (demo)": {
+      "agentId": "2056",
+      "owner": "0x1aa060c5604a6b4318765Ff83ef4cd79FA679965",
+      "wallet": "0x3F939DDa7F3d2C0C9ae95B417a20A3691b055896",
+      "role": "farm"
+    },
+    "farm-04 (demo)": {
+      "agentId": "2057",
+      "owner": "0x1aa060c5604a6b4318765Ff83ef4cd79FA679965",
+      "wallet": "0xc8632e87caE552EbDe4dBb2B35Ff5805FD1A0B45",
+      "role": "farm"
+    },
+    "farm-05 (demo)": {
+      "agentId": "2058",
+      "owner": "0x1aa060c5604a6b4318765Ff83ef4cd79FA679965",
+      "wallet": "0x9EC45Ecf646ac095d88389452138Ae328bd1C759",
+      "role": "farm"
+    },
+    "farm-06 (demo)": {
+      "agentId": "2059",
+      "owner": "0x1aa060c5604a6b4318765Ff83ef4cd79FA679965",
+      "wallet": "0x251d263351C67FF45Da91861D48C922922D758C9",
+      "role": "farm"
+    },
+    "farm-07 (demo)": {
+      "agentId": "2060",
+      "owner": "0x1aa060c5604a6b4318765Ff83ef4cd79FA679965",
+      "wallet": "0xc3331921091C629dc6940AdFeF4b8167c0529a0c",
+      "role": "farm"
+    },
+    "farm-08 (demo)": {
+      "agentId": "2061",
+      "owner": "0x1aa060c5604a6b4318765Ff83ef4cd79FA679965",
+      "wallet": "0xBA771edaCD4F8b3261DC336B085c291a95830601",
+      "role": "farm"
+    },
+    "farm-09 (demo)": {
+      "agentId": "2062",
+      "owner": "0x1aa060c5604a6b4318765Ff83ef4cd79FA679965",
+      "wallet": "0xb4295E1848F0Ba02421B7dD1c5De79D665E0C87D",
+      "role": "farm"
+    },
+    "farm-10 (demo)": {
+      "agentId": "2063",
+      "owner": "0x1aa060c5604a6b4318765Ff83ef4cd79FA679965",
+      "wallet": "0x6B0Ed5c9bB33B53173AE14AA1C14b0d6bCd9Bb63",
+      "role": "farm"
+    }
+  },
+  "done": {
+    "0.fund-mon": {
+      "block": 68978840,
+      "at": "2026-10-07T13:11:52.095Z"
+    },
+    "0.deploy-ancre": {
+      "block": 68978842,
+      "at": "2026-10-07T13:11:52.594Z"
+    },
+    "0.anchor-set": {
+      "block": 68978845,
+      "at": "2026-10-07T13:11:53.449Z"
+    },
+    "0.register:provider-1 (demo)": {
+      "block": 68978847,
+      "at": "2026-10-07T13:11:54.222Z"
+    },
+    "0.wallet:provider-1 (demo)": {
+      "block": 68978849,
+      "at": "2026-10-07T13:11:55.015Z"
+    },
+    "0.register:provider-2 (demo)": {
+      "block": 68978852,
+      "at": "2026-10-07T13:11:55.751Z"
+    },
+    "0.wallet:provider-2 (demo)": {
+      "block": 68978855,
+      "at": "2026-10-07T13:11:56.530Z"
+    },
+    "0.deploy-payer": {
+      "block": 68978858,
+      "at": "2026-10-07T13:11:57.300Z"
+    },
+    "0.fund-payer": {
+      "block": 68978860,
+      "at": "2026-10-07T13:11:57.937Z"
+    },
+    "0.cert": {
+      "block": 68978873,
+      "at": "2026-10-07T13:12:02.027Z",
+      "value": {
+        "action": "certified",
+        "block": 68978866
+      }
+    },
+    "scene-0": {
+      "block": 68978873,
+      "at": "2026-10-07T13:12:02.089Z"
+    },
+    "1.vouch:A->p1": {
+      "block": 68978875,
+      "at": "2026-10-07T13:12:02.634Z",
+      "value": {
+        "block": 68978875,
+        "wallMs": 1791378722526
+      }
+    },
+    "1.vouch:B->p1": {
+      "block": 68978877,
+      "at": "2026-10-07T13:12:03.304Z",
+      "value": {
+        "block": 68978877,
+        "wallMs": 1791378723243
+      }
+    },
+    "1.vouch:B->p2": {
+      "block": 68978880,
+      "at": "2026-10-07T13:12:04.100Z",
+      "value": {
+        "block": 68978879,
+        "wallMs": 1791378724039
+      }
+    },
+    "1.vouch:C->p2": {
+      "block": 68978882,
+      "at": "2026-10-07T13:12:04.774Z",
+      "value": {
+        "block": 68978882,
+        "wallMs": 1791378724709
+      }
+    },
+    "1.cert": {
+      "block": 68978889,
+      "at": "2026-10-07T13:12:07.028Z",
+      "value": {
+        "action": "certified",
+        "block": 68978888
+      }
+    },
+    "1.pay:p1": {
+      "block": 68978893,
+      "at": "2026-10-07T13:12:08.070Z",
+      "value": {
+        "decision": "PAID",
+        "stage": "settled",
+        "reason": "OK",
+        "block": 68978893,
+        "wallMs": 1791378728005,
+        "providerReceived": {
+          "$big": "10000"
+        }
+      }
+    },
+    "1.pay:p2": {
+      "block": 68978896,
+      "at": "2026-10-07T13:12:09.008Z",
+      "value": {
+        "decision": "PAID",
+        "stage": "settled",
+        "reason": "OK",
+        "block": 68978896,
+        "wallMs": 1791378728922,
+        "providerReceived": {
+          "$big": "10000"
+        }
+      }
+    },
+    "scene-1": {
+      "block": 68978896,
+      "at": "2026-10-07T13:12:09.100Z"
+    },
+    "7.register:provider-3 (demo)": {
+      "block": 68978899,
+      "at": "2026-10-07T13:12:09.904Z"
+    },
+    "7.wallet:provider-3 (demo)": {
+      "block": 68978902,
+      "at": "2026-10-07T13:12:10.636Z"
+    },
+    "7.vouch:p1->p3": {
+      "block": 68978903,
+      "at": "2026-10-07T13:12:11.118Z",
+      "value": {
+        "block": 68978903,
+        "wallMs": 1791378731040
+      }
+    },
+    "7.cert": {
+      "block": 68978912,
+      "at": "2026-10-07T13:12:13.602Z",
+      "value": {
+        "action": "certified",
+        "block": 68978910
+      }
+    },
+    "7.pay:p3": {
+      "block": 68978914,
+      "at": "2026-10-07T13:12:14.431Z",
+      "value": {
+        "decision": "PAID",
+        "stage": "settled",
+        "reason": "OK",
+        "block": 68978914,
+        "wallMs": 1791378734364,
+        "providerReceived": {
+          "$big": "10000"
+        }
+      }
+    },
+    "scene-7": {
+      "block": 68978914,
+      "at": "2026-10-07T13:12:14.562Z"
+    },
+    "2.register:farm target (demo)": {
+      "block": 68978916,
+      "at": "2026-10-07T13:12:14.974Z"
+    },
+    "2.wallet:farm target (demo)": {
+      "block": 68978919,
+      "at": "2026-10-07T13:12:15.753Z"
+    },
+    "2.register:farm-01 (demo)": {
+      "block": 68978920,
+      "at": "2026-10-07T13:12:16.195Z"
+    },
+    "2.wallet:farm-01 (demo)": {
+      "block": 68978923,
+      "at": "2026-10-07T13:12:16.912Z"
+    },
+    "2.register:farm-02 (demo)": {
+      "block": 68978924,
+      "at": "2026-10-07T13:12:17.574Z"
+    },
+    "2.wallet:farm-02 (demo)": {
+      "block": 68978927,
+      "at": "2026-10-07T13:12:18.354Z"
+    },
+    "2.register:farm-03 (demo)": {
+      "block": 68978930,
+      "at": "2026-10-07T13:12:19.039Z"
+    },
+    "2.wallet:farm-03 (demo)": {
+      "block": 68978932,
+      "at": "2026-10-07T13:12:19.893Z"
+    },
+    "2.register:farm-04 (demo)": {
+      "block": 68978934,
+      "at": "2026-10-07T13:12:20.441Z"
+    },
+    "2.wallet:farm-04 (demo)": {
+      "block": 68978936,
+      "at": "2026-10-07T13:12:20.950Z"
+    },
+    "2.register:farm-05 (demo)": {
+      "block": 68978939,
+      "at": "2026-10-07T13:12:21.775Z"
+    },
+    "2.wallet:farm-05 (demo)": {
+      "block": 68978942,
+      "at": "2026-10-07T13:12:23.007Z"
+    },
+    "2.register:farm-06 (demo)": {
+      "block": 68978944,
+      "at": "2026-10-07T13:12:23.431Z"
+    },
+    "2.wallet:farm-06 (demo)": {
+      "block": 68978946,
+      "at": "2026-10-07T13:12:24.113Z"
+    },
+    "2.register:farm-07 (demo)": {
+      "block": 68978949,
+      "at": "2026-10-07T13:12:24.796Z"
+    },
+    "2.wallet:farm-07 (demo)": {
+      "block": 68978951,
+      "at": "2026-10-07T13:12:25.614Z"
+    },
+    "2.register:farm-08 (demo)": {
+      "block": 68978954,
+      "at": "2026-10-07T13:12:26.362Z"
+    },
+    "2.wallet:farm-08 (demo)": {
+      "block": 68978956,
+      "at": "2026-10-07T13:12:27.188Z"
+    },
+    "2.register:farm-09 (demo)": {
+      "block": 68978958,
+      "at": "2026-10-07T13:12:27.649Z"
+    },
+    "2.wallet:farm-09 (demo)": {
+      "block": 68978960,
+      "at": "2026-10-07T13:12:28.366Z"
+    },
+    "2.register:farm-10 (demo)": {
+      "block": 68978962,
+      "at": "2026-10-07T13:12:28.857Z"
+    },
+    "2.wallet:farm-10 (demo)": {
+      "block": 68978965,
+      "at": "2026-10-07T13:12:29.634Z"
+    },
+    "2.farm:1->target": {
+      "block": 68978967,
+      "at": "2026-10-07T13:12:30.406Z",
+      "value": {
+        "block": 68978967,
+        "wallMs": 1791378750330
+      }
+    },
+    "2.farm:1->2": {
+      "block": 68978969,
+      "at": "2026-10-07T13:12:30.888Z",
+      "value": {
+        "block": 68978969,
+        "wallMs": 1791378750821
+      }
+    },
+    "2.farm:2->target": {
+      "block": 68978970,
+      "at": "2026-10-07T13:12:31.341Z",
+      "value": {
+        "block": 68978970,
+        "wallMs": 1791378751219
+      }
+    },
+    "2.farm:2->3": {
+      "block": 68978973,
+      "at": "2026-10-07T13:12:32.056Z",
+      "value": {
+        "block": 68978972,
+        "wallMs": 1791378751987
+      }
+    },
+    "2.farm:3->target": {
+      "block": 68978974,
+      "at": "2026-10-07T13:12:32.465Z",
+      "value": {
+        "block": 68978974,
+        "wallMs": 1791378752407
+      }
+    },
+    "2.farm:3->4": {
+      "block": 68978976,
+      "at": "2026-10-07T13:12:33.171Z",
+      "value": {
+        "block": 68978976,
+        "wallMs": 1791378753111
+      }
+    },
+    "2.farm:4->target": {
+      "block": 68978978,
+      "at": "2026-10-07T13:12:33.651Z",
+      "value": {
+        "block": 68978978,
+        "wallMs": 1791378753537
+      }
+    },
+    "2.farm:4->5": {
+      "block": 68978981,
+      "at": "2026-10-07T13:12:34.467Z",
+      "value": {
+        "block": 68978980,
+        "wallMs": 1791378754311
+      }
+    },
+    "2.farm:5->target": {
+      "block": 68978983,
+      "at": "2026-10-07T13:12:35.289Z",
+      "value": {
+        "block": 68978983,
+        "wallMs": 1791378755209
+      }
+    },
+    "2.farm:5->6": {
+      "block": 68978986,
+      "at": "2026-10-07T13:12:36.132Z",
+      "value": {
+        "block": 68978986,
+        "wallMs": 1791378756060
+      }
+    },
+    "2.farm:6->target": {
+      "block": 68978988,
+      "at": "2026-10-07T13:12:36.854Z",
+      "value": {
+        "block": 68978988,
+        "wallMs": 1791378756783
+      }
+    },
+    "2.farm:6->7": {
+      "block": 68978991,
+      "at": "2026-10-07T13:12:37.695Z",
+      "value": {
+        "block": 68978991,
+        "wallMs": 1791378757624
+      }
+    },
+    "2.farm:7->target": {
+      "block": 68978994,
+      "at": "2026-10-07T13:12:38.425Z",
+      "value": {
+        "block": 68978993,
+        "wallMs": 1791378758361
+      }
+    },
+    "2.farm:7->8": {
+      "block": 68978997,
+      "at": "2026-10-07T13:12:39.240Z",
+      "value": {
+        "block": 68978996,
+        "wallMs": 1791378759179
+      }
+    },
+    "2.farm:8->target": {
+      "block": 68978999,
+      "at": "2026-10-07T13:12:39.956Z",
+      "value": {
+        "block": 68978998,
+        "wallMs": 1791378759846
+      }
+    },
+    "2.farm:8->9": {
+      "block": 68979001,
+      "at": "2026-10-07T13:12:40.732Z",
+      "value": {
+        "block": 68979001,
+        "wallMs": 1791378760591
+      }
+    },
+    "2.farm:9->target": {
+      "block": 68979003,
+      "at": "2026-10-07T13:12:41.181Z",
+      "value": {
+        "block": 68979003,
+        "wallMs": 1791378761104
+      }
+    },
+    "2.farm:9->10": {
+      "block": 68979006,
+      "at": "2026-10-07T13:12:41.986Z",
+      "value": {
+        "block": 68979005,
+        "wallMs": 1791378761915
+      }
+    },
+    "2.farm:10->target": {
+      "block": 68979007,
+      "at": "2026-10-07T13:12:42.437Z",
+      "value": {
+        "block": 68979007,
+        "wallMs": 1791378762366
+      }
+    },
+    "2.farm:10->1": {
+      "block": 68979009,
+      "at": "2026-10-07T13:12:43.154Z",
+      "value": {
+        "block": 68979009,
+        "wallMs": 1791378763078
+      }
+    },
+    "2.cert": {
+      "block": 68979021,
+      "at": "2026-10-07T13:12:46.583Z",
+      "value": {
+        "action": "skip_identical",
+        "block": null
+      }
+    },
+    "2.pay:target": {
+      "block": 68979022,
+      "at": "2026-10-07T13:12:46.886Z",
+      "value": {
+        "decision": "REFUSED",
+        "stage": "verify",
+        "reason": "UNTRUSTED",
+        "block": 68979021,
+        "wallMs": 1791378766842,
+        "providerReceived": {
+          "$big": "0"
+        }
+      }
+    },
+    "2.compromised:C->target": {
+      "block": 68979024,
+      "at": "2026-10-07T13:12:47.642Z",
+      "value": {
+        "block": 68979024,
+        "wallMs": 1791378767579
+      }
+    },
+    "2.cert-compromised": {
+      "block": 68979042,
+      "at": "2026-10-07T13:12:52.852Z",
+      "value": {
+        "action": "certified",
+        "block": 68979040
+      }
+    },
+    "2.pay:target-after-compromise": {
+      "block": 68979042,
+      "at": "2026-10-07T13:12:53.166Z",
+      "value": {
+        "decision": "REFUSED",
+        "stage": "verify",
+        "reason": "UNTRUSTED",
+        "block": 68979042,
+        "wallMs": 1791378773102,
+        "providerReceived": {
+          "$big": "0"
+        }
+      }
+    },
+    "2.fund-farm-usdc:1": {
+      "block": 68979045,
+      "at": "2026-10-07T13:12:54.001Z"
+    },
+    "2.fund-farm-usdc:2": {
+      "block": 68979047,
+      "at": "2026-10-07T13:12:54.662Z"
+    },
+    "2.fund-farm-usdc:3": {
+      "block": 68979050,
+      "at": "2026-10-07T13:12:55.325Z"
+    },
+    "2.fund-farm-usdc:4": {
+      "block": 68979054,
+      "at": "2026-10-07T13:12:56.565Z"
+    },
+    "2.fund-farm-usdc:5": {
+      "block": 68979055,
+      "at": "2026-10-07T13:12:56.893Z"
+    },
+    "scene-2": {
+      "block": 68979055,
+      "at": "2026-10-07T13:12:56.990Z"
+    },
+    "3.farm-pay:1": {
+      "block": 68979058,
+      "at": "2026-10-07T13:12:57.880Z",
+      "value": "0xeaa7b1336660bfef0e4141a4266a41d063bb58f44328fa22112ffdd42a5c9920"
+    },
+    "3.farm-pay:2": {
+      "block": 68979061,
+      "at": "2026-10-07T13:12:58.622Z",
+      "value": "0x569b23a23f25de2d7534696bcb97f72a8a850f0fdd05fe897dd53aaba020568c"
+    },
+    "3.farm-pay:3": {
+      "block": 68979063,
+      "at": "2026-10-07T13:12:59.399Z",
+      "value": "0x5dc5fb23f51a7e4b4a04f6a6ae2cf11f8363cc3465ff96dae24cae86bcda23b2"
+    },
+    "3.farm-pay:4": {
+      "block": 68979066,
+      "at": "2026-10-07T13:13:00.318Z",
+      "value": "0x9263b0feb48cf653f991b7a101d3b4b88c7867287501c9d657aa3fb398aa58e1"
+    },
+    "3.farm-pay:5": {
+      "block": 68979068,
+      "at": "2026-10-07T13:13:00.928Z",
+      "value": "0x9d0206c2ac00ea8c2983dac34be81220a3a1662f863a013f462542caa42b99cf"
+    },
+    "3.pay:target": {
+      "block": 68979068,
+      "at": "2026-10-07T13:13:01.250Z",
+      "value": {
+        "decision": "REFUSED",
+        "stage": "verify",
+        "reason": "UNTRUSTED",
+        "block": 68979068,
+        "wallMs": 1791378781205,
+        "providerReceived": {
+          "$big": "0"
+        }
+      }
+    },
+    "scene-3": {
+      "block": 68979071,
+      "at": "2026-10-07T13:13:01.851Z"
+    },
+    "4.pay:p2-before": {
+      "block": 68979075,
+      "at": "2026-10-07T13:13:02.817Z",
+      "value": {
+        "decision": "PAID",
+        "stage": "settled",
+        "reason": "OK",
+        "block": 68979074,
+        "wallMs": 1791378782755,
+        "providerReceived": {
+          "$big": "10000"
+        }
+      }
+    },
+    "4.slash": {
+      "block": 68979077,
+      "at": "2026-10-07T13:13:03.476Z",
+      "value": {
+        "block": 68979076,
+        "wallMs": 1791378783414
+      }
+    },
+    "4.pay:p2-after-slash": {
+      "block": 68979077,
+      "at": "2026-10-07T13:13:03.802Z",
+      "value": {
+        "decision": "REFUSED",
+        "stage": "verify",
+        "reason": "ANCRE_STATUS",
+        "block": 68979077,
+        "wallMs": 1791378783674,
+        "providerReceived": {
+          "$big": "0"
+        }
+      }
+    },
+    "4.cert": {
+      "block": 68979101,
+      "at": "2026-10-07T13:13:10.940Z",
+      "value": {
+        "action": "certified",
+        "block": 68979094
+      }
+    },
+    "4.pay:p2-after-cert": {
+      "block": 68979102,
+      "at": "2026-10-07T13:13:11.283Z",
+      "value": {
+        "decision": "REFUSED",
+        "stage": "verify",
+        "reason": "ANCRE_STATUS",
+        "block": 68979101,
+        "wallMs": 1791378791219,
+        "providerReceived": {
+          "$big": "0"
+        }
+      }
+    },
+    "scene-4": {
+      "block": 68979103,
+      "at": "2026-10-07T13:13:11.401Z"
+    },
+    "5.review:rater->p2": {
+      "block": 68979106,
+      "at": "2026-10-07T13:13:12.237Z",
+      "value": {
+        "block": 68979105,
+        "wallMs": 1791378792114
+      }
+    },
+    "5.cert": {
+      "block": 68979117,
+      "at": "2026-10-07T13:13:15.633Z",
+      "value": {
+        "action": "skip_identical",
+        "block": null
+      }
+    },
+    "5.pay:p2": {
+      "block": 68979118,
+      "at": "2026-10-07T13:13:15.949Z",
+      "value": {
+        "decision": "REFUSED",
+        "stage": "verify",
+        "reason": "ANCRE_STATUS",
+        "block": 68979117,
+        "wallMs": 1791378795905,
+        "providerReceived": {
+          "$big": "0"
+        }
+      }
+    },
+    "scene-5": {
+      "block": 68979118,
+      "at": "2026-10-07T13:13:16.012Z"
+    },
+    "6.fabricated": {
+      "block": 68979132,
+      "at": "2026-10-07T13:13:20.116Z",
+      "value": {
+        "rejected": true,
+        "error": "EdgeMismatch(1, 1)"
+      }
+    },
+    "scene-6": {
+      "block": 68979132,
+      "at": "2026-10-07T13:13:20.155Z"
+    }
+  },
+  "notes": {
+    "breakerLatency": {
+      "from": {
+        "step": "4.slash",
+        "block": 68979076,
+        "wallMs": 1791378783414
+      },
+      "to": {
+        "step": "4.pay:p2-after-slash",
+        "block": 68979077,
+        "wallMs": 1791378783674
+      },
+      "blocks": 1,
+      "ms": 260,
+      "parts": [
+        {
+          "name": "slash -> refused payment (live veto, no certificate needed)",
+          "blocks": 1,
+          "ms": 260
+        },
+        {
+          "name": "slash -> certificate carrying the veto",
+          "blocks": 18,
+          "ms": null
+        }
+      ],
+      "measured": "testnet"
+    }
+  },
+  "ancre": "0x8bE6D3DD7F20b94cD9B1Ec51De199291B109da9B",
+  "setId": "0x627c8afe36b03432b280723a7170357333ded4d9ce56a78467c5829739653e10",
+  "set": {
+    "anchors": [
+      "0x658d74da41c2c12a42d10aee6285cbdce8e1c752",
+      "0xc016278eedaa2c73878bd28279c7f8d0ab2f5619",
+      "0xec8047fc7ed9ef9b7f1aeb5ab2be26d231fd51d6"
+    ],
+    "lambdas": [
+      "333333333333333333",
+      "333333333333333334",
+      "333333333333333333"
+    ],
+    "alphaN": 1,
+    "alphaD": 3,
+    "minAnchors": 2,
+    "tagSchemaHash": "0x98f7b42fe5b6195397f4d6e7f9643dd7e7527f11965a047067d03ba9288138e0",
+    "tags": [
+      {
+        "tag": "vouch",
+        "min": "0",
+        "neutral": "0",
+        "max": "100000000000000000000",
+        "kind": 0
+      },
+      {
+        "tag": "review",
+        "min": "-1000000000000000000",
+        "neutral": "0",
+        "max": "1000000000000000000",
+        "kind": 0
+      },
+      {
+        "tag": "slash",
+        "min": "-100000000000000000000",
+        "neutral": "0",
+        "max": "0",
+        "kind": 0
+      }
+    ],
+    "policy": {
+      "theta": 10000000000000000,
+      "rhoN": 1,
+      "rhoD": 2,
+      "minAnchors": 2,
+      "vetoQuorum": 1,
+      "vetoMax": -1,
+      "maxAge": 288000,
+      "minRefresh": 288000,
+      "slackRefresh": 0,
+      "eLowMax": 10000000000000000,
+      "strictTransfer": true,
+      "registryVerified": true,
+      "ownerFallback": false,
+      "submitters": [
+        "0x810724967b0d895d087b991304385720d4903c3f"
+      ]
+    }
+  },
+  "payer": "0xC9Db7a72960189e933a6B876A9359b5c605a5870"
+}

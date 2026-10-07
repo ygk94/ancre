@@ -88,7 +88,22 @@ contract's, not the client's: the scripts sign the farm's payment anyway, and th
   (format in `demo/EVENTS.md`).
 - `demo/out/run-<ts>.budget.json` holds every transaction with its estimate, gas limit and gas used.
 
-**Testnet deployment:** <!-- TODO (Hugo): after the real testnet run, paste the ANCRE, payer and setId addresses from demo/out/state-testnet.json, and the explorer links (https://testnet.monadscan.com/address/…). --> see `demo/RUNBOOK.md` §5 for how it is run.
+**Testnet deployment (real run of 2026-10-07, Monad testnet 10143, `ACT 2 PASS`, 8/8 scenes; log `docs/chantiers/rapports/act2-testnet/run-20261007T131141Z.json`):**
+
+| What | Address / tx |
+|---|---|
+| `AnchoredReputation` | [`0x8bE6D3DD7F20b94cD9B1Ec51De199291B109da9B`](https://testnet.monadscan.com/address/0x8bE6D3DD7F20b94cD9B1Ec51De199291B109da9B) (deploy tx [`0xe8ce…147f`](https://testnet.monadscan.com/tx/0xe8cefce0e30f3f579614f82ae2068c2726964dbf9965bf954df0b8b5b5a0147f)) |
+| `TrustGatedPayer` (ERC-1271) | [`0xC9Db7a72960189e933a6B876A9359b5c605a5870`](https://testnet.monadscan.com/address/0xC9Db7a72960189e933a6B876A9359b5c605a5870) |
+| Anchor set (`setId`) | `0x627c8afe36b03432b280723a7170357333ded4d9ce56a78467c5829739653e10` (3 anchors, m = 2, θ = 1 %) |
+| ERC-8004 registries (official testnet deployment) | Identity `0x8004A818BFB912233c491871b3d84c89A494BD9e`, Reputation `0x8004B663056A597Dffe9eCcC1965A193B7388713` |
+| First certificate, Registry-verified (scene 1) | [`0xf815…8168`](https://testnet.monadscan.com/tx/0xf815f45c39cd3fb82f90f0898df1ae6a4f63da8d8580df7c9859d9dccfaa8168) |
+| Honest provider paid through the x402 facilitator | [`0xf7fb…f9ff`](https://testnet.monadscan.com/tx/0xf7fbb89a8f11cef4a72a502b72aae329e2ab189ad8cb9bae56cb91b3c17ef9ff) |
+| Second hop paid (never rated by an anchor) | [`0x0035…bdc3`](https://testnet.monadscan.com/tx/0x0035234795acfa054194d898bb4ec09e0be662b871a495f941871aeb0a73bdc3) |
+| Anchor slashes provider-2 (breaker) | [`0x9fa7…2207`](https://testnet.monadscan.com/tx/0x9fa707e7c9ee2386c23d574f663e2f40ba60848dd3e2044f7c855a1a9e572207) |
+
+**Measured on the testnet:** the breaker refuses the very next payment **one block and 260 ms after the slash**, with no new certificate needed (live veto). The Sybil farm (10 agents, 20 ratings at the schema maximum, 5 genuine x402 receipts between them) keeps a robust mass of 0 and is refused at every attempt; the fabricated certificate is rejected at submission (`EdgeMismatch`). Cost of the whole act: ≈ 3.3 testnet MON. Refusals leave no transaction (the payer's ERC-1271 check fails inside the facilitator's simulation): they are in the event log, not on the explorer.
+
+See `demo/RUNBOOK.md` §5 for how it is run.
 
 ## What to keep in mind (measured vs. claimed)
 

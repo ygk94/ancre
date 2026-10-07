@@ -54,18 +54,7 @@
      ```
 1b. [x] **Changer le mot de passe du keystore** ✅ 07/10 : il a été tapé par erreur dans la conversation le 07/10. Commande, dans Terminal.app : `~/.foundry/bin/cast wallet change-password ancre-demo`.
 2. [x] **Test T1 (porte P3)** ✅ 07/10 : **ouverte, en `exact` comme en `upto`**. Le vrai facilitator a réglé avec la garde à 78 k puis à 190 k, ainsi qu'en `upto` (après correction de notre script), et a refusé l'agent non fiable ainsi que le disjoncteur. Détails dans le CR, « Porte P3 ».
-3. [ ] **Acte 2 sur le vrai testnet**, après la répétition, T1 et ton feu vert. **Indispensable d'après les règles** (§9.2, §9.4) : il faut des adresses ou des hashes de transaction, et une vidéo qui montre de vraies interactions avec Monad. Une démo en fork seule risque de ne pas compter. Commande :
-   ```
-   node run.ts --network testnet --keystore ~/.foundry/keystores/ancre-demo --sweep
-   ```
-   - Coût :
-     - environ 3,15 MON de frais (4,1 avec la marge) ;
-     - 2,25 MON prêtés, dont 0,8 récupérés ;
-     - 0,11 USDC ;
-     - 3 à 5 minutes.
-   - Pour ce run seulement, le payeur a owner = trésorerie = opérateur. C'est acceptable pour 0,1 USDC de testnet.
-   - Si T1 échoue : on filme sur le fork ou sur l'état figé (`node run.ts --frozen`).
-   - Donne-moi le résultat ensuite : les adresses vont dans `demo/JUDGES.md`.
+3. [x] **Acte 2 sur le vrai testnet** ✅ 07/10 : `ACT 2 PASS`, 8 scènes sur 8. ANCRE `0x8bE6…da9B`, payeur `0xC9Db…5870` ; disjoncteur à **1 bloc et 260 ms** ; environ 3,3 MON. Adresses et transactions dans `demo/JUDGES.md`.
 4. [ ] **Prototype Mera sur tes deux appareils (porte P4).**
    - Appareils : un Mac sous macOS 15 et un iPhone sous iOS 18.4 ou plus, avec le même trousseau iCloud.
    - Il se fait sur le domaine du point 4.

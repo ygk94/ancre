@@ -1594,3 +1594,21 @@ Ce qu'on apprend en plus :
 - Le facilitator renvoie un **HTTP 500 `unexpected_error`** sur un refus de signature, et non un `invalidReason` propre. L'écran et le plugin doivent l'interpréter comme un refus et l'expliquer avec `explain()` (AM-6.8).
 - Coût pour nous : environ 0,40 MON de testnet, avec un déploiement à 0,62 MON au prix maximal estimé. Le payeur garde 0,098 USDC.
 - Le script de T1 était cassé à deux endroits depuis 02-bis : les rôles du payeur, et `--sender` pour forge. C'est corrigé et commité.
+
+## Acte 2 sur le vrai testnet (07/10, lancé par Hugo)
+
+**`ACT 2 PASS`, 8 scènes sur 8, sur Monad testnet 10143.** Run `run-20261007T131141Z`, archivé dans `docs/chantiers/rapports/act2-testnet/`. Les adresses et les transactions citées aux juges sont dans `demo/JUDGES.md`, vérifiées par `cast receipt` (statut `true`).
+
+| Élément | Adresse |
+|---|---|
+| `AnchoredReputation` | `0x8bE6D3DD7F20b94cD9B1Ec51De199291B109da9B`, déployé au bloc 68 978 842 (9,47 M gas) |
+| `TrustGatedPayer` | `0xC9Db7a72960189e933a6B876A9359b5c605a5870` |
+| `setId` | `0x627c8afe…3e10` |
+
+Mesures, MESURÉ sur le testnet :
+- **AM-07.5 fermé.** Le disjoncteur refuse le paiement **1 bloc et 260 ms après le slash**, par le veto lu en direct. Le certificat qui porte le veto arrive 18 blocs plus tard. La vidéo peut donc dire « refusé au bloc suivant, en 260 ms ».
+- Les mêmes masses que sur fork : provider-1 à 3,46 %, provider-2 à 3,95 %, provider-3 au 2ᵉ saut à 2,30 % (θ = 1 %, D56). La ferme reste à une masse robuste de 0.
+- Coût de l'acte : environ **3,3 MON de testnet**, sweep compris (0,76 MON récupérés). Il reste 16,27 MON sur `0x8107…3c3F`.
+- Un refus ne laisse aucune transaction sur l'explorateur : il échoue dans la simulation du facilitator (AM-6.8). La preuve d'un refus est dans le journal des events, ou passe par `reportRefusal` si on veut une trace on-chain.
+
+**Proposition (pilote)** : faire de cette instance l'instance **officielle** du testnet, celle de l'indexeur Envio (`start_block` 68 978 842), de l'écran 07-bis et de la soumission, plutôt que de redéployer le 08/10. On économise un déploiement, et l'écran montre de vrais certificats. **Limite** : son payeur a owner = trésorerie = opérateur. C'est acceptable pour 0,1 USDC de testnet, mais il faudra un payeur à trois adresses distinctes pour le mainnet (D40). À valider par Hugo.
