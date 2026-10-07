@@ -1,0 +1,439 @@
+{
+ "format": "anchored-reputation-cert-v1",
+ "id": "seq_declared_omission",
+ "description": "Section 6.1, formula X. The row of agent 60 (client W60) truly endorses 62 (+10000), 63 (+5000) and 64 (+5000); the certificate commits 62 and 63 and declares sPlus = 20000 (64 omitted under the declaration, honest). Then W60 revokes its feedback on 62 and the decrease is proven (the budget may shrink, so every other entry may grow); the declared omission of 64 is revealed (indistinguishable from a new edge: worst case); W60 endorses agent 65, created after certification, and that new edge is proven (it dilutes every committed entry); finally the original certificate is resubmitted and refused by the proven facts (section 5.10). Submitter-attested; the registry block is replayed, then the sequence.",
+ "level": "SubmitterAttested",
+ "identityBlock": 0,
+ "set": {
+  "anchors": [
+   "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "0xa2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2"
+  ],
+  "lambdas": [
+   "500000000000000000",
+   "500000000000000000"
+  ],
+  "alphaN": 1,
+  "alphaD": 3,
+  "minAnchors": 2,
+  "tagSchemaHash": "0xee1d79784ee799abf8f061f7d9b6278c2d844c8d085e198518c59058aa004d48",
+  "tags": [
+   {
+    "tag": "vouch",
+    "min": "0",
+    "neutral": "0",
+    "max": "100000000000000000000",
+    "kind": 0
+   },
+   {
+    "tag": "review",
+    "min": "-1000000000000000000",
+    "neutral": "0",
+    "max": "1000000000000000000",
+    "kind": 0
+   },
+   {
+    "tag": "slash",
+    "min": "-100000000000000000000",
+    "neutral": "0",
+    "max": "0",
+    "kind": 0
+   }
+  ],
+  "policy": {
+   "theta": "1000000000000000",
+   "rhoN": 1,
+   "rhoD": 2,
+   "minAnchors": 2,
+   "vetoQuorum": 1,
+   "vetoMax": -1,
+   "maxAge": 288000,
+   "minRefresh": 600,
+   "slackRefresh": "0",
+   "eLowMax": "10000000000000000",
+   "strictTransfer": true,
+   "registryVerified": false,
+   "ownerFallback": false,
+   "submitters": [
+    "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+   ]
+  },
+  "setId": "0x9181661e37819ed07098b5bedc549d2fda035498dea4271f0eb38ad01fe6dde5"
+ },
+ "nCert": 6,
+ "nodes": [
+  {
+   "i": 0,
+   "kind": "anchor",
+   "address": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "hasRow": true
+  },
+  {
+   "i": 1,
+   "kind": "anchor",
+   "address": "0xa2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+   "hasRow": true
+  },
+  {
+   "i": 2,
+   "kind": "agent",
+   "agentId": 60,
+   "owner": "0x000000000000000000000000000000000000b03c",
+   "agentWallet": "0x000000000000000000000000000000000000c03c",
+   "hasRow": true
+  },
+  {
+   "i": 3,
+   "kind": "agent",
+   "agentId": 62,
+   "owner": "0x000000000000000000000000000000000000b03e",
+   "agentWallet": "0x000000000000000000000000000000000000c03e",
+   "hasRow": true
+  },
+  {
+   "i": 4,
+   "kind": "agent",
+   "agentId": 63,
+   "owner": "0x000000000000000000000000000000000000b03f",
+   "agentWallet": "0x000000000000000000000000000000000000c03f",
+   "hasRow": true
+  },
+  {
+   "i": 5,
+   "kind": "agent",
+   "agentId": 64,
+   "owner": "0x000000000000000000000000000000000000b040",
+   "agentWallet": "0x000000000000000000000000000000000000c040",
+   "hasRow": true
+  }
+ ],
+ "rows": [
+  {
+   "u": 0,
+   "source": null,
+   "via": "anchor",
+   "aliasOf": null,
+   "sPlus": 10000,
+   "bPlus": 10000,
+   "bMinus": 10000,
+   "edges": [
+    {
+     "dst": 2,
+     "w": 10000,
+     "feedbackIndex": 1,
+     "client": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+     "agentId": 60,
+     "tag1": "vouch"
+    }
+   ]
+  },
+  {
+   "u": 1,
+   "source": null,
+   "via": "anchor",
+   "aliasOf": null,
+   "sPlus": 10000,
+   "bPlus": 10000,
+   "bMinus": 10000,
+   "edges": [
+    {
+     "dst": 2,
+     "w": 10000,
+     "feedbackIndex": 1,
+     "client": "0xa2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+     "agentId": 60,
+     "tag1": "vouch"
+    }
+   ]
+  },
+  {
+   "u": 2,
+   "source": "0x000000000000000000000000000000000000c03c",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 20000,
+   "bPlus": 20000,
+   "bMinus": 10000,
+   "edges": [
+    {
+     "dst": 3,
+     "w": 10000,
+     "feedbackIndex": 1,
+     "client": "0x000000000000000000000000000000000000c03c",
+     "agentId": 62,
+     "tag1": "vouch"
+    },
+    {
+     "dst": 4,
+     "w": 5000,
+     "feedbackIndex": 1,
+     "client": "0x000000000000000000000000000000000000c03c",
+     "agentId": 63,
+     "tag1": "vouch"
+    }
+   ]
+  },
+  {
+   "u": 3,
+   "source": "0x000000000000000000000000000000000000c03e",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 0,
+   "bPlus": 10000,
+   "bMinus": 10000,
+   "edges": []
+  },
+  {
+   "u": 4,
+   "source": "0x000000000000000000000000000000000000c03f",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 0,
+   "bPlus": 10000,
+   "bMinus": 10000,
+   "edges": []
+  },
+  {
+   "u": 5,
+   "source": "0x000000000000000000000000000000000000c040",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 0,
+   "bPlus": 10000,
+   "bMinus": 10000,
+   "edges": []
+  }
+ ],
+ "vectors": {
+  "t": [
+   [
+    "333333333333333333",
+    "0",
+    "222222222222222222",
+    "74074074074074074",
+    "37037037037037037",
+    "0"
+   ],
+   [
+    "0",
+    "333333333333333333",
+    "222222222222222222",
+    "74074074074074074",
+    "37037037037037037",
+    "0"
+   ]
+  ],
+  "ownerFp": [
+   "0",
+   "0",
+   "45116",
+   "45118",
+   "45119",
+   "45120"
+  ]
+ },
+ "expected": {
+  "subSolution": true,
+  "iterationsFromZero": 4,
+  "r": [
+   "37037037037037042",
+   "37037037037037042"
+  ],
+  "e": [
+   "111111111111111126",
+   "111111111111111126"
+  ],
+  "eEff": "111111111111111126",
+  "qEff": "111111111111111112",
+  "mass": "666666666666666666",
+  "distrustMass": "0",
+  "d": [
+   "0",
+   "0",
+   "0",
+   "0",
+   "0",
+   "0"
+  ],
+  "graphRoot": "0x74428d13feef57a242618fa9fdcbfe4c11449cb99b958567d8e297713505bfb6",
+  "vectorRoot": "0xbb2b2cce8c6f2c48cfe78abb1e479b12bcb899fc758d280829fb875dbb37e983",
+  "tight": {
+   "r": [
+    "37037037037037038",
+    "37037037037037038"
+   ],
+   "e": [
+    "111111111111111114",
+    "111111111111111114"
+   ]
+  }
+ },
+ "calldata": {
+  "W": 2,
+  "newNodes": "0x010000003c010000003e010000003f0100000040",
+  "vectors": "0x04a03ce68d21555500000000000000000000000000000000000000000000000004a03ce68d215555000000000000000003157def08c0e38e03157def08c0e38e000000000000b03c010729fa58404bda010729fa58404bda000000000000b03e008394fd2c2025ed008394fd2c2025ed000000000000b03f00000000000000000000000000000000000000000000b040",
+  "rows": "0x02000000060000000100022710000000010001000100022710000000010002c002000000000000000000000000000000000000c03c00004e200003271000000001000413880000000100038000000000000000000000000000000000000000c03e00048000000000000000000000000000000000000000c03f00058000000000000000000000000000000000000000c040",
+  "nodeEntries": "0x010000003c010000003e010000003f0100000040"
+ },
+ "registry": {
+  "agents": [
+   {
+    "agentId": 60,
+    "owner": "0x000000000000000000000000000000000000b03c",
+    "agentWallet": "0x000000000000000000000000000000000000c03c",
+    "approved": "0x0000000000000000000000000000000000000000"
+   },
+   {
+    "agentId": 62,
+    "owner": "0x000000000000000000000000000000000000b03e",
+    "agentWallet": "0x000000000000000000000000000000000000c03e",
+    "approved": "0x0000000000000000000000000000000000000000"
+   },
+   {
+    "agentId": 63,
+    "owner": "0x000000000000000000000000000000000000b03f",
+    "agentWallet": "0x000000000000000000000000000000000000c03f",
+    "approved": "0x0000000000000000000000000000000000000000"
+   },
+   {
+    "agentId": 64,
+    "owner": "0x000000000000000000000000000000000000b040",
+    "agentWallet": "0x000000000000000000000000000000000000c040",
+    "approved": "0x0000000000000000000000000000000000000000"
+   },
+   {
+    "agentId": 65,
+    "owner": "0x000000000000000000000000000000000000b041",
+    "agentWallet": "0x000000000000000000000000000000000000c041",
+    "approved": "0x0000000000000000000000000000000000000000"
+   }
+  ],
+  "operators": [],
+  "feedbacks": [
+   {
+    "client": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "agentId": 60,
+    "value": 100,
+    "decimals": 0,
+    "tag1": "vouch",
+    "tag2": "",
+    "revoked": false
+   },
+   {
+    "client": "0xa2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+    "agentId": 60,
+    "value": 100,
+    "decimals": 0,
+    "tag1": "vouch",
+    "tag2": "",
+    "revoked": false
+   },
+   {
+    "client": "0x000000000000000000000000000000000000c03c",
+    "agentId": 62,
+    "value": 100,
+    "decimals": 0,
+    "tag1": "vouch",
+    "tag2": "",
+    "revoked": false
+   },
+   {
+    "client": "0x000000000000000000000000000000000000c03c",
+    "agentId": 63,
+    "value": 50,
+    "decimals": 0,
+    "tag1": "vouch",
+    "tag2": "",
+    "revoked": false
+   },
+   {
+    "client": "0x000000000000000000000000000000000000c03c",
+    "agentId": 64,
+    "value": 50,
+    "decimals": 0,
+    "tag1": "vouch",
+    "tag2": "",
+    "revoked": false
+   }
+  ]
+ },
+ "sequence": [
+  {
+   "op": "submit",
+   "calldata": "calldata",
+   "expect": "ACCEPTED",
+   "measured": {
+    "submit": "ACCEPTED",
+    "eLowEff": "0",
+    "eEff": "111111111111111126"
+   }
+  },
+  {
+   "op": "revoke",
+   "client": "0x000000000000000000000000000000000000c03c",
+   "agentId": 62,
+   "index": 1
+  },
+  {
+   "op": "proveEdge",
+   "row": 2,
+   "agentId": 62,
+   "wNew": 0,
+   "amends": "0x",
+   "pos": 2,
+   "measured": {
+    "proveEdge": "OK",
+    "eLowEff": "222222222222222222",
+    "eEff": "333333333333333348"
+   }
+  },
+  {
+   "op": "proveEdge",
+   "row": 2,
+   "agentId": 64,
+   "wNew": 5000,
+   "amends": "0x0000003e27100000",
+   "pos": 2,
+   "measured": {
+    "proveEdge": "OK",
+    "eLowEff": "222222222222222222",
+    "eEff": "333333333333333348"
+   }
+  },
+  {
+   "op": "feedback",
+   "client": "0x000000000000000000000000000000000000c03c",
+   "agentId": 65,
+   "value": 100,
+   "decimals": 0,
+   "tag1": "vouch"
+  },
+  {
+   "op": "proveEdge",
+   "row": 2,
+   "agentId": 65,
+   "wNew": 10000,
+   "amends": "0x0000003e271000000000004000001388",
+   "pos": 2,
+   "measured": {
+    "proveEdge": "OK",
+    "eLowEff": "244444444444444446",
+    "eEff": "355555555555555572"
+   }
+  },
+  {
+   "op": "submit",
+   "calldata": "calldata",
+   "expect": "ProvenRowResubmitted(2)",
+   "measured": {
+    "submit": "ProvenRowResubmitted(2)"
+   }
+  }
+ ],
+ "measuredOn": {
+  "implementation": "reference AnchoredReputation (lot 02-bis, main of 2026-10-07)",
+  "registries": "mock ERC-8004 registries (contracts/test/utils/Mocks.sol)",
+  "date": "2026-10-07",
+  "log": "docs/erc/drafts/measurements/forge-08bis-2026-10-07.log"
+ }
+}

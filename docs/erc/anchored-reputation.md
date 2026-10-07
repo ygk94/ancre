@@ -901,9 +901,13 @@ The vectors are in the [assets directory](../assets/erc-0000/README.md), as JSON
 - the `setId`;
 - the row bytes, `graphRoot` and `vectorRoot`;
 - the sub-solution check, `r`, `eUp`, `q`, `eEff`, `qEff`, mass, `d`, `D`;
-- the amounts of the discrepancy proofs.
+- the amounts of the discrepancy proofs;
+- the refusals of §3.5, §5.1, §5.3, §5.4 and §5.10;
+- the readings of §8 for the vectors that carry their registry state.
 
-Every expected value is an exact integer. An independent checker, `verify.py`, recomputes each one from this specification with the Python standard library, and also checks `t ≤ t*` and `‖t* − t‖₁ ≤ eUp` in exact rational arithmetic. The reference implementation accepts every certificate vector with identical values.
+Every expected value is an exact integer. An independent checker, `verify.py`, recomputes each one from this specification with the Python standard library. It also checks `t ≤ t*` and `‖t* − t‖₁ ≤ eUp` in exact rational arithmetic, and, after every proof of a sequence, that the bounds hold again for the registry's graph. The reference implementation accepts every certificate vector with identical values, refuses every refusal vector with the expected error, and produced every measured proof amount.
+
+On an open set, the node entries of a vector (`calldata.nodeEntries`) go through `addNodes` before the submission, and `newNodes` is empty (§5.1).
 
 ### TC-1 Normalization (§3.2): `quantization.json`, 19 cases
 
@@ -917,7 +921,7 @@ Every expected value is an exact integer. An independent checker, `verify.py`, r
 | `minusthird` (−3, 0, 0) | −1 | 0 | −3333 (toward zero) |
 | `vouch` (0, 0, 1) | 1 | 19 | invalid (`valueDecimals > 18`) |
 
-### TC-2 Pair edge (§3.3): `pair-edge.json`, 13 cases
+### TC-2 Pair edge (§3.1, §3.3): `pair-edge.json`, 17 cases
 
 | history of one (client, agent) pair, oldest first | expected |
 |---|---|
@@ -927,34 +931,37 @@ Every expected value is an exact integer. An independent checker, `verify.py`, r
 | `vouch 1` (1), `vouch 5` out of bounds (2) | no edge: the latest feedback of the tag is invalid, and the older one is not used |
 | `vouch 1` (1), `uptime 100` measurement (2) | `w = 10000`, index 1 |
 | `vouch 1` (1), `review +1` (2) | `w = 10000`, index 2 (tie: highest index) |
-| `vouch 1` from a controller of the agent | no edge |
+| `vouch 1` from a controller of the agent | no edge (self-endorsement) |
+| `slash −100` from a controller of the agent | `w = −10000`, index 1 (a controller's negative edge is kept) |
+| `vouch 1` (1), `slash −50` (2) from a controller | `w = −5000`, index 2 (the sign test applies to the combined weight) |
 | `veto −1` (1), `review +1` (2) | `w = −10000`, index 1 (the live veto of §8.2 reads only index 2) |
+| `vouch` followed by a NUL byte, value 1 | no edge: that tag is not `vouch` (§3.1) |
+| a 33-byte tag of the set, value 100 | `w = 10000`, index 1 |
 
 ### TC-3 Reference certificate: `certificates/mainnet_slash_anchor.json`
 
-The state of a real registry at a fixed block, with `α = 1/3` and two anchors `A1`, `A2` weighted `1/2` each. `A2` is also the `agentWallet` of agent 18. Edges after §3:
+The state of a real registry at a fixed block, with `α = 1/3`, two anchors `A1`, `A2` weighted `1/2` each, and `minAnchors = 2`. Neither anchor is the source of an agent. A client `C` is the `agentWallet` of agent 18. Edges after §3:
 - `A1 → 18`: `+10000`;
-- `A2 → 2`: `+10000`;
-- `A2 → 3`: `+10000`;
-- `A2 → 4`: `−10000`.
+- `A2 → 4`: `+10000`;
+- `C → 2`: `+10000`, `C → 3`: `+10000` (under another tag), `C → 4`: `−10000`.
 
-`A2`'s row is carried by the anchor node and copied into agent 18 (§3.5). Exact values:
+`C`'s row is emitted by agent 18 (§3.5). Exact values:
 
-| node | `t^(A1)` | `t^(A2)` | `trust` | `trustRobust` (m = 2) | `d` |
+| node | `t^(A1)` | `t^(A2)` | `trust` | `trustRobust` | `d` |
 |---|---|---|---|---|---|
 | `A1` | 1/3 | 0 | — | — | 0 |
 | `A2` | 0 | 1/3 | — | — | 0 |
 | 18 | 2/9 | 0 | 1/9 | 0 | 0 |
-| 2 | 2/27 | 1/9 | 5/54 | 1/27 | 0 |
-| 3 | 2/27 | 1/9 | 5/54 | 1/27 | 0 |
-| 4 | 0 | 0 | 0 | 0 | 5/27 |
+| 2 | 2/27 | 0 | 1/27 | 0 | 0 |
+| 3 | 2/27 | 0 | 1/27 | 0 | 0 |
+| 4 | 0 | 2/9 | 1/9 | 0 | 2/27 |
 
 The certified integers are the floors of these values, reached in 4 iterations from zero. Expected results:
-- `r = (6, 6)`, `eUp = (18, 18)`, `eEff = 18`, `qEff = 0`, mass `629629629629629628`;
-- `D = 185185185185185186`, that is 5/27 rounded up;
+- `r = (5, 5)`, `eUp = (15, 15)`, `eEff = 16`, `qEff = 0`, mass `629629629629629628`;
+- `D = 74074074074074074`;
 - `graphRoot` and `vectorRoot` as in the file.
 
-The slash makes agent 4's distrust positive although a later `+1` exists under another tag, and sets `A2`'s certified veto bit on agent 4. This real configuration does not follow the recommendation of §2.1: `A2` is the source of agent 18 (see Security Considerations, *Anchors*).
+The slash makes agent 4's distrust positive although a later `+1` from the same client exists under another tag. Every agent is reached through one anchor only, so no agent has a positive `trustRobust`: on this registry, a reader-anchored aggregator says "unknown" for everyone and "distrusted" for agent 4.
 
 ### TC-4 Other certificates: `certificates/`
 
@@ -962,23 +969,24 @@ The slash makes agent 4's distrust positive although a later `+1` exists under a
 |---|---|---|---|---|
 | `mainnet_honest_d20` | 6 | 5 | `RegistryVerified` | row copy restores a two-hop honest chain |
 | `mainnet_scanner_preD15` | 35 | 58 | `RegistryVerified` | a set that declares a scanner's measurement tags as endorsements leaks trust into a farm |
-| `mainnet_em_d44` | 13 | 48 | `RegistryVerified` | `ownerFallback` and VIA_OWNER rows, a 33-byte tag, ties resolved by index |
+| `mainnet_em_d44` | 14 | 38 | `RegistryVerified` | `ownerFallback` and VIA_OWNER rows; two massive agents whose owner is an anchor emit no row (§3.5); a 33-byte tag; ties resolved by index |
 | `toy_alias_owner_rowmax` | 264 | 266 | `SubmitterAttested` | alias rows, wallet precedence, a row capped at `ROW_MAX` with declared `sPlus` (`eUp_A1 ≈ 2.2·10¹⁵` wei from the declared-omission margin) |
 | `toy_alpha_1_2`, `_1_3`, `_1_4` | 5 | 7 | `SubmitterAttested` | the same graph under three values of `α` |
 | `toy_truncated` | 5 | 6 | `SubmitterAttested` | truncation margin of a node without a row |
 
 ### TC-5 Violations and proofs (§5, §6): `violations/`
 
-Four certificates satisfy `t ≤ F_bas(t)` for their committed graph, but that graph is not dominated by the registry. All four are built on TC-3.
+Five certificates satisfy `t ≤ F_bas(t)` for their committed graph, but that graph is not dominated by the registry. The first four are built on TC-3.
 
-| violation | effect on the true graph | `RegistryVerified` at submission | proof (`proveEdge`) | `eLowEff` / `eEff` after |
+| violation | effect on the true graph | `RegistryVerified` at submission | proofs (`proveEdge`) | `eLowEff` / `eEff` after |
 |---|---|---|---|---|
-| fabricated edge `A1 → 4` | `t(4)`: 0 → 0.0556 | refused (`EdgeMismatch`) | `SubmitterAttested`: row `A1`, agent 4, `wNew = 0` | 166666666666666667 / 166666666666666688 |
-| inflated slash (`−1` instead of `−10000`) | `d(4)`: 0.1852 → 0.1111 | refused (`EdgeMismatch`) | `SubmitterAttested`: row 18, agent 4, `wNew = −10000` | 0 / 222200000000000018 |
-| dilution: `18 → 3` omitted, no `sPlus` | `t(2)`: 0.0926 → 0.1296 | accepted | row 18, agent 3, `wNew = 10000` | 111111111111111111 / 111111111111111127 |
-| slash omitted (anchor row and copy) | `d(4)`: 0.1852 → 0 | accepted | row `A2`, then row 18, agent 4, `wNew = −10000` | 0 / 555555555555555573 |
+| fabricated edge `A1 → 4` | `Σλt(4)`: 0.1111 → 0.1667 | refused (`EdgeMismatch`) | `SubmitterAttested`: row `A1`, agent 4, `wNew = 0` | 166666666666666667 / 166666666666666685 |
+| inflated slash (`−1` instead of `−10000`) | `d(4)`: 0.0741 → 0.0000074 | refused (`EdgeMismatch`) | `SubmitterAttested`: row 18, agent 4, `wNew = −10000` | 0 / 222200000000000016 |
+| dilution: `18 → 3` omitted, no `sPlus` | `Σλt(2)`: 0.0370 → 0.0741 | accepted | row 18, agent 3, `wNew = 10000` | 111111111111111111 / 111111111111111123 |
+| slash `18 → 4` omitted | `d(4)`: 0.0741 → 0 | accepted | row 18, agent 4, `wNew = −10000` | 0 / 222222222222222238 |
+| two omissions on one row (slash on 4, endorsement of 2) | both | accepted | row 18, agent 4, then agent 2 with the first amendment | 222222222222222222 / 666666666666666678 |
 
-After the proofs, `‖(t − t*)⁺‖₁ ≤ eLow` and `d* ≤ d + eEff` hold again for the true graph. Resubmitting a proven certificate unchanged reverts (§5.9).
+After the proofs, `‖(t − t*)⁺‖₁ ≤ eLow` and `d* ≤ d + eEff` hold again for the true graph.
 
 ### TC-6 Behaviour (§5.9, §7, §8)
 
@@ -988,20 +996,59 @@ These cases need a chain. Their expected outcomes are normative:
 2. At `certBlock + maxAge + 1`, the status is `STALE`. It is also `STALE` as soon as proofs push `eLowEff` above `eLowMax`.
 3. After a registry version string changes and `checkRegistry(setId)` is called, the status is `REGISTRY_CHANGED`, and `RegistryChanged` is emitted. The next accepted certificate clears it.
 4. Transfers:
-   - strict mode: after `transferFrom` of a certified agent with non-zero trust, the agent is `TRANSFERRED`, and also if `ownerOf` reverts;
+   - strict mode: after `transferFrom` of a certified agent with mass, the agent is `TRANSFERRED`, and also if it no longer exists;
    - fast mode: the agent is `TRANSFERRED` only after `proveTransfer`.
 5. An anchor's current key posts `veto −1` on agent `j`:
    - in the next block, `assess(j, set, true)` returns `VETOED`, with `vetoCount = 1` and `triggerTag = keccak256("veto")`, without recertification;
    - if the anchor then posts any other feedback on `j`, the live veto lapses. The agent stays `VETOED` only if the certificate carries the anchor's veto bit.
 6. An agent outside the certificate has status `OK`, zero trust, and `passesAnchorPolicy` returns `false`.
-7. An agent endorsed by a single anchor of a set with `minAnchors = 2` has `trustRobust = 0` and is not trusted.
+7. An agent endorsed by a single anchor of a set with `minAnchors = 2` has `trustRobust = 0` and does not pass.
 8. Open set, replacement:
    - a certificate that omits endorsements (less mass) is refused;
    - a certificate for a graph that gained an edge (more mass, same `q`) is accepted;
    - the zero vector is refused against a live certificate;
    - a certificate that omits a negative edge (lower `D`) is refused;
-   - a widened certificate resubmitted unchanged is refused.
+   - a proven certificate resubmitted, unchanged or re-encoded, is refused, also under `REGISTRY_CHANGED` (TC-7, TC-8).
 9. With a registry that reverts or returns malformed data, `assess`, `trustOf` and `passesAnchorPolicy` do not revert, and `passesAnchorPolicy` returns `false`.
+10. Strict mode: the owner of a certified agent approves an anchor of the set; `assess(j, set, true)` returns `VETOED` with no feedback from that anchor. Fast mode: the same holds only after `proveApproval`.
+11. On an open set, a submission made from inside another contract's execution reverts (§5.2).
+
+### TC-7 Self-contained vectors (§3.3, §3.5, §5.1, §5.10, §8): `common/`
+
+Each vector carries the registry state it was built from (`registry`: agents with owner, wallet and approved address, operators, feedback in index order). A checker can therefore re-read every committed edge, compute the outcome of the submission, and compute the readings of §8 without a chain.
+
+| vector | level | expected | what it fixes |
+|---|---|---|---|
+| `common_A_anchor_not_source` | `RegistryVerified` | accepted | anchor `X` is the wallet of agent 10, which emits no row; an agent endorsed by `X` alone has `trustRobust = 0` |
+| `common_A_attack_anchor_copy` | `RegistryVerified` | `AnchorAsSource(2)` | the same graph with agent 10 carrying `X`'s row |
+| `common_A_mainnet_old_slash_anchor` | `RegistryVerified` | `AnchorAsSource(5)` | the same refusal on real data (needs the registry at `expect.forkBlock`) |
+| `common_B_controller_negative` | `RegistryVerified` | accepted | an anchor made operator, and the agent's approved address, both slash agent 30: both negative edges are kept; agent 30 is vetoed by the certified bit and by approval; agent 31 passes |
+| `common_C_proven_row_resubmitted` | `SubmitterAttested` | accepted, then `ProvenRowResubmitted(0)` | a fabricated anchor edge is proven false; the same false row with other bytes is refused; the honest certificate is accepted |
+| `common_2hop` | `RegistryVerified` | accepted | agent 51, two hops from the anchors, has `trustRobust = 2/27` and passes; a one-hop list of trusted raters says "unknown" |
+| `common_2hop_one_anchor` | `RegistryVerified` | accepted | the same chain through an agent endorsed by one anchor: `trustRobust = 0` |
+| `common_R1_address_zero_node` | `RegistryVerified` | `BadNodes()` | a node for the zero address |
+
+### TC-8 Proof sequences (§5.10, §6): `sequences/`
+
+Registry changes, proofs and resubmissions, in order, with `eLowEff` and `eEff` after each proof:
+
+| vector | sequence | `eLowEff` / `eEff` after each proof |
+|---|---|---|
+| `seq_declared_omission` | a row commits `{62: +10000, 63: +5000}` under a declared `sPlus = 20000` (64 omitted); the client revokes its feedback on 62, proven; the omission of 64 is revealed; the client endorses a new agent 65, proven; the original certificate is resubmitted | 0.2222 / 0.3333, then unchanged, then 0.2444 / 0.3556 (exact values in the file); resubmission refused (`ProvenRowResubmitted(2)`) |
+| `seq_prove_wallet` | the wallet of agent 70 changes, `proveWallet`; the same certificate is resubmitted; the wallet is set back, `clearSourceFact`; the same certificate is resubmitted | 0.4444 / 0.8889; refused (`ProvenRowResubmitted(2)`); then accepted |
+
+The first sequence fixes formula X. Keeping the declared budget when the committed edge on 62 falls would leave `eEff` at 0.111 instead of 0.333 after the first proof, and billing nothing to `eLow` for the new edge on 65 would leave `eLowEff` at 0.2222 after the last one.
+
+### TC-9 Refusals (§5.1, §5.3, §5.4): `refusals.json`
+
+Each case changes the certificate of `common_2hop` in one way, and MUST be refused:
+
+| change | expected |
+|---|---|
+| a row declares `sPlus` equal to its committed positive sum | `NotCanonical(2)` |
+| a row carries SRC with the zero address | `NotCanonical(2)` |
+| the node entries are passed inline (`newNodes`) on an open set | `BadNodes()` |
+| an anchor node carries a non-zero `ownerFp` | `EdgeMismatch(2²⁵⁶ − 1, 0)` |
 
 ⟦Tests de l'implémentation de référence correspondants (`contracts/test/`) :
 1. `test_statuses` ;
@@ -1009,12 +1056,14 @@ These cases need a chain. Their expected outcomes are normative:
 3. `test_registryChanged`, `test_fork_upgradeDetected`, `test_fork_upgradeToPR80` ;
 4. `test_statuses`, `test_fastTransferMode` ;
 5. `test_vetoIsLastAnchorFeedback`, `test_certifiedVetoBit`, `test_fork_vetoOnRealSlash` ;
-6. `test_isTrusted` ;
+6. `test_isTrusted` (nom historique, il appelle `passesAnchorPolicy`) ;
 7. `test_leaveOneOut` ;
-8. `test_openReplacementRule`, `test_replacementRefusesOmittedNegative`, `test_replacementRefusesResubmittingProvenCertificate` ;
-9. `test_neverRevertsOnBrokenRegistry`.
+8. `test_openReplacementRule`, `test_replacementRefusesOmittedNegative`, `test_replacementRefusesResubmittingProvenCertificate`, `test_C_provenRowResubmittedReencoded`, `test_C_provenRowResubmittedUnderRegistryChanged` ;
+9. `test_neverRevertsOnBrokenRegistry` ;
+10. `test_B_approvedAnchorVetoesStrict`, `test_B_operatorAnchorVetoesStrict`, `test_B_proveApprovalFastMode` ;
+11. G-11 dans `Bis.t.sol` (soumission par un contrat refusée sur un ensemble ouvert).
 
-Ces cas ne sont pas dans `verify.py` : ils exigent un registre. Le chemin `assets/erc-0000` suit l'usage du dépôt ERCs (numéro provisoire 0000, à renommer quand un éditeur attribue le numéro).⟧
+TC-7 : rejoués par `CommonVectors.t.sol` (mocks, Registry-verified) et par `simulate.py` sur fork (07/10, 27/27). TC-8 et TC-9 : construits par `docs/erc/drafts/build-x08.py` (pipeline du solveur), rejoués sur le contrat de `main` avec les mocks dans une copie de travail (test `X08Vectors.t.sol`, copie dans `drafts/measurements/`), journal `forge-08bis-2026-10-07.log`. Ces séquences ne sont pas encore dans `contracts/test/` : relais au 02 (AM-08bis.6). Le chemin `assets/erc-0000` suit l'usage du dépôt ERCs (numéro provisoire 0000, à renommer quand un éditeur attribue le numéro).⟧
 
 ## Reference Implementation
 
@@ -1059,7 +1108,7 @@ In every case, the lower bound is guaranteed for the registry's graph only once 
 ⟦OPEN — A1b (revue du 06/10), à trancher par Hugo ou le conseil (CR, « Ce qui reste ouvert après la revue »). D23 a décidé une zone de transit : un nœud n'entrerait dans la table que par un certificat accepté qui lui donne de la masse. Elle n'est pas implémentée, et `addNodes` reste ouvert sur un ensemble ouvert. Une alternative est une caution par nœud. Le texte décrit le code et chiffre le risque. Il ne normalise ni la zone de transit (ce serait contredire le code), ni l'ouverture (ce serait contredire D23).⟧
 
 **Bounds are global over a set.** `eLowEff` and `eEff` aggregate over all agents. One proof on a high-trust row lowers `trustLow`, or raises `distrustUp`, for every agent of the set until recertification.
-- On the deployment of Motivation, proving one omitted negative edge on an anchor row raised `eEff` from 18 wei to 0.556 WAD. With `ρ = 1/2`, no agent passed the policy until the next certificate.
+- On the deployment of Motivation, proving one omitted negative edge raised `eEff` from 16 wei to 0.222 WAD (TC-5). With `ρ = 1/2`, an agent then needed a `trustLow` of at least 0.444 WAD to pass, until the next certificate. With two anchors of weight 1/2 and `minAnchors = 2`, `trustLow` is at most `(1 − α)/2 = 1/3` WAD, so no agent could pass.
 - Only the client of a committed row can create such facts, and the replacement rule lets recertification follow at once. This is fail-closed by design, and it is also a denial-of-service lever.
 - The owner of an endorsed agent can make its endorser an approved operator (`setApprovalForAll`), which turns a positive endorsement into a self-endorsement (§3.3), and then prove the decrease.
 - `eLowMax` caps the widening of the lower bound: beyond it, the set is `STALE` and any certificate can replace the current one.
@@ -1070,7 +1119,7 @@ In every case, the lower bound is guaranteed for the registry's graph only once 
 ⟦OPEN — EFF1 (revue du 06/10), à trancher par Hugo ou le conseil. La revue propose d'engager dans la politique une fenêtre de relecture `scanMax` : D14 ne porterait plus que sur les `scanMax` derniers avis du couple, avec la même règle dans le contrat, le solveur et l'indexeur. C'est un changement de la règle d'arête normative (§3.3), donc du `setId` et des vecteurs. Le texte décrit la règle actuelle (historique entier, aucune borne) et chiffre le coût.⟧
 
 **Anchors.**
-- With `minAnchors ≥ 2` and `vetoQuorum = 1`, a stolen anchor key yields a denial of service (vetoes, distrust, loss of the endorsements it held), and no payment to an agent that the other anchors do not reach. This holds because no agent row may have an anchor as its source (§3.5). Without that rule, an agent whose wallet is the anchor address would carry the anchor's row with mass from the other columns: in the first test vector of TC-7, a Sybil endorsed with the stolen key would reach two columns, and the aggregator refuses that certificate. With `minAnchors = 1`, one stolen key suffices to make a Sybil agent pass.
+- With `minAnchors ≥ 2` and `vetoQuorum = 1`, a stolen anchor key yields a denial of service (vetoes, distrust, loss of the endorsements it held), and no payment to an agent that the other anchors do not reach. This holds because no agent row may have an anchor as its source (§3.5). Without that rule, an agent whose wallet is the anchor address would carry the anchor's row with mass from the other columns: in the TC-7 vector `common_A_attack_anchor_copy`, an agent endorsed with the stolen key alone would reach two columns, and the aggregator refuses that certificate. With `minAnchors = 1`, one stolen key suffices to make a Sybil agent pass.
 - An agent whose source is an anchor emits no row. Its own outgoing endorsements are lost, and its mass counts in the truncation margin of `eUp` (§5.6).
 - Leave-one-out protects against one compromised anchor, not against one compromised node. A reputable agent reached from every anchor that turns malicious can endorse Sybils in every column: the mass it passes is bounded by `(1 − α)/α` times the mass of its outgoing edges, and two agents endorsing each other amplify their own trust by up to `1/(1 − (1 − α)²)` (1.8 for `α = 1/3`).
 - A region `X` can concentrate up to `(1 − α)·π(X)` of distrust on a single agent.
@@ -1149,7 +1198,7 @@ Chains with a lower per-transaction gas cap (for example 2²⁴ under [EIP-7825]
 - *Guard* : contournement par `agentWallet` sous DISCLOSURE-GATE ; AM-9.3 (ancien owner qui note 918 blocs après le transfert, cas réel #10255) assumé par D48.
 - *Data availability* : G-11 (`msg.sender == tx.origin`) et AM-02bis.6 (EOA délégué EIP-7702 ; confiance 6 dans la revue de sécurité ; non corrigé ; question de Hugo n° 2 du rapport 02-bis).
 - *Indexers* : REGCB (revue, constat 34 ; FORMAT §7 ; MESURÉ sur le mainnet du 06/10 : 19 enregistrements, aucun touché). NUL et LONGTAG (revue, constats 12 et 13 ; jugés sur la limite documentée de Postgres, NON VÉRIFIÉS sur un vrai Postgres).
-Correspondance du 01/10, toujours valable : AM-02.1, AM-02.4 / AM-INT.4 (18 wei → 0,556 WAD, MESURÉ le 01/10), AM-02.3, AM-02.6 et AM-4.7, AM-08.4, AM-08.9, AM-3.5 / D17 / AM-08.5, AM-08.10, D20, désaccord 1 du tour 4 (concentration), désaccord 3 du tour 2 (consommateur-ancre), R4 (34,6 %), D25 (cache), AM-R5.9. Aucun mot-clé RFC 2119 hors de la Specification (EIP-1).⟧
+Correspondance du 01/10, toujours valable : AM-02.1, AM-02.4 / AM-INT.4 (01/10 : 18 wei → 0,556 WAD sur l'ancien vecteur, dont l'ancre était la source de #18 ; 07/10 : 16 wei → 0,222 WAD sur le nouveau TC-5, MESURÉ), AM-02.3, AM-02.6 et AM-4.7, AM-08.4, AM-08.9, AM-3.5 / D17 / AM-08.5, AM-08.10, D20, désaccord 1 du tour 4 (concentration), désaccord 3 du tour 2 (consommateur-ancre), R4 (34,6 %), D25 (cache), AM-R5.9. Aucun mot-clé RFC 2119 hors de la Specification (EIP-1).⟧
 
 ## Copyright
 

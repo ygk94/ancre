@@ -1,0 +1,291 @@
+{
+ "format": "anchored-reputation-cert-v1",
+ "id": "two_omissions_one_row",
+ "description": "Arithmetically valid certificate (t <= F(t)) whose committed graph is NOT dominated by the registry. Agent 18's copy of 0xea0b...'s row with BOTH its slash on agent 4 and its endorsement of agent 2 omitted (no sPlus declared): two proofs on one row, the second one starting from the amendments of the first (section 6). Anchors: the two demo anchors of mainnet_honest_d20.",
+ "level": "RegistryVerified",
+ "identityBlock": 110994810,
+ "set": {
+  "anchors": [
+   "0x0730536018541c5149a049d35528a76c2c8f1e6b",
+   "0xf7d5543dfff21ac729626579216776412132fe74"
+  ],
+  "lambdas": [
+   "500000000000000000",
+   "500000000000000000"
+  ],
+  "alphaN": 1,
+  "alphaD": 3,
+  "minAnchors": 2,
+  "tagSchemaHash": "0x89c4e167714727b67cef9e9eecec6a6028453be8ef30b0185f4e27877f41fac1",
+  "tags": [
+   {
+    "tag": "vouch",
+    "min": "0",
+    "neutral": "0",
+    "max": "100000000000000000000",
+    "kind": 0
+   },
+   {
+    "tag": "review",
+    "min": "-1000000000000000000",
+    "neutral": "0",
+    "max": "1000000000000000000",
+    "kind": 0
+   },
+   {
+    "tag": "slash",
+    "min": "-100000000000000000000",
+    "neutral": "0",
+    "max": "0",
+    "kind": 0
+   }
+  ],
+  "policy": {
+   "theta": "1000000000000000",
+   "rhoN": 1,
+   "rhoD": 2,
+   "minAnchors": 2,
+   "vetoQuorum": 1,
+   "vetoMax": -1,
+   "maxAge": 288000,
+   "minRefresh": 600,
+   "slackRefresh": "0",
+   "eLowMax": "10000000000000000",
+   "strictTransfer": true,
+   "registryVerified": true,
+   "ownerFallback": false,
+   "submitters": []
+  },
+  "setId": "0x73f18d14e84832a2f0c6b65f3dcf485b6b2f753be81b9e255928890f019822e5"
+ },
+ "nCert": 4,
+ "nodes": [
+  {
+   "i": 0,
+   "kind": "anchor",
+   "address": "0x0730536018541c5149a049d35528a76c2c8f1e6b",
+   "hasRow": true
+  },
+  {
+   "i": 1,
+   "kind": "anchor",
+   "address": "0xf7d5543dfff21ac729626579216776412132fe74",
+   "hasRow": true
+  },
+  {
+   "i": 2,
+   "kind": "agent",
+   "agentId": 3,
+   "owner": "0xe4cdd1ad7fae7d54441ef12db1a68ab9a4c2d7b5",
+   "agentWallet": "0xe4cdd1ad7fae7d54441ef12db1a68ab9a4c2d7b5",
+   "hasRow": true
+  },
+  {
+   "i": 3,
+   "kind": "agent",
+   "agentId": 18,
+   "owner": "0xea0b21fb2441464f4920ce3e34d478235605816b",
+   "agentWallet": "0xea0b21fb2441464f4920ce3e34d478235605816b",
+   "hasRow": true
+  }
+ ],
+ "rows": [
+  {
+   "u": 0,
+   "source": null,
+   "via": "anchor",
+   "aliasOf": null,
+   "sPlus": 10000,
+   "bPlus": 10000,
+   "bMinus": 10000,
+   "edges": [
+    {
+     "dst": 3,
+     "w": 10000,
+     "feedbackIndex": 1,
+     "client": "0x0730536018541c5149a049d35528a76c2c8f1e6b",
+     "agentId": 18,
+     "tag1": "vouch"
+    }
+   ]
+  },
+  {
+   "u": 1,
+   "source": null,
+   "via": "anchor",
+   "aliasOf": null,
+   "sPlus": 10000,
+   "bPlus": 10000,
+   "bMinus": 10000,
+   "edges": [
+    {
+     "dst": 3,
+     "w": 10000,
+     "feedbackIndex": 1,
+     "client": "0xf7d5543dfff21ac729626579216776412132fe74",
+     "agentId": 18,
+     "tag1": "review"
+    }
+   ]
+  },
+  {
+   "u": 2,
+   "source": "0xe4cdd1ad7fae7d54441ef12db1a68ab9a4c2d7b5",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 0,
+   "bPlus": 10000,
+   "bMinus": 10000,
+   "edges": []
+  },
+  {
+   "u": 3,
+   "source": "0xea0b21fb2441464f4920ce3e34d478235605816b",
+   "via": "wallet",
+   "aliasOf": null,
+   "sPlus": 10000,
+   "bPlus": 10000,
+   "bMinus": 10000,
+   "edges": [
+    {
+     "dst": 2,
+     "w": 10000,
+     "feedbackIndex": 1,
+     "client": "0xea0b21fb2441464f4920ce3e34d478235605816b",
+     "agentId": 3,
+     "tag1": "review"
+    }
+   ]
+  }
+ ],
+ "vectors": {
+  "t": [
+   [
+    "333333333333333333",
+    "0",
+    "148148148148148148",
+    "222222222222222222"
+   ],
+   [
+    "0",
+    "333333333333333333",
+    "148148148148148148",
+    "222222222222222222"
+   ]
+  ],
+  "ownerFp": [
+   "0",
+   "0",
+   "3577699483930253237",
+   "3806799678197301611"
+  ]
+ },
+ "expected": {
+  "subSolution": true,
+  "iterationsFromZero": 4,
+  "r": [
+   "4",
+   "4"
+  ],
+  "e": [
+   "12",
+   "12"
+  ],
+  "eEff": "12",
+  "qEff": "0",
+  "mass": "703703703703703702",
+  "distrustMass": "0",
+  "d": [
+   "0",
+   "0",
+   "0",
+   "0"
+  ],
+  "graphRoot": "0xa9c82736bc9f9e40416d718d89ccc6fbd63d13b550eb775e92d1c279430bc18d",
+  "vectorRoot": "0x84e5e904053c5e716f8fe70e4163701392b91c80d51b55701944961cdef26eb9",
+  "tight": {
+   "r": [
+    "1",
+    "1"
+   ],
+   "e": [
+    "3",
+    "3"
+   ]
+  }
+ },
+ "calldata": {
+  "W": 2,
+  "newNodes": "0x",
+  "vectors": "0x04a03ce68d21555500000000000000000000000000000000000000000000000004a03ce68d2155550000000000000000020e53f4b08097b4020e53f4b08097b431a68ab9a4c2d7b503157def08c0e38e03157def08c0e38e34d478235605816b",
+  "rows": "0x020000000400000001000327100000000100010001000327100000000100028000e4cdd1ad7fae7d54441ef12db1a68ab9a4c2d7b500038001ea0b21fb2441464f4920ce3e34d478235605816b0002271000000001",
+  "nodeEntries": "0x01000000030100000012"
+ },
+ "violation": {
+  "kind": "two_omissions_one_row",
+  "honestVector": "mainnet_honest_d20.json",
+  "atSubmission": {
+   "RegistryVerified": "accepted at both levels (completeness is not checkable)",
+   "SubmitterAttested": "accepted"
+  },
+  "proofs": [
+   {
+    "level": "RegistryVerified",
+    "steps": [
+     {
+      "row": 3,
+      "agentId": 4,
+      "wNew": -10000
+     },
+     {
+      "row": 3,
+      "agentId": 2,
+      "wNew": 10000
+     }
+    ],
+    "measured": {
+     "eLowEffBefore": "0",
+     "eLowEffAfter": "222222222222222222",
+     "eEffBefore": "12",
+     "eEffAfter": "666666666666666678",
+     "proofGas": [
+      361691,
+      340800
+     ]
+    }
+   },
+   {
+    "level": "SubmitterAttested",
+    "steps": [
+     {
+      "row": 3,
+      "agentId": 4,
+      "wNew": -10000
+     },
+     {
+      "row": 3,
+      "agentId": 2,
+      "wNew": 10000
+     }
+    ],
+    "measured": {
+     "eLowEffBefore": "0",
+     "eLowEffAfter": "222222222222222222",
+     "eEffBefore": "12",
+     "eEffAfter": "666666666666666678",
+     "proofGas": [
+      361691,
+      340800
+     ]
+    }
+   }
+  ],
+  "measuredOn": {
+   "implementation": "reference AnchoredReputation (lot 02-bis, main of 2026-10-07)",
+   "network": "anvil fork of chain 143",
+   "block": 110994810,
+   "date": "2026-10-07"
+  },
+  "note": "SubmitterAttested runs use the same rows and vectors on a set with registryVerified = false and one listed submitter; their setId differs."
+ }
+}

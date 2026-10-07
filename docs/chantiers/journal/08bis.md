@@ -85,3 +85,35 @@
 - **AM-08bis.5** : le « mode strict » de D48-B (veto par approbation lu en direct) n'a pas de champ à lui. C'est `strictTransfer` qui le commande. Le nom du champ ne dit plus tout ce qu'il fait. L'ERC le documente sans renommer le champ, puisque le renommer changerait le `setId`.
 
 **Prochaine étape** : E2, les vecteurs. Puis le chiffre de « Bounds are global » (18 wei → 0,556 WAD, vecteur du 01/10) est à recalculer sur le nouveau TC-3.
+
+## 2026-10-07 16:10 — E2 : vecteurs normatifs régénérés et étendus
+
+**Fait** (détail : CHANGES §10).
+- `docs/erc/assets/erc-0000/` régénéré, **27 fichiers** :
+  - 9 certificats ;
+  - 5 violations, dont une nouvelle à deux amendements ;
+  - 8 vecteurs communs autonomes, avec leur registre ;
+  - 2 séquences de preuves (nouvelles) ;
+  - 4 refus (nouveaux).
+- `verify.py` réécrit : règle B, identité des tags par hash, formule X, `proveWallet`, refus dans l'ordre du contrat, faits, lectures, borne L6 exacte après chaque preuve. **0 échec.** 7 mutations détectées sur 7 (les tests ne sont pas creux, AM-INT.2).
+- TC-1 à TC-9 réécrits dans l'ERC.
+
+**Mesures (MESURÉ le 07/10).**
+- `simulate.py` sur fork : 27/27 (voir E1).
+- Copie de travail du contrat de `main` dans le scratchpad, avec un test `X08Vectors.t.sol` (copie dans `drafts/measurements/`), mocks : **3/3** ; les deux séquences et les quatre refus ont l'issue attendue.
+- `pair-edge.json`, 17 cas : **0 écart** avec `solver/graph.combine_pairs`.
+- Sur `seq_declared_omission`, l'ancienne formule laisse eEff à 0,111 WAD au lieu de 0,333 (K8), et eLowEff à 0,2222 au lieu de 0,2444 (A2b).
+
+**Décisions de rédaction, et pourquoi.**
+1. **Vecteurs autonomes** (avec registre) plutôt que des vecteurs liés au mainnet : un lecteur doit pouvoir vérifier les refus et les lectures sans chaîne. Seul `common_A_mainnet_old_slash_anchor` exige le vrai registre, et `verify.py` n'y vérifie que la partie structurelle (`AnchorAsSource`).
+2. **Séquences mesurées sur mocks, pas sur fork.** Leurs registres jouets ne sont pas sur la chaîne, et le contrat est le même. Les montants sont refaits indépendamment par `verify.py`, au wei près.
+3. **`nodeEntries` / `newNodes` vide** sur un ensemble ouvert : le calldata des vecteurs du solveur portait les nœuds en ligne. Copié tel quel, il aurait été refusé par la règle A1d.
+4. **Les gas des mocks ne sont pas publiés** : ils ne représentent pas un vrai registre.
+5. **Les outils (`build-assets.py`, `build-x08.py`, mesures) restent dans `drafts/`**, hors des assets : ils dépendent du solveur. Les assets, eux, n'en dépendent pas.
+
+**Incohérences.**
+- **AM-08bis.6** : les séquences TC-8 et les refus TC-9 ne sont rejoués que dans ma copie de travail, pas dans `contracts/test/`. Il faudrait ajouter `X08Vectors.t.sol` (ou l'équivalent) au contrat (→ 02).
+- **AM-08bis.7** : le champ `atSubmission` des violations disait « accepted at both levels » même pour celles que RV refuse. C'est corrigé dans les assets (par niveau). Le JSON du solveur garde son champ `mustBe`, générique (sans effet).
+- **AM-08bis.8** : `solver/vectors/*.json` portent `alignedWith: "... (2026-10-01) ..."`, alors qu'ils ont été régénérés en 04-bis (06/10). Le libellé est périmé (→ 04, cosmétique).
+
+**Prochaine étape** : E3 (Security, déjà réécrite en E1) : balayage DISCLOSURE-GATE dans tout `docs/erc/`, puis E4.

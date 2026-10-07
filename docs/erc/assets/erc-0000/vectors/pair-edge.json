@@ -1,5 +1,5 @@
 {
- "description": "Section 3.3. Combined weight w(c, j) of one (client, agent) pair from its whole feedback history, and the index of the deciding feedback. expected = null: no edge.",
+ "description": "Section 3.3. Combined weight w(c, j) of one (client, agent) pair from its whole feedback history, and the index of the deciding feedback. expected = null: no edge. `controller`: the client is a current controller of the agent (rule 4: only a positive combined weight is rejected). Tags are matched by keccak256 of their bytes (section 3.1): a key of `tags` is the exact tag text.",
  "tags": {
   "starred": {
    "min": "0",
@@ -48,6 +48,12 @@
    "neutral": "0",
    "max": "100000000000000000000",
    "kind": 1
+  },
+  "requester_rating:knowledge_access": {
+   "min": "0",
+   "neutral": "0",
+   "max": "100000000000000000000",
+   "kind": 0
   }
  },
  "cases": [
@@ -248,7 +254,7 @@
    ],
    "controller": true,
    "expected": null,
-   "note": "the client is a controller of the agent (owner, agentWallet, approved or operator): rejected"
+   "note": "the client is a controller of the agent (owner, agentWallet, approved or operator) and the combined weight is positive: rejected (self-endorsement)"
   },
   {
    "id": "p10",
@@ -346,6 +352,82 @@
     "feedbackIndex": 1
    },
    "note": "a veto followed by another feedback: the pair edge stays negative (the LIVE veto of section 8.2 would read only index 2)"
+  },
+  {
+   "id": "p14",
+   "feedback": [
+    {
+     "tag1": "slash",
+     "value": "-100",
+     "decimals": 0,
+     "index": 1,
+     "revoked": false
+    }
+   ],
+   "controller": true,
+   "expected": {
+    "w": -10000,
+    "feedbackIndex": 1
+   },
+   "note": "rule 4: a controller's NEGATIVE pair weight is kept (an owner cannot erase a critic by approving it)"
+  },
+  {
+   "id": "p15",
+   "feedback": [
+    {
+     "tag1": "vouch",
+     "value": "1",
+     "decimals": 0,
+     "index": 1,
+     "revoked": false
+    },
+    {
+     "tag1": "slash",
+     "value": "-50",
+     "decimals": 0,
+     "index": 2,
+     "revoked": false
+    }
+   ],
+   "controller": true,
+   "expected": {
+    "w": -5000,
+    "feedbackIndex": 2
+   },
+   "note": "rule 4 is applied to the combined weight: negative dominance first, then the sign test"
+  },
+  {
+   "id": "p16",
+   "feedback": [
+    {
+     "tag1": "vouch\u0000",
+     "value": "1",
+     "decimals": 0,
+     "index": 1,
+     "revoked": false
+    }
+   ],
+   "controller": false,
+   "expected": null,
+   "note": "tag identity by bytes (section 3.1): 'vouch' followed by a NUL byte is not the tag 'vouch'"
+  },
+  {
+   "id": "p17",
+   "feedback": [
+    {
+     "tag1": "requester_rating:knowledge_access",
+     "value": "100",
+     "decimals": 0,
+     "index": 1,
+     "revoked": false
+    }
+   ],
+   "controller": false,
+   "expected": {
+    "w": 10000,
+    "feedbackIndex": 1
+   },
+   "note": "a 33-byte tag (real tag on chain 143) is matched by its hash like any other"
   }
  ]
 }

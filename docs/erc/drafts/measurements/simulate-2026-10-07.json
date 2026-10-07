@@ -1,0 +1,602 @@
+{
+ "fork": {
+  "url": "https://rpc1.monad.xyz",
+  "block": 110994810,
+  "network": "monad (anvil)"
+ },
+ "contract": "0x3c2bafebbb0c8c58f39a976e725cd20d611d01e9",
+ "vectors": [
+  {
+   "vector": "mainnet_em_d44",
+   "level": "Registry-verified",
+   "ownerFallback": true,
+   "setIdMatch": true,
+   "registerGas": 733691,
+   "expect": "ACCEPTED, mutated copy NotSubSolution, on-chain values = expected",
+   "pass": true,
+   "mutated": "rejected: NotSubSolution(0, 13)",
+   "result": "ACCEPTED",
+   "estimate": 3103219,
+   "gasLimit": 3340961,
+   "gasUsed": 3103219,
+   "eEffOnChain": 191595164079698872,
+   "eEffExpected": 191595164079698872,
+   "graphRootMatch": true,
+   "vectorRootMatch": true,
+   "massMatch": true,
+   "qMatch": true,
+   "addNodes": {
+    "fn": "addNodes",
+    "result": "ACCEPTED",
+    "estimate": 596139,
+    "gasUsed": 596139
+   }
+  },
+  {
+   "vector": "mainnet_honest_d20",
+   "level": "Registry-verified",
+   "ownerFallback": false,
+   "setIdMatch": true,
+   "registerGas": 414078,
+   "expect": "ACCEPTED, mutated copy NotSubSolution, on-chain values = expected",
+   "pass": true,
+   "mutated": "rejected: NotSubSolution(0, 5)",
+   "result": "ACCEPTED",
+   "estimate": 836469,
+   "gasLimit": 904205,
+   "gasUsed": 836469,
+   "eEffOnChain": 16,
+   "eEffExpected": 16,
+   "graphRootMatch": true,
+   "vectorRootMatch": true,
+   "massMatch": true,
+   "qMatch": true,
+   "addNodes": {
+    "fn": "addNodes",
+    "result": "ACCEPTED",
+    "estimate": 230003,
+    "gasUsed": 230003
+   }
+  },
+  {
+   "vector": "mainnet_scanner_preD15",
+   "level": "Registry-verified",
+   "ownerFallback": false,
+   "setIdMatch": true,
+   "registerGas": 572574,
+   "expect": "ACCEPTED, mutated copy NotSubSolution, on-chain values = expected",
+   "pass": true,
+   "mutated": "rejected: NotSubSolution(0, 5)",
+   "result": "ACCEPTED",
+   "estimate": 4607208,
+   "gasLimit": 4957749,
+   "gasUsed": 4607208,
+   "eEffOnChain": 174,
+   "eEffExpected": 174,
+   "graphRootMatch": true,
+   "vectorRootMatch": true,
+   "massMatch": true,
+   "qMatch": true,
+   "addNodes": {
+    "fn": "addNodes",
+    "result": "ACCEPTED",
+    "estimate": 1557236,
+    "gasUsed": 1557236
+   }
+  },
+  {
+   "vector": "mainnet_slash_anchor",
+   "level": "Registry-verified",
+   "ownerFallback": false,
+   "setIdMatch": true,
+   "registerGas": 698296,
+   "expect": "ACCEPTED, mutated copy NotSubSolution, on-chain values = expected",
+   "pass": true,
+   "mutated": "rejected: NotSubSolution(0, 5)",
+   "result": "ACCEPTED",
+   "estimate": 856265,
+   "gasLimit": 925485,
+   "gasUsed": 856265,
+   "eEffOnChain": 16,
+   "eEffExpected": 16,
+   "graphRootMatch": true,
+   "vectorRootMatch": true,
+   "massMatch": true,
+   "qMatch": true,
+   "addNodes": {
+    "fn": "addNodes",
+    "result": "ACCEPTED",
+    "estimate": 229991,
+    "gasUsed": 229991
+   }
+  },
+  {
+   "vector": "toy_alias_owner_rowmax",
+   "level": "Submitter-attested",
+   "ownerFallback": true,
+   "setIdMatch": true,
+   "registerGas": 432704,
+   "expect": "ACCEPTED, mutated copy NotSubSolution, on-chain values = expected",
+   "pass": true,
+   "mutated": "rejected: NotSubSolution(0, 263)",
+   "result": "ACCEPTED",
+   "estimate": 19958831,
+   "gasLimit": 21460744,
+   "gasUsed": 19958831,
+   "eEffOnChain": 1124556900135260,
+   "eEffExpected": 1124556900135260,
+   "graphRootMatch": true,
+   "vectorRootMatch": true,
+   "massMatch": true,
+   "qMatch": true
+  },
+  {
+   "vector": "toy_alpha_1_2",
+   "level": "Submitter-attested",
+   "ownerFallback": false,
+   "setIdMatch": true,
+   "registerGas": 432692,
+   "expect": "ACCEPTED, mutated copy NotSubSolution, on-chain values = expected",
+   "pass": true,
+   "mutated": "rejected: NotSubSolution(0, 4)",
+   "result": "ACCEPTED",
+   "estimate": 681636,
+   "gasLimit": 737759,
+   "gasUsed": 681636,
+   "eEffOnChain": 14,
+   "eEffExpected": 14,
+   "graphRootMatch": true,
+   "vectorRootMatch": true,
+   "massMatch": true,
+   "qMatch": true
+  },
+  {
+   "vector": "toy_alpha_1_3",
+   "level": "Submitter-attested",
+   "ownerFallback": false,
+   "setIdMatch": true,
+   "registerGas": 432692,
+   "expect": "ACCEPTED, mutated copy NotSubSolution, on-chain values = expected",
+   "pass": true,
+   "mutated": "rejected: NotSubSolution(0, 4)",
+   "result": "ACCEPTED",
+   "estimate": 681696,
+   "gasLimit": 737824,
+   "gasUsed": 681696,
+   "eEffOnChain": 22,
+   "eEffExpected": 22,
+   "graphRootMatch": true,
+   "vectorRootMatch": true,
+   "massMatch": true,
+   "qMatch": true
+  },
+  {
+   "vector": "toy_alpha_1_4",
+   "level": "Submitter-attested",
+   "ownerFallback": false,
+   "setIdMatch": true,
+   "registerGas": 432692,
+   "expect": "ACCEPTED, mutated copy NotSubSolution, on-chain values = expected",
+   "pass": true,
+   "mutated": "rejected: NotSubSolution(0, 4)",
+   "result": "ACCEPTED",
+   "estimate": 681648,
+   "gasLimit": 737772,
+   "gasUsed": 681648,
+   "eEffOnChain": 28,
+   "eEffExpected": 28,
+   "graphRootMatch": true,
+   "vectorRootMatch": true,
+   "massMatch": true,
+   "qMatch": true
+  },
+  {
+   "vector": "toy_truncated",
+   "level": "Submitter-attested",
+   "ownerFallback": false,
+   "setIdMatch": true,
+   "registerGas": 432692,
+   "expect": "ACCEPTED, mutated copy NotSubSolution, on-chain values = expected",
+   "pass": true,
+   "mutated": "rejected: NotSubSolution(0, 4)",
+   "result": "ACCEPTED",
+   "estimate": 675369,
+   "gasLimit": 731022,
+   "gasUsed": 675369,
+   "eEffOnChain": 19542096574323471,
+   "eEffExpected": 19542096574323471,
+   "graphRootMatch": true,
+   "vectorRootMatch": true,
+   "massMatch": true,
+   "qMatch": true
+  }
+ ],
+ "violations": [
+  {
+   "vector": "fabricated",
+   "level": "Registry-verified",
+   "submission": "REJECTED",
+   "reason": "EdgeMismatch(0, 0)",
+   "gasUsed": null,
+   "addNodes": {
+    "fn": "addNodes",
+    "result": "ACCEPTED",
+    "estimate": 230003,
+    "gasUsed": 230003
+   },
+   "expect": "EdgeMismatch",
+   "pass": true
+  },
+  {
+   "vector": "inflated",
+   "level": "Registry-verified",
+   "submission": "REJECTED",
+   "reason": "EdgeMismatch(5, 2)",
+   "gasUsed": null,
+   "addNodes": {
+    "fn": "addNodes",
+    "result": "ACCEPTED",
+    "estimate": 230003,
+    "gasUsed": 230003
+   },
+   "expect": "EdgeMismatch",
+   "pass": true
+  },
+  {
+   "vector": "dilution",
+   "level": "Registry-verified",
+   "submission": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 782135,
+   "addNodes": {
+    "fn": "addNodes",
+    "result": "ACCEPTED",
+    "estimate": 184270,
+    "gasUsed": 184270
+   },
+   "expect": "ACCEPTED, then proven by the watcher",
+   "detected": [
+    "DILUTION"
+   ],
+   "proofs": [
+    {
+     "kind": "DILUTION",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 392502,
+     "error": null,
+     "reason": null
+    }
+   ],
+   "eLowEffBefore": "0",
+   "eLowEffAfter": "111111111111111111",
+   "eEffBefore": "12",
+   "eEffAfter": "111111111111111123",
+   "pass": true
+  },
+  {
+   "vector": "omitted_negative",
+   "level": "Registry-verified",
+   "submission": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 786631,
+   "addNodes": {
+    "fn": "addNodes",
+    "result": "ACCEPTED",
+    "estimate": 230003,
+    "gasUsed": 230003
+   },
+   "expect": "ACCEPTED, then proven by the watcher",
+   "detected": [
+    "OMITTED_NEGATIVE"
+   ],
+   "proofs": [
+    {
+     "kind": "OMITTED_NEGATIVE",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 364641,
+     "error": null,
+     "reason": null
+    }
+   ],
+   "eLowEffBefore": "0",
+   "eLowEffAfter": "0",
+   "eEffBefore": "16",
+   "eEffAfter": "222222222222222238",
+   "pass": true
+  },
+  {
+   "vector": "two_omissions_one_row",
+   "level": "Registry-verified",
+   "submission": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 587198,
+   "addNodes": {
+    "fn": "addNodes",
+    "result": "ACCEPTED",
+    "estimate": 138537,
+    "gasUsed": 138537
+   },
+   "expect": "ACCEPTED, then proven by the watcher",
+   "detected": [
+    "DILUTION",
+    "OMITTED_NEGATIVE"
+   ],
+   "proofs": [
+    {
+     "kind": "OMITTED_NEGATIVE",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 361691,
+     "error": null,
+     "reason": null
+    },
+    {
+     "kind": "DILUTION",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 340800,
+     "error": null,
+     "reason": null
+    }
+   ],
+   "eLowEffBefore": "0",
+   "eLowEffAfter": "222222222222222222",
+   "eEffBefore": "12",
+   "eEffAfter": "666666666666666678",
+   "pass": true
+  },
+  {
+   "vector": "fabricated",
+   "level": "Submitter-attested",
+   "submission": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 732609,
+   "expect": "ACCEPTED, then proven by the watcher",
+   "detected": [
+    "FABRICATED"
+   ],
+   "proofs": [
+    {
+     "kind": "FABRICATED",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 359885,
+     "error": null,
+     "reason": null
+    }
+   ],
+   "eLowEffBefore": "0",
+   "eLowEffAfter": "166666666666666667",
+   "eEffBefore": "18",
+   "eEffAfter": "166666666666666685",
+   "pass": true
+  },
+  {
+   "vector": "inflated",
+   "level": "Submitter-attested",
+   "submission": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 730525,
+   "expect": "ACCEPTED, then proven by the watcher",
+   "detected": [
+    "INFLATED"
+   ],
+   "proofs": [
+    {
+     "kind": "INFLATED",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 365713,
+     "error": null,
+     "reason": null
+    }
+   ],
+   "eLowEffBefore": "0",
+   "eLowEffAfter": "0",
+   "eEffBefore": "16",
+   "eEffAfter": "222200000000000016",
+   "pass": true
+  },
+  {
+   "vector": "dilution",
+   "level": "Submitter-attested",
+   "submission": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 676430,
+   "expect": "ACCEPTED, then proven by the watcher",
+   "detected": [
+    "DILUTION"
+   ],
+   "proofs": [
+    {
+     "kind": "DILUTION",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 392502,
+     "error": null,
+     "reason": null
+    }
+   ],
+   "eLowEffBefore": "0",
+   "eLowEffAfter": "111111111111111111",
+   "eEffBefore": "12",
+   "eEffAfter": "111111111111111123",
+   "pass": true
+  },
+  {
+   "vector": "omitted_negative",
+   "level": "Submitter-attested",
+   "submission": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 711360,
+   "expect": "ACCEPTED, then proven by the watcher",
+   "detected": [
+    "OMITTED_NEGATIVE"
+   ],
+   "proofs": [
+    {
+     "kind": "OMITTED_NEGATIVE",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 364641,
+     "error": null,
+     "reason": null
+    }
+   ],
+   "eLowEffBefore": "0",
+   "eLowEffAfter": "0",
+   "eEffBefore": "16",
+   "eEffAfter": "222222222222222238",
+   "pass": true
+  },
+  {
+   "vector": "two_omissions_one_row",
+   "level": "Submitter-attested",
+   "submission": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 517555,
+   "expect": "ACCEPTED, then proven by the watcher",
+   "detected": [
+    "DILUTION",
+    "OMITTED_NEGATIVE"
+   ],
+   "proofs": [
+    {
+     "kind": "OMITTED_NEGATIVE",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 361691,
+     "error": null,
+     "reason": null
+    },
+    {
+     "kind": "DILUTION",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 340800,
+     "error": null,
+     "reason": null
+    }
+   ],
+   "eLowEffBefore": "0",
+   "eLowEffAfter": "222222222222222222",
+   "eEffBefore": "12",
+   "eEffAfter": "666666666666666678",
+   "pass": true
+  }
+ ],
+ "common": [
+  {
+   "vector": "common_2hop",
+   "level": "Submitter-attested",
+   "expect": "ACCEPTED",
+   "result": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 516979,
+   "pass": true
+  },
+  {
+   "vector": "common_2hop_one_anchor",
+   "level": "Submitter-attested",
+   "expect": "ACCEPTED",
+   "result": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 514662,
+   "pass": true
+  },
+  {
+   "vector": "common_A_anchor_not_source",
+   "level": "Submitter-attested",
+   "expect": "ACCEPTED",
+   "result": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 510704,
+   "pass": true
+  },
+  {
+   "vector": "common_A_attack_anchor_copy",
+   "level": "Submitter-attested",
+   "expect": "AnchorAsSource(2)",
+   "result": "REJECTED",
+   "reason": "AnchorAsSource(2)",
+   "gasUsed": null,
+   "pass": true
+  },
+  {
+   "vector": "common_A_mainnet_old_slash_anchor",
+   "level": "Registry-verified",
+   "expect": "AnchorAsSource(5)",
+   "result": "REJECTED",
+   "reason": "AnchorAsSource(5)",
+   "gasUsed": null,
+   "addNodes": {
+    "fn": "addNodes",
+    "result": "ACCEPTED",
+    "estimate": 230003,
+    "gasUsed": 230003
+   },
+   "pass": true
+  },
+  {
+   "vector": "common_B_controller_negative",
+   "level": "Submitter-attested",
+   "expect": "ACCEPTED",
+   "result": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 536236,
+   "pass": true
+  },
+  {
+   "vector": "common_C_proven_row_resubmitted",
+   "level": "Submitter-attested",
+   "expect": "ACCEPTED",
+   "result": "ACCEPTED",
+   "reason": null,
+   "gasUsed": 518906,
+   "pass": true,
+   "proof": [
+    {
+     "kind": "FABRICATED",
+     "fn": "proveEdge",
+     "status": true,
+     "gasUsed": 358798,
+     "error": null,
+     "reason": null
+    }
+   ],
+   "proofPass": true,
+   "fact": {
+    "client": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "agentJ": 41,
+    "proven": true,
+    "w": 0,
+    "refreshFact": "NothingToProve()",
+    "pass": true
+   },
+   "resubmission": {
+    "result": "REJECTED",
+    "reason": "ProvenRowResubmitted(0)",
+    "expect": "ProvenRowResubmitted(0)",
+    "pass": true
+   },
+   "control": {
+    "result": "ACCEPTED",
+    "reason": null,
+    "gasUsed": 260563,
+    "expect": "ACCEPTED",
+    "pass": true
+   }
+  },
+  {
+   "vector": "common_R1_address_zero_node",
+   "level": "Submitter-attested",
+   "expect": "BadNodes()",
+   "result": "REJECTED",
+   "reason": "BadNodes()",
+   "gasUsed": null,
+   "pass": true
+  }
+ ]
+}

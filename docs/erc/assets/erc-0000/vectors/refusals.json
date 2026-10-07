@@ -1,0 +1,45 @@
+{
+ "base": "common/common_2hop.json",
+ "cases": [
+  {
+   "id": "splus_equal_to_committed_sum",
+   "section": "5.4",
+   "change": "row 2 (agent 50) declares SPLUS = 10000, its committed positive sum",
+   "rows": "0x02000000040000000100022710000000010001000100022710000000010002c001000000000000000000000000000000000000c03200002710000327100000000100038000000000000000000000000000000000000000c033",
+   "expect": "NotCanonical(2)",
+   "measured": "NotCanonical(2)"
+  },
+  {
+   "id": "src_zero_address",
+   "section": "5.4",
+   "change": "row 2 (agent 50) carries SRC = 0x0",
+   "rows": "0x0200000004000000010002271000000001000100010002271000000001000280010000000000000000000000000000000000000000000327100000000100038000000000000000000000000000000000000000c033",
+   "expect": "NotCanonical(2)",
+   "measured": "NotCanonical(2)"
+  },
+  {
+   "id": "inline_nodes_on_open_set",
+   "section": "5.1",
+   "change": "the node entries are passed as newNodes of submitCertificate on an open set",
+   "rows": "0x020000000400000001000227100000000100010001000227100000000100028001000000000000000000000000000000000000c032000327100000000100038000000000000000000000000000000000000000c033",
+   "newNodes": "0x01000000320100000033",
+   "expect": "BadNodes()",
+   "measured": "BadNodes()"
+  },
+  {
+   "id": "anchor_fingerprint_not_zero",
+   "section": "5.3",
+   "change": "ownerFp of anchor node 0 set to 1",
+   "rows": "0x020000000400000001000227100000000100010001000227100000000100028001000000000000000000000000000000000000c032000327100000000100038000000000000000000000000000000000000000c033",
+   "vectors": "0x04a03ce68d21555500000000000000000000000000000001000000000000000004a03ce68d215555000000000000000003157def08c0e38e03157def08c0e38e000000000000b032020e53f4b08097b4020e53f4b08097b4000000000000b033",
+   "expect": "EdgeMismatch(115792089237316195423570985008687907853269984665640564039457584007913129639935, 0)",
+   "measured": "EdgeMismatch(115792089237316195423570985008687907853269984665640564039457584007913129639935, 0)"
+  }
+ ],
+ "description": "Single submissions, each one the certificate of common/common_2hop.json changed in one way (`change`). Every case MUST be refused with the error in `expect` (section 10). `rows`, `vectors` and `newNodes`, when present, replace the base calldata; otherwise the base calldata is used and the node entries go through addNodes first (open set).",
+ "measuredOn": {
+  "implementation": "reference AnchoredReputation (lot 02-bis, main of 2026-10-07)",
+  "registries": "mock ERC-8004 registries",
+  "date": "2026-10-07"
+ }
+}

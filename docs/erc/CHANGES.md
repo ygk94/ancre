@@ -236,3 +236,40 @@ Abstract : « exact » retiré, veto « sans recertification ». §1 : masse, pl
 | 9.26 | Backwards Compatibility | Demande 6 : émettre les events de `register()` dans l'ordre de l'état | REGCB |
 | 9.27 | Reference Implementation | Gas après 02-bis (démo RV 15 024 552, SA 1 449 205, `assess` avec veto 180 758 à 208 728, preuves 340 800 à 392 502), taille 39 261 octets ; note sur la licence MIT et CC0 | GAS.md (MESURÉ 06/10), simulate.py et `forge build --sizes` (MESURÉ 07/10 par 08-bis) |
 | 9.28 | Security | Réécrite : ensembles ouverts (faits), inflation de la table (A1b, chiffrée), bornes globales (facture au pire cas), asymétries (EFF1, chiffrées, coût des preuves), ancres (règle A), vivacité des faits, approbations (règle B), gouvernance (R6, DISCLOSURE-GATE), disponibilité des données (G-11, EIP-7702), indexeurs (REGCB, NUL, LONGTAG) | revue du 06/10, AM-02bis.1, .2, .6, .7 |
+| 9.29 | Test Cases (TC-2, TC-3, TC-4, TC-5, TC-6, TC-7 à TC-9 nouveaux) | TC-2 : 4 cas (règle B ×2, NUL, tag de 33 octets). TC-3 réécrit sur le nouveau `mainnet_slash_anchor` (ancres 0x0730 / 0x794c, plus aucune ancre source d'un agent). TC-4 : `mainnet_em_d44` (14 nœuds, 38 arêtes, règle A par l'owner). TC-5 : 5ᵉ violation (deux omissions sur une ligne, amendements chaînés). TC-6 : n° 8 « réencodé, aussi sous REGISTRY_CHANGED », n° 10 (veto par approbation) et n° 11 (G-11). TC-7 : vecteurs communs autonomes. TC-8 : séquences de preuves (formule X, `proveWallet`, `clearSourceFact`). TC-9 : refus (forme canonique, A1d, empreinte d'ancre) | E2 08-bis, AM-08.22 |
+| 9.30 | Security (*Bounds are global*) | Le chiffre du 01/10 (18 wei → 0,556 WAD, ancien vecteur) est remplacé par celui du nouveau TC-5 (16 wei → 0,222 WAD), avec le calcul de ce qu'il faut pour passer | E2 08-bis |
+
+## 10. Vecteurs (E2, 2026-10-07)
+
+**Ce qui est fait.** `docs/erc/assets/erc-0000/` régénéré par `drafts/build-assets.py`, qui lit `solver/vectors/` (lecture seule) et les mesures du 07/10. **27 fichiers, 0 échec** (MESURÉ, `python3 verify.py`).
+
+| Dossier | Contenu | Source | Rejoué sur le contrat de `main` |
+|---|---|---|---|
+| `certificates/` (9) | les 9 vecteurs du solveur ; `mainnet_slash_anchor` et `mainnet_em_d44` changent (règle A) | `solver/vectors/` (04-bis, 06/10) | fork du bloc 110 994 810, 07/10 : 9/9, racines, masse et q identiques |
+| `violations/` (5) | les 4 du 01/10, plus `two_omissions_one_row` | `solver/vectors/violations/`, `simulate.two_omissions_vector` | fork, 07/10 : montants des preuves au wei près |
+| `common/` (8) | vecteurs communs 02-bis / 04-bis, avec leur registre | `solver/vectors/common/` | fork (07/10) et mocks (`CommonVectors.t.sol`, 06/10) |
+| `sequences/` (2) | **nouveaux** : formule X (K8, A2b, omission déclarée révélée, resoumission refusée) ; `proveWallet`, fait de source et `clearSourceFact` | `drafts/build-x08.py` (pipeline du solveur) | mocks, copie de travail du contrat (`drafts/measurements/X08Vectors.t.sol.txt`, journal `forge-08bis-2026-10-07.log`) |
+| `refusals.json` (4 cas) | **nouveaux** : SPLUS = S⁺, SRC nul (`NotCanonical`), `newNodes` sur ensemble ouvert (`BadNodes`), empreinte d'ancre non nulle | idem | idem |
+
+**`verify.py` réécrit** (toujours bibliothèque standard seule) :
+- identité des tags par keccak (§3.1) ;
+- règle B (§3.3) ;
+- formule X (§6.1) et `proveWallet` (§6.2) ;
+- décodage des lignes depuis le calldata ;
+- refus dans l'ordre du contrat (§5.1, §5.4, §5.6, §5.7, §3.5, §5.10) ;
+- modèle de registre, relecture RV et lectures du §8 ;
+- faits prouvés ;
+- borne L6 en fractions exactes après chaque preuve d'une séquence.
+
+**Contrôle des contrôles (MESURÉ 07/10).** Sept mutations du vérificateur ou des données, chacune détectée :
+- règle B coupée → 3 échecs ;
+- `AnchorAsSource` coupé → 2 ;
+- formule X remplacée par « arête révélée dans la déclaration » → 1 (A2b) ;
+- faits ignorés → 3 ;
+- tag apparié sans ses NUL → 1 ;
+- valeur mesurée altérée d'un wei → 1 ;
+- budget déclaré conservé quand une arête engagée tombe (K8) → 15.
+
+**L'ancienne formule du 01/10**, appliquée à la séquence, laisse eEff à 0,111 WAD après la révocation (le contrat mesure 0,333, c'est K8). Elle laisse aussi eLowEff à 0,2222 après l'arête nouvelle (le contrat mesure 0,2444, c'est A2b).
+
+**Format** : `calldata.nodeEntries` (nouveau) porte les entrées de nœuds, et `calldata.newNodes` est vide sur un ensemble ouvert (A1d).
