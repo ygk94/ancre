@@ -45,7 +45,7 @@
 0. [ ] **Divulgation aux auteurs d'ERC-8004 (D29) : tu l'envoies aujourd'hui** (décidé le 07/10). Il faut qu'elle parte avant la mise en public du dépôt.
    - Le dépôt passe public le 12/10, et il décrit le contournement du garde-fou et l'EOA d'upgrade.
    - Brouillon (c) prêt dans `docs/erc/drafts/`. Dis-moi quand c'est parti : je débloque la publication (bloc DISCLOSURE-GATE du README).
-1. [ ] **Répéter l'acte 2 sur fork, sans aucune transaction réelle.**
+1. [x] **Répétition générale de l'acte 2** ✅ 07/10 : `ACT 2 PASS`, 8 scènes sur 8, avec le vrai keystore sur un fork du testnet ; le `--sweep` récupère 2,23 MON.
    - Le contrat corrigé passe déjà en fork : 8/8, mesuré le 06/10.
    - Avant de lancer : `git pull`, puis `cd contracts && forge build`.
    - Commande, qui doit afficher `ACT 2 PASS` :
