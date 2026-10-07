@@ -137,7 +137,7 @@ limit does it set (is there a cap?), and what does it answer on a refusal?
 plus **0.1 USDC testnet** (faucet.circle.com). **The facilitator pays** 3 settlements ≈ 1.1 M gas ≈ 0.11 MON
 testnet (≈ 0.34 with the 2 M probe); its testnet signer holds 4 977 MON (MEASURED 2026-10-01).
 
-Commands (Hugo):
+Commands (Hugo). **Since 07/10, in one go, in Terminal.app:** `plugin/scripts/t1-live.sh ancre-demo` (deploy, then the scenes; D is owner and operator, the treasury a fixed unused address). The step-by-step equivalent:
 
 ```bash
 cast wallet import ancre-t1 --interactive          # once: D's key in the Foundry keystore
