@@ -8,6 +8,7 @@ export type Page =
   | { page: "leaderboard" }
   | { page: "agent"; net: AgentNet; id: string }
   | { page: "live" }
+  | { page: "network" }
   | { page: "donate" }
   | { page: "notfound"; path: string };
 
@@ -26,6 +27,7 @@ export function parseRoute(pathname: string, search: string): Route {
   if (p === "/" || p === "/index.html") return { page: "discover", ...extra };
   if (p === "/leaderboard") return { page: "leaderboard", ...extra };
   if (p === "/live") return { page: "live", ...extra };
+  if (p === "/network") return { page: "network", ...extra };
   if (p === "/donate") return { page: "donate", ...extra };
   const m = /^\/agent\/(testnet|mainnet|demo)\/(\d+)$/.exec(p);
   if (m) {

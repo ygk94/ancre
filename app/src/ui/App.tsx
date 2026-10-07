@@ -9,6 +9,7 @@ import { Discover } from "./Discover";
 import { Feed } from "./Feed";
 import { Leaderboard } from "./Leaderboard";
 import { Live } from "./Live";
+import { Network } from "./Network";
 
 export function App() {
   const route = useRoute();
@@ -54,6 +55,8 @@ function page(route: Route, ds: ReturnType<typeof useDataset>["ds"], error: stri
       return <AgentPage route={route} ds={ds} error={error} />;
     case "live":
       return <Live />;
+    case "network":
+      return <Network route={route} />;
     case "donate":
       return (
         <div className="soonpage">
@@ -87,6 +90,9 @@ function Header({ route }: { route: Route }) {
         </a>
         <a href={href({ page: "leaderboard" }, route)} onClick={onLink} aria-current={cur("leaderboard")}>
           Leaderboard
+        </a>
+        <a href={href({ page: "network" }, route)} onClick={onLink} aria-current={cur("network")}>
+          Network
         </a>
         <a href={href({ page: "live" }, route)} onClick={onLink} aria-current={cur("live")}>
           Live demo
@@ -144,11 +150,14 @@ function NetworkPicker({ route }: { route: Route }) {
                     ? "ANCRE's anchor set and its certificates"
                     : n.state === "preview"
                       ? "read by our reference solver · on-chain certification soon"
-                      : "same ERC-8004 registries · not indexed yet"}
+                      : "not indexed by ANCRE yet"}
                 </small>
               </span>
             </button>
           ))}
+          <a className="netmore" href={href({ page: "network" }, route)} onClick={(e) => (setOpen(false), onLink(e))}>
+            Network details →
+          </a>
         </div>
       )}
     </div>

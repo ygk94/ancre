@@ -348,3 +348,25 @@ html, body { overflow-x: hidden; }
   .feed-more { display: block; margin: 8px 16px; }
   .page-head h1 { font-size: 20px; }
 }
+
+/* network page */
+.netgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 16px; align-items: start; }
+.netgrid .card + .card { margin-top: 0; }
+.netcard.current { border-color: var(--accent); }
+.netcard.off { opacity: 0.7; }
+.netcard h2 .dot { margin-top: 0; vertical-align: middle; }
+.netcard .kv code { font-size: 12px; overflow-wrap: anywhere; }
+.netmenu .netmore { display: block; padding: 8px 12px; border-top: 1px solid var(--line); font-size: 13px; }
+
+/* live demo: scene caption and first screen */
+.scene-note { margin: -4px 0 14px; font-size: 14px; color: var(--text-2); }
+.intro ul { margin: 0 0 14px; padding-left: 18px; line-height: 1.7; font-size: 14px; }
+.intro-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ctl.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.netcard { min-width: 0; }
+@media (max-width: 640px) {
+  .netcard .kv { grid-template-columns: minmax(0, 1fr); }
+  .netcard .kv > div:nth-child(odd) { padding-bottom: 0; border-bottom: 0; font-size: 12px; }
+  .netcard .kv > div:nth-child(even) { text-align: left; padding-top: 2px; }
+  .netcard .pill { white-space: normal; }
+}

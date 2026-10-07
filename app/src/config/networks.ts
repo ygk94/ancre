@@ -24,7 +24,7 @@ export const NETWORKS = {
 } as const;
 
 /** The network selector. Testnet: where ANCRE's anchor set is certified. Mainnet: a PREVIEW, read by the
- *  reference solver, no certificate on-chain yet. Ethereum: soon (same registries, not indexed by us). */
+ *  reference solver, no certificate on-chain yet. Ethereum: soon (not indexed by us). */
 export const NETWORK_CHOICES = [
   { id: "testnet", label: "Monad testnet", chainId: 10143, state: "active" },
   { id: "mainnet", label: "Monad mainnet", chainId: 143, state: "preview" },

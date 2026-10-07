@@ -135,3 +135,15 @@ PAGE AGENT (clic sur une ligne du feed ou de Discover)
 ## 2026-10-07 13:15 — Fin de session : rapport `docs/chantiers/rapports/07bis.md` — ✅
 
 Rapport écrit (livrables, captures, sources, mocks et « — », décisions, AM-07bis.1 à 6, INTERFACE, état de VIDEO-SHOTS, questions). 🧑 en attente : run de l'acte 2 sur le vrai testnet, choix de la lentille « inside the farm », fonction Netlify pour Alchemy, fusion dans `main`.
+
+---
+
+## 2026-10-07 15:30 — Retour de Hugo : page Network, Live demo plus lisible — ✅
+
+Hugo : « t'as oublié la page d'info de network et la page live demo pas sûr. Pk pas une page consigne si vraiment la prise en main a l'air compliqué ».
+
+- **Page `/network`** (onglet « Network » + lien « Network details → » dans le sélecteur) : une carte par réseau. Testnet : registres ERC-8004, `AnchoredReputation` et `TrustGatedPayer` lus dans l'en-tête du run (pill « recorded on a fork of the testnet » tant que le run testnet n'existe pas), ensemble d'ancres (3, m = 2, θ = 1 %), tête Envio et comptes lus en direct. Mainnet : registres, « ANCRE contracts: not deployed », bloc du snapshot du solveur (110 994 810), date de l'instantané 8004scan. Ethereum : « soon », « — » partout (aucune adresse vérifiée par nous).
+- **Live demo** : à l'ouverture (rejeu), une carte « How to follow this demo » remplace « waiting for the first agent event… » (qui est qui, ce que fait le payeur, boutons « Start with scene 1 » / « Jump to the Sybil farm », touches). Une ligne par scène sous la barre des scènes : ce qui se passe + « Watch: … ». Les 10 puces farm-01…10 regroupées en une seule « farm ×10 ».
+- **Pas de page « consigne » séparée** : la prise en main tient dans la carte d'accueil de la Live demo et le « How to read this » de Discover.
+
+**Vérifié** : `tsc -b`, 27/27 tests, build ; captures 1920×1080 et iPhone (`network.png`, `iphone-network.png`, `live-intro.png`, `live-farm-caption.png`), 0 erreur de console.

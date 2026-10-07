@@ -12,7 +12,7 @@
 cd app
 npm ci
 npm run dev                      # http://localhost:5173
-npm test                         # 24 tests: run reducer, block states, Discover/D49/D50 on real data, feed, routes
+npm test                         # 27 tests: run reducer, block states, Discover/D49/D50 on real data, feed, routes
 npx tsc -b && npm run build      # static site in app/dist/
 ```
 
@@ -25,6 +25,7 @@ as a future `public/mera/index.html`, wins over that redirect):
 | `/leaderboard` | every agent reached, ranked by leave-one-out mass; mainnet: 8004scan's top 10 read by ANCRE |
 | `/agent/{testnet,mainnet,demo}/<id>?tab=overview,ratings,path,certificates,payments` | agent page (`demo` = an agent of a fork run) |
 | `/live` (`?source=live`, `?at=`, `?autoplay=1`, `?pacing=recorded`, `?clock=testnet`) | the live demo (act 2), live or replay |
+| `/network` (`?network=mainnet`) | per network: ERC-8004 registry addresses (constants, CLAUDE.md §3), ANCRE contracts and anchor set (run header, “recorded on a fork” or “on Monad testnet”), mainnet solver snapshot block, Envio head and counts (read live), WebSocket URL; Ethereum “soon”, “—” everywhere |
 | `/donate` | “soon” (no wallet, no transaction) |
 | `?act=1`, `?act=2` | old chantier 07 links, rewritten to `/?network=mainnet` and `/live` |
 

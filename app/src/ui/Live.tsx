@@ -13,6 +13,18 @@ import { useHeads, type HeadsSource } from "../sources/useHeads";
 import { BigNum, Meter, Spark } from "./common";
 
 type Demo = ReturnType<typeof useDemo>;
+
+// One line per scene of the chantier 06 script: what happens, then what to look at. The numbers stay on screen.
+const SCENE_NOTES: Record<number, [string, string]> = {
+  0: ["ANCRE and the payer contract are deployed, the demo anchor set is registered, the payer is funded.", "nothing to pay yet"],
+  1: ["Two anchors each vouch for provider-1 and provider-2. Before paying, the payer contract asks ANCRE.", "ANCRE mass over θ, then ✓ Paid on the right"],
+  7: ["provider-1, trusted, vouches for provider-3, which no anchor ever rated.", "provider-3 is paid: trust went one hop further"],
+  2: ["Ten fresh agents rate each other and a target at the maximum. Then one anchor is compromised and vouches for the target too.", "explorer 100 against ANCRE 0; one anchor alone is never enough: still refused"],
+  3: ["The farm pays itself over x402: real receipts between its own agents.", "paying each other carries no trust from your anchors: mass 0, refused"],
+  4: ["provider-2 goes bad and an anchor slashes it.", "the very next payment is refused, before any new certificate"],
+  5: ["Someone else gives provider-2 a +1 under another tag.", "a positive rating does not erase an anchor's veto"],
+  6: ["A certificate claiming an edge the registry does not hold is submitted.", "the contract rejects it: every edge is re-read in the registry"],
+};
 const ROLE_ORDER = ["provider", "farm-target", "farm"];
 const ROLE_COLOUR: Record<string, string> = { provider: "var(--good)", "farm-target": "var(--bad)", farm: "var(--muted)" };
 
@@ -34,6 +46,7 @@ export function Live() {
     () => Object.values(s.agents).sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role) || Number(a.agentId) - Number(b.agentId)),
     [s.agents],
   );
+  const farm = chips.filter((a) => a.role === "farm");
   // scenes in the order the run plays them (scene 7, the second hop, runs right after scene 1)
   const order = useMemo(() => {
     const seen = s.scenes.map((x) => x.n);
@@ -76,19 +89,30 @@ export function Live() {
           );
         })}
       </div>
+      {currentScene !== null && SCENE_NOTES[currentScene] && (
+        <div className="scene-note">
+          {SCENE_NOTES[currentScene][0]} <span className="muted">Watch: {SCENE_NOTES[currentScene][1]}.</span>
+        </div>
+      )}
       {demo.mode === "live" && <ChainClock heads={heads} info={info} />}
       <div className="live-grid">
         <div>
           <div className="chips">
-            {chips.map((a) => (
+            {chips.filter((a) => a.role !== "farm").map((a) => (
               <button key={a.agentId} aria-current={a.agentId === focusId} onClick={() => setPinned(pinned === a.agentId ? null : a.agentId)} title={pinned === a.agentId ? "pinned: click to follow the action again" : "pin this agent"}>
                 <span className="mark" style={{ background: ROLE_COLOUR[a.role] ?? "var(--muted)" }} />
                 {a.label} #{a.agentId}
                 {pinned === a.agentId ? " · pinned" : ""}
               </button>
             ))}
+            {farm.length > 0 && (
+              <button aria-current={agent?.role === "farm"} onClick={() => setPinned(farm.at(-1)!.agentId)} title={farm.map((a) => `${a.label} #${a.agentId}`).join(", ")}>
+                <span className="mark" style={{ background: ROLE_COLOUR.farm }} />
+                farm ×{farm.length} #{farm[0].agentId}–{farm.at(-1)!.agentId}
+              </button>
+            )}
           </div>
-          {agent && s.header?.set && s.header.contracts ? <AgentPanel s={s} a={agent} gate={gate} reread={demo.mode === "live"} /> : <Empty s={s} />}
+          {agent && s.header?.set && s.header.contracts ? <AgentPanel s={s} a={agent} gate={gate} reread={demo.mode === "live"} /> : <Empty s={s} demo={demo} />}
         </div>
         <aside>
           <Latency s={s} />
@@ -107,13 +131,51 @@ export function Live() {
   );
 }
 
-function Empty({ s }: { s: ScreenState }) {
+function Empty({ s, demo }: { s: ScreenState; demo: Demo }) {
+  if (demo.mode === "replay" && s.header) return <Intro demo={demo} m={s.header.set?.minAnchors ?? null} />;
   return (
     <div className="banner info">
       {s.header
         ? `Run ${s.header.runId}: ${s.header.set ? "waiting for the first agent event…" : "setting up (deploying ANCRE and the payer, registering the anchor set)…"}`
         : "No run loaded. Start a chantier 06 run (live) or pick a recorded run."}
     </div>
+  );
+}
+
+/** First screen of a replay: who is who, and how to move through it. */
+function Intro({ demo, m }: { demo: Demo; m: number | null }) {
+  const { controls } = demo;
+  return (
+    <section className="card">
+      <div className="card-h">
+        <h2>How to follow this demo</h2>
+      </div>
+      <div className="card-b intro">
+        <ul>
+          <li>
+            <b>Anchors A, B, C</b>: the wallets this reader trusts. {m ? ` An agent must be reached from at least ${m} of them.` : ""}
+          </li>
+          <li>
+            <b>provider-1, 2, 3</b>: honest agents. <b>farm ×10</b> and <b>farm target</b>: a Sybil farm rating its own target.
+          </li>
+          <li>
+            <b>The payer</b> is a contract: before every x402 payment it asks ANCRE, and pays or refuses on its own.
+          </li>
+          <li>
+            Left, the agent in play: an explorer's average against ANCRE's mass. Right, every decision of the payer.
+          </li>
+        </ul>
+        <div className="intro-actions">
+          <button className="ctl primary" onClick={() => (controls.jumpScene(1), controls.setPlaying(true))}>
+            ▶ Start with scene 1
+          </button>
+          <button className="ctl" onClick={() => controls.jumpScene(2)}>
+            Jump to the Sybil farm
+          </button>
+          <span className="muted small">or click a scene above · keys ← → step, space play, 1-7 scenes</span>
+        </div>
+      </div>
+    </section>
   );
 }
 
