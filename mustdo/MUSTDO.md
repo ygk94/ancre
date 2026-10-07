@@ -52,9 +52,7 @@
      ```
      cd demo && npm ci && node run.ts --rehearse-testnet --keystore ~/.foundry/keystores/ancre-demo --sweep
      ```
-2. [ ] **Feu vert au test T1, celui du facilitator x402 (porte P3).**
-   - Coût : environ 0,40 MON de testnet pour nous.
-   - Il décide si le facilitator accepte le payeur ERC-1271. S'il le refuse, les paiements honnêtes de l'acte 2 s'arrêtent.
+2. [x] **Test T1 (porte P3)** ✅ 07/10 : **ouverte pour `exact`**. Le vrai facilitator a réglé avec la garde à 78 k puis à 190 k, et a refusé l'agent non fiable ainsi que le disjoncteur. Il reste le rejeu de `upto` seul, après correction de notre script (nonce en décimal). Détails dans le CR, « Porte P3 ».
 3. [ ] **Acte 2 sur le vrai testnet**, après la répétition, T1 et ton feu vert. **Indispensable d'après les règles** (§9.2, §9.4) : il faut des adresses ou des hashes de transaction, et une vidéo qui montre de vraies interactions avec Monad. Une démo en fork seule risque de ne pas compter. Commande :
    ```
    node run.ts --network testnet --keystore ~/.foundry/keystores/ancre-demo --sweep

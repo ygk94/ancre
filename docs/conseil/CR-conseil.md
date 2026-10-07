@@ -1575,3 +1575,22 @@ Ajouts du pilote pendant la fusion :
   - côté contrat : le nettoyage de 02-bis ;
   - côté solveur : REGADDR, SRCLESS, SYNROWS, DEAD, K27 et MERKLE.
 - **Conséquence pour le déploiement** : `indexer/check.ts` ne passe plus contre l'endpoint Envio Cloud actuel tant qu'il n'est pas redéployé, car le schéma a changé (2ᵉ des 3 déploiements).
+
+## Porte P3 : test T1 réel sur le testnet (07/10, lancé par Hugo)
+
+Sur le testnet Monad (10143), le vrai facilitator `x402-facilitator.molandak.org` a été appelé avec notre payeur ERC-1271 `0xb2FC…5b07` et l'oracle de test `0x5ed5…616C`. Toutes les valeurs sont MESURÉES et figurent dans `docs/chantiers/rapports/t1/live-1791368041585.json` :
+
+| Scène | Résultat | Gas (limite = consommé sur Monad) |
+|---|---|---|
+| T1-4 `exact`, garde à 78 k | **vérifié puis réglé** (tx `0x0018…6f4a`) | 302 447 |
+| T1-6 `exact`, garde à 190 k (veto, k = 8) | **vérifié puis réglé** (tx `0x2d53…6035`) | 398 955 |
+| T1-8 agent non fiable | **refusé à /verify** (`FiatTokenV2: invalid signature`, HTTP 500 `unexpected_error`) | — |
+| T1-9 disjoncteur : non fiable entre verify et settle | **refusé au settle**, aucune transaction diffusée (`facilitatorNonceDelta = 0`) | — |
+| T1-11 `upto` | ❌ **refusé à /verify pour un format invalide**. Notre script envoyait le nonce Permit2 en hexadécimal, alors que x402-rs attend un décimal. C'est un bug du script de test, pas de l'architecture. Corrigé, rejeu de T1-11 seul (`--only-upto`) en attente | — |
+
+**Verdict** : la **porte P3 est ouverte pour `exact`**. Le facilitator avance le gas d'un `isValidSignature` qui appelle ANCRE, jusqu'à 190 k au moins, et ne met aucune limite de gas sous 400 k (MESURÉ). La garde dure on-chain tient : un refus au verify ne laisse aucune trace, et le disjoncteur entre verify et settle ne diffuse rien. Le mode `upto` reste à confirmer.
+
+Ce qu'on apprend en plus :
+- Le facilitator renvoie un **HTTP 500 `unexpected_error`** sur un refus de signature, et non un `invalidReason` propre. L'écran et le plugin doivent l'interpréter comme un refus et l'expliquer avec `explain()` (AM-6.8).
+- Coût pour nous : environ 0,40 MON de testnet, avec un déploiement à 0,62 MON au prix maximal estimé. Le payeur garde 0,098 USDC.
+- Le script de T1 était cassé à deux endroits depuis 02-bis : les rôles du payeur, et `--sender` pour forge. C'est corrigé et commité.
