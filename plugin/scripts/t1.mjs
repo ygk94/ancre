@@ -5,7 +5,7 @@
 //   node scripts/t1.mjs --local       dry run: anvil --network monad fork of the testnet, the facilitator emulated
 //                                     as x402-rs does it (eth_call, then eth_estimateGas, then a send with that limit).
 //                                     NO real transaction. Also the TS <-> Solidity digest check.
-//   node scripts/t1.mjs --live --account <keystore> --provider 0xP --payer 0x… --oracle 0x… [--probe-cap]
+//   node scripts/t1.mjs --live --account <keystore> --provider 0xP --payer 0x… --oracle 0x… [--probe-cap] [--only-upto]
 //                                     REAL testnet run against https://x402-facilitator.molandak.org, after the deploy
 //                                     (`forge script script/t1/T1.s.sol`, T1_STEP=deploy). Interactive: a human types
 //                                     a confirmation in a terminal, then the keystore password for each transaction.
@@ -129,7 +129,7 @@ async function payUpto(ctx, label, cap = 5000n, amount = 1000n) {
   const payload = {
     x402Version: 2, resource: { url: "https://ancre.local/t1-upto" }, accepted,
     payload: { signature: blob, permit2Authorization: { permitted: { token: USDC, amount: cap.toString() }, from: ctx.payer, spender: UPTO,
-      nonce: toHex(u.nonce, { size: 32 }), deadline: u.deadline.toString(), witness: { to: u.to, facilitator: FAC, validAfter: "0" } } },
+      nonce: u.nonce.toString() /* decimal: x402-rs rejects 0x (live T1, 07/10) */, deadline: u.deadline.toString(), witness: { to: u.to, facilitator: FAC, validAfter: "0" } } },
   };
   const local = { to: UPTO, data: (phase) => encodeFunctionData({ abi: uptoAbi, functionName: "settle", args: [
     { permitted: { token: USDC, amount: cap }, nonce: u.nonce, deadline: u.deadline },
@@ -173,6 +173,10 @@ async function main() {
         payerUsdc: await pub.readContract({ address: USDC, abi: usdcAbi, functionName: "balanceOf", args: [ctx.payer] }) });
     }
     const setBurn = (b) => admin(ctx, ctx.oracle, oracleAbi, "setBurn", [b], 60_000n);
+    if (has("only-upto")) { // re-run T1-11 alone on an already deployed payer (approvePermit2 already done)
+      await payUpto(ctx, "T1-11 upto, cap 5000, settle 1000 (re-run)");
+      return;
+    }
     const setTrusted = (t) => admin(ctx, ctx.oracle, oracleAbi, "setAgent", [AGENT_ID, ctx.provider, t, 0], 120_000n);
 
     await payExact(ctx, "T1-4 exact, burn 78k (assess without veto)");
