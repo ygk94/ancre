@@ -16,6 +16,7 @@ Tout ce qui relève des deux premiers points du brouillon (c) (D29) est encadré
 
 - `python3 strip-notes.py IN OUT` retire les notes ⟦ ⟧ **et** les blocs gated. C'est le mode sûr, celui à utiliser tant que la divulgation n'est pas faite.
 - `python3 strip-notes.py IN OUT --keep-gated` retire les notes et garde le texte gated. Il ne sert qu'après la divulgation (🧑).
+- ⚠️ **Brouillons (a), (b), (d)** : les marqueurs sont **dans** les blocs de texte à coller. Un commentaire HTML disparaît à l'affichage sur Discourse et GitHub, mais il reste dans le source. Avant de coller, il faut passer le brouillon par `strip-notes.py` (sans `--keep-gated` tant que la divulgation n'est pas faite) et coller la sortie, jamais le fichier brut (relecture E6, C).
 - Dans l'ERC, la demande sur le garde-fou est la dernière de Backwards Compatibility (n° 6) : retirer le bloc ne casse donc pas la numérotation 1 à 5.
 - ⚠️ Le troisième point du brouillon (c), la mise sous silence par approbation, n'est **pas** sous marqueur dans l'ERC. Le brief ne vise que le garde-fou et l'EOA, et l'ERC y répond désormais par sa propre règle (B, D48). Hugo doit décider si ce point attend aussi la divulgation (🧑, rapport 08-bis).
 

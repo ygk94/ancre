@@ -15,7 +15,7 @@
    - soit le dépôt devient public ;
    - soit on copie `AnchoredReputation.sol` dans `assets/erc-0000/`.
    EIP-1 n'autorise pas de lien vers GitHub dans le texte.
-4. Retirer toutes les notes ⟦ ⟧ et les ⟦OPEN⟧ du fichier.
+4. Retirer toutes les notes internes (entre crochets doubles) et les marqueurs OPEN du fichier (`strip-notes.py`).
    - Les points encore ouverts passent dans le premier message du fil, comme questions à la communauté.
 5. Copier les fichiers dans un fork d'`ethereum/ERCs` :
    - `ERCS/erc-0000.md` (ce texte, avec `eip: 0000`) ;

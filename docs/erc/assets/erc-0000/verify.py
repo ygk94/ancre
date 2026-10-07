@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: CC0-1.0
 """Independent checker for the test vectors of "Anchored Reputation for Trustless Agents".
 
 Standard library only. It does not import the reference implementation: every quantity is recomputed from
@@ -687,7 +688,7 @@ class Proofs:
 def true_bounds_hold(v: dict, cert: Cert, reg: Registry, pr: "Proofs") -> tuple[bool, str]:
     """Lemma L6 after proofs, in exact arithmetic: rebuild the TRUE graph from the registry (every client of a
     committed row, with its current source; agents absent from the node table get extra nodes), then check
-    ||(t - t*)+||_1 <= eLow_a and ||t* - t||_1 <= eUp_a for every column, and d* <= d + eEff."""
+    ||(t - t*)+||_1 <= eLow_a and ||(t* - t)+||_1 <= eUp_a for every column, and d* <= d + eEff."""
     specs = tag_specs(v["set"]["tags"])
     kind = {nd["i"]: nd["kind"] for nd in v["nodes"]}
     agent_of = {nd["i"]: nd["agentId"] for nd in v["nodes"] if nd["kind"] == "agent"}
@@ -731,11 +732,11 @@ def true_bounds_hold(v: dict, cert: Cert, reg: Registry, pr: "Proofs") -> tuple[
     d = out["d"] + [0] * len(extra)
     for a in range(cert.k):
         over = sum(max(Fraction(t[a][i]) - tstar[a][i], 0) for i in range(N))
-        gap = sum(abs(tstar[a][i] - t[a][i]) for i in range(N))
+        under = sum(max(tstar[a][i] - Fraction(t[a][i]), 0) for i in range(N))
         if over > pr.elow[a]:
             return False, f"||(t - t*)+|| {float(over)} > eLow {pr.elow[a]} (column {a})"
-        if gap > pr.eup[a]:
-            return False, f"||t* - t|| {float(gap)} > eUp {pr.eup[a]} (column {a})"
+        if under > pr.eup[a]:  # section 4.5: after proofs, eUp bounds the part t is missing
+            return False, f"||(t* - t)+|| {float(under)} > eUp {pr.eup[a]} (column {a})"
     if any(dstar[i] > d[i] + e_eff for i in range(N)):
         return False, "d* > d + eEff"
     return True, ""

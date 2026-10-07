@@ -33,7 +33,8 @@ PR #80 implements this.
 **4. Put a timelock in front of registry upgrades.**
 <!-- DISCLOSURE-GATE:start — keep only once the ERC-8004 maintainers have been notified (decision D29) -->
 The Identity and Reputation proxies are owned by a single externally owned account, with no delay before an upgrade takes effect (chain ID 143, verified 2026-10-01 and 2026-10-07).
-<!-- DISCLOSURE-GATE:end --> Aggregators and payers can only detect an upgrade after the fact, and not at all if the version string is unchanged.
+<!-- DISCLOSURE-GATE:end -->
+Aggregators and payers can only detect an upgrade after the fact, and not at all if the version string is unchanged.
 Minimal change: an owner contract with a public delay (for example a standard timelock controller), so that consumers can react before new semantics apply.
 
 **5. Standardize `getVersion()` in the interface.**

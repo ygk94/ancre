@@ -4,7 +4,7 @@
 <!-- DISCLOSURE-GATE:start — keep only once the ERC-8004 maintainers have been notified (decision D29) -->
 > **Ordre imposé** : ce message mentionne publiquement le garde-fou qui ignore `agentWallet`. Il ne part **qu'après** la divulgation privée (brouillon c, D29), et seulement si le fil dédié à l'ERC est ouvert (brouillon a), puisqu'il y renvoie.
 <!-- DISCLOSURE-GATE:end -->
-> **Sans la divulgation**, le message part sans la puce marquée (retirer le bloc DISCLOSURE-GATE du texte) ; il reste 150 mots environ. Mis à jour par 08-bis le 07/10 (D50 : propagation au-delà d'un saut).
+> **Sans la divulgation**, le message part sans la puce marquée (retirer le bloc marqué du texte, avec `strip-notes.py`) ; il reste 150 mots environ. Mis à jour par 08-bis le 07/10 (D50 : propagation au-delà d'un saut).
 
 ## État du fil (vérifié le 2026-10-01 par un agent, API JSON du forum)
 

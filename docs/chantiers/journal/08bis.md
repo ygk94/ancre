@@ -189,3 +189,50 @@ Un est **retiré** : le désaccord 2 du tour 5 (veto au dernier avis), tranché 
 **Décision.** Le lint passe par la version WebAssembly plutôt que de rester bloqué sur docker. C'est le même code d'eipw (même version), avec la même configuration, mais par un autre point d'entrée que la CI d'ethereum/ERCs (binaire `eipw`). C'est noté comme tel dans le rapport.
 
 **Prochaine étape** : E6, la relecture adversariale (`/llm-council`).
+
+## 2026-10-07 19:30 — E6 : relecture adversariale (`/llm-council`) et corrections
+
+**Fait.**
+- Cinq agents séparés ont lu le texte, le code, les vecteurs et les brouillons, en lecture seule :
+  - A théoricien ;
+  - B EVM ;
+  - C éditeur EIP ;
+  - D attaquant ;
+  - E intégrateur.
+- Phases 2 et 3 jouées par la session. Compte rendu : `docs/erc/relecture-conseil.md`, section 08-bis.
+- Avant de conclure, j'ai revérifié dans le code les constats qui changent le texte :
+  - alias validé avec son propre `u` ;
+  - `sDecl` de l'alias dans `_checkFacts` ;
+  - `_verifyOwners` hors R6 ;
+  - `s.facts` jamais décrémenté ;
+  - contre-exemple de §4.5, refait à la main.
+- 18 corrections du texte, des brouillons et de `verify.py` (CHANGES §13).
+- eipw : 0 erreur (avec et sans blocs gated). `verify.py` : 27/0.
+
+**Verdict.**
+- **Q1, fidélité au code** : fidèle sur toute la mécanique (règles A, B, C, faits, formule X, R1 bis, refus) ; 9 écarts de rédaction, corrigés. Confiance 0,85.
+- **Q2, Security** : honnête, mais elle manquait **deux défauts de garantie**, désormais écrits (AM-08bis.11, .12). Confiance 0,8.
+- **Q3, PR** : **pas prête ; pas de PR avant le 13/10**. Au plus tôt après la divulgation et son délai, et après la décision du conseil sur AM-08bis.11 et .12. C est minoritaire (« avant, si (c) part le 08/10 »). Confiance 0,75.
+- **Q4, DISCLOSURE-GATE** :
+  - **complets dans `docs/erc/`** ;
+  - **inopérants pour le dépôt** : `app/`, `demo/` et `ANCRE.md` publient les mêmes faits ;
+  - la mise sous silence par approbation n'est **pas** mise sous marqueur (4 contre 1, D dissident).
+
+  Confiance 0,7.
+
+**Incohérences (AM-08bis.n) relayées au pilote.**
+- **AM-08bis.10** (→ 02) : `_verifyOwners` appelle `identity.ownerOf` en direct (l. 1299), pas via `_idCall`. R6 n'y est pas appliqué : un revert brut remonte (B).
+- **AM-08bis.11** (→ conseil et 02, **grave**) : la clause « D ne baisse pas » de la voie rapide ne protège pas un négatif dont la ligne garde S⁻ ≥ GRID : Σ_j d_uj = T(1−α) quelle que soit l'arête retirée. Les bits de veto certifiés ne sont pas dans D. Sur un ensemble ouvert, un certificat qui fait taire un critique passe donc avant `minRefresh` (D, vérifié par la formule). Pistes :
+  - D par arête ou par colonne de destination ;
+  - ou exiger que chaque négatif et chaque bit de veto du titulaire soit présent ou prouvé disparu.
+- **AM-08bis.12** (→ conseil, 02, 06, **grave**) : la règle A ne couvre pas les agents dont une ancre est **propriétaire**. Avec la clé volée, `setAgentWallet(U, w)` fait de `w` la source de U ; la masse de U dans les autres colonnes porte alors la ligne de l'attaquant ; `ownerOf` ne change pas (A, raisonné, non testé). `mainnet_em_d44` est dans ce cas, et les ancres de démo du 06 sont à vérifier.
+- **AM-08bis.13** (→ 02) : un agent dont la source est une ancre paie la marge de troncature, alors que le vrai graphe ne lui donne pas de ligne non plus. Cela rend `mainnet_em_d44` inutilisable (`distrustUp` ≥ 0,19 WAD). C'est une option de code à trancher (A).
+- **AM-08bis.14** (→ 05) : vérifier que le cache de `TrustGatedPayer` (D25) ne fait pas sauter un veto en direct ni `REGISTRY_CHANGED` (E). L'ERC le documente désormais (§8.3).
+- **AM-08bis.15** (→ 02) : `RowVoided` et `SourceFactCleared` ne portent ni `src` ni `via`. Un indexeur doit alors sonder `provenSource` ligne par ligne (E).
+- **AM-08bis.16** (→ 02) : `proveEdge` ne consulte pas les faits. La même omission déclarée honnête se révèle donc à nouveau après chaque recertification (griefing rejouable, environ 0,39 M gas contre une recertification ; D, A).
+- **AM-08bis.17** (→ 02, doc) : ENCODING §3.2 classe « alias vers une ligne non agent » en `NotCanonical`, alors que le code renvoie `BadRows(9)` ou `BadRows(10)` (B).
+- **AM-08bis.18** (→ pilote, 🧑) : le cas #8317 et l'EOA d'upgrade apparaissent hors de `docs/erc/`, sans marqueur : `app/src/ui/Act1.tsx` l. 34, `demo/JUDGES.md` l. 50, `demo/VIDEO-SHOTS.md` l. 31, `demo/SCREEN.md` l. 75, `ANCRE.md` l. 83, 97 et 423 (relevé de B, A et D, non revérifié ligne par ligne).
+
+**🧑 BLOQUÉ (nouveau).** Le dépôt devient public le 12/10 et la vidéo le 11/10 : la divulgation (c) doit partir **avant**, sinon l'écran de démo, la vidéo et `ANCRE.md` la font à sa place. Ce n'est plus une question d'ERC.
+
+**Prochaine étape** : le rapport de fin de session.

@@ -282,7 +282,7 @@ Abstract : « exact » retiré, veto « sans recertification ». §1 : masse, pl
 
 | # | Où | Changement | Source |
 |---|---|---|---|
-| 11.1 | ERC, CHANGES, brouillons (a), (b), (d) ; (c) en entier | Marqueurs `DISCLOSURE-GATE` autour de tout ce qui décrit le contournement du garde-fou et l'EOA d'upgrade ; notes internes reformulées pour ne plus le décrire ; contrôle par script : aucune occurrence hors marqueurs, marqueurs appariés | D29, brief 08-bis |
+| 11.1 | ERC, CHANGES, brouillons (a), (b), (d) ; (c) en entier | Marqueurs `DISCLOSURE-GATE` autour de tout ce qui relève de la note G1 (§1) ; notes internes reformulées pour ne plus le décrire ; contrôle par script : aucune occurrence hors marqueurs, marqueurs appariés | D29, brief 08-bis |
 | 11.2 | ERC, Backwards Compatibility | Demande sur le garde-fou déplacée en n° 6 (sous marqueur) ; renvois « request 5 » → « request 4 » | pour que le retrait du bloc ne casse pas la liste |
 | 11.3 | ERC, Security | Titre « The registry guard and shared wallets » → « Controllers, former owners and shared wallets » (lisible sans le bloc gated) | idem |
 | 11.4 | `drafts/strip-notes.py` | Retire par défaut les notes **et** les blocs gated ; `--keep-gated` après la divulgation ; auteur `@ygk94` | D29, CLAUDE.md (compte renommé) |
@@ -309,3 +309,28 @@ Abstract : « exact » retiré, veto « sans recertification ». §1 : masse, pl
 **Hors ⟦OPEN⟧, mais à décider (🧑)** : le passage des vecteurs et des preuves sous la licence de l'ERC (CC0) si le contrat est copié dans `assets/` ; et la mise sous marqueur, ou non, du 3ᵉ point de la divulgation (approbations).
 
 **D49 ajoutée en E4** (oubli de E1, le brief ne la citait pas) : §11 *Bonded vouching*, *Trust domains*, *Validation registry*.
+
+## 13. Corrections après la relecture adversariale (E6, 2026-10-07)
+
+| # | Où | Correction | Expert |
+|---|---|---|---|
+| 13.1 | §2.4 | Document de schéma : entiers en chaînes décimales, adresses et `bytes32` en hex minuscule, tag non UTF-8 en `{"bytes": "0x…"}`, valeur nulle de `tagSchemaHash` explicite (RFC 8785 sérialise les nombres en doubles) | C, E |
+| 13.2 | §4.2, Rationale | `F_bas` → `F_floor`, défini ; « requires » → « recommends » | C |
+| 13.3 | §4.5, Rationale *Two bounds* | Après une preuve, `eUp` ne borne que `‖(t* − t)⁺‖₁` ; la surestimation est bornée par `eLow` (contre-exemple de A, refait à la main) ; `verify.py` vérifie désormais la partie positive | A |
+| 13.4 | §5.2 | Normatif aligné sur le code : refuser si `msg.sender ≠ tx.origin` (et non « MUST be the top-level call »), avec renvoi à EIP-7702 | A, C |
+| 13.5 | §5.4 | Règle d'alias écrite : les arêtes héritées sont contrôlées avec le `u` de l'alias ; un alias dont la ligne `ref` vise l'agent `u` est refusé | A, B, E |
+| 13.6 | §5.9, Rationale, Security *Open sets* | D ne protège pas tout négatif : une ligne dont les autres négatifs totalisent encore au moins GRID absorbe l'omission (renormalisation de B⁻), et les bits de veto ne sont pas dans D | D |
+| 13.7 | §5.10 | Fait de source d'une ligne sans SRC (`src` nul) ; un alias ne peut pas omettre un positif prouvé ; un fait vers un agent hors de `[0, nCert)` rend les lignes du client invalides | B, D, E |
+| 13.8 | §6.1 | `incN` écrit en entier (`nOut`, `nIn`, `Ncur`) ; parties positives `(·)⁺` des facturations ; « billed » défini comme état | B, C |
+| 13.9 | §8.2 | `getLastIndex = 0` ⇒ pas de veto en direct ; « bloc suivant » vrai pour un lecteur sans cache | C, E |
+| 13.10 | §8.3 | Cache du payeur : clé avec `vectorRoot` ; un cache ne voit ni veto, ni approbation, ni transfert, ni changement de registre pendant sa durée ; cette durée est le délai de veto accepté | E |
+| 13.11 | §8.4 | « Ne revert pas » sous réserve d'un gas suffisant (`3k + 2` appels plafonnés) ; lecture des données de retour avec contrôle de longueur | C, E |
+| 13.12 | §9 | MUST NOT (adressé aux ancres, invérifiable) → SHOULD NOT | C |
+| 13.13 | §10 | `ResidualTooLarge` ajoutée ; le commentaire d'`EdgeMismatch` couvre forme, empreinte et relecture | A, B |
+| 13.14 | Backwards Compatibility | Events `Approval`, `ApprovalForAll` et effacement de `agentWallet` dans la liste des lectures des certificateurs | E |
+| 13.15 | Rationale | Neutralité de chaîne : « storage priced per page » retiré ; projet de provenance désigné par son auteur, et non par un nom de dépôt qui contient « monad » | C |
+| 13.16 | Security | Ajouts : portée de la règle A (une ancre propriétaire d'agents), marge de la règle A (0,19 WAD sur `mainnet_em_d44`), faits créés par l'owner via une approbation, preuve d'omission rejouable à chaque certificat, STALE ouvert par une seule preuve, coût permanent des faits ; section Gas `3k + 2` appels (≈ 6 M à k = 16, CALCULÉ) ; « +27 % » attribué au lot 02-bis | A, B, D |
+| 13.17 | Brouillons | (d) : un marqueur de fin isolé sur sa ligne ; (a) et (b) : textes qui ne cassent plus `strip-notes.py` ; README : coller la sortie de `strip-notes.py`, jamais le fichier brut | C |
+| 13.18 | `verify.py` | En-tête `SPDX-License-Identifier: CC0-1.0` ; borne L6 sur la partie positive | C, A |
+
+**Lint après corrections (MESURÉ le 07/10)** : 1 erreur `markdown-link-first` (EIP-7702 désormais cité d'abord au §5.2), corrigée, puis **0 erreur** avec et sans les blocs gated. **`verify.py` : 27 fichiers, 0 échec.**
