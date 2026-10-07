@@ -197,3 +197,42 @@ Ce ne sont pas des désaccords du CR. Chacun est marqué d'une note dans le text
 ## 8. Corrections du texte après la relecture (01/10)
 
 Abstract : « exact » retiré, veto « sans recertification ». §1 : masse, plages u32, `getVersion` requis, agrégateur non upgradable, préséance. §2.1 : recommandation « ancre ≠ source ». §2.4 : `setParams` dans le document, RFC 8785, plus d'`edgeFilterId`. §3.3 : renvoi vers D2-a. §3.8 : aucun champ. §4.2 : SHOULD. §4.4 : plafond de d en 63 bits. §4.5 : bornes qualifiées. §5.1 : soumetteurs listés à tous les niveaux. §5.3 : u64 < 2⁶³. §5.4 : alias seulement vers une ligne d'agent, forme canonique. §5.7 : « address node », agents brûlés. §5.9 : portée du refus. §6 : ordre des amendements, ligne sans source. §7 : `getVersion` requis. §8.2 : égalité et timing. §8.3 : `payTo`, clé de cache, m ≥ 2 non appliqué, agrégateur épinglé. §8.4 : 120 000 gas. §10 : types déclarés, `identity`, `reputation`, `nodeCount`, `nodeKeyAt`. §11 : ancres en compte-contrat. Rationale : Cheng-Friedman, linéarité, limites de L7 et de « Two bounds ». Security : AM-08.14 à .19, compromission d'un nœud, concentration de méfiance, rachat discret, empoisonnement de paire, disponibilité des données, coût d'un registre hostile, EIP-7825. TC-3 : écart avec §2.1 signalé.
+
+# Chantier 08-bis (2026-10-07) : alignement sur 02-bis, 04-bis et la revue maximale du 06/10
+
+- **Ancien texte** : celui du chantier 08 (01/10), commit `0376a56` de la branche `chantier/08bis-norme` (identique à `main` du 07/10).
+- **Sources** : CR (D47 à D56, « Revue maximale du 06/10 : corrections fusionnées sur main »), rapports 02-bis (§1, §3, §4, §8) et 04-bis (§6 bis, §7, §8), `docs/revue/revue-max-2026-10-06-complete.md`, `contracts/ENCODING.md` (§0bis G-1 à G-11, §3.5, §7.1 formule X, §7.4), `contracts/PROOFS.md` (L6 réécrit, L8), `contracts/GAS.md` (lot 02-bis), `solver/FORMAT.md` (R1 bis, R6, R8, §7 REGCB, §8), `AnchoredReputation.sol` de `main`.
+- **Principe inchangé** : le texte normatif décrit le code de `main`. Un écart entre le CR et le code est noté AM-08bis.n (section 11) et dans une note ⟦ ⟧.
+
+## 9. Changements du texte (une entrée par changement)
+
+| # | Où | Changement | Source |
+|---|---|---|---|
+| 9.1 | Abstract, §2.2, §8.3, §8.4, §10, TC-6 | `isTrusted` → `passesAnchorPolicy` ; `Assessment.trusted` → `passesPolicy`. Le §2.2 précise que la réponse dit « passe la politique de ces ancres », pas « digne de confiance » | D48, AM-9.5, ENCODING G-1 |
+| 9.2 | Abstract, Motivation (« One hop is not enough »), Rationale (« Beyond one hop, with a bound ») | La propagation au-delà d'un saut, avec une borne Sybil et un certificat vérifié on-chain, passe en avant ; renvoi aux vecteurs du 2ᵉ saut (TC-7) | D50, AM-10.6 |
+| 9.3 | Motivation | Chiffres roulés au 06/10 : 9 291 avis, 82,5 % pour la ferme, aucune arête nouvelle ; 150 noteurs de la ferme financés par l'owner de la cible (sans adresse ni montant) ; puce « wallets partagés » séparée de celle du garde-fou | 04-bis E2, D55 |
+| 9.4 | Motivation, Backwards Compatibility (demande 2), Security (gouvernance, garde-fou) | Passages sur le contournement du garde-fou (78 avis sur #8317) et sur l'EOA d'upgrade encadrés par `DISCLOSURE-GATE` | D29, consigne du brief 08-bis |
+| 9.5 | §1 | Nouvelle convention « Registry answers » : seule `ERC721NonexistentToken` (ERC-6093) dit qu'un agent n'existe pas ; tout autre échec = registre illisible | R6 du lot 02-bis, ENCODING G-8 |
+| 9.6 | §2.1, §3.5, §5.4, §5.6, §5.7, Security (Anchors), Rationale | « Ancre ≠ source » : de SHOULD NOT à règle du graphe (l'agent dont la source est une ancre n'émet aucune ligne) et à refus du contrat (`AnchorAsSource`) ; Rationale du leave-one-out | D48-A, AM-08.14, PROOFS L8, FORMAT R8 |
+| 9.7 | §2.2 (θ), Rationale (*Constants*) | θ sans valeur recommandée ; la démo (1 %) est citée comme mesure datée, pas comme recommandation | D56 |
+| 9.8 | §3.1 | Identité d'un tag = keccak256 de ses octets ; interdiction d'apparier par un texte décodé ou tronqué ; NUL et UTF-8 invalide permis | R1 bis (solver-relais), revue NUL, LONGTAG |
+| 9.9 | §3.3 | Règle B : seul le positif d'un contrôleur est rejeté, sur le signe de la combinaison ; existence de la cible ; paragraphe de motivation | D48-B, AM-08.15, FORMAT R6 (relais 04-bis) |
+| 9.10 | §3.4, §5.1 | Adresse nulle jamais un nœud (`BadNodes`) | R1 (revue du 05/10, K6/L1) |
+| 9.11 | §5.1 | `newNodes` doit être vide sur un ensemble ouvert ; procédure `addNodes` puis `nodeKeyAt` puis soumission | A1d |
+| 9.12 | §5.2 | Ensemble ouvert : soumission en appel de premier niveau par un EOA (`msg.sender == tx.origin`) ; les soumetteurs listés passent par n'importe quel chemin | G-11, AM-03.3 |
+| 9.13 | §5.3 | Empreinte d'ancre non nulle refusée aux deux niveaux | R5 |
+| 9.14 | §5.4 | Forme canonique : de SHOULD à MUST pour SRC non nul, SPLUS strictement supérieur à S⁺, alias vers une ligne d'agent (`NotCanonical`) ; W = 4 reste accepté ; « aucune règle ne dépend des octets » | R4, D48-C, rapport 02-bis §3 décision 2 |
+| 9.15 | §5.7 | Règle B dans la table de relecture ; passes multiples sur les mêmes octets ; gas non plafonné vers `readFeedback` sur les chemins payants ; agents inexistants et registre illisible | E1 et K6 (revue), R6 |
+| 9.16 | §5.9, §5.10 (nouveau), Rationale (*Facts instead of bytes*), Security (*Open sets*) | La garde « racines brutes égales » est remplacée par les **faits prouvés** (arête, source), vérifiés aux deux niveaux sous tout état ; `refreshFact` et `clearSourceFact` | D48-C, AM-08.16, K7, K10, ENCODING §3.5 |
+| 9.17 | §6 (préambule), §6.1 | Registre illisible ⇒ la preuve revert ; pas de preuve vers l'agent de la ligne ; enregistrement du fait | R6, AM-04bis.1 (`BadProof(27)`) |
+| 9.18 | §6.1 | Montant des preuves : formule X d'ENCODING §7.1 (bornes cumulées contre la ligne engagée, toute arête révélée supposée nouvelle) ; Rationale (*Two bounds*) | R3, K8, A2b, PROOFS L6 |
+| 9.19 | §6.2 | Le fait de source est enregistré ; le nouveau wallet devenu ancre est couvert | D48-A, D48-C |
+| 9.20 | §6.3 | « ownerOf reverts » → « l'agent n'existe plus » | R6 |
+| 9.21 | §6.4 (nouveau) | `proveApproval` (mode rapide du veto par approbation) | D48-B, ENCODING §7.4 |
+| 9.22 | §8.1 | Transfert strict déclenché par la masse ; registre illisible ⇒ `REGISTRY_CHANGED` (plus de `TRANSFERRED` sur un `ownerOf` illisible) | R7, R6 ; AM-08.6 fermé |
+| 9.23 | §8.2 | Troisième forme de veto : l'approbation d'une ancre (en direct si `strictTransfer`, sinon par `proveApproval`) | D48-B |
+| 9.24 | §8.3 | SHOULD NOT pour un payeur sur un ensemble en mode rapide | R8 du lot 02-bis, AM-02bis.7 |
+| 9.25 | §10 | `proveApproval`, faits (`edgeFact`, `sourceHash`, `provenSource`, `refreshFact`, `clearSourceFact`), events `ApprovalProven`, `EdgeFact`, `SourceFactCleared`, erreurs nommées (SHOULD) | ENCODING §0bis, contrat de `main` |
+| 9.26 | Backwards Compatibility | Demande 6 : émettre les events de `register()` dans l'ordre de l'état | REGCB |
+| 9.27 | Reference Implementation | Gas après 02-bis (démo RV 15 024 552, SA 1 449 205, `assess` avec veto 180 758 à 208 728, preuves 340 800 à 392 502), taille 39 261 octets ; note sur la licence MIT et CC0 | GAS.md (MESURÉ 06/10), simulate.py et `forge build --sizes` (MESURÉ 07/10 par 08-bis) |
+| 9.28 | Security | Réécrite : ensembles ouverts (faits), inflation de la table (A1b, chiffrée), bornes globales (facture au pire cas), asymétries (EFF1, chiffrées, coût des preuves), ancres (règle A), vivacité des faits, approbations (règle B), gouvernance (R6, DISCLOSURE-GATE), disponibilité des données (G-11, EIP-7702), indexeurs (REGCB, NUL, LONGTAG) | revue du 06/10, AM-02bis.1, .2, .6, .7 |

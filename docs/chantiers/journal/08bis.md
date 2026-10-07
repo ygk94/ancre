@@ -31,3 +31,57 @@
 4. **E4** : les ⟦OPEN⟧. **E5** : eipw (docker) et `verify.py`. **E6** : `/llm-council`. Puis le rapport.
 
 **Prochaine étape** : E1.
+
+## 2026-10-07 13:40 — E1 : texte normatif aligné sur `main` (02-bis, 04-bis, revue du 06/10)
+
+**Fait.** `docs/erc/anchored-reputation.md`, avec une entrée par changement dans `docs/erc/CHANGES.md` §9 (28 entrées, chacune avec sa source) :
+- **Renommage** : `passesAnchorPolicy` et `passesPolicy`, partout.
+- **Règles A, B et C** :
+  - A : une ancre n'émet que comme nœud-ancre (§3.5, `AnchorAsSource`) ;
+  - B : un contrôleur ne perd que ses positifs (§3.3), et une ancre approuvée vaut veto (§8.2, §6.4 `proveApproval`) ;
+  - C : faits prouvés (§5.10 nouveau, `refreshFact`, `clearSourceFact`), qui remplacent la garde à l'octet près (§5.9).
+- **Nouvelles règles de soumission** :
+  - adresse nulle refusée ;
+  - `newNodes` vide sur un ensemble ouvert ;
+  - soumission en appel de premier niveau sur un ensemble ouvert ;
+  - forme canonique en MUST ;
+  - empreinte d'ancre nulle ;
+  - passes sur les mêmes octets ;
+  - gas non plafonné vers `readFeedback` sur les chemins payants.
+- **Preuves** : formule X (§6.1), registre illisible ⇒ revert, pas de preuve vers l'agent de la ligne.
+- **Lecture** : transfert strict déclenché par la masse (R7) ; registre illisible ⇒ `REGISTRY_CHANGED` (R6).
+- **Convention §1 « Registry answers »** (R6).
+- **Identité d'un tag** = keccak de ses octets (R1 bis).
+- **D50** en avant (Abstract, Motivation, Rationale) ; **D56** (θ sans valeur recommandée).
+- **Interface §10** : nouvelles fonctions, events et erreurs.
+- **Reference Implementation** : gas et taille mesurés.
+- **Security Considerations** réécrite. J'ai fait E3 dans la même passe, pour ne pas laisser de paragraphe contraire au code : voir l'entrée E3.
+
+**Mesures (MESURÉ le 07/10).**
+- `forge build --sizes` : `AnchoredReputation` = **39 261 octets**.
+- `solver/simulate.py --scenarios vectors,violations,common`, fork anvil de rpc1.monad.xyz au bloc 110 994 810, contrat de `main` : **27 vérifications sur 27 conformes** :
+  - 9 vecteurs acceptés ;
+  - fabriquée et gonflée refusées en RV ;
+  - 4 violations prouvées aux deux niveaux ;
+  - vecteurs communs : `AnchorAsSource(2)`, `AnchorAsSource(5)`, `ProvenRowResubmitted(0)`, `BadNodes()` ;
+  - gas des preuves de 340 800 à 392 502, **identique au gas près** à GAS.md (06/10).
+
+  La sortie est dans le scratchpad de la session, `solver/out/` n'est pas modifié. Elle servira à E2.
+
+**Décisions de rédaction, et pourquoi.**
+1. **Les erreurs sont nommées dans l'interface, avec un SHOULD** : les vecteurs communs attendent des refus nommés. Le refus lui-même est normatif (MUST), son nom ne l'est pas, pour qu'une autre implémentation puisse nommer ses erreurs autrement. Les codes numériques (`BadProof(n)`, `BadRows(n)`) restent hors interface.
+2. **« Ancre ≠ source »** passe de SHOULD NOT à règle du graphe. Le contrat le refuse : garder un SHOULD contredirait le code.
+3. **Le veto par approbation est rattaché à `strictTransfer`**, comme dans le code, qui lie les deux lectures en direct à ce seul champ. Pour un payeur, j'ajoute un **SHOULD NOT** sur le mode rapide : le payeur de référence le refuse (R8), mais la norme ne peut pas exiger ce que fait un payeur particulier.
+4. **θ** : aucune valeur recommandée. Le 1 % de D56 apparaît comme une mesure datée (« fork of a test network », sans nommer Monad, conformément à la règle de neutralité).
+5. **Faits** : le texte dit « facts », pas « canonical hash ». D48-C demandait un hash canonique, mais 02-bis a montré qu'il se contournait. Le code suit l'intention de D48-C, pas sa lettre, et je fais de même en le notant (⟦ ⟧ du §5.10).
+6. **Formule X écrite en entier** dans le §6.1 : les vecteurs fixent les montants au wei près, et un lecteur doit pouvoir les recalculer sans ENCODING.md.
+7. **Demande 6 à ERC-8004** (ordre des events de `register()`) : REGCB n'est pas une faille du registre, c'est un piège pour tout indexeur. On peut donc le demander publiquement, hors DISCLOSURE-GATE.
+
+**Incohérences (AM-08bis.n), relayées au pilote.**
+- **AM-08bis.1** : `contracts/GAS.md` donne une taille de 38 992 octets (06/10). Le rapport 02-bis §8 et `forge build --sizes` du 07/10 donnent **39 261**. GAS.md est périmé (→ 02).
+- **AM-08bis.2** : `solver/out/simulation.json` sur `main` date d'avant 02-bis : `proveEdge` y coûte environ 304 k, et les vecteurs communs y sont attendus refusés mais acceptés. Mon rejeu du 07/10 donne les valeurs de GAS.md. À régénérer (→ 04).
+- **AM-08bis.3** : ENCODING §3.5 dit qu'une arête positive prouvée peut être omise « sous un sPlus ≥ S⁺ + w ». Or le code exige que la déclaration couvre **la somme** des positifs prouvés omis (`_checkFacts`, correction de la revue de sécurité du 06/10). La formulation d'ENCODING est à aligner (→ 02). L'ERC suit le code.
+- **AM-08bis.4** : CLAUDE.md §1 et ANCRE.md §0 disent encore « restent ouverts : AM-08.A, B, C » et « 02-bis en cours ». C'est périmé depuis la fusion du 06/10 (→ pilote).
+- **AM-08bis.5** : le « mode strict » de D48-B (veto par approbation lu en direct) n'a pas de champ à lui. C'est `strictTransfer` qui le commande. Le nom du champ ne dit plus tout ce qu'il fait. L'ERC le documente sans renommer le champ, puisque le renommer changerait le `setId`.
+
+**Prochaine étape** : E2, les vecteurs. Puis le chiffre de « Bounds are global » (18 wei → 0,556 WAD, vecteur du 01/10) est à recalculer sur le nouveau TC-3.
