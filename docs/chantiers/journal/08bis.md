@@ -236,3 +236,7 @@ Un est **retiré** : le désaccord 2 du tour 5 (veto au dernier avis), tranché 
 **🧑 BLOQUÉ (nouveau).** Le dépôt devient public le 12/10 et la vidéo le 11/10 : la divulgation (c) doit partir **avant**, sinon l'écran de démo, la vidéo et `ANCRE.md` la font à sa place. Ce n'est plus une question d'ERC.
 
 **Prochaine étape** : le rapport de fin de session.
+
+## 2026-10-07 19:50 — Fin de session
+
+Rapport écrit : `docs/chantiers/rapports/08bis.md`. Rien n'a été publié ni envoyé, aucun push. Six questions pour Hugo (rapport §8). La plus urgente : envoyer la divulgation (c) avant la mise en public du dépôt et le tournage de la vidéo.
