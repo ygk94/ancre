@@ -64,3 +64,43 @@ PAGE AGENT (clic sur une ligne du feed ou de Discover)
 **Questions posées à Hugo** (🧑) : sens de « Donation » ; tension testnet/mainnet (ma proposition : mainnet sélectionnable en « preview · solver analysis, not certified on-chain »).
 
 **Prochaine étape** : socle (routes, en-tête, thèmes, sélecteur de réseau), puis feed, puis Discover.
+
+---
+
+## 2026-10-07 12:40 — Étape 1 : refonte livrée (Discover, Leaderboard, page agent, feed, Live demo) — ✅ avant revue
+
+**Réponses de Hugo (07/10)** : *Donate* = onglet « soon » désactivé (aucun wallet, aucune transaction) ; *réseau* = mainnet sélectionnable en « preview » (« read by our reference solver · on-chain certification soon »), testnet actif par défaut, Ethereum « soon ».
+
+**Fait**
+- Routes History API : `/` Discover, `/leaderboard`, `/agent/{testnet|mainnet|demo}/:id?tab=…`, `/live`, `/donate` (soon). `?network=mainnet&anchors=<lentille>`. Les anciens `?act=1` / `?act=2` sont réécrits. `/mera` tombe sur « Not found » côté SPA, mais un futur `public/mera/index.html` passe avant la redirection de `netlify.toml` (fichier existant servi en priorité). `vite base` passe de `./` à `/` (obligatoire pour des routes profondes), surchargeable par `ANCRE_BASE`.
+- **Feed** (gauche) : onglet « ERC-8004 registry » = Envio (`Feedback`, révocations, `OwnerChange` mint/transfert, sondé toutes les 8 s) + WebSocket public `eth_subscribe logs` sur les deux registres (ligne provisoire « ● », remplacée par la ligne Envio de même clé). Onglet « ANCRE » = certificats, certificat fabriqué rejeté, veto d'ancre, décisions du payeur, tirés du run enregistré. Aucune clé d'API dans le bundle.
+- **Discover** : « Pass » (statut, masse leave-one-out, méfiance, « reached from your anchors ») puis « Most rated, refused » (avis du registre et moyenne naïve en gris, masse ANCRE, raison). Une ligne de provenance (RECORDED / COMPUTED), le reste dans « How to read this ».
+- **Page agent** calquée sur 8004scan (carte d'identité, onglets, panneau latéral) : Overview (jauge θ, masses, e, bloc du certificat, contraste registre / ANCRE en une rangée), **Ratings = D49**, **Trust path = D50**, Certificates, Payments (decide / explain ; « only a human can override, from their own wallet (D47) », aucun bouton). Lien « view on 8004scan » pour les vrais agents seulement.
+- **Live demo** : l'acte 2, même réducteur, finalité et relecture `assess()` / `decide()` inchangées ; un seul agent focalisé, chiffres à 20 px, scène 7 « Second hop » ajoutée.
+- Thèmes clair et sombre (préférence OS + bouton, `localStorage` sous try/catch). iPhone : feed sous le contenu, plafonné à 8 lignes, tableaux sans débordement.
+- Run du 06 synchronisé : `run-20261006T121308Z` (8 scènes, θ = 1 %, 2ᵉ saut) remplace les deux runs du 06 au matin (6 scènes, θ = 2 %, avant 02-bis).
+
+**Données et mesures**
+- `export_act1.py` : θ = 1 % (D56), `is_trusted` → `passes_anchor_policy` (renommage 04-bis), snapshot `run_mainnet.BLOCK` = **110 994 810** (9 291 avis, aligné sur Envio : AM-07.1 levé). **D49 calculé par le solveur** : chaque avis non révoqué est classé (R2-R6) et sa contribution lue dans le certificat, (1 − α)·Σλt_u·q/B⁺_u ; auto-contrôle : somme des contributions = masse brute certifiée (assert). CALCULÉ 07/10 : sous « Two independent raters », #18 = 2 avis d'ancre à 11,11 % chacun ; #2 = 1 avis via #18, +7,41 % ; Eve = 7 662 + 3 avis hors schéma. **Complément « every tag accepted »** (mêmes ancres, schéma permissif, 16 tags les plus fréquents) : Eve = **7 548 compteraient pour 0 (auteurs injoignables), 117 rejetés hors bornes** (114 `eve` + 3 `plague`).
+- Testnet (run du 06) : D49 recalculé par l'écran avec le schéma engagé dans l'en-tête (`set.tags`) ; poids normalisé w affiché, contribution « — » (pas de B⁺ dans le journal). α = 1/3 et ρ = 1/2 viennent de `demo/lib/config.ts` (absents de l'en-tête).
+- WebSocket MESURÉ 07/10 (`scratchpad/ws-logs.mjs`, 20 s) : `wss://testnet-rpc.monad.xyz` et `wss://rpc.monad.xyz` acceptent `eth_subscribe logs` ; 66 têtes en 20 s ; 0 log de registre pendant la fenêtre.
+- 8004scan : URL `8004scan.io/agents/monad/<id>` et `testnet.8004scan.io/agents/monad-testnet/<id>` (relevé headless 07/10). Le vrai #2022 du testnet s'appelle « Ship » : confirme AM-07bis.1.
+- Tests : **24/24** (10 anciens + 14 : passe / refus, D49, D50, R4, feed, routes). `tsc -b` et build verts. Captures 1920×1080 clair et sombre, iPhone 390 px : `rapports/07bis/`, 0 erreur de console.
+
+**Décisions et raisons**
+- Pas de skill « frontend-design » disponible dans cette session : design fait à la main, sobre (texte 15 px, chiffres 17-20 px au plus).
+- Les agents du run sur fork ont la route `/agent/demo/:id` et jamais de lien 8004scan ni de croisement avec Envio 10143 (AM-07bis.1). Un vrai agent du testnet cliqué dans le feed affiche « No certificate », ses avis listés sans poids.
+- Feed en deux onglets plutôt que mélangé : les blocs du fork (~68,68 M) ne sont pas des blocs du testnet ; les trier ensemble mentirait sur la chronologie.
+- Le chiffre d'Eve sous le schéma de référence est « hors schéma » (vrai mais faible) ; la ligne « even if every tag counted » donne la raison de fond (auteurs injoignables), calculée et non affirmée.
+
+**AM-07bis**
+- AM-07bis.1 : collision des numéros d'agents entre le fork et le vrai testnet (voir plus haut).
+- AM-07bis.2 : l'endpoint Envio déployé (`433cc83`) est **antérieur au schéma v3** : pas de `Certificate` ni de `Discrepancy`. Les events ANCRE du feed viennent du run. → INTERFACE indexeur.
+- AM-07bis.3 : sur le testnet, la masse ANCRE est celle du **run enregistré sur fork**, pas une lecture en direct : le bandeau le dit (« recorded on a fork of the testnet »). Dès qu'un run `mode: testnet` existe, l'écran le prend tel quel (route `/agent/testnet/…`, `policy.onchain = true`).
+- AM-07bis.4 : noms du feed : seuls les `agentURI` en `data:` sont décodés ; les autres s'affichent « #id » (aucune requête vers une URI distante).
+
+**INTERFACE (indexeur, solveur : non modifiés)**
+- Indexeur : redéployer le schéma v3 sur Envio Cloud avec l'adresse persistante d'`AnchoredReputation` (testnet) ; l'écran ajoutera `Certificate` / `Discrepancy` au feed ANCRE (requête prête à écrire, même format).
+- Alchemy (D55) : la Transfers API exige la clé, donc un serveur ; une fonction Netlify (`ALCHEMY_KEY` en variable d'environnement Netlify) serait la voie la plus courte. Non fait.
+
+**Prochaine étape** : `/code-review high`, corrections, puis VIDEO-SHOTS.md et SCREEN.md.

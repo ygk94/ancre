@@ -2,7 +2,7 @@
  "format": "ancre-screen-act1-v1",
  "status": "COMPUTED by the reference solver (not deployed on mainnet), reproducible",
  "command": "cd app && ../solver/.venv/bin/python scripts/export_act1.py",
- "solverCommit": "fe3d554",
+ "solverCommit": "6c453dc",
  "chainId": 143,
  "featured": [
   "182",
@@ -17,14 +17,14 @@
   "10279",
   "10278"
  ],
- "snapshotBlock": 108835675,
- "snapshotFeedbacks": 9283,
- "snapshotAgents": 10262,
- "source": "solver/data/mainnet-108835675.{feedbacks,identity}.json.gz (re-read on-chain, solver/snapshot.py)",
+ "snapshotBlock": 110994810,
+ "snapshotFeedbacks": 9291,
+ "snapshotAgents": 10281,
+ "source": "solver/data/mainnet-110994810.{feedbacks,identity}.json.gz (re-read on-chain, solver/snapshot.py)",
  "rules": "D20, alpha = 1/3, m = 2, uniform lambdas, integer certificate from 0 (D26)",
  "policy": {
-  "theta": "20000000000000000",
-  "thetaPct": 2.0,
+  "theta": "10000000000000000",
+  "thetaPct": 1.0,
   "rhoN": 1,
   "rhoD": 2,
   "note": "theta of the chantier 06 demo set, applied off-chain to illustrate the payment verdict"
@@ -128,8 +128,8 @@
    "naiveAverage": null,
    "outOfRange": 0,
    "topClientShare": null,
-   "owner": null,
-   "wallet": null
+   "owner": "0x4bac2be288b5931886eec4c555895ce6bcab19e7",
+   "wallet": "0x4bac2be288b5931886eec4c555895ce6bcab19e7"
   },
   "10278": {
    "feedbacks": 0,
@@ -137,8 +137,8 @@
    "naiveAverage": null,
    "outOfRange": 0,
    "topClientShare": null,
-   "owner": null,
-   "wallet": null
+   "owner": "0xf3cbd8aaf1f2350bfd8a3220ab4e83fdd8fa18d9",
+   "wallet": "0xf3cbd8aaf1f2350bfd8a3220ab4e83fdd8fa18d9"
   }
  },
  "lenses": [
@@ -394,7 +394,311 @@
       "detail": "slashed by a trusted rater: distrust 14.81%, no mass"
      }
     }
-   ]
+   ],
+   "reviews": {
+    "2": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "hop",
+       "tag": "vouch",
+       "via": "18",
+       "count": 1,
+       "contribution": "74074074074074074",
+       "w": 10000,
+       "sampleRater": "0xea0b21fb2441464f4920ce3e34d478235605816b"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "agent:18",
+       "contribution": "74074074074074074",
+       "w": 10000,
+       "tag": "vouch",
+       "client": "0xea0b21fb2441464f4920ce3e34d478235605816b"
+      }
+     ]
+    },
+    "3": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "hop",
+       "tag": "review",
+       "via": "18",
+       "count": 1,
+       "contribution": "74074074074074074",
+       "w": 10000,
+       "sampleRater": "0xea0b21fb2441464f4920ce3e34d478235605816b"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "agent:18",
+       "contribution": "74074074074074074",
+       "w": 10000,
+       "tag": "review",
+       "client": "0xea0b21fb2441464f4920ce3e34d478235605816b"
+      }
+     ]
+    },
+    "4": {
+     "total": 76,
+     "groups": [
+      {
+       "why": "hop_negative",
+       "tag": "slash",
+       "via": "18",
+       "count": 1,
+       "contribution": "-148148148148148148",
+       "w": -10000,
+       "sampleRater": "0xea0b21fb2441464f4920ce3e34d478235605816b"
+      },
+      {
+       "why": "outside",
+       "tag": "uptime",
+       "via": null,
+       "count": 20,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "sensorReadings",
+       "via": null,
+       "count": 11,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "reachable",
+       "via": null,
+       "count": 9,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "vpdAccuracy",
+       "via": null,
+       "count": 9,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "sensorAccuracy",
+       "via": null,
+       "count": 3,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "growActions",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "communitySize",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "mcpTools",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "a2aSkills",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "mcpCoverage",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "responseTime",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      }
+     ],
+     "groupsOmitted": 17,
+     "inbound": [
+      {
+       "from": "agent:18",
+       "contribution": "-148148148148148148",
+       "w": -10000,
+       "tag": "slash",
+       "client": "0xea0b21fb2441464f4920ce3e34d478235605816b"
+      }
+     ]
+    },
+    "9": {
+     "total": 518,
+     "groups": [
+      {
+       "why": "outside",
+       "tag": "elo",
+       "via": null,
+       "count": 518,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0xd8a01de3d27bd6fb0df99e7ca94ec69c5dabe38c"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "18": {
+     "total": 2,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "vouch",
+       "via": null,
+       "count": 1,
+       "contribution": "111111111111111110",
+       "w": 10000,
+       "sampleRater": "0x0730536018541c5149a049d35528a76c2c8f1e6b"
+      },
+      {
+       "why": "anchor",
+       "tag": "review",
+       "via": null,
+       "count": 1,
+       "contribution": "111111111111111110",
+       "w": 10000,
+       "sampleRater": "0xf7d5543dfff21ac729626579216776412132fe74"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "111111111111111110",
+       "w": 10000,
+       "tag": "vouch",
+       "client": "0x0730536018541c5149a049d35528a76c2c8f1e6b"
+      },
+      {
+       "from": "anchor",
+       "contribution": "111111111111111110",
+       "w": 10000,
+       "tag": "review",
+       "client": "0xf7d5543dfff21ac729626579216776412132fe74"
+      }
+     ]
+    },
+    "19": {
+     "total": 0,
+     "groups": [],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "87": {
+     "total": 508,
+     "groups": [
+      {
+       "why": "outside",
+       "tag": "elo",
+       "via": null,
+       "count": 508,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0xd8a01de3d27bd6fb0df99e7ca94ec69c5dabe38c"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "182": {
+     "total": 7665,
+     "groups": [
+      {
+       "why": "outside",
+       "tag": "eve",
+       "via": null,
+       "count": 7662,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x000b86d0927095aed35e2193a0f98401b35b6358"
+      },
+      {
+       "why": "outside",
+       "tag": "plague",
+       "via": null,
+       "count": 3,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x1e50685dd845f87f0b782a13f5825892268a5b1f"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "8317": {
+     "total": 78,
+     "groups": [
+      {
+       "why": "outside",
+       "tag": "trade_execution",
+       "via": null,
+       "count": 78,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x449854134593bcb92c1244cfb382b5ab6254eead"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "10278": {
+     "total": 0,
+     "groups": [],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "10279": {
+     "total": 0,
+     "groups": [],
+     "groupsOmitted": 0,
+     "inbound": []
+    }
+   }
   },
   {
    "id": "screener-as-trust",
@@ -905,7 +1209,1118 @@
       "detail": "one anchor: leave-one-out (m = 2) leaves 0"
      }
     }
-   ]
+   ],
+   "reviews": {
+    "2": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "unreachable",
+       "tag": "vouch",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": 10000,
+       "sampleRater": "0xea0b21fb2441464f4920ce3e34d478235605816b"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "3": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "unreachable",
+       "tag": "review",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": 10000,
+       "sampleRater": "0xea0b21fb2441464f4920ce3e34d478235605816b"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "4": {
+     "total": 76,
+     "groups": [
+      {
+       "why": "outside",
+       "tag": "uptime",
+       "via": null,
+       "count": 20,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "sensorReadings",
+       "via": null,
+       "count": 11,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "reachable",
+       "via": null,
+       "count": 9,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "vpdAccuracy",
+       "via": null,
+       "count": 9,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "sensorAccuracy",
+       "via": null,
+       "count": 3,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "growActions",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "communitySize",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "mcpTools",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "a2aSkills",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "mcpCoverage",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "responseTime",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "dataFreshness",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      }
+     ],
+     "groupsOmitted": 17,
+     "inbound": []
+    },
+    "9": {
+     "total": 518,
+     "groups": [
+      {
+       "why": "outside",
+       "tag": "elo",
+       "via": null,
+       "count": 518,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0xd8a01de3d27bd6fb0df99e7ca94ec69c5dabe38c"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "18": {
+     "total": 2,
+     "groups": [
+      {
+       "why": "unreachable",
+       "tag": "vouch",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": 10000,
+       "sampleRater": "0x0730536018541c5149a049d35528a76c2c8f1e6b"
+      },
+      {
+       "why": "unreachable",
+       "tag": "review",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": 10000,
+       "sampleRater": "0xf7d5543dfff21ac729626579216776412132fe74"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "19": {
+     "total": 0,
+     "groups": [],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "87": {
+     "total": 508,
+     "groups": [
+      {
+       "why": "outside",
+       "tag": "elo",
+       "via": null,
+       "count": 508,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0xd8a01de3d27bd6fb0df99e7ca94ec69c5dabe38c"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "182": {
+     "total": 7665,
+     "groups": [
+      {
+       "why": "hop",
+       "tag": "eve",
+       "via": "4993",
+       "count": 1,
+       "contribution": "6827103601297149",
+       "w": 10000,
+       "sampleRater": "0x05e6b8c70092c154a2c9f1434579893e0a7dac7b"
+      },
+      {
+       "why": "hop",
+       "tag": "eve",
+       "via": "5205",
+       "count": 1,
+       "contribution": "6827103601297149",
+       "w": 10000,
+       "sampleRater": "0x335a0db1e94d1d3a765e33356256abafc5058dc8"
+      },
+      {
+       "why": "hop",
+       "tag": "eve",
+       "via": "5169",
+       "count": 1,
+       "contribution": "6827103601297149",
+       "w": 10000,
+       "sampleRater": "0x42e6e6b51ffb3b2f6f900e1a99b7e71d92fee8b2"
+      },
+      {
+       "why": "hop",
+       "tag": "eve",
+       "via": "5240",
+       "count": 1,
+       "contribution": "6827103601297149",
+       "w": 10000,
+       "sampleRater": "0x5b49438db4689adfab2967d1dd15576cae91ebbe"
+      },
+      {
+       "why": "hop",
+       "tag": "eve",
+       "via": "2422",
+       "count": 1,
+       "contribution": "6827103601297149",
+       "w": 10000,
+       "sampleRater": "0xb73788bf5afc8c3ce75d89645d65d33e37db9800"
+      },
+      {
+       "why": "hop",
+       "tag": "eve",
+       "via": "4078",
+       "count": 1,
+       "contribution": "6827103601297149",
+       "w": 10000,
+       "sampleRater": "0xd84382f1fa353222d040e67ff429ad81cceb5a1a"
+      },
+      {
+       "why": "hop",
+       "tag": "eve",
+       "via": "5329",
+       "count": 1,
+       "contribution": "6827103601297149",
+       "w": 10000,
+       "sampleRater": "0xf190aac02080c72d94a89eeaa117aa5169016166"
+      },
+      {
+       "why": "hop",
+       "tag": "eve",
+       "via": "6618",
+       "count": 1,
+       "contribution": "5803038061102576",
+       "w": 10000,
+       "sampleRater": "0x222f2b06c530a9a1404bb7adbb117ffaa633c3a0"
+      },
+      {
+       "why": "hop",
+       "tag": "eve",
+       "via": "7657",
+       "count": 1,
+       "contribution": "5803038061102576",
+       "w": 10000,
+       "sampleRater": "0x27b7cd80d61dbf3fa34f7c6e55d8f0b53c8c3aef"
+      },
+      {
+       "why": "hop",
+       "tag": "eve",
+       "via": "5720",
+       "count": 1,
+       "contribution": "5803038061102576",
+       "w": 10000,
+       "sampleRater": "0x3b3639a93757a37c70a4320806bdabdd0622ad8d"
+      },
+      {
+       "why": "hop",
+       "tag": "eve",
+       "via": "8095",
+       "count": 1,
+       "contribution": "5803038061102576",
+       "w": 10000,
+       "sampleRater": "0x449d490f6a76cafcfff1babeff839d4a5dee139c"
+      },
+      {
+       "why": "hop",
+       "tag": "eve",
+       "via": "6149",
+       "count": 1,
+       "contribution": "5803038061102576",
+       "w": 10000,
+       "sampleRater": "0x59de0ec4e62fc31e36fc5682e2c3afdf99d31a4d"
+      }
+     ],
+     "groupsOmitted": 17,
+     "inbound": [
+      {
+       "from": "agent:2422",
+       "contribution": "6827103601297149",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0xb73788bf5afc8c3ce75d89645d65d33e37db9800"
+      },
+      {
+       "from": "agent:4078",
+       "contribution": "6827103601297149",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0xd84382f1fa353222d040e67ff429ad81cceb5a1a"
+      },
+      {
+       "from": "agent:4993",
+       "contribution": "6827103601297149",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0x05e6b8c70092c154a2c9f1434579893e0a7dac7b"
+      },
+      {
+       "from": "agent:5169",
+       "contribution": "6827103601297149",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0x42e6e6b51ffb3b2f6f900e1a99b7e71d92fee8b2"
+      },
+      {
+       "from": "agent:5205",
+       "contribution": "6827103601297149",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0x335a0db1e94d1d3a765e33356256abafc5058dc8"
+      },
+      {
+       "from": "agent:5240",
+       "contribution": "6827103601297149",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0x5b49438db4689adfab2967d1dd15576cae91ebbe"
+      },
+      {
+       "from": "agent:5329",
+       "contribution": "6827103601297149",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0xf190aac02080c72d94a89eeaa117aa5169016166"
+      },
+      {
+       "from": "agent:3156",
+       "contribution": "5803038061102576",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0x7c26cfb8ffc3afc2e58175b33955252afadbcc95"
+      }
+     ]
+    },
+    "1829": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "liveness",
+       "via": null,
+       "count": 1,
+       "contribution": "1024065540194572",
+       "w": 1000,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "1024065540194572",
+       "w": 1000,
+       "tag": "liveness",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "2422": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "liveness",
+       "via": null,
+       "count": 1,
+       "contribution": "10240655401945724",
+       "w": 10000,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "10240655401945724",
+       "w": 10000,
+       "tag": "liveness",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "3156": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "trust",
+       "via": null,
+       "count": 1,
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "tag": "trust",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "4078": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "liveness",
+       "via": null,
+       "count": 1,
+       "contribution": "10240655401945724",
+       "w": 10000,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "10240655401945724",
+       "w": 10000,
+       "tag": "liveness",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "4442": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "trust",
+       "via": null,
+       "count": 1,
+       "contribution": "6144393241167434",
+       "w": 6000,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "6144393241167434",
+       "w": 6000,
+       "tag": "trust",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "4557": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "trust",
+       "via": null,
+       "count": 1,
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "tag": "trust",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "4993": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "liveness",
+       "via": null,
+       "count": 1,
+       "contribution": "10240655401945724",
+       "w": 10000,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "10240655401945724",
+       "w": 10000,
+       "tag": "liveness",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "5117": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "trust",
+       "via": null,
+       "count": 1,
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "tag": "trust",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "5169": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "liveness",
+       "via": null,
+       "count": 1,
+       "contribution": "10240655401945724",
+       "w": 10000,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "10240655401945724",
+       "w": 10000,
+       "tag": "liveness",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "5205": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "liveness",
+       "via": null,
+       "count": 1,
+       "contribution": "10240655401945724",
+       "w": 10000,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "10240655401945724",
+       "w": 10000,
+       "tag": "liveness",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "5240": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "liveness",
+       "via": null,
+       "count": 1,
+       "contribution": "10240655401945724",
+       "w": 10000,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "10240655401945724",
+       "w": 10000,
+       "tag": "liveness",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "5329": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "liveness",
+       "via": null,
+       "count": 1,
+       "contribution": "10240655401945724",
+       "w": 10000,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "10240655401945724",
+       "w": 10000,
+       "tag": "liveness",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "5710": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "trust",
+       "via": null,
+       "count": 1,
+       "contribution": "3072196620583717",
+       "w": 3000,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "3072196620583717",
+       "w": 3000,
+       "tag": "trust",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "5720": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "trust",
+       "via": null,
+       "count": 1,
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "tag": "trust",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "5779": {
+     "total": 2,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "trust",
+       "via": null,
+       "count": 1,
+       "contribution": "3072196620583717",
+       "w": 3000,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      },
+      {
+       "why": "superseded",
+       "tag": "trust",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "3072196620583717",
+       "w": 3000,
+       "tag": "trust",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "5957": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "trust",
+       "via": null,
+       "count": 1,
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "tag": "trust",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "6149": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "trust",
+       "via": null,
+       "count": 1,
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "tag": "trust",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "6238": {
+     "total": 3,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "trust",
+       "via": null,
+       "count": 1,
+       "contribution": "6144393241167434",
+       "w": 6000,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      },
+      {
+       "why": "superseded",
+       "tag": "trust",
+       "via": null,
+       "count": 2,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "6144393241167434",
+       "w": 6000,
+       "tag": "trust",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "6618": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "trust",
+       "via": null,
+       "count": 1,
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "tag": "trust",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "6906": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "trust",
+       "via": null,
+       "count": 1,
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "tag": "trust",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "7222": {
+     "total": 2,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "trust",
+       "via": null,
+       "count": 1,
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      },
+      {
+       "why": "superseded",
+       "tag": "trust",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "tag": "trust",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "7362": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "trust",
+       "via": null,
+       "count": 1,
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "tag": "trust",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "7537": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "trust",
+       "via": null,
+       "count": 1,
+       "contribution": "6144393241167434",
+       "w": 6000,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "6144393241167434",
+       "w": 6000,
+       "tag": "trust",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "7657": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "trust",
+       "via": null,
+       "count": 1,
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "tag": "trust",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "8095": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "trust",
+       "via": null,
+       "count": 1,
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "tag": "trust",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "8216": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "trust",
+       "via": null,
+       "count": 1,
+       "contribution": "3072196620583717",
+       "w": 3000,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "3072196620583717",
+       "w": 3000,
+       "tag": "trust",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "8220": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "trust",
+       "via": null,
+       "count": 1,
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "tag": "trust",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "8317": {
+     "total": 78,
+     "groups": [
+      {
+       "why": "outside",
+       "tag": "trade_execution",
+       "via": null,
+       "count": 78,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x449854134593bcb92c1244cfb382b5ab6254eead"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "8357": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "trust",
+       "via": null,
+       "count": 1,
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "sampleRater": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "8704557091653865",
+       "w": 8500,
+       "tag": "trust",
+       "client": "0xa06f907f7ea437ebe60e3d452831ec69e5be43a4"
+      }
+     ]
+    },
+    "10278": {
+     "total": 0,
+     "groups": [],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "10279": {
+     "total": 0,
+     "groups": [],
+     "groupsOmitted": 0,
+     "inbound": []
+    }
+   }
   },
   {
    "id": "screener-d15",
@@ -1096,7 +2511,272 @@
      }
     }
    },
-   "ranking": []
+   "ranking": [],
+   "reviews": {
+    "2": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "unreachable",
+       "tag": "vouch",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": 10000,
+       "sampleRater": "0xea0b21fb2441464f4920ce3e34d478235605816b"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "3": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "unreachable",
+       "tag": "review",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": 10000,
+       "sampleRater": "0xea0b21fb2441464f4920ce3e34d478235605816b"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "4": {
+     "total": 76,
+     "groups": [
+      {
+       "why": "outside",
+       "tag": "uptime",
+       "via": null,
+       "count": 20,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "sensorReadings",
+       "via": null,
+       "count": 11,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "reachable",
+       "via": null,
+       "count": 9,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "vpdAccuracy",
+       "via": null,
+       "count": 9,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "sensorAccuracy",
+       "via": null,
+       "count": 3,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "growActions",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "communitySize",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "mcpTools",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "a2aSkills",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "mcpCoverage",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "responseTime",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "dataFreshness",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      }
+     ],
+     "groupsOmitted": 17,
+     "inbound": []
+    },
+    "9": {
+     "total": 518,
+     "groups": [
+      {
+       "why": "outside",
+       "tag": "elo",
+       "via": null,
+       "count": 518,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0xd8a01de3d27bd6fb0df99e7ca94ec69c5dabe38c"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "18": {
+     "total": 2,
+     "groups": [
+      {
+       "why": "unreachable",
+       "tag": "vouch",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": 10000,
+       "sampleRater": "0x0730536018541c5149a049d35528a76c2c8f1e6b"
+      },
+      {
+       "why": "unreachable",
+       "tag": "review",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": 10000,
+       "sampleRater": "0xf7d5543dfff21ac729626579216776412132fe74"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "19": {
+     "total": 0,
+     "groups": [],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "87": {
+     "total": 508,
+     "groups": [
+      {
+       "why": "outside",
+       "tag": "elo",
+       "via": null,
+       "count": 508,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0xd8a01de3d27bd6fb0df99e7ca94ec69c5dabe38c"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "182": {
+     "total": 7665,
+     "groups": [
+      {
+       "why": "measurement",
+       "tag": "eve",
+       "via": null,
+       "count": 7662,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x000b86d0927095aed35e2193a0f98401b35b6358"
+      },
+      {
+       "why": "measurement",
+       "tag": "plague",
+       "via": null,
+       "count": 3,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x1e50685dd845f87f0b782a13f5825892268a5b1f"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "8317": {
+     "total": 78,
+     "groups": [
+      {
+       "why": "outside",
+       "tag": "trade_execution",
+       "via": null,
+       "count": 78,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x449854134593bcb92c1244cfb382b5ab6254eead"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "10278": {
+     "total": 0,
+     "groups": [],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "10279": {
+     "total": 0,
+     "groups": [],
+     "groupsOmitted": 0,
+     "inbound": []
+    }
+   }
   },
   {
    "id": "inside-farm",
@@ -1316,7 +2996,660 @@
       "detail": "reached by one anchor only: leave-one-out mass 0"
      }
     }
-   ]
+   ],
+   "reviews": {
+    "2": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "unreachable",
+       "tag": "vouch",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": 10000,
+       "sampleRater": "0xea0b21fb2441464f4920ce3e34d478235605816b"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "3": {
+     "total": 1,
+     "groups": [
+      {
+       "why": "unreachable",
+       "tag": "review",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": 100,
+       "sampleRater": "0xea0b21fb2441464f4920ce3e34d478235605816b"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "4": {
+     "total": 76,
+     "groups": [
+      {
+       "why": "outside",
+       "tag": "uptime",
+       "via": null,
+       "count": 20,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "sensorReadings",
+       "via": null,
+       "count": 11,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "reachable",
+       "via": null,
+       "count": 9,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "vpdAccuracy",
+       "via": null,
+       "count": 9,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "sensorAccuracy",
+       "via": null,
+       "count": 3,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "growActions",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "communitySize",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "mcpTools",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "a2aSkills",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "mcpCoverage",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "responseTime",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      },
+      {
+       "why": "outside",
+       "tag": "dataFreshness",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+      }
+     ],
+     "groupsOmitted": 17,
+     "inbound": []
+    },
+    "9": {
+     "total": 518,
+     "groups": [
+      {
+       "why": "outside",
+       "tag": "elo",
+       "via": null,
+       "count": 518,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0xd8a01de3d27bd6fb0df99e7ca94ec69c5dabe38c"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "18": {
+     "total": 2,
+     "groups": [
+      {
+       "why": "unreachable",
+       "tag": "vouch",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": 10000,
+       "sampleRater": "0x0730536018541c5149a049d35528a76c2c8f1e6b"
+      },
+      {
+       "why": "unreachable",
+       "tag": "review",
+       "via": null,
+       "count": 1,
+       "contribution": "0",
+       "w": 100,
+       "sampleRater": "0xf7d5543dfff21ac729626579216776412132fe74"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "19": {
+     "total": 0,
+     "groups": [],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "87": {
+     "total": 508,
+     "groups": [
+      {
+       "why": "outside",
+       "tag": "elo",
+       "via": null,
+       "count": 508,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0xd8a01de3d27bd6fb0df99e7ca94ec69c5dabe38c"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "182": {
+     "total": 7665,
+     "groups": [
+      {
+       "why": "anchor",
+       "tag": "eve",
+       "via": null,
+       "count": 1,
+       "contribution": "111111111111111110",
+       "w": 10000,
+       "sampleRater": "0x0021c946b40995c00cc4cacdb65dd63bfb053717"
+      },
+      {
+       "why": "unreachable",
+       "tag": "eve",
+       "via": null,
+       "count": 7547,
+       "contribution": "0",
+       "w": 10000,
+       "sampleRater": "0x002417627c319921895a1e64d4784dfa66442e2e"
+      },
+      {
+       "why": "out_of_bounds",
+       "tag": "eve",
+       "via": null,
+       "count": 114,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x000b86d0927095aed35e2193a0f98401b35b6358"
+      },
+      {
+       "why": "out_of_bounds",
+       "tag": "plague",
+       "via": null,
+       "count": 3,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x1e50685dd845f87f0b782a13f5825892268a5b1f"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": [
+      {
+       "from": "anchor",
+       "contribution": "111111111111111110",
+       "w": 10000,
+       "tag": "eve",
+       "client": "0x0021c946b40995c00cc4cacdb65dd63bfb053717"
+      }
+     ]
+    },
+    "8317": {
+     "total": 78,
+     "groups": [
+      {
+       "why": "outside",
+       "tag": "trade_execution",
+       "via": null,
+       "count": 78,
+       "contribution": "0",
+       "w": null,
+       "sampleRater": "0x449854134593bcb92c1244cfb382b5ab6254eead"
+      }
+     ],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "10278": {
+     "total": 0,
+     "groups": [],
+     "groupsOmitted": 0,
+     "inbound": []
+    },
+    "10279": {
+     "total": 0,
+     "groups": [],
+     "groupsOmitted": 0,
+     "inbound": []
+    }
+   }
   }
- ]
+ ],
+ "permissive": {
+  "schema": "stress (every tag = endorsement)",
+  "filter": [
+   "eve",
+   "elo",
+   "trade_execution",
+   "uptime",
+   "sensorReadings",
+   "reachable",
+   "vpdAccuracy",
+   "review",
+   "sensorAccuracy",
+   "plague",
+   "vouch",
+   "growActions",
+   "communitySize",
+   "mcpTools",
+   "a2aSkills",
+   "mcpCoverage"
+  ],
+  "edges": 7555,
+  "reviews": {
+   "2": {
+    "total": 1,
+    "groups": [
+     {
+      "why": "hop",
+      "tag": "vouch",
+      "via": "18",
+      "count": 1,
+      "contribution": "73347857661583151",
+      "w": 10000,
+      "sampleRater": "0xea0b21fb2441464f4920ce3e34d478235605816b"
+     }
+    ],
+    "groupsOmitted": 0,
+    "inbound": [
+     {
+      "from": "agent:18",
+      "contribution": "73347857661583151",
+      "w": 10000,
+      "tag": "vouch",
+      "client": "0xea0b21fb2441464f4920ce3e34d478235605816b"
+     }
+    ]
+   },
+   "3": {
+    "total": 1,
+    "groups": [
+     {
+      "why": "hop",
+      "tag": "review",
+      "via": "18",
+      "count": 1,
+      "contribution": "733478576615831",
+      "w": 100,
+      "sampleRater": "0xea0b21fb2441464f4920ce3e34d478235605816b"
+     }
+    ],
+    "groupsOmitted": 0,
+    "inbound": [
+     {
+      "from": "agent:18",
+      "contribution": "733478576615831",
+      "w": 100,
+      "tag": "review",
+      "client": "0xea0b21fb2441464f4920ce3e34d478235605816b"
+     }
+    ]
+   },
+   "4": {
+    "total": 76,
+    "groups": [
+     {
+      "why": "hop",
+      "tag": "review",
+      "via": "18",
+      "count": 1,
+      "contribution": "733478576615831",
+      "w": 100,
+      "sampleRater": "0xea0b21fb2441464f4920ce3e34d478235605816b"
+     },
+     {
+      "why": "superseded",
+      "tag": "uptime",
+      "via": null,
+      "count": 19,
+      "contribution": "0",
+      "w": null,
+      "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+     },
+     {
+      "why": "superseded",
+      "tag": "sensorReadings",
+      "via": null,
+      "count": 10,
+      "contribution": "0",
+      "w": null,
+      "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+     },
+     {
+      "why": "superseded",
+      "tag": "reachable",
+      "via": null,
+      "count": 8,
+      "contribution": "0",
+      "w": null,
+      "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+     },
+     {
+      "why": "superseded",
+      "tag": "vpdAccuracy",
+      "via": null,
+      "count": 8,
+      "contribution": "0",
+      "w": null,
+      "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+     },
+     {
+      "why": "superseded",
+      "tag": "sensorAccuracy",
+      "via": null,
+      "count": 2,
+      "contribution": "0",
+      "w": null,
+      "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+     },
+     {
+      "why": "combined",
+      "tag": "growActions",
+      "via": null,
+      "count": 1,
+      "contribution": "0",
+      "w": null,
+      "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+     },
+     {
+      "why": "out_of_bounds",
+      "tag": "communitySize",
+      "via": null,
+      "count": 1,
+      "contribution": "0",
+      "w": null,
+      "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+     },
+     {
+      "why": "combined",
+      "tag": "mcpTools",
+      "via": null,
+      "count": 1,
+      "contribution": "0",
+      "w": null,
+      "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+     },
+     {
+      "why": "combined",
+      "tag": "a2aSkills",
+      "via": null,
+      "count": 1,
+      "contribution": "0",
+      "w": null,
+      "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+     },
+     {
+      "why": "combined",
+      "tag": "mcpCoverage",
+      "via": null,
+      "count": 1,
+      "contribution": "0",
+      "w": null,
+      "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+     },
+     {
+      "why": "outside",
+      "tag": "responseTime",
+      "via": null,
+      "count": 1,
+      "contribution": "0",
+      "w": null,
+      "sampleRater": "0x443cbff015457107fe556dfca8b8684f7ee3cbc4"
+     }
+    ],
+    "groupsOmitted": 22,
+    "inbound": [
+     {
+      "from": "agent:18",
+      "contribution": "733478576615831",
+      "w": 100,
+      "tag": "review",
+      "client": "0xea0b21fb2441464f4920ce3e34d478235605816b"
+     }
+    ]
+   },
+   "9": {
+    "total": 518,
+    "groups": [
+     {
+      "why": "superseded",
+      "tag": "elo",
+      "via": null,
+      "count": 517,
+      "contribution": "0",
+      "w": null,
+      "sampleRater": "0xd8a01de3d27bd6fb0df99e7ca94ec69c5dabe38c"
+     },
+     {
+      "why": "out_of_bounds",
+      "tag": "elo",
+      "via": null,
+      "count": 1,
+      "contribution": "0",
+      "w": null,
+      "sampleRater": "0xd8a01de3d27bd6fb0df99e7ca94ec69c5dabe38c"
+     }
+    ],
+    "groupsOmitted": 0,
+    "inbound": []
+   },
+   "18": {
+    "total": 2,
+    "groups": [
+     {
+      "why": "anchor",
+      "tag": "vouch",
+      "via": null,
+      "count": 1,
+      "contribution": "111111111111111110",
+      "w": 10000,
+      "sampleRater": "0x0730536018541c5149a049d35528a76c2c8f1e6b"
+     },
+     {
+      "why": "anchor",
+      "tag": "review",
+      "via": null,
+      "count": 1,
+      "contribution": "1111111111111111",
+      "w": 100,
+      "sampleRater": "0xf7d5543dfff21ac729626579216776412132fe74"
+     }
+    ],
+    "groupsOmitted": 0,
+    "inbound": [
+     {
+      "from": "anchor",
+      "contribution": "111111111111111110",
+      "w": 10000,
+      "tag": "vouch",
+      "client": "0x0730536018541c5149a049d35528a76c2c8f1e6b"
+     },
+     {
+      "from": "anchor",
+      "contribution": "1111111111111111",
+      "w": 100,
+      "tag": "review",
+      "client": "0xf7d5543dfff21ac729626579216776412132fe74"
+     }
+    ]
+   },
+   "19": {
+    "total": 0,
+    "groups": [],
+    "groupsOmitted": 0,
+    "inbound": []
+   },
+   "87": {
+    "total": 508,
+    "groups": [
+     {
+      "why": "superseded",
+      "tag": "elo",
+      "via": null,
+      "count": 507,
+      "contribution": "0",
+      "w": null,
+      "sampleRater": "0xd8a01de3d27bd6fb0df99e7ca94ec69c5dabe38c"
+     },
+     {
+      "why": "out_of_bounds",
+      "tag": "elo",
+      "via": null,
+      "count": 1,
+      "contribution": "0",
+      "w": null,
+      "sampleRater": "0xd8a01de3d27bd6fb0df99e7ca94ec69c5dabe38c"
+     }
+    ],
+    "groupsOmitted": 0,
+    "inbound": []
+   },
+   "182": {
+    "total": 7665,
+    "groups": [
+     {
+      "why": "unreachable",
+      "tag": "eve",
+      "via": null,
+      "count": 7548,
+      "contribution": "0",
+      "w": 10000,
+      "sampleRater": "0x0021c946b40995c00cc4cacdb65dd63bfb053717"
+     },
+     {
+      "why": "out_of_bounds",
+      "tag": "eve",
+      "via": null,
+      "count": 114,
+      "contribution": "0",
+      "w": null,
+      "sampleRater": "0x000b86d0927095aed35e2193a0f98401b35b6358"
+     },
+     {
+      "why": "out_of_bounds",
+      "tag": "plague",
+      "via": null,
+      "count": 3,
+      "contribution": "0",
+      "w": null,
+      "sampleRater": "0x1e50685dd845f87f0b782a13f5825892268a5b1f"
+     }
+    ],
+    "groupsOmitted": 0,
+    "inbound": []
+   },
+   "8317": {
+    "total": 78,
+    "groups": [
+     {
+      "why": "superseded",
+      "tag": "trade_execution",
+      "via": null,
+      "count": 77,
+      "contribution": "0",
+      "w": null,
+      "sampleRater": "0x449854134593bcb92c1244cfb382b5ab6254eead"
+     },
+     {
+      "why": "unreachable",
+      "tag": "trade_execution",
+      "via": null,
+      "count": 1,
+      "contribution": "0",
+      "w": -10000,
+      "sampleRater": "0x449854134593bcb92c1244cfb382b5ab6254eead"
+     }
+    ],
+    "groupsOmitted": 0,
+    "inbound": []
+   },
+   "10278": {
+    "total": 0,
+    "groups": [],
+    "groupsOmitted": 0,
+    "inbound": []
+   },
+   "10279": {
+    "total": 0,
+    "groups": [],
+    "groupsOmitted": 0,
+    "inbound": []
+   }
+  }
+ }
 }

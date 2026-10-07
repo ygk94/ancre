@@ -29,6 +29,7 @@ function liveRuns(): Plugin {
 
 export default defineConfig({
   plugins: [react(), liveRuns()],
-  base: "./",
+  // History-API routes (/agent/testnet/2022) need absolute asset URLs; a sub-path host sets ANCRE_BASE=/sub/
+  base: process.env.ANCRE_BASE ?? "/",
   build: { target: "es2022", chunkSizeWarningLimit: 900 },
 });

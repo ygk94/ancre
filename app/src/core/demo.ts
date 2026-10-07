@@ -162,6 +162,7 @@ export const SCENE_TITLES: Record<number, string> = {
   4: "Circuit breaker",
   5: "Anti-erasure",
   6: "Fabricated certificate",
+  7: "Second hop",
 };
 
 const FEED_KINDS = new Set(["feedback", "feedback-batch", "revoke", "certificate", "payment", "farm-payment", "rejected"]);
