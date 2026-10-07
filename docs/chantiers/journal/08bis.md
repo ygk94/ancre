@@ -117,3 +117,34 @@
 - **AM-08bis.8** : `solver/vectors/*.json` portent `alignedWith: "... (2026-10-01) ..."`, alors qu'ils ont été régénérés en 04-bis (06/10). Le libellé est périmé (→ 04, cosmétique).
 
 **Prochaine étape** : E3 (Security, déjà réécrite en E1) : balayage DISCLOSURE-GATE dans tout `docs/erc/`, puis E4.
+
+## 2026-10-07 17:00 — E3 : Security Considerations et DISCLOSURE-GATE
+
+**Fait.**
+- **Security Considerations** a été réécrite dès E1. On y trouve désormais :
+  - les ensembles ouverts, avec les faits ;
+  - **A1b**, chiffré, avec un ⟦OPEN⟧ ;
+  - les bornes globales, avec la facture au pire cas, et le nouveau chiffre de TC-5 (16 wei → 0,222 WAD) ;
+  - **EFF1**, chiffré, avec un ⟦OPEN⟧, et le coût des preuves (+26 à +29 %, MESURÉ) ;
+  - les ancres (règle A) ;
+  - la **vivacité des faits** ;
+  - les approbations (règle B) ;
+  - la gouvernance (R6) ;
+  - la disponibilité des données (**G-11**, EOA délégués **EIP-7702**) ;
+  - les **indexeurs** (**REGCB**, **NUL**, **LONGTAG**).
+- **DISCLOSURE-GATE** : marqueurs posés dans l'ERC, CHANGES et les brouillons (a), (b) et (d) ; le brouillon (c) est couvert en entier. Contrôle par script : **0 occurrence hors marqueurs** dans `docs/erc/`, marqueurs appariés.
+- `strip-notes.py` sait maintenant traiter les blocs, et retire le gated par défaut.
+- Les brouillons sont mis à jour (CHANGES §11).
+
+**Mesure (MESURÉ le 07/10, bloc 111 299 306).** L'owner des deux proxys est inchangé (EOA sans code), `getVersion()` = 2.0.0, et la valeur relue pour le brouillon (c) est inchangée.
+
+**Décisions de rédaction, et pourquoi.**
+1. **La demande sur le garde-fou passe en dernier** dans Backwards Compatibility. Sinon, retirer le bloc gated laisserait une liste 1, 3, 4, 5 et un renvoi « request 5 » faux.
+2. **Notes internes reformulées.** Une note ⟦ ⟧ disparaît à la soumission, mais elle reste lisible dans le dépôt une fois public. Elle ne doit donc pas décrire le contournement hors des marqueurs.
+3. **Le brouillon (c) est couvert en entier** : il est la divulgation elle-même.
+4. **REGCB, NUL et LONGTAG ne sont pas sous marqueur.** Ce sont des pièges pour les indexeurs, pas des failles du registre visées par D29.
+5. **Le §3.3 et la Security parlent de la mise sous silence par approbation sans marqueur.** C'est le 3ᵉ point du brouillon (c), mais le brief ne vise que le garde-fou et l'EOA, et l'ERC y répond désormais par sa propre règle.
+
+**🧑 BLOQUÉ (décision de Hugo, j'avance sans elle)** : la mise sous silence par approbation, 3ᵉ point de la divulgation (c), doit-elle elle aussi attendre la divulgation ? Si oui, il faut encadrer le paragraphe de motivation du §3.3 (règle 4), la phrase du Rationale « Approvals » et le paragraphe Security « Approvals ». Cela représente trois blocs, et sans eux la règle B reste normative, mais sans justification.
+
+**Prochaine étape** : E4 (les ⟦OPEN⟧).

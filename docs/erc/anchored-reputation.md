@@ -547,14 +547,14 @@ If `eLowEff > eLowMax`, the certificate is `STALE` (§8), and the replacement ru
 
 The registries are typically upgradeable proxies, and a contract cannot read another contract's implementation slot.
 
-- `versionHash = keccak256(abi.encode(identityRegistry, keccak256(bytes(identity.getVersion())), reputationRegistry, keccak256(bytes(reputation.getVersion()))))`. If either `getVersion()` call fails or returns malformed data, the registry is unreadable: submission MUST revert. This version therefore cannot be used with registries that do not implement `getVersion()` (Backwards Compatibility, request 5).
+- `versionHash = keccak256(abi.encode(identityRegistry, keccak256(bytes(identity.getVersion())), reputationRegistry, keccak256(bytes(reputation.getVersion()))))`. If either `getVersion()` call fails or returns malformed data, the registry is unreadable: submission MUST revert. This version therefore cannot be used with registries that do not implement `getVersion()` (Backwards Compatibility, request 4).
 - Every certificate stores the `versionHash` read in its submitting transaction.
 - `checkRegistry(setId)` is callable by anyone. It recomputes the hash and, if it differs from the certificate's hash or cannot be read, marks the set's certificate `REGISTRY_CHANGED` and emits `RegistryChanged`. A new certificate clears the mark.
 - Certifiers MUST check the registry versions before each certification. Operators SHOULD monitor the registries' [ERC-1967](./eip-1967.md) `Upgraded` events off-chain and call `checkRegistry` for every set they rely on when one is emitted.
 
 An upgrade that keeps the same version string is invisible on-chain (Security Considerations).
 
-⟦D17. `checkRegistry` est par ensemble dans la v1 (R6 : global) : une upgrade doit être signalée ensemble par ensemble (AM-08.5). `getVersion()` ne fait pas partie de l'interface ERC-8004 (AM-R6.10) : demande 5 en Backwards Compatibility. Le désaccord 2 du tour 3 (suffisance de la vérification de version) est maintenu en Security comme limite, sans marqueur ⟦OPEN⟧ : le texte ne prend aucune position qu'un tour ultérieur pourrait renverser.⟧
+⟦D17. `checkRegistry` est par ensemble dans la v1 (R6 : global) : une upgrade doit être signalée ensemble par ensemble (AM-08.5). `getVersion()` ne fait pas partie de l'interface ERC-8004 (AM-R6.10) : demande 4 en Backwards Compatibility. Le désaccord 2 du tour 3 (suffisance de la vérification de version) est maintenu en Security comme limite, sans marqueur ⟦OPEN⟧ : le texte ne prend aucune position qu'un tour ultérieur pourrait renverser.⟧
 
 ### 8. Reading
 
@@ -881,17 +881,17 @@ This ERC requires no change to ERC-8004. Aggregators only read the registries: `
 **Requested for a future ERC-8004 revision.** Each request removes a limitation stated in Security Considerations:
 
 1. **Record `block.number` with each feedback.** Omissions, transfers and anchor key rotations would become datable. Discrepancy proofs could then be limited to facts that predate a certificate, and reputation received before a transfer could be separated from reputation received after it.
+2. **Make `agentWallet` unique and add a reverse lookup.** Emitter resolution and row completeness would become verifiable on-chain.
+3. **Timelock registry upgrades.** Upgrades should be announced on-chain, with a delay, before they take effect.
+4. **Standardize `getVersion()`** in the ERC-8004 interfaces, so that aggregators can commit to a registry version without relying on an implementation detail.
+5. **Emit the registration events in state order.** `register()` should emit `MetadataSet` for `agentWallet` before the ERC-721 receiver callback, so that an indexer that replays events obtains the state the registry stores (Security Considerations, *Indexers*).
 <!-- DISCLOSURE-GATE:start — keep only once the ERC-8004 maintainers have been notified (decision D29) -->
-2. **Extend the `giveFeedback` guard to `agentWallet`.** The current guard rejects the owner and approved operators, but not the agent's own wallet.
+6. **Extend the `giveFeedback` guard to `agentWallet`.** The current guard rejects the owner and approved operators, but not the agent's own wallet.
 <!-- DISCLOSURE-GATE:end -->
-3. **Make `agentWallet` unique and add a reverse lookup.** Emitter resolution and row completeness would become verifiable on-chain.
-4. **Timelock registry upgrades.** Upgrades should be announced on-chain, with a delay, before they take effect.
-5. **Standardize `getVersion()`** in the ERC-8004 interfaces, so that aggregators can commit to a registry version without relying on an implementation detail.
-6. **Emit the registration events in state order.** `register()` should emit `MetadataSet` for `agentWallet` before the ERC-721 receiver callback, so that an indexer that replays events obtains the state the registry stores (Security Considerations, *Indexers*).
 
 If the registries change the semantics of `agentWallet`, of `feedbackIndex` or of the guard, existing certificates become `REGISTRY_CHANGED` (§7) once the version string changes, and sets need recertification.
 
-⟦08-bis : demande 2 sous DISCLOSURE-GATE (elle décrit le contournement du garde-fou, D29) ; la numérotation reste 1-6 même si le bloc est retiré (à renuméroter alors). Demande 6 = REGCB (revue du 06/10, constat 34). D17, tour 3 Q3 C. Demande 1 déjà dans le draft du 21/09 ; 2 à 4 ajoutées au tour 3 ; 5 proposée par R6 (AM-R6.10). Une v2.1.0 (unicité du wallet, index inverse) existe en amont (PR #80, ouverte, non déployée au 27/09). `isAuthorizedOrOwner`, utilisé par l'implémentation, est une fonction de l'implémentation de référence d'ERC-8004 : la norme ne cite que les fonctions ERC-721.⟧
+⟦08-bis : renumérotation. La demande sur le garde-fou passe en dernier (n° 6, sous DISCLOSURE-GATE, D29) pour que la liste reste numérotée 1-5 si le bloc est retiré. Demande 5 = REGCB (revue du 06/10, constat 34). Correspondance avec le 01/10 : 1 → 1, 3 → 2, 4 → 3, 5 → 4, 2 → 6. D17, tour 3 Q3 C. Une v2.1.0 (unicité du wallet, index inverse) existe en amont (PR #80, ouverte, non déployée au 27/09). `isAuthorizedOrOwner`, utilisé par l'implémentation, est une fonction de l'implémentation de référence d'ERC-8004 : la norme ne cite que les fonctions ERC-721.⟧
 
 ## Test Cases
 
@@ -1155,7 +1155,7 @@ Registries are typically upgradeable. Whoever controls an upgrade can change any
 - A registry call that fails after an upgrade, for example because it now costs more than the 120,000-gas cap of reads, makes the registry unreadable (§1): reads return `REGISTRY_CHANGED` for every agent whose answer needs it, and proofs and submissions revert. It is never read as a burned agent or an absent edge.
 - `getVersion` and the reference registry's `isAuthorizedOrOwner` are not part of the ERC-8004 interface. On a registry without them, the reference implementation refuses every submission and every proof that needs them. An implementation can use the ERC-721 functions of §1 instead of `isAuthorizedOrOwner`.
 
-**The registry guard and shared wallets.**
+**Controllers, former owners and shared wallets.**
 <!-- DISCLOSURE-GATE:start — keep only once the ERC-8004 maintainers have been notified (decision D29) -->
 - The ERC-8004 guard does not reject an agent's own `agentWallet`: one agent of the deployment in Motivation received 78 feedback entries from it. §3.3 rejects the positive edges of every current controller, `agentWallet` included.
 <!-- DISCLOSURE-GATE:end -->
@@ -1194,8 +1194,8 @@ Chains with a lower per-transaction gas cap (for example 2²⁴ under [EIP-7825]
 - *Anchors* : D48-A, L8, vecteur `common_A_attack_anchor_copy` (`AnchorAsSource(2)`).
 - *Liveness of proven facts* : AM-02bis.2 ; question de Hugo n° 3 du rapport 02-bis (permissionless ou réservé aux soumetteurs) : le texte suit le code (permissionless).
 - *Approvals* : D48-B ; AM-02bis.1 (l'approbation ne vaut veto que pour une adresse déjà ancre ; la scène « approbation préventive » n'est pas encore jouée sur le vrai registre) ; AM-02bis.7 (mode rapide).
-- *Registry governance* : EOA d'upgrade sous DISCLOSURE-GATE (D29) ; R6 (registre illisible, plus de `TRANSFERRED` ni de preuve « arête absente »).
-- *Guard* : contournement par `agentWallet` sous DISCLOSURE-GATE ; AM-9.3 (ancien owner qui note 918 blocs après le transfert, cas réel #10255) assumé par D48.
+- *Registry governance* : première phrase sous DISCLOSURE-GATE (D29) ; R6 (registre illisible, plus de `TRANSFERRED` ni de preuve « arête absente »).
+- *Guard* : première puce sous DISCLOSURE-GATE (D29) ; AM-9.3 (ancien owner qui note 918 blocs après le transfert, cas réel #10255) assumé par D48.
 - *Data availability* : G-11 (`msg.sender == tx.origin`) et AM-02bis.6 (EOA délégué EIP-7702 ; confiance 6 dans la revue de sécurité ; non corrigé ; question de Hugo n° 2 du rapport 02-bis).
 - *Indexers* : REGCB (revue, constat 34 ; FORMAT §7 ; MESURÉ sur le mainnet du 06/10 : 19 enregistrements, aucun touché). NUL et LONGTAG (revue, constats 12 et 13 ; jugés sur la limite documentée de Postgres, NON VÉRIFIÉS sur un vrai Postgres).
 Correspondance du 01/10, toujours valable : AM-02.1, AM-02.4 / AM-INT.4 (01/10 : 18 wei → 0,556 WAD sur l'ancien vecteur, dont l'ancre était la source de #18 ; 07/10 : 16 wei → 0,222 WAD sur le nouveau TC-5, MESURÉ), AM-02.3, AM-02.6 et AM-4.7, AM-08.4, AM-08.9, AM-3.5 / D17 / AM-08.5, AM-08.10, D20, désaccord 1 du tour 4 (concentration), désaccord 3 du tour 2 (consommateur-ancre), R4 (34,6 %), D25 (cache), AM-R5.9. Aucun mot-clé RFC 2119 hors de la Specification (EIP-1).⟧

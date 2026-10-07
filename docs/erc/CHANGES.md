@@ -11,7 +11,7 @@
 |---|---|---|---|---|
 | Préambule : `requires: 8004`, `created: 2026-09-21` | `requires: 165, 721, 8004`, `created: 2026-09-27`, description réécrite (114 car.) | L'ERC s'appuie désormais sur ERC-165 et ERC-721 (`ownerOf`, `getApproved`, `isApprovedForAll`) | Lecture des contrôleurs et pause sur transfert | D10, D16 |
 | Abstract : score relatif + deux niveaux `Verified` / `Optimistic` avec caution | Part de masse, méfiance, borne qui ne fait que croître, statuts qui ne revert pas, veto des ancres | Réécriture complète | Nouveau modèle de certificat | D1, D4, D6, D11 |
-| Motivation : chiffres du 21/09 (9 188 avis, 83 %, 117 × 1e38, 1,5e36) | Mêmes chiffres, datés et marqués mesuré ; ajouts : garde-fou contourné (78), 178 wallets partagés par 1 773 agents, 72 transferts avec effacement, fuite par un scanner, 84 agents notés dont 10 hors index, registre dormant depuis le 10/09, 3 arêtes utiles | Les faits du tour 3 sont intégrés. Monad n'est pas nommé : « chain ID 143 » seulement | Tour 3, « Changements », Motivation ; norme chain-agnostique | CLAUDE.md §5, D19 |
+| Motivation : chiffres du 21/09 (9 188 avis, 83 %, 117 × 1e38, 1,5e36) | Mêmes chiffres, datés et marqués mesuré ; ajouts : un constat sur le garde-fou (note G1 sous le tableau), 178 wallets partagés par 1 773 agents, 72 transferts avec effacement, fuite par un scanner, 84 agents notés dont 10 hors index, registre dormant depuis le 10/09, 3 arêtes utiles | Les faits du tour 3 sont intégrés. Monad n'est pas nommé : « chain ID 143 » seulement | Tour 3, « Changements », Motivation ; norme chain-agnostique | CLAUDE.md §5, D19 |
 | §1 *Node* = agent ou adresse d'ancre | §1.1 : trois types `AGENT` / `ADDRESS` / `ANCHOR`, `nodeKey` normatif | Nœud-adresse sans masse pour un wallet ambigu ; nœud-ancre toujours distinct | AM-3.4, tour 2 Q2 | D9, D16 |
 | §1 *Controller* = owner + agentWallet | §1 : contrôleurs = owner, agentWallet, approved, opérateurs ; anciens owners définis à part | Liste élargie | AM-3.3 | D16 |
 | §1 *Anchor set* = liste de nœuds, `anchorSetId = keccak(nodes)` | §5 `AnchorSet` : ancres par `anchorId`, poids λ, α, `schemaHash`, `edgeFilterId`, `Policy`, registres, `metadataURI` ; `setId` immuable | Le setId engage toute la politique | AM-1.1, tour 2 Q2 | D1, D9, D12 |
@@ -37,10 +37,14 @@
 | §6 fraîcheur laissée au consommateur, pas de `maxAge` normé | §5 : `maxAge` dans la politique engagée (utilisé aussi par la règle de remplacement) ; le consommateur peut être plus strict | Déplacé dans le setId | Tour 2, « Changements », Politique | D1, D6 |
 | §6 : ne pas servir un certificat en fenêtre de contestation | Supprimé (plus de fenêtre) | — | — | D6 |
 | Rationale : ancres, PPR, linéarité, deux niveaux, rejet sans plafonnement, antériorités | Rationale : mêmes points, plus part de masse, convention absorbante, budgets séparés, méfiance à un saut, veto, leave-one-out, borne unique pour t et d, borne croissante, lecture stockée, quantification, kinds, unité d'arête, émetteur, pré-rotation, trois niveaux | Étendu | — | D1 à D18 |
-| Backwards Compatibility : demande `block.number` par avis | + garde-fou étendu à `agentWallet`, unicité du wallet et index inverse, timelock d'upgrade ; + proposition R6 : normaliser `getVersion()` | 3 demandes du CR + 1 proposition R6 | Tour 3 Q3 C | D17 |
+| Backwards Compatibility : demande `block.number` par avis | + une demande sur le garde-fou (note G1), unicité du wallet et index inverse, timelock d'upgrade ; + proposition R6 : normaliser `getVersion()` | 3 demandes du CR + 1 proposition R6 | Tour 3 Q3 C | D17 |
 | (absent) | Test Cases : vecteurs normatifs TC-1 à TC-8, TC-9 informatif (mainnet) | Nouveau | Tour 2 Q5 (relecture C→A) | D12 |
 | Reference Implementation : Verified, déployé sur Monad | Note interne : niveau ResidualVerified, preuve (i) seule, chantiers R4 et R5 en cours, aucun chiffre de gas avant mesure | Monad hors texte normatif | CLAUDE.md §5 ; AM-3.6 | D18 |
-| Security : capture d'ancre, trou de complétude, lectures périmées, changements de contrôleur, le paiement n'est pas l'honnêteté, arrondi, gas | + `minAnchors` ≥ 2 **MUST**, clé d'ancre volée, consommateur-ancre, surveillants, borne globale, vivacité, rachat, gouvernance du registre (EOA unique), contournement du garde-fou, wallets partagés, négatif permanent et recours `appendResponse`, oracle de refus, fuite par les mesures, lignes d'ancre > rowMax, même chaîne | Étendu | Tours 2 et 3, « Changements », Security | D8, D10, D14, D16, D17 |
+| Security : capture d'ancre, trou de complétude, lectures périmées, changements de contrôleur, le paiement n'est pas l'honnêteté, arrondi, gas | + `minAnchors` ≥ 2 **MUST**, clé d'ancre volée, consommateur-ancre, surveillants, borne globale, vivacité, rachat, gouvernance du registre et garde-fou (note G1), wallets partagés, négatif permanent et recours `appendResponse`, oracle de refus, fuite par les mesures, lignes d'ancre > rowMax, même chaîne | Étendu | Tours 2 et 3, « Changements », Security | D8, D10, D14, D16, D17 |
+
+<!-- DISCLOSURE-GATE:start — keep only once the ERC-8004 maintainers have been notified (decision D29) -->
+**Note G1.** Le garde-fou de `giveFeedback` ne rejette pas l'`agentWallet` de l'agent (78 avis de son propre wallet sur #8317, MESURÉ le 27/09, inchangé le 07/10), et les deux proxys des registres ont pour owner une seule EOA, `0x5472…2603`, sans timelock (relu le 07/10, bloc 111 299 306).
+<!-- DISCLOSURE-GATE:end -->
 
 **Points ⟦OPEN⟧ repris dans le texte** : les 9 désaccords normatifs listés ci-dessous, sans les trancher.
 - **Tour 2** :
@@ -211,7 +215,7 @@ Abstract : « exact » retiré, veto « sans recertification ». §1 : masse, pl
 | 9.1 | Abstract, §2.2, §8.3, §8.4, §10, TC-6 | `isTrusted` → `passesAnchorPolicy` ; `Assessment.trusted` → `passesPolicy`. Le §2.2 précise que la réponse dit « passe la politique de ces ancres », pas « digne de confiance » | D48, AM-9.5, ENCODING G-1 |
 | 9.2 | Abstract, Motivation (« One hop is not enough »), Rationale (« Beyond one hop, with a bound ») | La propagation au-delà d'un saut, avec une borne Sybil et un certificat vérifié on-chain, passe en avant ; renvoi aux vecteurs du 2ᵉ saut (TC-7) | D50, AM-10.6 |
 | 9.3 | Motivation | Chiffres roulés au 06/10 : 9 291 avis, 82,5 % pour la ferme, aucune arête nouvelle ; 150 noteurs de la ferme financés par l'owner de la cible (sans adresse ni montant) ; puce « wallets partagés » séparée de celle du garde-fou | 04-bis E2, D55 |
-| 9.4 | Motivation, Backwards Compatibility (demande 2), Security (gouvernance, garde-fou) | Passages sur le contournement du garde-fou (78 avis sur #8317) et sur l'EOA d'upgrade encadrés par `DISCLOSURE-GATE` | D29, consigne du brief 08-bis |
+| 9.4 | Motivation, Backwards Compatibility (demande 2), Security (gouvernance, garde-fou) | Passages relevant de la divulgation (note G1 du §1) encadrés par `DISCLOSURE-GATE` | D29, consigne du brief 08-bis |
 | 9.5 | §1 | Nouvelle convention « Registry answers » : seule `ERC721NonexistentToken` (ERC-6093) dit qu'un agent n'existe pas ; tout autre échec = registre illisible | R6 du lot 02-bis, ENCODING G-8 |
 | 9.6 | §2.1, §3.5, §5.4, §5.6, §5.7, Security (Anchors), Rationale | « Ancre ≠ source » : de SHOULD NOT à règle du graphe (l'agent dont la source est une ancre n'émet aucune ligne) et à refus du contrat (`AnchorAsSource`) ; Rationale du leave-one-out | D48-A, AM-08.14, PROOFS L8, FORMAT R8 |
 | 9.7 | §2.2 (θ), Rationale (*Constants*) | θ sans valeur recommandée ; la démo (1 %) est citée comme mesure datée, pas comme recommandation | D56 |
@@ -273,3 +277,18 @@ Abstract : « exact » retiré, veto « sans recertification ». §1 : masse, pl
 **L'ancienne formule du 01/10**, appliquée à la séquence, laisse eEff à 0,111 WAD après la révocation (le contrat mesure 0,333, c'est K8). Elle laisse aussi eLowEff à 0,2222 après l'arête nouvelle (le contrat mesure 0,2444, c'est A2b).
 
 **Format** : `calldata.nodeEntries` (nouveau) porte les entrées de nœuds, et `calldata.newNodes` est vide sur un ensemble ouvert (A1d).
+
+## 11. DISCLOSURE-GATE et brouillons (E3, 2026-10-07)
+
+| # | Où | Changement | Source |
+|---|---|---|---|
+| 11.1 | ERC, CHANGES, brouillons (a), (b), (d) ; (c) en entier | Marqueurs `DISCLOSURE-GATE` autour de tout ce qui décrit le contournement du garde-fou et l'EOA d'upgrade ; notes internes reformulées pour ne plus le décrire ; contrôle par script : aucune occurrence hors marqueurs, marqueurs appariés | D29, brief 08-bis |
+| 11.2 | ERC, Backwards Compatibility | Demande sur le garde-fou déplacée en n° 6 (sous marqueur) ; renvois « request 5 » → « request 4 » | pour que le retrait du bloc ne casse pas la liste |
+| 11.3 | ERC, Security | Titre « The registry guard and shared wallets » → « Controllers, former owners and shared wallets » (lisible sans le bloc gated) | idem |
+| 11.4 | `drafts/strip-notes.py` | Retire par défaut les notes **et** les blocs gated ; `--keep-gated` après la divulgation ; auteur `@ygk94` | D29, CLAUDE.md (compte renommé) |
+| 11.5 | Brouillon (a) | `passesAnchorPolicy`, D50 en tête, faits prouvés, six demandes, deux questions ouvertes nouvelles (A1b, EFF1), `@ygk94` | D48, D50, revue |
+| 11.6 | Brouillon (b) | Puce garde-fou isolée sous marqueur (le message reste envoyable sans elle) ; phrase D50 | D29, D50 |
+| 11.7 | Brouillon (c) | Faits relus le 07/10 (bloc 111 299 306) ; description de notre réponse mise à jour (règle B, veto par approbation) ; tout le document sous marqueur | D48-B, relecture on-chain 08-bis |
+| 11.8 | Brouillon (d) | Demandes 2 et 4 sous marqueur ; demande 6 (ordre des events) ; correspondance de numérotation avec l'ERC | REGCB |
+
+**Relu on-chain par 08-bis (MESURÉ, 07/10, `cast`, `rpc.monad.xyz`, bloc 111 299 306)** : propriétaire des deux proxys inchangé, toujours une EOA sans code ; `getVersion()` = 2.0.0 ; valeur de la note G1 inchangée.

@@ -1,7 +1,10 @@
 # Brouillon (b) : réponse au post #309 du fil ethereum-magicians #25098
 
 > **NE PAS ENVOYER.** Brouillon du chantier 08, 2026-10-01.
+<!-- DISCLOSURE-GATE:start — keep only once the ERC-8004 maintainers have been notified (decision D29) -->
 > **Ordre imposé** : ce message mentionne publiquement le garde-fou qui ignore `agentWallet`. Il ne part **qu'après** la divulgation privée (brouillon c, D29), et seulement si le fil dédié à l'ERC est ouvert (brouillon a), puisqu'il y renvoie.
+<!-- DISCLOSURE-GATE:end -->
+> **Sans la divulgation**, le message part sans la puce marquée (retirer le bloc DISCLOSURE-GATE du texte) ; il reste 150 mots environ. Mis à jour par 08-bis le 07/10 (D50 : propagation au-delà d'un saut).
 
 ## État du fil (vérifié le 2026-10-01 par un agent, API JSON du forum)
 
@@ -18,15 +21,21 @@
 
 What we measured on one production deployment (chain ID 143):
 - 7,665 of 9,188 feedback entries (83 %) came from agents registered within about 48 hours, all rating one agent at the maximum; its naive mean was about 1.5 × 10³⁶ (2026-09-21).
-- With personalized PageRank relative to anchors chosen by the reader, that agent gets zero for every anchor set from which no endorsement path reaches the farm, and one honest two-hop endorsement chain remains in the whole registry (2026-10-01).
-- Two registry properties matter for any reader-anchored scheme: feedback carries no block number, so an omission cannot be dated, and `giveFeedback` does not reject the agent's own `agentWallet` (one agent received 78 entries from it, 2026-09-27).
+- With personalized PageRank relative to anchors chosen by the reader, that agent gets zero for every anchor set from which no endorsement path reaches the farm, and one honest two-hop endorsement chain remains in the whole registry (2026-10-01). A list of trusted raters would not see that chain at all: it stops at one hop.
+- Feedback carries no block number, so an omission cannot be dated: any reader-anchored scheme has to live with that.
+<!-- DISCLOSURE-GATE:start — keep only once the ERC-8004 maintainers have been notified (decision D29) -->
+- `giveFeedback` does not reject the agent's own `agentWallet` (one agent received 78 entries from it, 2026-09-27, unchanged on 2026-10-07).
+<!-- DISCLOSURE-GATE:end -->
 
 The draft certifies each anchor's column on-chain as a sub-solution (`t ≤ F(t)`), which gives a per-agent lower bound, and it defines no default anchor set.
 ```
 
 ⟦Choix :
 - **Aucune promesse** : ni « we will », ni date, ni déploiement annoncé.
-- **Aucun tiers nommé** : ni ferme, ni scanner, ni agent #8317, ni concurrent.
+- **Aucun tiers nommé** : ni ferme, ni scanner, ni concurrent.
+<!-- DISCLOSURE-GATE:start — keep only once the ERC-8004 maintainers have been notified (decision D29) -->
+- Ni l'agent #8317.
+<!-- DISCLOSURE-GATE:end -->
 - **Pas de nom de projet** : ANCRE est provisoire (🧑).
 - **Monad non nommé** : seul le chain ID est donné, comme dans l'ERC.
 - **Tous les chiffres sont datés.** « One honest two-hop endorsement chain » vient du chantier 04 (D20, 01/10).
