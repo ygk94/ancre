@@ -66,7 +66,9 @@ describe("testnet set from the recorded run", () => {
     expect(items.some((i) => i.kind === "rejected" && /EdgeMismatch/.test(i.title))).toBe(true);
     expect(items.filter((i) => i.kind === "veto")).toHaveLength(1);
     expect(items.some((i) => i.kind === "payment" && i.tone === "good")).toBe(true);
-    expect(items.every((i) => i.net === "demo")).toBe(true); // a fork run never links to real testnet agents
+    // a fork run never links to real testnet agents; a real testnet run does
+    const net = rs.header.network.mode === "testnet" ? "testnet" : "demo";
+    expect(items.every((i) => i.net === net)).toBe(true);
   });
 });
 
