@@ -78,13 +78,19 @@
 3. [ ] **Publier et redéployer l'indexeur sur Envio Cloud** : c'est le 2ᵉ des 3 déploiements gratuits, et il embarque aussi le schéma v3.
    - (a) **Régénère ton token Envio** sur envio.dev/app/api-tokens, car l'ancien est apparu en clair (AM-03.7). Si le déploiement Cloud en a besoin, mets le nouveau dans ses variables d'environnement, jamais dans le dépôt.
    - (b) ✅ **Publié et déployé le 07/10** : `ygk94/ancre-indexer` est poussé sur `main` et `envio` (d48dbd4), ce qui déclenche le déploiement Cloud (le 2ᵉ des 3). Les tests du clone passent (63 verts).
-   - (c) **Il te reste** : vérifier « synced » sur envio.dev/app, puis me donner la **nouvelle URL GraphQL**. L'ancienne (`…/433cc83/…`) sert encore l'ancien schéma, et je mettrai à jour l'écran, le README et la CI de keepalive.
+   - (c) **08/10 : Envio n'a pas pris le push** (l'indexeur est encore rattaché à `hugothomas9`, l'ancien nom du compte GitHub). Crée un **nouvel indexeur** sur `ygk94/ancre-indexer`, branche `envio`. **Attends qu'il soit « synced » avant de supprimer l'ancien** (`6107d0a`). Puis donne-moi la **nouvelle URL GraphQL**.
+   - Ancien texte : vérifier « synced » sur envio.dev/app, puis me donner la nouvelle URL GraphQL. L'ancienne (`…/433cc83/…`) sert encore l'ancien schéma, et je mettrai à jour l'écran, le README et la CI de keepalive.
 4. [ ] **Webhook Alchemy** (après le point 3) :
    - Crée un Custom Webhook sur Monad testnet, sur `0x8bE6…da9B` et sur le registre de réputation `0x8004B663…`.
    - Mets le jeton Notify et la clé de signature dans `solver/.env`.
    - L'URL du webhook est un tunnel vers le certificateur ; je te donne la commande.
 
 ## Jeu 09/10 : le mainnet et le dépôt public
+
+0. [x] **Adresses du payeur mainnet (D40)** ✅ 08/10 :
+   - **trésorerie** = `0x0146082951DE0C4d09fca1e1277ACa8963a305B9` (2ᵉ compte MetaMask de Hugo, réception seule) ;
+   - **opérateur** = le keystore `ancre-demo` (`0x8107…3c3F`), qui signe les paiements ;
+   - **owner** = ton compte MetaMask principal, le seul qui pourra forcer un paiement (D47). **Donne-moi son adresse** le jour du déploiement mainnet.
 
 1. [ ] **Valider le budget mainnet** (environ 2 MON, ESTIMÉ), puis l'exécution minimale (D40).
 2. [ ] **Décider ce qui reste privé.** Candidats : `mustdo/` et `docs/conseil/`. Liste : chantier 09.
