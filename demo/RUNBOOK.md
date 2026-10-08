@@ -114,7 +114,7 @@ Cost (`BUDGET.md`): ≈ 3.15 MON of fees (≈ 4.1 with margin), 2.25 MON lent to
    - transactions: `out/run-<ts>.json`, every `tx.hash` on https://testnet.monadscan.com (answered HTTP 200 on 06/10; other explorers answered 403 to curl);
    - the Envio indexer (testnet is indexed):
      ```bash
-     curl -s -X POST https://indexer.dev.hyperindex.xyz/433cc83/v1/graphql -H 'content-type: application/json' \
+     curl -s -X POST https://indexer.dev.hyperindex.xyz/38cf597/v1/graphql -H 'content-type: application/json' \
        -d '{"query":"{ Feedback(where:{tag2:{_eq:\"demo\"}}, order_by:{blockNumber:desc}, limit:50){ client tag1 value blockNumber agent { id } } }"}'
      ```
 7. `--sweep` sends the unspent MON of the 16 emitters back to the operator (`node run.ts --network testnet

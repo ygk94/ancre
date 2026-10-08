@@ -38,7 +38,7 @@ export const scanUrl = (n: "testnet" | "mainnet", id: string) =>
   n === "mainnet" ? `https://8004scan.io/agents/monad/${id}` : `https://testnet.8004scan.io/agents/monad-testnet/${id}`;
 
 export const ENVIO_GRAPHQL =
-  env.VITE_ENVIO_GRAPHQL ?? "https://indexer.dev.hyperindex.xyz/433cc83/v1/graphql"; // indexer/SCHEMA.md
+  env.VITE_ENVIO_GRAPHQL ?? "https://indexer.dev.hyperindex.xyz/38cf597/v1/graphql"; // indexer/SCHEMA.md
 
 /** Where to read a run's chain. The header carries a URL on the testnet only ("local" on a fork: chantier 06
  *  does not publish its port); a frozen run's anvil is gone once the run ends. */
