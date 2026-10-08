@@ -1,0 +1,14 @@
+{
+  block {
+    number
+    hash
+    timestamp
+    logs(filter: {addresses: ["0x8004A818BFB912233c491871b3d84c89A494BD9e", "0x8004B663056A597Dffe9eCcC1965A193B7388713", "0x8bE6D3DD7F20b94cD9B1Ec51De199291B109da9B"], topics: [["0x6a4a61743519c9d648a14e6493f47dbe3ff1aa29e7785c96c8326a205e58febc", "0x25156fd3288212246d8b008d5921fde376c71ed14ac2e072a506eb06fde6d09d", "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", "0x2c149ed548c6d2993cd73efe187df6eccabe4538091b33adbd25fafdb8a1468b", "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925", "0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31", "0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b", "0x5928694911ad7acc30c1038da94fc5a9db85c5d035a8318108408af3c9f05465", "0xf67b5a2f4eda543da8cf35c19095b329ab72912dba3da3db62ca2041b6a30de8", "0xe0967f0ca17210d6cdfbbc9aaa8fd58ff0a2c9496f27293f8adee64b7ba576e2"]]}) {
+      index
+      topics
+      data
+      account { address }
+      transaction { hash index status }
+    }
+  }
+}
