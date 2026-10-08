@@ -105,7 +105,7 @@ Envio is ANCRE's data layer, not an add-on.
 
 4. HyperSync analytics across seven chains. A survival scan replays the same edge rules over the ERC-8004 deployments on Monad, Monad testnet, Ethereum, Base, Arbitrum, Optimism and Polygon: under our reference schema, less than 5% of feedback ever becomes a trust edge, 0.12% on Monad. HyperSync reads Monad's full history in about 17 seconds.
 
-Links: indexer repository ⟦CHECK: https://github.com/ygk94/ancre-indexer, public⟧ · GraphQL endpoint ⟦CHECK⟧ · demo ⟦CHECK: horodatage dans la vidéo ou vidéo séparée⟧.
+Links: indexer repository ⟦CHECK: https://github.com/ygk94/ancre-indexerv2, public⟧ · GraphQL endpoint ⟦CHECK⟧ · demo ⟦CHECK: horodatage dans la vidéo ou vidéo séparée⟧.
 
 
 ------------------------------------------------------------------------------

@@ -77,8 +77,8 @@
 2. [x] **Indexeur branché sur cette adresse** ✅ 07/10 (`indexer/config.yaml`, 75 tests verts, poussé).
 3. [ ] **Publier et redéployer l'indexeur sur Envio Cloud** : c'est le 2ᵉ des 3 déploiements gratuits, et il embarque aussi le schéma v3.
    - (a) **Régénère ton token Envio** sur envio.dev/app/api-tokens, car l'ancien est apparu en clair (AM-03.7). Si le déploiement Cloud en a besoin, mets le nouveau dans ses variables d'environnement, jamais dans le dépôt.
-   - (b) ✅ **Publié et déployé le 07/10** : `ygk94/ancre-indexer` est poussé sur `main` et `envio` (d48dbd4), ce qui déclenche le déploiement Cloud (le 2ᵉ des 3). Les tests du clone passent (63 verts).
-   - (c) **08/10 : Envio n'a pas pris le push** (l'indexeur est encore rattaché à `hugothomas9`, l'ancien nom du compte GitHub). Crée un **nouvel indexeur** sur `ygk94/ancre-indexer`, branche `envio`. **Attends qu'il soit « synced » avant de supprimer l'ancien** (`6107d0a`). Puis donne-moi la **nouvelle URL GraphQL**.
+   - (b) ✅ **Publié et déployé le 07/10** : `ygk94/ancre-indexerv2` est poussé sur `main` et `envio` (d48dbd4), ce qui déclenche le déploiement Cloud (le 2ᵉ des 3). Les tests du clone passent (63 verts).
+   - (c) **08/10 : Envio n'a pas pris le push** (l'indexeur est encore rattaché à `hugothomas9`, l'ancien nom du compte GitHub). Crée un **nouvel indexeur** sur `ygk94/ancre-indexerv2`, branche `envio`. **Attends qu'il soit « synced » avant de supprimer l'ancien** (`6107d0a`). Puis donne-moi la **nouvelle URL GraphQL**.
    - Ancien texte : vérifier « synced » sur envio.dev/app, puis me donner la nouvelle URL GraphQL. L'ancienne (`…/433cc83/…`) sert encore l'ancien schéma, et je mettrai à jour l'écran, le README et la CI de keepalive.
 4. [ ] **Webhook Alchemy** (après le point 3) :
    - Crée un Custom Webhook sur Monad testnet, sur `0x8bE6…da9B` et sur le registre de réputation `0x8004B663…`.

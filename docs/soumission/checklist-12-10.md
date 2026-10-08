@@ -28,7 +28,7 @@ Si une porte est rouge le 11 au soir, appliquer la colonne « sinon » : on soum
 | 09:45 | **Les 7 vérifications** du `publication-checklist.md` §7 sur le clone filtré | Hugo + pilote | chaque commande ne renvoie rien ; une seule identité de commit |
 | 10:15 | Relecture humaine du README **dans le clone** (rendu GitHub en local ou aperçu) : liens relatifs qui pointent vers des fichiers présents, adresses, chiffres datés | Hugo | aucun lien mort vers un dossier resté privé (`docs/chantiers/rapports/` publié ?) |
 | 10:45 | Création du dépôt public, push, **visibilité publique** | Hugo | page du dépôt ouverte **déconnecté** (fenêtre privée) |
-| 11:00 | `ygk94/ancre-indexer` : mêmes vérifications, puis public | Hugo | `config.yaml`, `schema.graphql`, `src/` visibles déconnecté (bounty Envio) |
+| 11:00 | `ygk94/ancre-indexerv2` : mêmes vérifications, puis public | Hugo | `config.yaml`, `schema.graphql`, `src/` visibles déconnecté (bounty Envio) |
 | 11:15 | Rejeu de l'acte 1 par un tiers **depuis le dépôt public** : clone neuf, README §5 mot pour mot, chronomètre | un membre qui n'a pas écrit le README | ≤ 5 min ; sortie identique à `solver/out/mainnet.md` ; les deux `cast` répondent |
 | 11:45 | Endpoint GraphQL Envio Cloud : une requête depuis une fenêtre privée | Hugo | réponse non vide ; `_meta` à jour (la requête compte aussi pour le quota « 1 requête / 7 jours ») |
 | 12:00 | *Pause* | | |

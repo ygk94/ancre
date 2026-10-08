@@ -110,7 +110,7 @@ Trois faits : (i) le garde-fou anti-auto-notation ne vérifie pas `agentWallet` 
 | `contracts/` (sauf `lib/`) | **public** après la licence | le produit |
 | `contracts/lib/forge-std/` | public (ou sous-module) | dépendance |
 | `solver/` | **public**, après le nettoyage des chemins (§2.4) | rejeu de l'acte 1 |
-| `indexer/` | **public** (et `ygk94/ancre-indexer`) | bounty Envio |
+| `indexer/` | **public** (et `ygk94/ancre-indexerv2`) | bounty Envio |
 | `plugin/` | **public** | intégration côté agent |
 | `docs/erc/anchored-reputation.md`, `assets/` | **public** si P2 (a) ; sinon après réécriture des Security Considerations | la norme |
 | `docs/erc/CHANGES.md`, `relecture-conseil.md` | à relire ; probablement **privé** (notes internes en français, chemins machine) | — |
