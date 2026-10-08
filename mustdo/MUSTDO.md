@@ -75,7 +75,8 @@
 
 1. [x] **Instance officielle = celle de l'acte 2** ✅ validée par Hugo le 07/10 : ANCRE `0x8bE6D3DD7F20b94cD9B1Ec51De199291B109da9B` (bloc 68 978 842), payeur `0xC9Db7a72960189e933a6B876A9359b5c605a5870`. Pas de redéploiement. Le payeur à trois adresses distinctes ne sera nécessaire que pour le mainnet (D40).
 2. [x] **Indexeur branché sur cette adresse** ✅ 07/10 (`indexer/config.yaml`, 75 tests verts, poussé).
-3. [ ] **Publier et redéployer l'indexeur sur Envio Cloud** : c'est le 2ᵉ des 3 déploiements gratuits, et il embarque aussi le schéma v3.
+3. [x] **Indexeur sur Envio Cloud** ✅ 08/10 : nouvel indexeur dans l'organisation `ygk94`, dépôt `ygk94/ancre-indexerv2`, déploiement `a8289d5`. Endpoint **`https://indexer.dev.hyperindex.xyz/38cf597/v1/graphql`**, avec le schéma v3 et 3 chaînes synced (56 455 events). L'audit de l'ensemble officiel est **CLEAN** (5 certificats). L'écran, le README et la CI pointent dessus. Ancien indexeur `hugothomas9` laissé tel quel (impossible à supprimer).
+   - Détail d'origine : : c'est le 2ᵉ des 3 déploiements gratuits, et il embarque aussi le schéma v3.
    - (a) **Régénère ton token Envio** sur envio.dev/app/api-tokens, car l'ancien est apparu en clair (AM-03.7). Si le déploiement Cloud en a besoin, mets le nouveau dans ses variables d'environnement, jamais dans le dépôt.
    - (b) ✅ **Publié et déployé le 07/10** : `ygk94/ancre-indexerv2` est poussé sur `main` et `envio` (d48dbd4), ce qui déclenche le déploiement Cloud (le 2ᵉ des 3). Les tests du clone passent (63 verts).
    - (c) **08/10 : Envio n'a pas pris le push** (l'indexeur est encore rattaché à `hugothomas9`, l'ancien nom du compte GitHub). Crée un **nouvel indexeur** sur `ygk94/ancre-indexerv2`, branche `envio`. **Attends qu'il soit « synced » avant de supprimer l'ancien** (`6107d0a`). Puis donne-moi la **nouvelle URL GraphQL**.
