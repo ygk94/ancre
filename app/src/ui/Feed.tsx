@@ -2,7 +2,8 @@
 // WebSocket for the line that appears before Envio indexes it). "ANCRE" = our own events (certificates,
 // rejected certificates, anchor vetoes, payer decisions), from the recorded run until the indexer serves them.
 import { useMemo, useState } from "react";
-import { fromRun, type FeedItem } from "../core/feed";
+import { fromMainnetRun, fromRun, type FeedItem } from "../core/feed";
+import { mainnetRun } from "../sources/mainnetChain";
 import type { NetId } from "../core/model";
 import { int } from "../lib/format";
 import { href } from "../router";
@@ -26,8 +27,16 @@ export function Feed({ network, ds }: { network: NetId; ds: Dataset | null }) {
   const [tab, setTab] = useState<"registry" | "ancre">("registry");
   const [all, setAll] = useState(false);
   const { items, status } = useRegistryFeed(network);
-  const ancre = useMemo(() => (ds?.run ? fromRun(ds.run).sort((a, b) => b.block - a.block || b.order - a.order) : []), [ds]);
-  const rows = tab === "registry" ? items : network === "mainnet" ? [] : ancre;
+  const ancre = useMemo(
+    () =>
+      network === "mainnet"
+        ? fromMainnetRun(mainnetRun, ds?.nameOf ?? ((id) => `#${id}`))
+        : ds?.run
+          ? fromRun(ds.run).sort((a, b) => b.block - a.block || b.order - a.order)
+          : [],
+    [ds, network],
+  );
+  const rows = tab === "registry" ? items : ancre;
   const fork = ds?.run && ds.run.header.network.mode !== "testnet";
 
   return (
@@ -53,7 +62,7 @@ export function Feed({ network, ds }: { network: NetId; ds: Dataset | null }) {
         ) : (
           <div className="feed-status">
             {network === "mainnet"
-              ? "No ANCRE contract on mainnet yet (preview)."
+              ? `Recorded minimal run on Monad mainnet (${mainnetRun.startedAt.slice(0, 10)}) · state now: read on-chain`
               : fork
                 ? `Recorded run, anvil fork of Monad testnet (${ds!.run!.header.startedAt.slice(0, 10)})`
                 : ds?.run
@@ -84,7 +93,7 @@ export function Feed({ network, ds }: { network: NetId; ds: Dataset | null }) {
       )}
       {rows.length === 0 && (
         <div className="feed-empty">
-          {tab === "registry" ? (status.envio === "error" ? "Envio is unreachable; real-time lines still appear here." : "Loading…") : network === "mainnet" ? "Switch to Monad testnet to see certificates and payer decisions." : "—"}
+          {tab === "registry" ? (status.envio === "error" ? "Envio is unreachable; real-time lines still appear here." : "Loading…") : "—"}
         </div>
       )}
       <div className="feed-note">

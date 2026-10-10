@@ -19,7 +19,8 @@ export type AgentRow = {
   id: string;
   name: string;
   role?: string;
-  /** contract status from assess() (testnet), null when no contract is deployed (mainnet preview) */
+  /** contract status from assess() (testnet), null for the reference solver's rows (mainnet; ANCRE's
+   *  on-chain answer there is read separately, core/onchain.ts) */
   status: Status | null;
   passes: boolean; // passesAnchorPolicy (testnet: the contract's answer; mainnet: the reference solver's)
   why: string; // one short line: why it passes or not

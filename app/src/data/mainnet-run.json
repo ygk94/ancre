@@ -1,0 +1,166 @@
+{
+ "source": "docs/chantiers/rapports/act-mainnet/run-20261010T123036Z.json",
+ "runId": "run-20261010T123036Z",
+ "startedAt": "2026-10-10T12:30:36.120Z",
+ "chainId": 143,
+ "contracts": {
+  "ancre": "0x0Da1579233E7Cb07a174986D059D59B1F293b30E",
+  "payer": "0x52f361A14A49fAB267703203f833b997B9cF5Dc0",
+  "identity": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
+  "reputation": "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63",
+  "usdc": "0x754704Bc059F8C67012fEd69BC8A327a5aafb603"
+ },
+ "payerRoles": {
+  "owner": "0xD6FabC0A420127F493DeECdb461EaD4DAD644071",
+  "treasury": "0x0146082951DE0C4d09fca1e1277ACa8963a305B9",
+  "operator": "0x810724967b0d895d087b991304385720d4903c3F"
+ },
+ "deploy": {
+  "ancre": {
+   "tx": "0xaacf78b9c2ac58dedac127b0ffc90f23d9584d037c378ab1d4ae6dcb0c827965",
+   "block": 112182847
+  },
+  "payer": {
+   "tx": "0x3024db4f684a0d053bbfd02d9e4fbf6f682353ec78ef3c1d6e2dc50c87f334da",
+   "block": 112182857
+  },
+  "anchorSet": {
+   "tx": "0x33c638830384bff7293d16a848d83606591c624cce46ec8c91ea28ffdda5a894",
+   "block": 112182850
+  }
+ },
+ "set": {
+  "setId": "0x627c8afe36b03432b280723a7170357333ded4d9ce56a78467c5829739653e10",
+  "anchors": [
+   {
+    "address": "0xC016278eEDaA2C73878bD28279c7F8D0ab2f5619",
+    "label": "anchor-A (demo)"
+   },
+   {
+    "address": "0x658D74DA41c2c12A42D10aEE6285CbDce8E1C752",
+    "label": "anchor-B (demo)"
+   },
+   {
+    "address": "0xEc8047fC7ed9ef9B7f1aeB5Ab2Be26d231fD51d6",
+    "label": "anchor-C (demo)"
+   }
+  ],
+  "minAnchors": 2,
+  "thetaPct": 1,
+  "maxAge": 288000,
+  "level": "Registry-verified, attested submitter"
+ },
+ "agents": [
+  {
+   "agentId": "10330",
+   "label": "provider-1 (demo)",
+   "payTo": "0xbd2AeDcAb8FCBa9Ee0c036110ac168bbC525DAE8"
+  },
+  {
+   "agentId": "182",
+   "label": "Eve-8004",
+   "payTo": "0x97cD97CFE21799bacBf39D0a53469e5f82f30996"
+  }
+ ],
+ "certificates": [
+  {
+   "step": "1.cert",
+   "certBlock": 112182869,
+   "tx": "0xd87e9049f6244d56e71ffac565a5ac6b82f886a9dd7864ec5b6004d5520f6d39",
+   "trigger": "anchors vouched for the provider",
+   "nCert": 4
+  },
+  {
+   "step": "4.cert",
+   "certBlock": 112182889,
+   "tx": "0x6a2c04418319e814c96f2346a4ddc263f53b47df388ce95d78666c5c9855b959",
+   "trigger": "an anchor slashed provider-1",
+   "nCert": 4
+  }
+ ],
+ "payments": [
+  {
+   "step": "1.pay:p1",
+   "agentId": "10330",
+   "amount": "10000",
+   "decision": "PAID",
+   "stage": "settled",
+   "reason": "OK",
+   "status": "OK",
+   "trustLow": "51851851851851851",
+   "block": 112182878,
+   "settlementTx": "0xa099331e10ae31327e54d53b78a3c24277e140f235fe2373f33946d06853a60c"
+  },
+  {
+   "step": "2.pay:eve",
+   "agentId": "182",
+   "amount": "10000",
+   "decision": "REFUSED",
+   "stage": "verify",
+   "reason": "UNTRUSTED",
+   "status": "OK",
+   "trustLow": "0",
+   "block": 112182879,
+   "settlementTx": null
+  },
+  {
+   "step": "4.pay:p1-after-slash",
+   "agentId": "10330",
+   "amount": "10000",
+   "decision": "REFUSED",
+   "stage": "verify",
+   "reason": "ANCRE_STATUS",
+   "status": "VETOED",
+   "trustLow": "51851851851851851",
+   "block": 112182883,
+   "settlementTx": null
+  },
+  {
+   "step": "4.pay:p1-after-cert",
+   "agentId": "10330",
+   "amount": "10000",
+   "decision": "REFUSED",
+   "stage": "verify",
+   "reason": "ANCRE_STATUS",
+   "status": "VETOED",
+   "trustLow": "0",
+   "block": 112182896,
+   "settlementTx": null
+  }
+ ],
+ "feedbacks": [
+  {
+   "step": "1.vouch:A->p1",
+   "agentId": "10330",
+   "label": "anchor-A (demo) gives vouch 80 to provider-1 (demo)",
+   "tag": "vouch",
+   "value": "80",
+   "tx": "0x5806e04744f90d2adb95798a39346452c7ba4b5716ca73abbbc4b9f116bc275f",
+   "block": 112182862
+  },
+  {
+   "step": "1.vouch:B->p1",
+   "agentId": "10330",
+   "label": "anchor-B (demo) gives vouch 70 to provider-1 (demo)",
+   "tag": "vouch",
+   "value": "70",
+   "tx": "0xf9ed3d1e58b06e06e290d33f336b05dacf096980d95dd160f3bd5d2442818ca5",
+   "block": 112182864
+  },
+  {
+   "step": "4.slash",
+   "agentId": "10330",
+   "label": "anchor-B (demo) slashes provider-1 (-100)",
+   "tag": "slash",
+   "value": "-100",
+   "tx": "0x6be5453d4e36237980d30243219c6256c0be2763c46e36b3286814d14c33e08c",
+   "block": 112182882
+  }
+ ],
+ "breaker": {
+  "blocks": 1,
+  "ms": 332,
+  "fromStep": "4.slash",
+  "toStep": "4.pay:p1-after-slash"
+ }
+}

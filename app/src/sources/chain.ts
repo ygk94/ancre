@@ -2,6 +2,7 @@
 // carries assess() as read by the scene script; when the run's RPC is reachable (fork or testnet) the screen
 // re-reads it at the same block and says whether it matches. Read-only: no wallet, no transaction.
 import { createPublicClient, http, parseAbi, type PublicClient } from "viem";
+import { REASON, STATUS } from "../core/onchain";
 
 // AnchoredReputation.Assessment, field order of contracts/src/AnchoredReputation.sol
 const ASSESSMENT =
@@ -9,15 +10,10 @@ const ASSESSMENT =
 const ANCRE_ABI = parseAbi([ASSESSMENT, "function assess(uint256 agentId, bytes32 setId, bool withVeto) view returns (Assessment)"]);
 const PAYER_ABI = parseAbi([ASSESSMENT, "function decide(uint256 agentId, address to, uint256 value) view returns (uint8 reason, Assessment a)"]);
 
-// enum orders, from contracts/src/AnchoredReputation.sol (Status) and TrustGatedPayer.sol (Reason)
-const STATUS = ["OK", "NO_CERT", "STALE", "TRANSFERRED", "VETOED", "REGISTRY_CHANGED"] as const;
-const REASON = [
-  "OK", "PAUSED", "BAD_FORMAT", "BAD_KIND", "DIGEST_MISMATCH", "OVER_LIMIT",
-  "NO_WALLET", "WALLET_MISMATCH", "BAD_OPERATOR_SIG", "ANCRE_STATUS", "UNTRUSTED",
-] as const;
+// enum orders (Status, Reason): core/onchain.ts
 
 const clients = new Map<string, PublicClient>();
-function clientFor(rpc: string): PublicClient {
+export function clientFor(rpc: string): PublicClient {
   let c = clients.get(rpc);
   if (!c) {
     c = createPublicClient({ transport: http(rpc, { timeout: 2_500, retryCount: 0 }) }) as PublicClient;

@@ -370,3 +370,17 @@ html, body { overflow-x: hidden; }
   .netcard .kv > div:nth-child(even) { text-align: left; padding-top: 2px; }
   .netcard .pill { white-space: normal; }
 }
+
+/* mainnet, certified on-chain (Onchain.tsx) */
+.soon-tag.live-tag { color: var(--good); border-color: color-mix(in srgb, var(--good) 40%, var(--line)); background: var(--good-soft); }
+.kv.onchain > div:nth-child(even) { text-align: right; }
+@media (max-width: 900px) {
+  .netpick .hide-sm { display: none; }
+}
+@media (max-width: 640px) {
+  .kv.onchain { grid-template-columns: minmax(0, 1fr); }
+  .kv.onchain > div:nth-child(odd) { padding-bottom: 0; border-bottom: 0; font-size: 12px; }
+  .kv.onchain > div:nth-child(even) { text-align: left; padding-top: 2px; }
+  .kv.onchain .pill { white-space: normal; }
+}
+.section-h { font-size: 15px; font-weight: 600; margin: 22px 0 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }

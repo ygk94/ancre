@@ -132,26 +132,20 @@ function NetworkPicker({ route }: { route: Route }) {
   return (
     <div className="netpick" ref={box}>
       <button aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span className={`dot ${cur.state === "active" ? "live" : "preview"}`} />
+        <span className={`dot ${cur.state === "active" ? "live" : "off"}`} />
         {cur.label}
-        {cur.state === "preview" && <span className="soon-tag">preview</span>}
+        {cur.tag && <span className="soon-tag live-tag hide-sm">{cur.tag}</span>}
         <span aria-hidden>▾</span>
       </button>
       {open && (
         <div className="netmenu" role="menu">
           {NETWORK_CHOICES.map((n) => (
             <button key={n.id} role="menuitemradio" aria-checked={n.id === route.network} disabled={n.state === "soon"} onClick={() => n.state !== "soon" && choose(n.id as NetId)}>
-              <span className={`dot ${n.state === "active" ? "live" : n.state === "preview" ? "preview" : "off"}`} />
+              <span className={`dot ${n.state === "active" ? "live" : "off"}`} />
               <span>
                 {n.label}
-                {n.state !== "active" && <span className="soon-tag">{n.state}</span>}
-                <small>
-                  {n.state === "active"
-                    ? "ANCRE's anchor set and its certificates"
-                    : n.state === "preview"
-                      ? "read by our reference solver · on-chain certification soon"
-                      : "not indexed by ANCRE yet"}
-                </small>
+                {n.state !== "active" ? <span className="soon-tag">{n.state}</span> : n.tag && <span className="soon-tag live-tag">{n.tag}</span>}
+                <small>{n.blurb}</small>
               </span>
             </button>
           ))}

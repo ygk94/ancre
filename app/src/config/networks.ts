@@ -16,6 +16,7 @@ export const NETWORKS = {
     reputation: "0x8004B663056A597Dffe9eCcC1965A193B7388713",
   },
   mainnet: {
+    http: env.VITE_MAINNET_RPC ?? "https://rpc.monad.xyz", // public, 25 rps, no key (CLAUDE.md §8)
     ws: env.VITE_MAINNET_WSS ?? "wss://rpc.monad.xyz",
     // ERC-8004 v2.0.0 registries on Monad 143 (CLAUDE.md §3, verified 27/09)
     identity: "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
@@ -23,13 +24,26 @@ export const NETWORKS = {
   },
 } as const;
 
-/** The network selector. Testnet: where ANCRE's anchor set is certified. Mainnet: a PREVIEW, read by the
- *  reference solver, no certificate on-chain yet. Ethereum: soon (not indexed by us). */
-export const NETWORK_CHOICES = [
-  { id: "testnet", label: "Monad testnet", chainId: 10143, state: "active" },
-  { id: "mainnet", label: "Monad mainnet", chainId: 143, state: "preview" },
-  { id: "ethereum", label: "Ethereum", chainId: 1, state: "soon" },
-] as const;
+/** The network selector. Testnet: where ANCRE's full act 2 runs. Mainnet: ANCRE deployed by the minimal run of
+ *  10/10 (demo anchor set, certificates read on-chain by this screen, no continuous recertification), and the
+ *  whole registry read by the reference solver (computed, not certified). Ethereum: soon (not indexed by us). */
+export type NetworkChoice = { id: string; label: string; chainId: number; state: "active" | "soon"; tag: string | null; blurb: string };
+export const NETWORK_CHOICES: readonly NetworkChoice[] = [
+  { id: "testnet", label: "Monad testnet", chainId: 10143, state: "active", tag: null, blurb: "ANCRE's anchor set and its certificates" },
+  {
+    id: "mainnet",
+    label: "Monad mainnet",
+    chainId: 143,
+    state: "active",
+    tag: "live · minimal run 10/10",
+    blurb: "ANCRE deployed: certificate read on-chain · whole registry: reference solver",
+  },
+  { id: "ethereum", label: "Ethereum", chainId: 1, state: "soon", tag: null, blurb: "not indexed by ANCRE yet" },
+];
+
+/** monadscan.com, the mainnet explorer that demo/JUDGES.md links: address, tx and block pages. */
+export const MONADSCAN = "https://monadscan.com";
+export const monadscan = (kind: "address" | "tx" | "block", v: string | number) => `${MONADSCAN}/${kind}/${v}`;
 
 export const chainIdOf = (n: "testnet" | "mainnet") => (n === "mainnet" ? 143 : 10143);
 

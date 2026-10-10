@@ -7,6 +7,7 @@ import { int, pctU } from "../lib/format";
 import { href, navigate, type Route } from "../router";
 import { act1, type Dataset } from "../sources/useDataset";
 import { Avatar, BigNum, Link, Mass, rowClick, SourceLine, StatusChip } from "./common";
+import { OnchainSetCard } from "./Onchain";
 
 export function Discover({ route, ds, error }: { route: Route; ds: Dataset | null; error: string | null }) {
   if (!ds) return <div className="empty">{error ? `Anchor set unavailable: ${error}` : "Loading the anchor set…"}</div>;
@@ -24,6 +25,12 @@ export function Discover({ route, ds, error }: { route: Route; ds: Dataset | nul
           <p>An explorer lists every agent. ANCRE keeps the ones your anchors reach, and a contract checks it before it pays.</p>
         </div>
       </div>
+      {ds.net === "mainnet" && <OnchainSetCard route={route} nameOf={ds.nameOf} />}
+      {ds.net === "mainnet" && (
+        <h2 className="section-h">
+          The whole registry, read by the reference solver <span className="pill warn">COMPUTED · not certified on-chain</span>
+        </h2>
+      )}
       <PolicyBar route={route} ds={ds} />
 
       <section className="card">
@@ -185,7 +192,7 @@ export function PolicyBar({ route, ds }: { route: Route; ds: Dataset }) {
         )}
         <span className="spacer" style={{ flex: 1 }} />
         {ds.net === "mainnet" ? (
-          <span className="pill warn">preview · computed off-chain, not certified</span>
+          <span className="pill warn">reference solver · computed off-chain, not certified</span>
         ) : fork ? (
           <span className="pill warn">{p.level} · recorded on a fork of the testnet</span>
         ) : (

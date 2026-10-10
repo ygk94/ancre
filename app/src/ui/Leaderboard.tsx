@@ -67,7 +67,7 @@ export function Leaderboard({ route, ds, error }: { route: Route; ds: Dataset | 
         {ranked.length === 0 && <div className="empty">Nobody is reachable from these anchors.</div>}
         {ds.net === "mainnet" && ranked.length > 0 && (
           <div className="card-b note" style={{ marginTop: 0 }}>
-            Mainnet preview: not a ranking of honest agents. Under independent anchors almost every agent is unknown; the farm is at 0.
+            Reference solver (computed off-chain, not certified): not a ranking of honest agents. Under independent anchors almost every agent is unknown; the farm is at 0.
           </div>
         )}
       </section>

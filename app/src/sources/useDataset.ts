@@ -1,7 +1,8 @@
 // One shape for both networks, so every page reads the same fields:
 //  - testnet: the anchor set of the newest recorded chantier 06 run (RECORDED; on a FORK of the testnet until the
 //    real testnet run exists, and the page says so);
-//  - mainnet (preview): the reference solver's export (COMPUTED, not certified on-chain), under a chosen lens.
+//  - mainnet: the reference solver's export (COMPUTED, not certified on-chain), under a chosen lens. ANCRE's
+//    contract on mainnet (minimal run of 10/10) is read on-chain apart: sources/mainnetChain.ts.
 import { useMemo } from "react";
 import act1Json from "../data/act1.json";
 import scan from "../data/scan-snapshot.json";

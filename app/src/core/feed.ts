@@ -4,6 +4,7 @@
 // row replaces the provisional one.
 import type { AgentNet } from "./model";
 import type { RunSet } from "./runset";
+import type { MainnetRun } from "./mainnetRun";
 import { big, short } from "../lib/format";
 
 export type FeedKind = "feedback" | "revoked" | "registered" | "transfer" | "certificate" | "skipped" | "rejected" | "veto" | "payment";
@@ -162,4 +163,37 @@ export function mergeFeed(prev: FeedItem[], incoming: FeedItem[], limit = 60): F
     if (!p || p.source === "ws" || x.source !== "ws") m.set(x.key, x);
   }
   return [...m.values()].sort((a, b) => b.block - a.block || b.order - a.order).slice(0, limit);
+}
+
+/** ANCRE's own events of the minimal mainnet run (10/10), RECORDED: certificates, the anchor's slash, the payer's
+ *  decisions. What holds now is read from the contract elsewhere; these lines say what happened then. */
+export function fromMainnetRun(run: MainnetRun, nameOf: (id: string) => string): FeedItem[] {
+  const out: FeedItem[] = [];
+  const name = (id: string) => {
+    const l = run.agents.find((a) => a.agentId === id)?.label;
+    return l && /\(demo\)/.test(l) ? l : nameOf(id);
+  };
+  const base = { origin: "ancre" as const, source: "run" as const, net: "mainnet" as const };
+  run.certificates.forEach((c, i) =>
+    out.push({ ...base, key: `mainnet:${run.runId}:cert:${i}`, kind: "certificate", block: c.certBlock, order: 0, agentId: null, title: `Certificate accepted · ${c.nCert ?? "—"} nodes`, detail: c.trigger ?? "", tone: "good" }),
+  );
+  run.feedbacks
+    .filter((f) => BigInt(f.value || "0") < 0n)
+    .forEach((f, i) =>
+      out.push({ ...base, key: `mainnet:${run.runId}:veto:${i}`, kind: "veto", block: f.block, order: 1, agentId: f.agentId, title: `Veto: ${f.label}`, detail: `${f.tag} ${f.value} · read live by the contract`, tone: "bad" }),
+    );
+  run.payments.forEach((p, i) =>
+    out.push({
+      ...base,
+      key: `mainnet:${run.runId}:pay:${i}`,
+      kind: "payment",
+      block: p.block,
+      order: 2,
+      agentId: p.agentId,
+      title: p.decision === "PAID" ? `Paid ${name(p.agentId)} ${Number(p.amount) / 1e6} USDC` : `Refused ${name(p.agentId)} · ${p.reason}`,
+      detail: p.decision === "PAID" ? "x402, settled by the real facilitator" : `payer contract, at ${p.stage}${p.status && p.status !== "OK" ? ` · ANCRE ${p.status}` : ""}`,
+      tone: p.decision === "PAID" ? "good" : "bad",
+    }),
+  );
+  return out.sort((a, b) => b.block - a.block || b.order - a.order);
 }
