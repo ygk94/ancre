@@ -52,7 +52,7 @@ We re-read the canonical registries on Monad mainnet directly on-chain (never th
 | `getSummary(182, [], "", "")` | reverts: `clientAddresses required` | MEASURED live, 2026-10-06 |
 | Feedback that survives as a usable trust edge | **11 edges out of 9,283 entries (0.12 %)** under the reference schema | MEASURED, `solver/out/mainnet.md` §0; `indexer` survival scan |
 
-Any application that ranks agents by average rating puts Eve-8004 first. Requiring proof of payment does not fix it: the farm paid, and the raters' funds came from the same owner. We checked a random sample of 150 of Eve's raters: each one received its first MON from Eve's owner, always 11.0 MON (MEASURED, 2026-10-06, Alchemy Transfers API on `rpc1.monad.xyz`; `docs/ressources/alchemy.md` **[TBD: commit the script and its JSON output]**).
+Any application that ranks agents by average rating puts Eve-8004 first. Requiring proof of payment does not fix it: the farm paid, and the raters' funds came from the same owner. We checked a random sample of 150 of Eve's raters: each one received its first MON from Eve's owner, always 11.0 MON (MEASURED, 2026-10-06, then re-run on 2026-10-10 with a new random sample of 150, same result: Alchemy Transfers API, script [`solver/funders.py`](solver/funders.py), output [`solver/out/alchemy-funders-182-sample.json`](solver/out/alchemy-funders-182-sample.json); shown on the agent page of the screen, see [`docs/ressources/alchemy-integration.md`](docs/ressources/alchemy-integration.md)).
 
 The registry's self-rating guard checks the agent's owner and operators, not its `agentWallet`: agent #8317 received 78 ratings from its own agent wallet, all accepted by the registry. ANCRE drops all 78 (MEASURED, `solver/out/mainnet.md` §c).
 

@@ -247,6 +247,10 @@ class Signer:
 
 
 PUBLIC_RANGE_100 = ("rpc.monad.xyz", "testnet-rpc.monad.xyz")   # eth_getLogs <= 100 blocks (CLAUDE.md §7, MEASURED)
+# Alchemy Free tier on Monad: eth_getLogs <= 10 blocks per call (error -32600, MEASURED 10/10 on monad-testnet;
+# `cast logs --query-size 10` passes). Its URL carries the API key: it goes to cast through ETH_RPC_URL in the CHILD
+# environment, never on the command line (`ps`), and never in a journal line.
+ALCHEMY_HOST = "g.alchemy.com"
 
 
 class Chain:
@@ -255,7 +259,9 @@ class Chain:
         self.cast = cast or os.path.expanduser("~/.foundry/bin/cast")
         # review LOGS: split eth_getLogs on the public RPCs (range limited to 100 blocks, error -32614)
         self.log_chunk = log_chunk if log_chunk is not None else (
+            10 if ALCHEMY_HOST in rpc else
             100 if any(h in rpc for h in PUBLIC_RANGE_100) and "rpc1" not in rpc else 0)
+        self.rpc_env = ALCHEMY_HOST in rpc              # keyed URL: environment only
 
     def _run(self, sub: str, *args: str, sign: bool = False) -> str:
         """`cast <sub> --rpc-url RPC [signer options] <args>`. Callers pass their options before the positionals
@@ -266,8 +272,10 @@ class Chain:
                 raise RuntimeError("no signer configured")
             sig = self.signer.args()
             env.update(self.signer.env())
-        p = subprocess.run([self.cast, sub, "--rpc-url", self.rpc, *sig, *args], capture_output=True, text=True,
-                           env=env)
+        rpc = ["--rpc-url", self.rpc]
+        if self.rpc_env:
+            env["ETH_RPC_URL"], rpc = self.rpc, []
+        p = subprocess.run([self.cast, sub, *rpc, *sig, *args], capture_output=True, text=True, env=env)
         if p.returncode != 0:                           # with --json cast writes some errors on STDOUT (AM-06.1)
             raise ChainError((p.stderr.strip() or p.stdout.strip())[-2000:] or f"cast {sub} exited {p.returncode}")
         return p.stdout.strip()
@@ -674,9 +682,32 @@ class Certifier:
     def due_refresh(self, oc: OnChain, head: int) -> bool:
         return oc.cert_block > 0 and head - oc.cert_block > self.cfg.max_age - self.cfg.refresh_lead
 
+    def estimates(self, txs: list[Tx]) -> list[dict]:
+        """eth_estimateGas and the gas limit each transaction of a plan would be sent with (prepare mode). The
+        estimates run against the current state: a transaction that depends on an earlier one of the same plan
+        (submitCertificate after addNodes) is reported, not estimated."""
+        out = []
+        for i, tx in enumerate(txs):
+            row = {"fn": tx.fn, "note": tx.note, "calldataBytes": sum(len(a) // 2 - 1 for a in tx.args
+                                                                       if a.startswith("0x"))}
+            if i:
+                row["estimate"] = "after the previous transaction"
+            else:
+                try:
+                    est = self.chain.estimate(self.contract, tx.sig, *tx.args)
+                    row.update(estimate=est, gasLimit=self.cfg.gas.limit(est))
+                except ChainError as e:
+                    row["error"] = e.reason
+            out.append(row)
+        return out
+
     def run_once(self, fbs, idn: Identity, *, reason: str, block: int | None = None, dry: bool = False,
-                 _level: int = 0) -> dict:
+                 prepare: bool = False, _level: int = 0) -> dict:
+        """dry: plan only, the chain is not read. prepare: everything a real run does (node table and certificate
+        re-read, alignment, replacement rule, submitter check, eth_estimateGas of every transaction, gas limit), and
+        then stops: action `prepared`, nothing is signed or sent."""
         t0 = time.perf_counter()
+        dry = dry and not prepare
         self.retry_at = None
         if self.chain is None or dry:
             table, oc, head = anchor_table(self.cfg.anchors), None, None
@@ -721,6 +752,9 @@ class Certifier:
             return self.journal.log(action="deferred_replacement_rule", waitBlocks=wait, qCur=oc.q_cur,
                                     massCur=oc.mass, eLowCur=oc.e_low_eff, head=head, **base)
         self.check_submitter()
+        if prepare:
+            return self.journal.log(action="prepared", head=head, txs=self.estimates(txs), refresh=refresh,
+                                    stale=stale, **base)
         split = not self.cfg.submitters and bool(al.appended)
         if split:                                       # open set: the nodes go alone, never with the certificate
             txs = [t for t in txs if t.fn != "submitCertificate"]

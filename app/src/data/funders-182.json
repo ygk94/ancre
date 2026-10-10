@@ -1,0 +1,1692 @@
+{
+ "status": "MEASURED",
+ "measuredAt": "2026-10-10T11:53:15Z",
+ "source": "Alchemy Transfers API (alchemy_getAssetTransfers)",
+ "chainId": 143,
+ "agentId": 182,
+ "owner": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+ "ratersSource": "solver/data/mainnet-110994810.feedbacks.json.gz (block 110994810): distinct clients of the agent",
+ "population": 7665,
+ "sample": {
+  "size": 150,
+  "seed": 20261010,
+  "method": "random.Random(seed).sample"
+ },
+ "summary": {
+  "raters": 150,
+  "withFirstFunding": 150,
+  "noExternalFunding": 0,
+  "firstFundedByOwner": 150,
+  "distinctFirstFunders": 1,
+  "topFirstFunders": [
+   {
+    "address": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "raters": 150
+   }
+  ],
+  "amounts": [
+   {
+    "wei": "11000000000000000000",
+    "mon": 11.0,
+    "raters": 150
+   }
+  ],
+  "firstFundingBlocks": [
+   55695540,
+   56017595
+  ]
+ },
+ "rowsKept": 150,
+ "rows": [
+  {
+   "rater": "0x006fec3115243f18c3220af299b091915c22a4e0",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55863085,
+    "tx": "0x1938fe47de38592708b06bff56f5dfdb5952d4b750a0ae5804985b481573f6df",
+    "time": "2026-02-17T00:26:44.000Z"
+   }
+  },
+  {
+   "rater": "0x00e31755dcb63ac9b82817c5895519da5fef0e4a",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55866382,
+    "tx": "0xdb6927f19a4ac22f82d917a675a2f75dd288fc0bfec381c77f860303d2949b8c",
+    "time": "2026-02-17T00:48:41.000Z"
+   }
+  },
+  {
+   "rater": "0x036d5e4601947b62a9ed459aaf225ee4ef01bf34",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55718208,
+    "tx": "0xed83bd944b03b5e96fb457c498c8a37b9a77599523689f67be32ca03be2748b3",
+    "time": "2026-02-16T08:17:14.000Z"
+   }
+  },
+  {
+   "rater": "0x07a21a4b022d920c2e361787895876b48e0a1464",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55963160,
+    "tx": "0x97af4f1e7ad636ddf16fd1adbd29384f44cdd06a44366fd50829f56a5bdc9bff",
+    "time": "2026-02-17T11:32:58.000Z"
+   }
+  },
+  {
+   "rater": "0x08ab4cd8aabd647b318a992cd654762f2782037e",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55986461,
+    "tx": "0x3a6327189dec108bcc110adb483732f2b23dbc7ea0f1663d324d984fd5ded54b",
+    "time": "2026-02-17T14:09:08.000Z"
+   }
+  },
+  {
+   "rater": "0x09f989797764f1149d7a0df8096913d62e74adfd",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55864032,
+    "tx": "0x2feb406b5c52a38b1b3d5d5a219cc99f877631b704d182cd3cf2fa6cbbcf471b",
+    "time": "2026-02-17T00:33:03.000Z"
+   }
+  },
+  {
+   "rater": "0x0ad2832f252e3169e8d5a6ae664159a0d6b22985",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55766875,
+    "tx": "0x74d1dc79b190d387f8faf6c30b039b43d36a100a9260a1ea25982e03e4af8703",
+    "time": "2026-02-16T13:46:04.000Z"
+   }
+  },
+  {
+   "rater": "0x0b2e35a7b3cef91b8579b56f6b1324036896cde3",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55905229,
+    "tx": "0x7c6e95ae609207d8034fd8a5c99e5af315dbd2a7045b9b8b1f90f7f124823e30",
+    "time": "2026-02-17T05:07:11.000Z"
+   }
+  },
+  {
+   "rater": "0x0b87c8fcd911a6548cdf29ebf6ad2bc97b896f17",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55914440,
+    "tx": "0x1354e0bebdf4ffe9a4e87b703a17fe0caa2c85ba65348c43b15b0b1c5cba28f4",
+    "time": "2026-02-17T06:08:33.000Z"
+   }
+  },
+  {
+   "rater": "0x0de37d42da9e17a6cc386f11ab5de4299023d386",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55979446,
+    "tx": "0x09cfe133a0357f4734b05300cc751779878d7441d812e0600b2ea4a9aaaf9402",
+    "time": "2026-02-17T13:22:25.000Z"
+   }
+  },
+  {
+   "rater": "0x0f843a8d2d7cc3bc5f65270a2e28578cafe0f2c9",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 56006614,
+    "tx": "0x7a9c9461d708ec4fdce9d726ee7783ce4aecb9e860293cce4936f87d9b356a38",
+    "time": "2026-02-17T16:23:27.000Z"
+   }
+  },
+  {
+   "rater": "0x0fd4f468a11de2edf089c2ebb9d0e3764cec5483",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55829090,
+    "tx": "0x950d2598a9488710b2442f655283e03496a23c7250bb0e2f1cef649f789ec858",
+    "time": "2026-02-16T20:40:24.000Z"
+   }
+  },
+  {
+   "rater": "0x121d5eea5f5c71b8842d85f4b8e12bf1ea619c62",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55726522,
+    "tx": "0x7c959971c485858af3302dbae1c5e7b2698054b1fc8523abe148be90170a1dfd",
+    "time": "2026-02-16T09:13:23.000Z"
+   }
+  },
+  {
+   "rater": "0x149c24c78a7f8f2866afc241aa67f9f1a096ef35",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55853357,
+    "tx": "0xdca952ae81e2b73c9ee750aae1cc5a029987295552de6abe7f3e86a402c431bc",
+    "time": "2026-02-16T23:21:56.000Z"
+   }
+  },
+  {
+   "rater": "0x15e55afc5c39c4e1a0b2ae10dc26d58266be192b",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55930016,
+    "tx": "0x119cfe29102a0f1a1a2555faf71fbbd30c1fd158accb77dcbf58e6213c4cf1c4",
+    "time": "2026-02-17T07:52:12.000Z"
+   }
+  },
+  {
+   "rater": "0x169d4ad404faef725d1b72e77a0160f0ed724cb5",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55776035,
+    "tx": "0xf4aa4256aa53710e41813a44fdc849fc771a87d9708c5977ed0d81e99c15a741",
+    "time": "2026-02-16T14:47:04.000Z"
+   }
+  },
+  {
+   "rater": "0x18524f419713cf828be8b48ea2f19fc76eb12d4b",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 56000264,
+    "tx": "0x109dd83786a00c09d40ff88bf494b305378fc5e41414cb1dfc9224a1274b3c78",
+    "time": "2026-02-17T15:41:08.000Z"
+   }
+  },
+  {
+   "rater": "0x1a00f0b20b70e15540251770264a0bde82b08799",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55796491,
+    "tx": "0x658a08d526e25467f824342e61e68b837120c9940dbf76394b9d33788d2a122e",
+    "time": "2026-02-16T17:03:22.000Z"
+   }
+  },
+  {
+   "rater": "0x1c29c11f4b10d4106be28ddf7621051de541ad76",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55756633,
+    "tx": "0xf367d1b1e59baa3a19ebaeaaef85ce1a5febd0b96688f4f54162b9cc4c7313eb",
+    "time": "2026-02-16T12:37:10.000Z"
+   }
+  },
+  {
+   "rater": "0x1df29ccd58a2251ea64045dc72c487a497e9ed73",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55965865,
+    "tx": "0x04a69fa2d15bf26552b2017b85842db10d410bb530da925e8d3eed01fb36fffe",
+    "time": "2026-02-17T11:51:03.000Z"
+   }
+  },
+  {
+   "rater": "0x24f44c5b9b72f5ddf75b961ccaa11d542512c98d",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55934684,
+    "tx": "0xed9464f37f7e7887cd1dd090e494638b70f1eed250597d299dbc37a3dc469c63",
+    "time": "2026-02-17T08:23:19.000Z"
+   }
+  },
+  {
+   "rater": "0x278cf0d03ff9fda29ae8b4030164c68925f4a33e",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55721665,
+    "tx": "0xbc7ce9738527b56b34d0ff220e15ab192acca3711be01b270868f75009436d12",
+    "time": "2026-02-16T08:40:37.000Z"
+   }
+  },
+  {
+   "rater": "0x291e82d42d7856372208b3f0d9841d275b1fb5dc",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55883333,
+    "tx": "0xec6d56f431d4100e9883c7ef24bc1d6867faa81a62434bd3b0089b9b1eed36d7",
+    "time": "2026-02-17T02:41:29.000Z"
+   }
+  },
+  {
+   "rater": "0x29586abfc137b4854399172153197eefbb94f8c2",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55855602,
+    "tx": "0xf588ddaed79f894493cbedaac7fc13a6fe2c3a3b23a758c26dcc8dd189727e78",
+    "time": "2026-02-16T23:36:53.000Z"
+   }
+  },
+  {
+   "rater": "0x2b5853edb7a80c6710a8dd8bb012fab21dd5452e",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55721800,
+    "tx": "0x8971fb81a59583a687c10f208e9331be402bf1910921d9d4b1eb4d92c039bdec",
+    "time": "2026-02-16T08:41:31.000Z"
+   }
+  },
+  {
+   "rater": "0x2d486ed1677df2755830b65cb952a82d87b1e03a",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55754318,
+    "tx": "0x70d30fa9e1c59b9866d72d974fa42079a5234a08f54afca84c81717c8120e704",
+    "time": "2026-02-16T12:21:34.000Z"
+   }
+  },
+  {
+   "rater": "0x2e8d97b6e87e218a836ba05a2e95170e0c6328db",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55974619,
+    "tx": "0x26bde1fa81ff32ff596089d603c11d987eb8e24609028fcc7a3c2a2ea077020e",
+    "time": "2026-02-17T12:50:16.000Z"
+   }
+  },
+  {
+   "rater": "0x2f729038c6e2fe2e6861a932559b0508fef6ab4c",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55784883,
+    "tx": "0x20ede17ef93d3f6844c6ce90913c36a3cae4f2261375b71f45e0373ce2e50893",
+    "time": "2026-02-16T15:46:01.000Z"
+   }
+  },
+  {
+   "rater": "0x30e893eda752e5f2b4d802e606e8790ea05045a9",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55832509,
+    "tx": "0x4ff3709b3347a04ab90ab0f41af9536c799b59627b9f60ca02ff61c07290fa6a",
+    "time": "2026-02-16T21:03:10.000Z"
+   }
+  },
+  {
+   "rater": "0x32b63b257254b4a4a44d769743bb08c82d4e8d91",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55762004,
+    "tx": "0xb8b303e55ef0811abddec2b43b7474b2549cc742e3e7518b98ecb3a328662678",
+    "time": "2026-02-16T13:13:29.000Z"
+   }
+  },
+  {
+   "rater": "0x34fc16a172d87909c60f052d93d6c71137c9afca",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55964728,
+    "tx": "0xaaa13420c5f374879444ab39adef09f05ec6ff544bf27caa97db513de9bc945e",
+    "time": "2026-02-17T11:43:23.000Z"
+   }
+  },
+  {
+   "rater": "0x39fb756a77d6ff00096b56052eb0f99049954be2",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55726828,
+    "tx": "0xff36f9698acf85b942b48c4a4da8b1c1e29113544d3255d25cf81479a7a4c018",
+    "time": "2026-02-16T09:15:28.000Z"
+   }
+  },
+  {
+   "rater": "0x3af2afb95fe2cf388f8009dec9ba58de0d595feb",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55732425,
+    "tx": "0x32dbe2bb96bcdb0d8f98d9fea032c35b259015fb75fc26087daa5e013209991a",
+    "time": "2026-02-16T09:53:23.000Z"
+   }
+  },
+  {
+   "rater": "0x3b591530faebd1a5dfc38260be09c9b1a6221892",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55818573,
+    "tx": "0x598223203e1f8f80b2ed9d48d56fd91cabfb12381b712bdb08ca2b62cc8e54aa",
+    "time": "2026-02-16T19:30:24.000Z"
+   }
+  },
+  {
+   "rater": "0x3bd0a7ea8385efd0b27b0c8514fc5b82bd012e2a",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55746259,
+    "tx": "0xdbebb422a3c2de5dfe1d6aabf3b6f5a7ed900231a4ec02c536baf831f66ff6d4",
+    "time": "2026-02-16T11:26:58.000Z"
+   }
+  },
+  {
+   "rater": "0x3e7ab7286aaf34042802323c05055a3bf53b2d2e",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55914899,
+    "tx": "0x1e70cfaa1a1935f6b5061b1f53ba7f969af4d6b05aed9e499d78f270bedddf36",
+    "time": "2026-02-17T06:11:36.000Z"
+   }
+  },
+  {
+   "rater": "0x403dbdf6772ac359f1f149be519d893461a65a97",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55985000,
+    "tx": "0xe121c2aee20f2506d3b1760be3c5f3890bbc8b1627122fe55234ad5cad33c3ee",
+    "time": "2026-02-17T13:59:23.000Z"
+   }
+  },
+  {
+   "rater": "0x430fb69b585178dda2195dab82bf0ce3b4d58f06",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55820667,
+    "tx": "0x84c615497924edea13105a6dce9a685b264bd2583767dcd8eaf907576045f732",
+    "time": "2026-02-16T19:44:20.000Z"
+   }
+  },
+  {
+   "rater": "0x4609a30850c2ecaa42bc182c9c049801c5e64dbd",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55746533,
+    "tx": "0x00014446d7bcddb67acaba17bc6a5e90311e9f6dec50f63f9ca1b2eb079cb1f0",
+    "time": "2026-02-16T11:28:50.000Z"
+   }
+  },
+  {
+   "rater": "0x47304800fa951fefc2f690a814eb475da81b35cc",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55824911,
+    "tx": "0xb570f77736193ea01d831f39bdc08bb4dd4e7a6f2e0cf5a45ddf261dc35b3553",
+    "time": "2026-02-16T20:12:37.000Z"
+   }
+  },
+  {
+   "rater": "0x47ef17617e026ad0cc5e4b025aa3f9444b5c7905",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55774861,
+    "tx": "0xffe35407f3efeeb27419fce3e88641291592b6ef0e713ae1b058485d548a1df4",
+    "time": "2026-02-16T14:39:17.000Z"
+   }
+  },
+  {
+   "rater": "0x48ae580663a9ce95579e44f9bdcd2820c54953b8",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55805922,
+    "tx": "0xeca0d59c3f7382bbe3bf6ed074b2e83d9b93b808814fb7a253db94cea5661387",
+    "time": "2026-02-16T18:06:07.000Z"
+   }
+  },
+  {
+   "rater": "0x49c7531af0ae40addacce8b4a0e9794b0e6fdbce",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55885820,
+    "tx": "0x52f63636fc9442199ddc6e6c3f0c05b8d14c3259b840ab58a42f625cb11ec579",
+    "time": "2026-02-17T02:58:02.000Z"
+   }
+  },
+  {
+   "rater": "0x49f4baeee4b3f86aacade3a66e3676874f5a1e0c",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55970885,
+    "tx": "0xd2c98ba2b8578bef9ad54d40cf816b9f2e074771006588c19c077e232bd87dfc",
+    "time": "2026-02-17T12:25:05.000Z"
+   }
+  },
+  {
+   "rater": "0x4a65703805366cc09799c3f8fde7e73d0f837991",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55726739,
+    "tx": "0xfaab95296b6a9b24115bc881e9e2551305de6f0da849dccea2566a33f6677a48",
+    "time": "2026-02-16T09:14:52.000Z"
+   }
+  },
+  {
+   "rater": "0x4cea8092f161cce1df9536d2579de24a637b84e5",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55871974,
+    "tx": "0x2331305f3c780e9f1709be109a08144cd1472d7cb5b426003235a0d713b1eeb0",
+    "time": "2026-02-17T01:25:55.000Z"
+   }
+  },
+  {
+   "rater": "0x50aee7d4efcb67df0dfccb1aa56d68115264ac4d",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55845987,
+    "tx": "0xa489e657a4efa51201709d003a38973501ee123855aab11f677485a7305026e5",
+    "time": "2026-02-16T22:32:51.000Z"
+   }
+  },
+  {
+   "rater": "0x50bc8c2647f834b5731ad138e0b40011aade55fa",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55865158,
+    "tx": "0x0b4390f184510d03cc754260ebcb75053f5eaaad43d4a8b34377b33432203c87",
+    "time": "2026-02-17T00:40:31.000Z"
+   }
+  },
+  {
+   "rater": "0x51bff0e113b89b95983c5e3c947dd0eaf200c1ba",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55922926,
+    "tx": "0xe7381ba0914520ff0f3ba22f43f754103af5b7a922f62a6062d49a0f10b88d27",
+    "time": "2026-02-17T07:05:01.000Z"
+   }
+  },
+  {
+   "rater": "0x52245d72a2cec009daceb00a98f1effc67f72bc6",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55999637,
+    "tx": "0x4b21931beb2ea3a449561ad134d2aa08e9678fa2833feedd0e5ddd9121485069",
+    "time": "2026-02-17T15:36:57.000Z"
+   }
+  },
+  {
+   "rater": "0x53216feac32fc9b0c173abb83f2915102e6c6900",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55947948,
+    "tx": "0xcc49b776ffa93938ebd49629986f52d17abbb54295df7a35cef75b02baae8271",
+    "time": "2026-02-17T09:51:41.000Z"
+   }
+  },
+  {
+   "rater": "0x5333dcbb4be36d3d1c784251efb2a31864e9ffdf",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55823298,
+    "tx": "0x5401eaadaec20fcee5dded41513d914a2888ba80f8323d3b7ef5186aad61b352",
+    "time": "2026-02-16T20:01:54.000Z"
+   }
+  },
+  {
+   "rater": "0x55079f4e0ea713c3fa188539513c502500ace1a6",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55904327,
+    "tx": "0x65bac97ebdef86753706c29b580c8466572ffeec46c6b56414c7215bb9029a76",
+    "time": "2026-02-17T05:01:10.000Z"
+   }
+  },
+  {
+   "rater": "0x57b712f7979793c9609fd9a5327fd483867148c8",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55994198,
+    "tx": "0x47b3cb71adb5e1b957af16768f0463aa845a75e6f9f16139e32cf486ee3e700a",
+    "time": "2026-02-17T15:00:42.000Z"
+   }
+  },
+  {
+   "rater": "0x58c1a3d849d405f998cf0a20b486b603111bf424",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55921386,
+    "tx": "0xeb471b248e2d14089b7f385e2f58e9716f6f347b4c0ae212abf2205460db0b4d",
+    "time": "2026-02-17T06:54:45.000Z"
+   }
+  },
+  {
+   "rater": "0x5b4d59f3ed3db4ca4b86a9512c035a28460c57fe",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55798501,
+    "tx": "0xa5a7adc210873254929d9c09cd04cf6a784babc6b0d893b3d63c8b9232e08a8a",
+    "time": "2026-02-16T17:16:45.000Z"
+   }
+  },
+  {
+   "rater": "0x5b75862372aed83bbff2f93baa00af2a17e32869",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55990643,
+    "tx": "0x08631a642317affca9e29e65a4d7e4e0bc535766294542e551c8b4b78bc1a651",
+    "time": "2026-02-17T14:37:00.000Z"
+   }
+  },
+  {
+   "rater": "0x5bf90022d19cde22647dae3094877023876ab4ef",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 56013939,
+    "tx": "0x776f318cd9c1d3bbd388a9233445c9143dbce9fc8e8ba343390c453a684a85d6",
+    "time": "2026-02-17T17:12:55.000Z"
+   }
+  },
+  {
+   "rater": "0x5d8b5d29a22bbe3925aa40d573d28fc1dabf1866",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55746745,
+    "tx": "0x57019f9224c80f9d424a1e2a0c9e673df346df164a50cabe96273e516a152208",
+    "time": "2026-02-16T11:30:17.000Z"
+   }
+  },
+  {
+   "rater": "0x606de67553ab7d614dcbc96c15d1c74e1df38670",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55811071,
+    "tx": "0xbb746870f967a44fd099f11bcc40b0892be5bf574ad6bf5cef44862a749b0e57",
+    "time": "2026-02-16T18:40:25.000Z"
+   }
+  },
+  {
+   "rater": "0x60db2e588b3d6d482eb0f6b38adce386905f7a17",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55890726,
+    "tx": "0x0a4ae135ae7e25d026c595000496a4fa2047fc01912bc12ff3365566774a1794",
+    "time": "2026-02-17T03:30:45.000Z"
+   }
+  },
+  {
+   "rater": "0x61c75717ef4b79763f2f8e27503bd575d48120a4",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55937277,
+    "tx": "0x5d3ec2a9806d950f2ee57a4fa925e42ee5bdd3c52b328edeafe995f25daa7453",
+    "time": "2026-02-17T08:40:36.000Z"
+   }
+  },
+  {
+   "rater": "0x63a9eae5efebcc04d851a13755269accac384fd4",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55942090,
+    "tx": "0xffd340e14a1c6262f79309b527598f09130b90449e8b19721cb15c32297e6d4e",
+    "time": "2026-02-17T09:12:41.000Z"
+   }
+  },
+  {
+   "rater": "0x6bf6a26189a3bf5615882948949456ffd2e12c97",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55813912,
+    "tx": "0xf47ab8c19e53a912a92ec5e6e270f3c91def09f00a54b6d8b8f88e1d6f8d7a63",
+    "time": "2026-02-16T18:59:21.000Z"
+   }
+  },
+  {
+   "rater": "0x6d31c83edf9ed2b1682c820881f722c8d1e921b6",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55959177,
+    "tx": "0xe8e6a8d0f2deee0c315388ffa36e372720070cd85954fb7afe925f43d99ccac9",
+    "time": "2026-02-17T11:06:27.000Z"
+   }
+  },
+  {
+   "rater": "0x6db3f3ae36a7b45a8449d94d732085952fb5f734",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55816079,
+    "tx": "0x735bb97a793dbcb322b50194bbdba045a5a8392f65ba958b8f89cc4efb5fa240",
+    "time": "2026-02-16T19:13:47.000Z"
+   }
+  },
+  {
+   "rater": "0x6de28ae15ea4f3363577d9a305377a63187981b3",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55803503,
+    "tx": "0xb0c915b6746f76cf713cb6b78277e221ff995a28cb2bcef951186e3bc3652097",
+    "time": "2026-02-16T17:50:00.000Z"
+   }
+  },
+  {
+   "rater": "0x6fb2a2315b484779a5802abb8fd13c7db4487f99",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55991131,
+    "tx": "0x4c8eddcf48c8828e213eae1f6f7505075501e3cecba69007aa406660c4ccf58a",
+    "time": "2026-02-17T14:40:16.000Z"
+   }
+  },
+  {
+   "rater": "0x6fffe3264dd2549ed216bf02ce7948a66815364e",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 56017595,
+    "tx": "0xa5bcb5b8a5b80e2dd017a54ec89720c2d58be25089dac6b407a75d1f58fd1f49",
+    "time": "2026-02-17T17:37:48.000Z"
+   }
+  },
+  {
+   "rater": "0x725f172e752f5f46437c2b09a413b7f4b958e57a",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55833699,
+    "tx": "0xc8e49ad7c703ecff39e6360cf924a74b9605762ae65b67c606597146dd0f614e",
+    "time": "2026-02-16T21:11:06.000Z"
+   }
+  },
+  {
+   "rater": "0x734a001459c7dd87abed4f4a8e88264f06dafa75",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55789909,
+    "tx": "0x98ff75ad8af9e1075056a198dfb8355ad5b67faa1a41d4c7707c70344af91f2d",
+    "time": "2026-02-16T16:19:31.000Z"
+   }
+  },
+  {
+   "rater": "0x747d8b9693e7cc1c7b98c6534539a557b1895d04",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55818385,
+    "tx": "0xd9f44db142e057430717d96a34a2a88cff9964d56c876c0a9c20aad7b000056d",
+    "time": "2026-02-16T19:29:09.000Z"
+   }
+  },
+  {
+   "rater": "0x74d7338f7bebe17bdc2b63295309accf4c82b051",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55826881,
+    "tx": "0x43e2f7f3c576b445c0f28aca7e7f1cb7d6f476efe0d85ead2a34fc2207b4107c",
+    "time": "2026-02-16T20:25:44.000Z"
+   }
+  },
+  {
+   "rater": "0x75a05f6306d6537afd53a5e4ac127c8d7d5845df",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55771131,
+    "tx": "0xcca50bd68e387eeda7ad3b5eb32b98059b9f1a15600ba27967d29f87c733ae10",
+    "time": "2026-02-16T14:14:25.000Z"
+   }
+  },
+  {
+   "rater": "0x77c5a6d6ae685581f95ce39473b8357d463c6dcb",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55822139,
+    "tx": "0xbfbbc5f4ed9ca4b94cd1fab38c2f39bfc215c062046b157781a4240abb253660",
+    "time": "2026-02-16T19:54:10.000Z"
+   }
+  },
+  {
+   "rater": "0x7b10f35f56e446ef4367ff13edb769666cff40b1",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55802641,
+    "tx": "0x5209e41da3d8d6b3b4246f3875e133b9a9e2488a9602606fcc42f53e55e03668",
+    "time": "2026-02-16T17:44:16.000Z"
+   }
+  },
+  {
+   "rater": "0x7e6df0f887a07df471d987f99a58776aa65453c5",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 56013102,
+    "tx": "0x374eb362b546cde68cc93e68f1649500a7643f24034d19c883646ea677becd6f",
+    "time": "2026-02-17T17:07:13.000Z"
+   }
+  },
+  {
+   "rater": "0x7ec1b16d1c60488f57d195b32b3245bdda478a60",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55932012,
+    "tx": "0x76870b82d8809a93bf992a71fa32ed93a90ff13ee314ad9a9fd364218640dcf0",
+    "time": "2026-02-17T08:05:30.000Z"
+   }
+  },
+  {
+   "rater": "0x889b1e77da3184491275b4c8f01ef93a5acc3140",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55739057,
+    "tx": "0x218e0f6dcbf84cb758dea268c9801fb4298ff7eeb4b8faa6ae7561c8b70d35c0",
+    "time": "2026-02-16T10:38:18.000Z"
+   }
+  },
+  {
+   "rater": "0x8943a9e367954892c4a7e7db92bedef374f9b4d5",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55825308,
+    "tx": "0x0ff6a1613d99b88f6fdf14f726186f9d3d97248e7b101f7275e2f18ca663caca",
+    "time": "2026-02-16T20:15:15.000Z"
+   }
+  },
+  {
+   "rater": "0x8a3d94bab5b43fdc8e518480a31b5f09f184ff6c",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55804060,
+    "tx": "0x0fc8c05670d39532137ea7d918d1d97ff9b4c0547faf65b9e7874610f56f0ea0",
+    "time": "2026-02-16T17:53:43.000Z"
+   }
+  },
+  {
+   "rater": "0x904449ba7c1918cea674295db51d9b7c59451e3b",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55720318,
+    "tx": "0x4a5990a5ba88a25d1a54e1fdc28fa33daa67218ddbff004886868692b13578ad",
+    "time": "2026-02-16T08:31:31.000Z"
+   }
+  },
+  {
+   "rater": "0x91b22992c1fee36f159a2947da4303ad2f3eab49",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55826456,
+    "tx": "0xaf3482a15958452fa8b1ec84254783981a828680fc8a57f42d5c79ed2e2d5939",
+    "time": "2026-02-16T20:22:54.000Z"
+   }
+  },
+  {
+   "rater": "0x922d86472052b38ba9485523a5150a4a8a348033",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55723099,
+    "tx": "0x82871239f5562bfbc2e296473cea693b4c4aae4ffc4e789bd3832f04f9f43286",
+    "time": "2026-02-16T08:50:18.000Z"
+   }
+  },
+  {
+   "rater": "0x9388c75c73491cb4da7c3d86f83b7c6968ef5494",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55839586,
+    "tx": "0xe5db596cf63e0ffd61de236f1fd4f79f397e6b04581653acd2e6c86a1d1d41c4",
+    "time": "2026-02-16T21:50:15.000Z"
+   }
+  },
+  {
+   "rater": "0x93deae2ff43d9131df5ac89359eda3be836448f6",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55750098,
+    "tx": "0xd3a2b8112f1792110079279ec184cd52f3bdf5683582e2d490727b3fd3425b6c",
+    "time": "2026-02-16T11:52:59.000Z"
+   }
+  },
+  {
+   "rater": "0x9469aff0e8a3f1abdaaa8d16d370a9ce113f5393",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55956316,
+    "tx": "0x6eddbdfa3c29977e638cf758c3cbe0eb23a5dc8aad8c937ed9206093e3daf418",
+    "time": "2026-02-17T10:47:24.000Z"
+   }
+  },
+  {
+   "rater": "0x968c09cf15657aeeb83fedabfca4ff8ad1228040",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55892455,
+    "tx": "0xcffbcca0e7f6430d6277965346a252ad9ab06c5ea2520402482ac499d0df93c1",
+    "time": "2026-02-17T03:42:15.000Z"
+   }
+  },
+  {
+   "rater": "0x973099fa90760f07bd58d89f8ea033914ed3480e",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55857501,
+    "tx": "0x094a165598eb7d3db522546aff0b3aecbeeee408d2b5ff2b958f2f6964d680f8",
+    "time": "2026-02-16T23:49:33.000Z"
+   }
+  },
+  {
+   "rater": "0x9739fe23f590b5e137f09b94908e708f8975a3d9",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55922337,
+    "tx": "0xfa5b7cd6daed5f2158a41e011e876ebde513cea736e8e800119c05d899d5209c",
+    "time": "2026-02-17T07:01:06.000Z"
+   }
+  },
+  {
+   "rater": "0x97ceafb92db37cce4b887871446ddb7c5f694592",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55801213,
+    "tx": "0x9adea3d84676b5c6226639a06797a90453125ab89f7dbdbe88a0cdee6867e976",
+    "time": "2026-02-16T17:34:48.000Z"
+   }
+  },
+  {
+   "rater": "0x987f155552bb1f0e396c20c0b40f312fc0119e86",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55980333,
+    "tx": "0x0c73a5d954e12ba42e2fa30a9944cddcd360fe7519c4231469dc01189b37c672",
+    "time": "2026-02-17T13:28:19.000Z"
+   }
+  },
+  {
+   "rater": "0x99a5c8ada970161c66b8fa39725e5fe093f4bacf",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 56007061,
+    "tx": "0x6bc7ef3b2a0c16f6d0da45ce7777416ee499c2dce70b8d60c89e0f87a5327751",
+    "time": "2026-02-17T16:26:25.000Z"
+   }
+  },
+  {
+   "rater": "0x9cba165b7a3820cc0fef1d30f1f1ee428e8a3693",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55889477,
+    "tx": "0x3b669f3ae2d4e8f37ba679a7c5cc1bc9462ec39b6d7588ed5d3ff2fd41a4635f",
+    "time": "2026-02-17T03:22:25.000Z"
+   }
+  },
+  {
+   "rater": "0x9ce148593cfebd15891773529eb1f7603eff7c75",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55883466,
+    "tx": "0x970aab8280372d7399fdd8893f1d14609a789bffe4700e65a94abe8673f4142d",
+    "time": "2026-02-17T02:42:22.000Z"
+   }
+  },
+  {
+   "rater": "0x9d9be62ac80ba03a6ef481b74803a83dc5596df3",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55861861,
+    "tx": "0xb797729d90f4c229614d280050b0744f99c8f5ef451b46f6b1640571bd34a041",
+    "time": "2026-02-17T00:18:36.000Z"
+   }
+  },
+  {
+   "rater": "0x9e5628a1bf692950a1fbd915226a7478e3cd18c3",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55963787,
+    "tx": "0x5054592482ef567d8d20feabeb938ea96e51e6d4448f2981053a13d652697263",
+    "time": "2026-02-17T11:37:08.000Z"
+   }
+  },
+  {
+   "rater": "0x9fa21e009f5d95e58a83695fcff08b382c258b70",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55801574,
+    "tx": "0x4316a87212ac06722f8639c132a3058858815f3fca099f3ca74d0f92ae6725b6",
+    "time": "2026-02-16T17:37:13.000Z"
+   }
+  },
+  {
+   "rater": "0xa3feab10ba43c5226afb9185c10e76e2a285b7f1",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55961175,
+    "tx": "0x5b6dd1c174d8b04fc7ad5407505f93eb0c488354f89be60c2eeb56824291374d",
+    "time": "2026-02-17T11:19:44.000Z"
+   }
+  },
+  {
+   "rater": "0xa465ee64d9b5a460596fe1a1a83a610596cd0323",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55792250,
+    "tx": "0x91073dc19bd48a7a4e86bd1d10b9a9774b5a8db6d0ecf7f59d8f5879eeb483ad",
+    "time": "2026-02-16T16:35:07.000Z"
+   }
+  },
+  {
+   "rater": "0xa728ad44240b7f7e9e10074550c82c5967862e05",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55972507,
+    "tx": "0xf5198470a2d547f38d50202b99dcba29a1297a8b1b66491bd6356d7e0bb5c23e",
+    "time": "2026-02-17T12:36:02.000Z"
+   }
+  },
+  {
+   "rater": "0xa7acecdd6c6ccb4ae65edace7b7cca3ede587559",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55741320,
+    "tx": "0x89cff48a388013f2e20f783253cb40b04a0cbe2687caad5255eb4d2b62996683",
+    "time": "2026-02-16T10:53:34.000Z"
+   }
+  },
+  {
+   "rater": "0xa845e17c23d6f8f23c0eec89d31606b49be7e188",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55852716,
+    "tx": "0x037e09b2356fb27a82963eea0be4652b3f0837a31ab6c65dd7e62f18eee10914",
+    "time": "2026-02-16T23:17:40.000Z"
+   }
+  },
+  {
+   "rater": "0xa89876b21d0ecb9e7a9911e114729c57541ba1e1",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55891544,
+    "tx": "0x933b9f8d49ffe66f08ff33a1769a46ba3690eda9857a3bc467217037d047cda6",
+    "time": "2026-02-17T03:36:13.000Z"
+   }
+  },
+  {
+   "rater": "0xabea4bb1924fa6d2ad15e20211377fba92da7d39",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55864352,
+    "tx": "0x9f6248f8e80ba872c42d9b4ecb26fed0e863da2b5d299a64fc102649da6e8d20",
+    "time": "2026-02-17T00:35:09.000Z"
+   }
+  },
+  {
+   "rater": "0xad76bd70ba2d08ae7ae1719c4fdd9415fea64ad6",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55925831,
+    "tx": "0x4f9d7c1e9eab1f3e9504c8e015fc0ce516affc7bde6eeab13f4e9dbf3864c293",
+    "time": "2026-02-17T07:24:21.000Z"
+   }
+  },
+  {
+   "rater": "0xafd1df360a1ef987e501f8e5d722a92ea7368c74",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 56006213,
+    "tx": "0x33c1aa42e245c7dfcac0c5d91413f221aa13ec21b3b2d49e1e03c153da1a559e",
+    "time": "2026-02-17T16:20:46.000Z"
+   }
+  },
+  {
+   "rater": "0xb1801bf4a5a0e91154357ce0c225571e4a65247a",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55836002,
+    "tx": "0x8ed2a7ece20bc0f9cb47b70f3110e0254931e029b6fc015d2f08ff6e6535b084",
+    "time": "2026-02-16T21:26:25.000Z"
+   }
+  },
+  {
+   "rater": "0xb2504a9ddcef07ead9f6411235fa7fcb80aa9545",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55863039,
+    "tx": "0x87a84c18e508bd6489959e78b72232b9fdc291ffb2b18a5e0119534743148330",
+    "time": "2026-02-17T00:26:25.000Z"
+   }
+  },
+  {
+   "rater": "0xb6c581c606632a88a19fd973660099e228c743e4",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 56008263,
+    "tx": "0xb720803c019599c2d25fa4401bfb8f68656d393b8222f1da3aac1a139e4ff388",
+    "time": "2026-02-17T16:34:26.000Z"
+   }
+  },
+  {
+   "rater": "0xb6da565551e871d4a6a61258e77a288ab2ae9495",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55870045,
+    "tx": "0x443407083aa9d888817aea6b98291bed0a58e9a894fc7002ef652d6b4a4bd37f",
+    "time": "2026-02-17T01:13:04.000Z"
+   }
+  },
+  {
+   "rater": "0xb877f29529cf9b370b3f4066fb88b552c19d7d1d",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55822488,
+    "tx": "0xa14ec13fcfa2997b997f6a9ef0d470d27db5b92a796646203d075e8001b30415",
+    "time": "2026-02-16T19:56:29.000Z"
+   }
+  },
+  {
+   "rater": "0xb9afe415191ca3a4d7b39f260bb693eaf21f6552",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55723580,
+    "tx": "0x7b6fd21ebdbdfd8a037ab969d6938b85e144e7e5e76d5bf865df619f31b917fc",
+    "time": "2026-02-16T08:53:33.000Z"
+   }
+  },
+  {
+   "rater": "0xba3131fdc04abe181f3bec99d8943e2ddfd706b4",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55819562,
+    "tx": "0x94605478b16116c9368bd0634ab7db3e28dec98f5d0a9bb6646ff568389bb648",
+    "time": "2026-02-16T19:36:59.000Z"
+   }
+  },
+  {
+   "rater": "0xbabdbdf006e16b607cc19b8f57744ff42bd54e0d",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55752987,
+    "tx": "0x32684201b4da7bb959e8813592a8e95a9b0501d4f72ff5bc681cadc035bcbcf3",
+    "time": "2026-02-16T12:12:29.000Z"
+   }
+  },
+  {
+   "rater": "0xbaf93fee599e8b91deccecf15da1ad26bd67c2a9",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55910541,
+    "tx": "0x5dfd911e0e5bf0a11826bdb44454cefaa8f7532d92e6879bd164b325b57aa0a1",
+    "time": "2026-02-17T05:42:35.000Z"
+   }
+  },
+  {
+   "rater": "0xbb006eaec1c397afea760cd38e06acf802358147",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55903206,
+    "tx": "0x224171ef80b8953a5ccc0177b45a20fdaf2eb5698b301f9966f2f96c677a9f55",
+    "time": "2026-02-17T04:53:42.000Z"
+   }
+  },
+  {
+   "rater": "0xbb9708901680303630614a327e9ee24271d74fbe",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55845706,
+    "tx": "0x9bb573943eb5d48169324de813ce90bd9b6d23b3555f3c50d15771a66a64f9f4",
+    "time": "2026-02-16T22:30:59.000Z"
+   }
+  },
+  {
+   "rater": "0xbc86ba186ebca7cfa3189b0b3a52578ef55373fb",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55833265,
+    "tx": "0xf9bed4f542258ed5116fdad7d83e2d66656847bbbf62ce77ec17c863bc74bfe5",
+    "time": "2026-02-16T21:08:12.000Z"
+   }
+  },
+  {
+   "rater": "0xbf18c8c7a353faccc7b50c0e2854f4532e33ba8b",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55819289,
+    "tx": "0xdea20a38337ccb0710d0217eae5b9278ff4719ba51cc5c58cbbeefdccfd7f524",
+    "time": "2026-02-16T19:35:10.000Z"
+   }
+  },
+  {
+   "rater": "0xc70fa64800a49b8f2ad78779ca0ddecdd741b396",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55713523,
+    "tx": "0x305950e3271797b64358b7875dec1b313a72b701faf7c84b217cb36cede1b1b3",
+    "time": "2026-02-16T07:45:33.000Z"
+   }
+  },
+  {
+   "rater": "0xc93e805419cf81cbc4686a164417bbb7b603181e",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55903874,
+    "tx": "0x05b2f95c88ca2101b8c60045b7bd8aeada09db72dfee5001b64807e16e10446e",
+    "time": "2026-02-17T04:58:09.000Z"
+   }
+  },
+  {
+   "rater": "0xc9d71c6d5bdf5e22e09d1c0d4ab2db8278006d41",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 56016313,
+    "tx": "0x54622c6599bbfcee42a5073ff733cbeb7b96355e8f88a31e248023c8fcf458e2",
+    "time": "2026-02-17T17:29:04.000Z"
+   }
+  },
+  {
+   "rater": "0xca930e8665f99cafb17270c578b6769f75150a8e",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55798717,
+    "tx": "0x5488d68eb45d3b04b8a4bb3fa4ff4a97d3aa082952629d7f90d4d99f0b5e7c11",
+    "time": "2026-02-16T17:18:11.000Z"
+   }
+  },
+  {
+   "rater": "0xcbe5430b323536c64fbfa96179521ef4aeba7b83",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55884413,
+    "tx": "0x058010e5b4d8434484ad480633994fda442a34c0cc6bb1ab584a73aaa6cb56bb",
+    "time": "2026-02-17T02:48:40.000Z"
+   }
+  },
+  {
+   "rater": "0xd093d21e338d8e13669f5e89e47d952462cb7722",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55695540,
+    "tx": "0x452288c579f64921eb00fa66a5490c9ed55c1e1e3789021a6e7973754d9a3154",
+    "time": "2026-02-16T05:43:46.000Z"
+   }
+  },
+  {
+   "rater": "0xd2e7bf99579a56b79e045fdbfb921f2205c31f5e",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55709478,
+    "tx": "0x8db404e13f1e55ac5ddb7b80c11a43b6893ed76820f4d66eca73d77c7c6501f8",
+    "time": "2026-02-16T07:18:08.000Z"
+   }
+  },
+  {
+   "rater": "0xd709b7f8ef7a726d25be4f6185ca367901a4c5d1",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55753256,
+    "tx": "0xe59cbfebe1192f16d56ded2231b5b6467f690c925f70fbfa6d0baceb817f2ebc",
+    "time": "2026-02-16T12:14:21.000Z"
+   }
+  },
+  {
+   "rater": "0xd7ae94abf4fa156d44840e1550f81c05bd8c4a9c",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55933098,
+    "tx": "0xc457b73d9ac8e1ee7540acfc2886692ba64ab7f3baebd60dd8ebf8b3c4a34e60",
+    "time": "2026-02-17T08:12:45.000Z"
+   }
+  },
+  {
+   "rater": "0xd7c313c7376a3f2d96b2378394f22ea37d66730d",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55804772,
+    "tx": "0x09fc16fd5536587a71af27ab7c40fd73328be8bfc44898efbe56cac44e3f3aa5",
+    "time": "2026-02-16T17:58:28.000Z"
+   }
+  },
+  {
+   "rater": "0xd895589c925645c3aa9924f332675cc453439d31",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 56012836,
+    "tx": "0x4c0a434c92df1fcfe399dba882192f2e10a05f3044c34d494169cb70a7c10953",
+    "time": "2026-02-17T17:05:23.000Z"
+   }
+  },
+  {
+   "rater": "0xd986ed5ac0a2339fffa6b8bc3d6e958d445145b2",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55875874,
+    "tx": "0xa605a7a50346f073cbe48c6aaff1b4263769aa274ecb375835a41ac90a46b0b7",
+    "time": "2026-02-17T01:51:46.000Z"
+   }
+  },
+  {
+   "rater": "0xdbfbb17cfd59fc525a42285fe63ccae687798751",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55921206,
+    "tx": "0x184302cff976004f0ff7d714976bd87b03923a8492a4758c6bc0fef99b474ac9",
+    "time": "2026-02-17T06:53:32.000Z"
+   }
+  },
+  {
+   "rater": "0xdca0ffedd213b0d291dea39303755f21893218dc",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55860633,
+    "tx": "0xb0bb989a5070414225569efa28fdf0d252a46191e5a2f890076b86dd56d80542",
+    "time": "2026-02-17T00:10:25.000Z"
+   }
+  },
+  {
+   "rater": "0xe09d229da71e527ba9f056acfb2763d2f70fa24e",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55961615,
+    "tx": "0xfbbfe3750b4fe9859ff72bc165453f95ab273e3f7f1751cb19613898ab2a9745",
+    "time": "2026-02-17T11:22:40.000Z"
+   }
+  },
+  {
+   "rater": "0xe34c66732cbed5a64259c088085844e344df8eee",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55784976,
+    "tx": "0x859137bbec7252ab6a0cddc2aee205c47d4f33b835794bf889c2c14c4f08eb7d",
+    "time": "2026-02-16T15:46:38.000Z"
+   }
+  },
+  {
+   "rater": "0xe3641e7e87cc1b35fa3268c23a3a87a62278f6c8",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55983577,
+    "tx": "0x4552859769f3ac93fa02dcaf70daf8ce6bf1549840cee9b6d2dc5a6643e4b000",
+    "time": "2026-02-17T13:49:55.000Z"
+   }
+  },
+  {
+   "rater": "0xe466ee230beb8b08670173a70b721b638942463b",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55808261,
+    "tx": "0x2e400d48db0602706fb493ab3048d1cf77af0a2665fcbb041fa5646cade31d05",
+    "time": "2026-02-16T18:21:42.000Z"
+   }
+  },
+  {
+   "rater": "0xe7e46a8190446b89fdf3a0d2e8dbfd4cf2f4f76d",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55768529,
+    "tx": "0xd8f7a339f51471bd2de2ee105127e10eca9a50efce3134c9c18c65e4e81ac528",
+    "time": "2026-02-16T13:57:06.000Z"
+   }
+  },
+  {
+   "rater": "0xebb0f23bbe0c04e3c0ca77d2cf71da26def0d975",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55739191,
+    "tx": "0x3e8c25290abab358d9f8047d90e9b47d0762314bcaae3418e21a95c4d25e5558",
+    "time": "2026-02-16T10:39:12.000Z"
+   }
+  },
+  {
+   "rater": "0xecea60c925650d213973724e75873b4d8db1c0ee",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55944407,
+    "tx": "0x0695c66a9411f1db780c76f2a096d9e477baea9fb9247359af8b1f7b07ee53c6",
+    "time": "2026-02-17T09:28:06.000Z"
+   }
+  },
+  {
+   "rater": "0xedffcbe0acd4860a59ad1ca413ff6223510d4766",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55982426,
+    "tx": "0xc405dce3d567adee30ee7d5ca3d7e1aa0b7a7e8fcb146780b03d5c376eff5d89",
+    "time": "2026-02-17T13:42:16.000Z"
+   }
+  },
+  {
+   "rater": "0xefa0bcc547ba8299a6260774a1252471eff331b7",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55963964,
+    "tx": "0x6e39fe3796be5f0c17097df6d4ee75927e54fcbc8b0c64ebf0931f4684fae9ec",
+    "time": "2026-02-17T11:38:19.000Z"
+   }
+  },
+  {
+   "rater": "0xf0d4cf14550125f606fdd163798bf22c6693dc7e",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55786581,
+    "tx": "0xa3162df8d7bc47659079eea1083449f057d19cd0aa79c6b2f988dcf4dbc76915",
+    "time": "2026-02-16T15:57:21.000Z"
+   }
+  },
+  {
+   "rater": "0xf166d4082c00dc1a9298181b649f74dd4870f292",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55845889,
+    "tx": "0xef7ece511a56151c945e44e6b93a4e273fb4751ef231b8cad577b7f971bc8928",
+    "time": "2026-02-16T22:32:12.000Z"
+   }
+  },
+  {
+   "rater": "0xf17ba4683d6945ffae823f8f8e72fe48087b4c80",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55730385,
+    "tx": "0x62318455e141b1020e64e4f84de0fda4a55ef1cfe77e8530be7975f19195badc",
+    "time": "2026-02-16T09:39:34.000Z"
+   }
+  },
+  {
+   "rater": "0xf23351a077b9b6da8ff69d71e1574952e02e848b",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55991756,
+    "tx": "0xd19d8b3341fefcea7789849981d99a43d0a3888a7a9f17ace2a5ba46a4ab5de1",
+    "time": "2026-02-17T14:44:26.000Z"
+   }
+  },
+  {
+   "rater": "0xf2701affa98da7463dd43f544a63ce28e85fdf23",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55833011,
+    "tx": "0x4613b529b8ccb27c36d633bf96df81939c4d8c11b16a96fc2eb49355446c59bb",
+    "time": "2026-02-16T21:06:31.000Z"
+   }
+  },
+  {
+   "rater": "0xf55a0efee552b61f954bce15acadba6f82227d6b",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55810414,
+    "tx": "0xc8ad7aaaa54001a123239ae920562cc4eff3e2ec41b6c57e38295467172efc3f",
+    "time": "2026-02-16T18:36:02.000Z"
+   }
+  },
+  {
+   "rater": "0xf774ea7dd2d4263c9a2c9383e8279280cc1d0fa1",
+   "firstFunding": {
+    "from": "0x97cd97cfe21799bacbf39d0a53469e5f82f30996",
+    "wei": "11000000000000000000",
+    "asset": "MON",
+    "block": 55759213,
+    "tx": "0x39e12ab5c16b5c799ec4ac59d51560c8a093ceca41cbeed66365fcc12777d5ec",
+    "time": "2026-02-16T12:54:37.000Z"
+   }
+  }
+ ]
+}
