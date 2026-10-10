@@ -330,7 +330,10 @@ def watch_once(chain: C.Chain, contract: str, cfg: C.SetConfig, set_id: str, nod
         for d in disc:
             if d.provable:
                 by_row.setdefault(d.u, []).append(d)
-        onchain = chain_amends(chain, contract, set_id, sub["rows"], nodes, int(lg["blockNumber"], 16), journal)
+        # the amendments on chain matter only for a row with something to prove: a clean audit scans no proof logs
+        # (alchemy-live: on a 10-block eth_getLogs RPC, the scan since an old certificate is ~10^5 calls)
+        onchain = chain_amends(chain, contract, set_id, sub["rows"], nodes, int(lg["blockNumber"], 16),
+                               journal) if by_row else {}
         for u, lst in by_row.items():
             amends, voided = onchain.get(u, ([], False))  # review AMENDS: start from the proofs already on chain
             if voided:

@@ -1,0 +1,10 @@
+13:51:12.861  ANCRE x Alchemy  listening on :8797  chain 10143  dry: certificates are prepared, never sent
+13:51:19.710  Alchemy webhook  NewFeedback  block 68979076  signature OK  Finalized  head 69817883 (+838807 blocks)
+13:51:21.733  Envio indexer at block 69817883 (waited 49 ms): 2349 feedbacks exported in 1972 ms
+13:51:23.053  submitCertificate PREPARED (dry, not sent): 7 nodes, 7 rows, mass 59.26 %  eth_estimateGas 560952, gas limit 608024
+13:51:23.055  TIMELINE  event block 68979076 -> webhook at head +838807 blocks (254296.468 s after the block timestamp) -> prepared at head 69817890 (+838814 blocks, 3587.6 ms after the webhook)
+13:51:23.299  Alchemy webhook  CertificateSubmitted  block 68979094  signature OK  Finalized  head 69817895 (+838801 blocks)
+13:51:25.306  Envio indexer at block 69817894 (waited 51 ms): 2349 feedbacks exported in 1956 ms
+13:51:26.601  watcher audit of certificate tx 0x85b3ab3818…: CLEAN
+13:51:27.282  Alchemy webhook  NewFeedback  block 68979105  signature OK  Finalized  head 69817908 (+838803 blocks)
+13:51:27.282  no event touches the certificate (its client carries no mass): nothing to recompute

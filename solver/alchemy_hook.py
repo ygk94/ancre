@@ -23,12 +23,29 @@ the POST arrives: block <= finalized -> "Finalized", else "notFinalized" (Propos
 tell them apart), plus the head distance in blocks (latest − block).
 
 Secrets: ALCHEMY_SIGNING_KEY, ALCHEMY_NOTIFY_TOKEN, ALCHEMY_API_KEY come from the environment or a local .env file
-(gitignored), never from the repository nor the command line.
+(gitignored), never from the repository nor the command line; journal and console lines are redacted.
+
+Fresh data on every trigger (alchemy-live, 10/10): the webhook says WHICH block changed; the registry content at that
+block comes from the Envio indexer (chantier 03, D42), exported at its head once the head has reached the event's
+block (from_indexer.export: the same files and rules as the parity-checked export). Why not the Alchemy RPC itself:
+the ERC-8004 registry has no per-client index, so rebuilding the graph needs the full NewFeedback / identity history,
+and Alchemy's Free tier caps eth_getLogs at 10 blocks per call (MEASURED 10/10, monad-testnet), i.e. millions of
+calls for the testnet history. The indexer exports the whole testnet registry in ~2 s (MEASURED 10/10: 2 349
+feedbacks, 2 107 agents) and trailed the chain head by 2 blocks when measured. Alchemy carries the trigger and every
+chain read of the certifier (node table, certificate, eth_estimateGas, submission).
+
+Timeline (journal action `timeline`, and one console line per step for the video): event block and its timestamp,
+webhook reception (ms), head at reception, indexer ready, certificate prepared or submitted (tx block), as deltas in
+blocks and in ms.
 
 Usage:
   .venv/bin/python alchemy_hook.py query   --chain 143 [--ancre 0x...]      # GraphQL filter to paste in the dashboard
-  .venv/bin/python alchemy_hook.py serve   --port 8787 --rpc URL [--ancre 0x... --set-config cfg.json --set-id 0x...
-                                           --data DIR] [--send]           # receiver + fallback poller (dry by default)
+  .venv/bin/python alchemy_hook.py serve   --port 8787 --chain 10143 --rpc alchemy --ancre 0x... --set-config cfg.json
+                                           --set-id 0x... --indexer URL [--send --from 0x.. --keystore F --password-env V]
+                                           # receiver + fallback poller; without --send every recertification is
+                                           # PREPARED (chain re-read, eth_estimateGas), never signed
+  (`--rpc alchemy` = https://monad-{mainnet,testnet}.g.alchemy.com/v2/$ALCHEMY_API_KEY; `--data DIR` instead of
+   `--indexer` keeps the former static export, which lags every new event: data_behind)
   .venv/bin/python alchemy_hook.py payloads --from-block A --to-block B --out FILE   # Alchemy-shaped payloads rebuilt
                                            from real chain logs (replay until Hugo's webhook exists)
   .venv/bin/python alchemy_hook.py replay  --file FILE --url http://127.0.0.1:8787/alchemy   # sign + POST them
@@ -79,14 +96,45 @@ CONTRACT_KINDS = ("CertificateSubmitted", "EdgeProven", "RowVoided")
 KIND_OF = {v: k for k, v in TOPICS.items()}
 
 
-def load_env(path: Path = HERE / ".env") -> None:
-    """KEY=VALUE lines of a local, gitignored .env into os.environ (existing variables win)."""
+def load_env(path: Path | None = None) -> None:
+    """KEY=VALUE lines of a local, gitignored .env into os.environ (existing variables win). Default: solver/.env,
+    or the file named by ANCRE_ENV (a git worktree reads the main checkout's .env without copying it)."""
+    path = Path(path or os.environ.get("ANCRE_ENV") or HERE / ".env")
     if path.exists():
         for line in path.read_text().splitlines():
             line = line.strip()
             if line and not line.startswith("#") and "=" in line:
                 k, v = line.split("=", 1)
                 os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+
+
+ALCHEMY_RPC = {143: "https://monad-mainnet.g.alchemy.com/v2/", 10143: "https://monad-testnet.g.alchemy.com/v2/"}
+SECRET_VARS = ("ALCHEMY_API_KEY", "ALCHEMY_SIGNING_KEY", "ALCHEMY_NOTIFY_TOKEN")
+
+
+def resolve_rpc(spec: str, chain: int) -> str:
+    """`alchemy` -> the keyed Alchemy URL of the chain (the key never appears on the command line)."""
+    if spec != "alchemy":
+        return spec
+    key = os.environ.get("ALCHEMY_API_KEY", "")
+    if not key:
+        raise SystemExit("--rpc alchemy: ALCHEMY_API_KEY is not set (solver/.env)")
+    return ALCHEMY_RPC[chain] + key
+
+
+def redact(x):
+    """Secrets out of anything that is printed or journaled (a cast error can quote the keyed RPC URL)."""
+    if isinstance(x, str):
+        for v in SECRET_VARS:
+            sec = os.environ.get(v)
+            if sec and len(sec) >= 8:
+                x = x.replace(sec, f"<{v}>")
+        return x
+    if isinstance(x, dict):
+        return {k: redact(v) for k, v in x.items()}
+    if isinstance(x, (list, tuple)):
+        return [redact(v) for v in x]
+    return x
 
 
 def graphql_query(chain: int, ancre: str | None = None) -> str:
@@ -266,10 +314,17 @@ class Receiver:
             try:
                 m.update(commit_state(self.rpc, meta["number"]))
             except Exception as e:                                      # a measure must never block the trigger
-                m["commitStateError"] = str(e)[:200]
+                m["commitStateError"] = redact(str(e))[:200]
+        self.journal.log(action="webhook_received", block=meta["number"], kinds=sorted({e["kind"] for e in events}),
+                         events=len(events), signature="ok", **m)
         res = self.d.handle(events, "webhook", meta["number"])
-        return self.journal.log(action="webhook", eventId=meta["eventId"], sequenceNumber=meta["sequenceNumber"],
-                                blockHash=meta["hash"], **m, **res)
+        t_done = time.time()
+        out = self.journal.log(action="webhook", eventId=meta["eventId"], sequenceNumber=meta["sequenceNumber"],
+                               blockHash=meta["hash"], **m, **res)
+        tl = timeline(meta, m, res, t_recv, t_done)
+        if tl:
+            self.journal.log(action="timeline", **tl)
+        return out
 
     def work_forever(self):
         while True:
@@ -301,6 +356,163 @@ class Receiver:
             def log_message(self, *a):
                 pass
         return H
+
+
+def timeline(meta: dict, m: dict, res: dict, t_recv: float, t_done: float) -> dict | None:
+    """Event block -> webhook -> data -> certificate, in blocks and in ms (None if nothing was recertified).
+    Block times are the header's (1 s resolution on Monad); webhook and certificate times are this host's clock."""
+    rc = res.get("recertify")
+    if not isinstance(rc, dict) or meta.get("number") is None:
+        return None
+    ev = meta["number"]
+    tl = {"eventBlock": ev, "eventBlockTime": meta.get("timestamp"), "webhookAt": round(t_recv, 3),
+          "blockToWebhookS": m.get("latencyS"), "headAtWebhook": (m.get("head") or {}).get("latest"),
+          "commitState": m.get("state"), "certAction": rc.get("action"), "certDoneAt": round(t_done, 3),
+          "webhookToCertMs": round((t_done - t_recv) * 1000, 1)}
+    if tl["headAtWebhook"] is not None:
+        tl["blocksEventToWebhook"] = tl["headAtWebhook"] - ev
+    data = rc.get("data") or {}
+    if data:
+        tl.update(indexerHead=data.get("indexerHead"), indexerWaitMs=data.get("waitMs"),
+                  exportMs=data.get("exportMs"))
+    certified = rc.get("action") == "certified"
+    end = rc.get("txBlock") if certified else rc.get("head")
+    if end is not None:
+        tl["certBlock" if certified else "headAtPrepare"] = end
+        tl["blocksEventToCert"] = end - ev
+    if rc.get("lastTx"):
+        tl["tx"] = rc["lastTx"]
+    return tl
+
+
+def _hms(ts: float | None) -> str:
+    if not ts:
+        return "--:--:--.---"
+    return time.strftime("%H:%M:%S", time.localtime(ts)) + f".{int((ts % 1) * 1000):03d}"
+
+
+def _pct(wad) -> str:
+    return f"{int(wad) / 1e16:.2f} %" if wad is not None else "?"
+
+
+def console_line(ev: dict) -> str | None:
+    """One readable line per step of the live flow (filmed for the Alchemy video). None: not shown."""
+    a, t = ev.get("action"), _hms(ev.get("ts"))
+    if a == "alchemy_serve":
+        mode = "SEND (real transactions)" if ev.get("send") else "dry: certificates are prepared, never sent"
+        return f"{t}  ANCRE x Alchemy  listening on :{ev.get('port')}  chain {ev.get('chain')}  {mode}"
+    if a == "webhook_received":
+        head = (ev.get("head") or {}).get("latest")
+        lag = f"  head {head} (+{head - ev['block']} blocks)" if head is not None and ev.get("block") else ""
+        state = f"  {ev['state']}" if ev.get("state") else ""
+        return (f"{t}  Alchemy webhook  {', '.join(ev.get('kinds') or [])}  block {ev.get('block')}  "
+                f"signature OK{state}{lag}")
+    if a == "webhook_rejected":
+        return f"{t}  Alchemy webhook REJECTED: {ev.get('reason')}"
+    if a == "data_ready":
+        return (f"{t}  Envio indexer at block {ev.get('indexerHead')} (waited {ev.get('waitMs')} ms): "
+                f"{ev.get('feedbacks')} feedbacks exported in {ev.get('exportMs')} ms")
+    if a == "data_behind":
+        return f"{t}  data behind the event block {ev.get('eventBlock')}: the poller retries"
+    if a == "skip_identical":
+        return f"{t}  recomputed: same certificate as on chain, nothing to submit"
+    if a in ("prepared", "certified", "planned"):
+        what = {"prepared": "submitCertificate PREPARED (dry, not sent)", "certified": "certificate SUBMITTED",
+                "planned": "certificate planned (offline)"}[a]
+        extra = ""
+        if a == "prepared" and ev.get("txs"):
+            last = ev["txs"][0]
+            extra = (f"  eth_estimateGas {last['estimate']}, gas limit {last['gasLimit']}" if "gasLimit" in last
+                     else f"  {last.get('error', '')}")
+        if a == "certified":
+            extra = f"  tx {ev.get('lastTx')}  block {ev.get('txBlock')}"
+        return (f"{t}  {what}: {ev.get('nCert')} nodes, {ev.get('rows')} rows, mass {_pct(ev.get('mass'))}{extra}")
+    if a == "deferred_replacement_rule":
+        return f"{t}  certificate deferred {ev.get('waitBlocks')} blocks (replacement rule)"
+    if a == "timeline":
+        if "certBlock" in ev:
+            end = f"certificate in block {ev['certBlock']}"
+        else:
+            end = f"prepared at head {ev.get('headAtPrepare')}"
+        return (f"{t}  TIMELINE  event block {ev.get('eventBlock')} -> webhook at head +{ev.get('blocksEventToWebhook')}"
+                f" blocks ({ev.get('blockToWebhookS')} s after the block timestamp) -> {end} "
+                f"(+{ev.get('blocksEventToCert')} blocks, {ev.get('webhookToCertMs')} ms after the webhook)")
+    if a == "webhook" and ev.get("fresh") and not ev.get("relevant") and not ev.get("certificates"):
+        return f"{t}  no event touches the certificate (its client carries no mass): nothing to recompute"
+    if a == "audit":
+        n = len(ev.get("discrepancies") or [])
+        return (f"{t}  watcher audit of certificate tx {str(ev.get('tx'))[:12]}…: "
+                f"{'CLEAN' if not n else str(n) + ' discrepancies (proofs follow)'}")
+    if a == "poll_caught":
+        return f"{t}  fallback poller caught {ev.get('fresh')} event(s) the webhook had not delivered"
+    if a == "webhook_silent":
+        return f"{t}  webhook silent for {ev.get('seconds')} s (the poller keeps covering the blocks)"
+    if a == "error":
+        return f"{t}  ERROR {ev.get('where', '')} {str(ev.get('error', ''))[:200]}"
+    return None
+
+
+class LiveJournal(C.Journal):
+    """The service journal: redacted, and echoed to the console in readable lines (console_line)."""
+
+    def __init__(self, path, echo: bool = True):
+        super().__init__(path)
+        self.echo = echo
+
+    def log(self, **ev):
+        ev = super().log(**redact(ev))
+        line = console_line(ev) if self.echo else None
+        if line:
+            print(line, flush=True)
+        return ev
+
+
+class IndexerData:
+    """Registry data for one trigger, from the Envio indexer (module docstring): wait until the indexer's head has
+    reached the event's block (bounded by wait_s), then export at that head into `out` (atomic files) and load."""
+
+    def __init__(self, src, out: Path, journal: C.Journal, wait_s: float = 60.0, poll_s: float = 0.5,
+                 sleep=time.sleep, clock=time.monotonic):
+        self.src, self.out, self.journal = src, Path(out), journal
+        self.wait_s, self.poll_s, self.sleep, self.clock = wait_s, poll_s, sleep, clock
+        self.last = None
+
+    def load(self, block: int):
+        """(feedbacks, identity, info), or None if the indexer is still behind `block` after wait_s."""
+        from from_indexer import export
+        from graph import load_feedbacks_onchain, load_identity_json
+        t0 = self.clock()
+        head = self.src.head()
+        while head < block:
+            if self.clock() - t0 > self.wait_s:
+                self.last = head
+                return None
+            self.sleep(self.poll_s)
+            head = self.src.head()
+        t1 = self.clock()
+        files = export(self.src, head, self.out)
+        fbs, idn = load_feedbacks_onchain(files["feedbacks"]), load_identity_json(files["identity"])
+        info = {"indexerHead": head, "waitMs": round((t1 - t0) * 1000),
+                "exportMs": round((self.clock() - t1) * 1000), "feedbacks": len(fbs)}
+        self.last = head
+        self.journal.log(action="data_ready", eventBlock=block, **info)
+        return fbs, idn, info
+
+
+class StaticData:
+    """The former source: a from_indexer.py export directory, read as is (it lags new events: data_behind)."""
+
+    def __init__(self, directory: str | Path):
+        self.dir, self.last = Path(directory), None
+
+    def load(self, block: int):
+        from graph import load_feedbacks_onchain, load_identity_json
+        fbs = load_feedbacks_onchain(self.dir / "onchain_feedbacks.json")
+        idn = load_identity_json(self.dir / "identity.json")
+        self.last = idn.block
+        if idn.block < block:
+            return None
+        return fbs, idn, {"indexerHead": idn.block, "static": True}
 
 
 def poll_once(d: Dispatcher, chain: C.Chain, chain_id: int, ancre: str | None, head: int, start: int) -> dict:
@@ -376,35 +588,49 @@ def post(url: str, payload: dict, key: str) -> int:
 # ----------------------------------------------------------------------------- service
 
 
-def build_service(a, journal: C.Journal) -> tuple[Dispatcher, C.Certifier | None]:
-    """Wire the dispatcher to the existing certifier and watcher (dry unless --send)."""
+def build_service(a, journal: C.Journal, source=None, chain=None) -> tuple[Dispatcher, C.Certifier | None]:
+    """Wire the dispatcher to the existing certifier and watcher. Without --send a recertification is PREPARED
+    (node table and certificate re-read, eth_estimateGas from the set owner) and never signed; --send is Hugo's."""
     svc = None
     d = Dispatcher(set_id=a.set_id, journal=journal)
-    if a.set_config and a.set_id and a.ancre and a.data:
-        from graph import load_feedbacks_onchain, load_identity_json
+    if source is None and a.set_config and a.set_id and a.ancre:
+        if getattr(a, "indexer", None):
+            from from_indexer import GraphQLSource
+            source = IndexerData(GraphQLSource(a.indexer, a.chain), Path(a.data_dir), journal, wait_s=a.indexer_wait)
+        elif a.data:
+            source = StaticData(a.data)
+    if a.set_config and a.set_id and a.ancre and source is not None:
         import watcher as Wt
         cfg = C.SetConfig.load(a.set_config)
-        signer = C.Signer.build(a.sender, a.keystore if a.send else None, a.password_env)
-        chain = C.Chain(a.rpc, signer)
+        if cfg.set_id.lower() != a.set_id.lower():
+            raise SystemExit(f"--set-config gives setId {cfg.set_id}, not --set-id {a.set_id}")
+        if a.send and not (a.sender and a.keystore and a.password_env):
+            raise SystemExit("--send needs --from, --keystore and --password-env (never a silent dry run)")
+        signer = C.Signer.build(a.sender or cfg.owner, a.keystore if a.send else None, a.password_env)
+        chain = chain or C.Chain(a.rpc, signer)        # (tests inject a fake chain)
         svc = C.Certifier(cfg, chain, a.ancre, a.set_id, Path(a.state), journal)
-        load = lambda: (load_feedbacks_onchain(Path(a.data) / "onchain_feedbacks.json"),
-                        load_identity_json(Path(a.data) / "identity.json"))
 
         def recertify(events, block):
-            fbs, idn = load()
-            if idn.block < block:                       # the registry export lags the event: say it, retry on poll
-                return journal.log(action="data_behind", dataBlock=idn.block, eventBlock=block)
-            return svc.run_once(fbs, idn, reason=f"alchemy: {len(events)} relevant event(s)", block=block,
-                                dry=not a.send)
+            got = source.load(block)
+            if got is None:                             # the data lags the event: say it, the poller retries
+                return journal.log(action="data_behind", dataBlock=source.last, eventBlock=block)
+            fbs, idn, info = got
+            kinds = ", ".join(sorted({e["kind"] for e in events}))
+            r = svc.run_once(fbs, idn, reason=f"alchemy: {len(events)} relevant event(s) ({kinds})", block=block,
+                             prepare=not a.send)
+            return {**r, "data": info}
 
         def audit(frm, to):
-            fbs, idn = load()
+            got = source.load(to)
+            if got is None:
+                return ["data_behind"]
+            fbs, idn, _ = got
             nodes = C.chain_table(chain, a.ancre, a.set_id, cfg.anchors)
             out = [e.get("action") for e in Wt.watch_once(chain, a.ancre, cfg, a.set_id, nodes, fbs, idn, journal,
-                                                          frm, to, send=a.send and signer is not None)]
+                                                          frm, to, send=a.send)]
             if svc.contract_changed(C.OnChain.read(chain, a.ancre, a.set_id)):   # review THIRD: a third party moved
                 out.append(svc.run_once(fbs, idn, reason="alchemy: contract state changed", block=to,
-                                        dry=not a.send).get("action"))
+                                        prepare=not a.send).get("action"))
             return out
         d.on_recertify, d.on_audit, d.support_of = recertify, audit, (lambda: svc.support)
     return d, svc
@@ -421,11 +647,14 @@ def main(argv=None):
     s.add_argument("--port", type=int, default=8787)
     s.add_argument("--host", default="127.0.0.1")
     s.add_argument("--chain", type=int, default=143)
-    s.add_argument("--rpc", default="https://rpc1.monad.xyz")
+    s.add_argument("--rpc", default="https://rpc1.monad.xyz", help="URL, or `alchemy` (keyed URL from .env)")
     s.add_argument("--ancre", help="AnchoredReputation address")
     s.add_argument("--set-config")
     s.add_argument("--set-id")
-    s.add_argument("--data", help="from_indexer.py export directory")
+    s.add_argument("--data", help="static from_indexer.py export directory (lags new events; prefer --indexer)")
+    s.add_argument("--indexer", help="Envio GraphQL endpoint: a fresh export at each trigger")
+    s.add_argument("--indexer-wait", type=float, default=60.0, help="max seconds to wait for the indexer head")
+    s.add_argument("--data-dir", default="out/alchemy-live/data", help="where --indexer exports are written")
     s.add_argument("--state", default="certifier_state.json")
     s.add_argument("--journal", default="alchemy.jsonl")
     s.add_argument("--poll-interval", type=float, default=30.0)
@@ -450,7 +679,7 @@ def main(argv=None):
         print(graphql_query(a.chain, a.ancre))
         return 0
     if a.cmd == "payloads":
-        pl = payloads_from_chain(a.rpc, a.chain, a.from_block, a.to_block, a.ancre)
+        pl = payloads_from_chain(resolve_rpc(a.rpc, a.chain), a.chain, a.from_block, a.to_block, a.ancre)
         Path(a.out).write_text("\n".join(json.dumps(x) for x in pl) + "\n")
         print(f"{len(pl)} payloads, {sum(len(x['event']['data']['block']['logs']) for x in pl)} logs -> {a.out}")
         return 0
@@ -464,7 +693,9 @@ def main(argv=None):
         return 0
     if not key:
         raise SystemExit("🧑 ALCHEMY_SIGNING_KEY missing: create the webhook (Hugo), put its signing key in solver/.env")
-    journal = C.Journal(Path(a.journal))
+    a.rpc = resolve_rpc(a.rpc, a.chain)
+    Path(a.journal).parent.mkdir(parents=True, exist_ok=True)
+    journal = LiveJournal(Path(a.journal))
     d, _ = build_service(a, journal)
     rec = Receiver(d, key, a.rpc, journal)
     srv = ThreadingHTTPServer((a.host, a.port), rec.http_handler())
@@ -473,7 +704,9 @@ def main(argv=None):
     chain = C.Chain(a.rpc)
     start = a.from_block if a.from_block is not None else chain.block_number()
     d.covered = start - 1
-    journal.log(action="alchemy_serve", port=a.port, chain=a.chain, fromBlock=start, send=a.send)
+    journal.log(action="alchemy_serve", port=a.port, chain=a.chain, fromBlock=start, send=a.send,
+                rpc="alchemy" if C.ALCHEMY_HOST in a.rpc else a.rpc, ancre=a.ancre, setId=a.set_id,
+                data="indexer" if getattr(a, "indexer", None) else a.data)
     while True:                                          # fallback poller + silence alarm
         time.sleep(a.poll_interval)
         try:
@@ -484,7 +717,7 @@ def main(argv=None):
             if d.last_webhook and time.time() - d.last_webhook > a.silence:
                 journal.log(action="webhook_silent", seconds=round(time.time() - d.last_webhook))
         except Exception as e:
-            journal.log(action="error", error=str(e)[:500])
+            journal.log(action="error", where="poller", error=str(e)[:500])
 
 
 if __name__ == "__main__":

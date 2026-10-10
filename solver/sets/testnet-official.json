@@ -1,0 +1,40 @@
+{
+  "name": "ancre-demo-act2",
+  "anchors": [
+    "0xc016278eedaa2c73878bd28279c7f8d0ab2f5619",
+    "0x658d74da41c2c12a42d10aee6285cbdce8e1c752",
+    "0xec8047fc7ed9ef9b7f1aeb5ab2be26d231fd51d6"
+  ],
+  "lambdas": [
+    333333333333333334,
+    333333333333333333,
+    333333333333333333
+  ],
+  "alphaN": 1,
+  "alphaD": 3,
+  "filter_tags": [
+    "review",
+    "slash",
+    "vouch"
+  ],
+  "schema_path": "schema_reference.json",
+  "min_anchors": 2,
+  "max_age": 288000,
+  "min_refresh": 288000,
+  "slack_refresh": 0,
+  "refresh_lead": 20000,
+  "owner": "0x810724967b0d895d087b991304385720d4903c3f",
+  "owner_fallback": false,
+  "tag_schema_hash": "0x98f7b42fe5b6195397f4d6e7f9643dd7e7527f11965a047067d03ba9288138e0",
+  "theta": 10000000000000000,
+  "rho_n": 1,
+  "rho_d": 2,
+  "veto_quorum": 1,
+  "veto_max": -1,
+  "e_low_max": 10000000000000000,
+  "strict_transfer": true,
+  "registry_verified": true,
+  "submitters": [
+    "0x810724967b0d895d087b991304385720d4903c3f"
+  ]
+}

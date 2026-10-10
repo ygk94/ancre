@@ -9,3 +9,6 @@ __pycache__/
 # Env / secrets
 .env
 *.env
+# alchemy_hook.py serve: journals, state and per-trigger exports (runtime output)
+solver/out/alchemy/
+solver/out/alchemy-live*/
