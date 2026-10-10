@@ -11,6 +11,7 @@ import { bound, int, pct, pctU, short } from "../lib/format";
 import { href, type Route } from "../router";
 import { act1, type Dataset } from "../sources/useDataset";
 import { Addr, Avatar, BigNum, Link, Mass, Meter, SourceLine, StatusChip } from "./common";
+import { FundersPanel, fundersMeasure } from "./Funders";
 
 const TABS = [
   ["overview", "Overview"],
@@ -30,6 +31,7 @@ export function AgentPage({ route, ds, error }: { route: Route & { page: "agent"
   const row = inSet ? (ds!.rows.find((r) => r.id === id) ?? null) : null;
   const chain = net === "demo" ? null : chainIdOf(net);
   const live = useLiveRegistry(chain, id);
+  const funders = fundersMeasure(net, id); // D55: Alchemy Transfers API, committed measure + live re-check
   if (!ds && !error) return <div className="empty">Loading…</div>;
 
   const name =
@@ -92,6 +94,7 @@ export function AgentPage({ route, ds, error }: { route: Route & { page: "agent"
         <div>
           {!row && <NotInSet net={net} ds={ds} />}
           {tab === "overview" && row && ds && <Overview row={row} ds={ds} live={live.registry} />}
+          {tab === "overview" && funders && <FundersPanel m={funders} owner={row?.owner ?? live.identity?.owner ?? live.registry?.owner} />}
           {tab === "ratings" && (row && ds ? <Ratings id={id} ds={ds} /> : <RawRatings chain={chain} id={id} />)}
           {tab === "path" && row && ds && <Path id={id} row={row} ds={ds} />}
           {tab === "certificates" && <Certificates row={row} ds={ds} />}

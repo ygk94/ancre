@@ -8,6 +8,12 @@
 [build.environment]
   NODE_VERSION = "22"
 
+# Server-side functions (relative to base): /api/funders calls the Alchemy Transfers API with ALCHEMY_API_KEY, a
+# Netlify environment variable (Site configuration > Environment variables), never shipped in app/dist.
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
 # single-page app: unknown paths fall back to the screen
 [[redirects]]
   from = "/*"
