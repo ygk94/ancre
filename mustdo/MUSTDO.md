@@ -8,7 +8,7 @@
 ## 🔴 Ven 10/10 (aujourd'hui)
 
 1. [x] **Webhook Alchemy** ✅ : 18 livraisons signées, bloc → réception en 1,3 s (médiane), puis **de bout en bout en réel à 13:16 UTC** : avis → webhook 1,06 s → certificat on-chain +17 blocs / 6,3 s, audité CLEAN. **Le certificat officiel du testnet est rafraîchi.**
-2. [ ] **Netlify : variable `ALCHEMY_API_KEY`**, en cochant « Contains secret values ». En cours. Le push de 16:xx redéploie le site, donc pas besoin de *Trigger deploy*.
+2. [ ] **Netlify : variable `ALCHEMY_API_KEY`**, en cochant « Contains secret values ». En cours. Si la variable est créée après le dernier push, fais un *Trigger deploy* : les fonctions ne lisent la variable qu'au déploiement.
 3. [x] **Push** ✅ (mainnet, Alchemy, scripts vidéo, écran mainnet).
 4. [x] **Écran mainnet (option 1)** ✅ : lecture directe du contrat, avec le certificat, son âge et `STALE` (à partir du 11/10 vers midi UTC, estimé), les liens monadscan, le libellé « live · minimal run 10/10 » et 61 tests.
 5. [ ] **Relire le README public et le write-up.** Les textes de la plateforme sont dans `docs/soumission/textes-plateforme.txt` (adresses mainnet et mesures Alchemy déjà ajoutées).
