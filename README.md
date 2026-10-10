@@ -11,7 +11,10 @@ It is the reference implementation of a draft ERC, *Anchored Reputation for Trus
 | Hackathon | Monad Metropolis, track 04 — Trust, Identity & AI Infra |
 | Network | Monad mainnet (143) and testnet (10143), next to the canonical ERC-8004 registries |
 | Certificate level used in the demo | **Registry-verified** (every edge re-read from the registry at submission) |
-| Status at submission | **[TBD: contracts deployed on testnet / mainnet — see §7]** |
+| Status | **Deployed and run for real** on Monad testnet (act 2, 8/8 scenes, 2026-10-07) and mainnet (minimal run, 2026-10-10): addresses and transactions in §7 and [`demo/JUDGES.md`](demo/JUDGES.md) |
+| Live screen | https://ancre-xyz.netlify.app |
+| Indexer (Envio Cloud) | `https://indexer.dev.hyperindex.xyz/38cf597/v1/graphql`, repository [`ygk94/ancre-indexerv2`](https://github.com/ygk94/ancre-indexerv2) |
+| Video | **[TBD: video link, 12/10]** |
 
 **How to read the numbers.** Every figure below links to the file that produced it, with its date and one of four labels: **MEASURED** (output of a script or test in this repository, or an on-chain read we made), **DOC** (official documentation), **ESTIMATED**, **UNVERIFIED**.
 
@@ -45,7 +48,7 @@ We re-read the canonical registries on Monad mainnet directly on-chain (never th
 | Fact | Value | Status and source |
 |---|---|---|
 | Registries | Identity `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`, Reputation `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`, version 2.0.0 | MEASURED, `cast`, 2026-09-27 |
-| Agents / feedback entries | **10,262 / 9,283** at block 108,835,675 | MEASURED, 2026-09-28, [`solver/out/mainnet.md`](solver/out/mainnet.md) (snapshot in `solver/data/`) **[TBD: refreshed snapshot, lot 04-bis]** |
+| Agents / feedback entries | **10,262 / 9,283** at block 108,835,675 | MEASURED, 2026-09-28, [`solver/out/mainnet.md`](solver/out/mainnet.md) (snapshot in `solver/data/`). Live count from our Envio indexer on 2026-10-10: 10,330 agents, 9,297 entries, still 11 usable edges (MEASURED) |
 | Feedback pointing to one agent, Eve-8004 (#182) | **7,665 (83 %)**, from agents registered on 16–17 Feb 2026 at about 300 per hour | MEASURED, `solver/out/mainnet.md` |
 | Entries set to `1e38` | **117**, all on Eve-8004 | MEASURED, same file |
 | Naive average of Eve-8004 | **1.526 × 10³⁶** (`getSummary(182, all 7,665 clients)`) | MEASURED live, block 110,993,179, 2026-10-06 (commands in §5) |
@@ -80,7 +83,7 @@ A list of trusted raters, which ERC-8004 already accepts, tells you **whose rati
 2. **A formal Sybil bound.** Trust enters a group of accounts only through ratings given by accounts that already hold trust. A farm of thousands of agents rating each other receives nothing unless someone the anchors reach vouches for it. The bound is the classical one for personalized PageRank: π(S) ≤ ((1−α)/α) · Σ_{u∉S} π(u) · C(u, S).
 3. **A certificate checked on-chain.** The trust vector is computed off-chain, but the contract only accepts it if it is a provable lower bound of the true value (§3.2). At the Registry-verified level, the contract also re-reads every edge from the live ERC-8004 registry.
 
-On the real Monad registry, with two independent anchors (`0x0730…`, `0xf7d5…`), α = 1/3 (MEASURED, `solver/out/mainnet.md` §a and §d, **[TBD: recompute after lots 02-bis and 04-bis]**):
+On the real Monad registry, with two independent anchors (`0x0730…`, `0xf7d5…`), α = 1/3 (MEASURED, `solver/out/mainnet.md` §a and §d; re-run on 2026-10-10 with the current solver: identical):
 
 | Agent | Naive view | ANCRE |
 |---|---|---|
@@ -160,15 +163,22 @@ The `mm ancre` plugin for the MetaMask Agent Wallet ([`plugin/`](plugin/)) check
                                  │                         │
                  contracts/TrustGatedPayer.sol      plugin/ mm ancre (agent-side check,
                  ERC-1271, holds USDC, x402          human-only override)
+
+ Alchemy Custom Webhook (registries + ANCRE events) ──► certifier: recertify on the event, audit every certificate
+ app/  screen (Netlify): Envio for the registry, the contract for certified state, Alchemy Transfers API for "why zero?"
 ```
 
-| Component | What it is | Tests (MEASURED, 2026-10-06 on this commit unless stated) |
+| Component | What it is | Tests (MEASURED, date given) |
 |---|---|---|
-| [`contracts/`](contracts/) | `AnchoredReputation` (verifier, v1) and `TrustGatedPayer` (ERC-1271 payer), Solidity 0.8.28, Foundry ≥ 1.8 with `network = "monad"` | **147 passing**, including forks of Monad mainnet and testnet against the real registries |
-| [`solver/`](solver/) | Edge rules, PPR solver, certificate encoder (`ancre-cert-v1`), certifier service, watcher, Python | **135 passing** |
-| [`indexer/`](indexer/) | Envio HyperIndex indexer, three chains, parity with the solver | 28 passing (2026-10-05, reported by the indexer session; not re-run here) |
-| [`plugin/`](plugin/) | `mm ancre` plugin for the MetaMask Agent Wallet | 48 passing (2026-10-01, `docs/chantiers/rapports/05.md`) |
-| [`docs/erc/`](docs/erc/) | Draft ERC, 15 test vectors, an independent verifier (`verify.py`, Python standard library only) | `eipw` lint: 0 errors; `verify.py`: 0 failures (2026-10-01) |
+| [`contracts/`](contracts/) | `AnchoredReputation` (verifier, v1 with lot 02-bis) and `TrustGatedPayer` (ERC-1271 payer), Solidity 0.8.28, Foundry ≥ 1.8 with `network = "monad"` | **197 passing**, including forks of Monad mainnet and testnet against the real registries (2026-10-06) |
+| [`solver/`](solver/) | Edge rules, PPR solver, certificate encoder (`ancre-cert-v1`), certifier, watcher, Alchemy webhook receiver, Python | **223 passing** (2026-10-10) |
+| [`indexer/`](indexer/) | Envio HyperIndex indexer, three chains, edge rules and certificate audit in the handlers, parity with the solver | **75 passing** (2026-10-07) |
+| [`app/`](app/) | The screen: Discover, agent pages, live feed, act-2 replay, mainnet read on-chain | **61 passing** (2026-10-10) |
+| [`demo/`](demo/) | Act 2 runner (fork, testnet, mainnet), frozen replay, runbook | act 2 **PASS 8/8** on testnet (2026-10-07), minimal mainnet run **PASS** (2026-10-10) |
+| [`plugin/`](plugin/) | `mm ancre` plugin for the MetaMask Agent Wallet | **76 passing** (2026-10-06) |
+| [`docs/erc/`](docs/erc/) | Draft ERC, test vectors, an independent verifier (`verify.py`, Python standard library only) | `eipw` lint: 0 errors; 27 vectors, 0 failures (2026-10-07) |
+
+**Sponsor tools, where they sit in the flow.** **Envio** is the data layer: HyperIndex on Envio Cloud compiles the trust graph from raw ERC-8004 events and audits every ANCRE certificate inside its event handler; HyperSync runs the seven-chain survival scan (§1). **Alchemy** wakes the certifier: a Custom Webhook on the registries and on our contract triggers recertification (live on 2026-10-10: rating → webhook 1.1 s → new certificate on chain 17 blocks later, MEASURED), and the Transfers API explains a zero on the agent page. Details: [`docs/ressources/alchemy-integration.md`](docs/ressources/alchemy-integration.md), [`indexer/README.md`](indexer/README.md).
 
 The certificate is a single transaction sent directly from an account (not through a relayer or multicall), so the indexer can decode it from calldata and audit it.
 
@@ -201,19 +211,27 @@ cast call $R "getSummary(uint256,address[],string,string)(uint64,int128,uint8)" 
 # → 7665, 1526418786692759295499021526418786791 [1.526e36], 0      (block 110,993,179, 2026-10-06)
 ```
 
-**Then on-chain** **[TBD: once deployed, §7]**: `passesAnchorPolicy(182, <demo setId>)` on our contract returns `false`, for 29,231 gas.
+**Then on-chain**, on our mainnet deployment (2026-10-10):
 
-**Act 2** is our own traffic: honest providers, a scripted Sybil farm that pays its target for real, an anchor whose key is stolen, an anchor that vetoes a provider, and the second hop. Runbook: **[TBD: `demo/RUNBOOK.md`, lot 06]**. Transaction hashes: **[TBD]**.
+```bash
+A=0x0Da1579233E7Cb07a174986D059D59B1F293b30E; SET=0x627c8afe36b03432b280723a7170357333ded4d9ce56a78467c5829739653e10
+cast call $A "passesAnchorPolicy(uint256,bytes32)(bool)" 182 $SET --rpc-url https://rpc.monad.xyz
+# → false   (28,882 gas of execution in the bench, contracts/GAS.md; 41,039 for the whole call by eth_estimateGas)
+```
+
+**Act 2** is our own traffic: honest providers, a scripted Sybil farm that pays its target for real, an anchor whose key is stolen, an anchor that vetoes a provider, and the second hop. Runbook: [`demo/RUNBOOK.md`](demo/RUNBOOK.md). It ran for real on Monad testnet on 2026-10-07 (8/8 scenes), and a minimal version on mainnet on 2026-10-10 (an honest provider paid by the real x402 facilitator, Eve-8004 refused, an anchor's veto stopping the next payment 1 block and 332 ms later). Every address and transaction hash: [`demo/JUDGES.md`](demo/JUDGES.md). Without a network: `cd demo && npm ci && node run.ts --frozen`.
 
 ---
 
 ## 6. Run the tests
 
 ```bash
-cd contracts && forge test                     # 147 tests; fork tests need network access
+cd contracts && forge test                     # 197 tests; fork tests need network access
 cd solver && .venv/bin/python -m pytest -q tests
 cd indexer && pnpm install && pnpm test
 cd plugin && npm install && npm test
+cd app && npm ci && npm test
+cd demo && npm ci && node run.ts --frozen      # act 2 replayed from the frozen state, no network
 python3 docs/erc/assets/erc-0000/verify.py    # independent check of the ERC test vectors
 ```
 
@@ -225,12 +243,12 @@ Gas report: `cd contracts && forge test --match-contract "GasTest|RegistryBenchT
 
 | Contract | Monad testnet (10143) | Monad mainnet (143) |
 |---|---|---|
-| `AnchoredReputation` | **[TBD]** | **[TBD]** |
-| `TrustGatedPayer` | **[TBD]** | **[TBD]** |
-| Demo anchor set (`setId`) | **[TBD]** | **[TBD]** |
+| `AnchoredReputation` | [`0x8bE6D3DD7F20b94cD9B1Ec51De199291B109da9B`](https://testnet.monadscan.com/address/0x8bE6D3DD7F20b94cD9B1Ec51De199291B109da9B) | [`0x0Da1579233E7Cb07a174986D059D59B1F293b30E`](https://monadscan.com/address/0x0Da1579233E7Cb07a174986D059D59B1F293b30E) |
+| `TrustGatedPayer` | [`0xC9Db7a72960189e933a6B876A9359b5c605a5870`](https://testnet.monadscan.com/address/0xC9Db7a72960189e933a6B876A9359b5c605a5870) | [`0x52f361A14A49fAB267703203f833b997B9cF5Dc0`](https://monadscan.com/address/0x52f361A14A49fAB267703203f833b997B9cF5Dc0) (owner, treasury and operator: three distinct addresses) |
+| Demo anchor set (`setId`, content-addressed, same on both) | `0x627c8afe36b03432b280723a7170357333ded4d9ce56a78467c5829739653e10` | same |
 | ERC-8004 Identity (canonical, not ours) | `0x8004A818BFB912233c491871b3d84c89A494BD9e` | `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` |
 | ERC-8004 Reputation (canonical, not ours) | `0x8004B663056A597Dffe9eCcC1965A193B7388713` | `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63` |
-| Indexer GraphQL (Envio Cloud) | **[TBD]** | |
+| Indexer GraphQL (Envio Cloud, 143 + 10143 + Optimism) | `https://indexer.dev.hyperindex.xyz/38cf597/v1/graphql` | same endpoint |
 
 Source verification: **[TBD: MonadVision / Sourcify links]**.
 
@@ -238,32 +256,35 @@ Source verification: **[TBD: MonadVision / Sourcify links]**.
 
 ## 8. Gas measurements
 
-Foundry 1.8.3, solc 0.8.28 via-IR, `network = "monad"`, forks against the real registries. MON amounts at 102 gwei (MEASURED gas price, 2026-09-28). Source: [`contracts/GAS.md`](contracts/GAS.md) and [`contracts/PAYER.md`](contracts/PAYER.md). **[TBD: re-measure after lot 02-bis.]**
+Foundry 1.8.3, solc 0.8.28 via-IR, `network = "monad"`, forks against the real registries. MON amounts at 102 gwei (MEASURED gas price, 2026-09-28 and again 2026-10-10 on both networks). Source: [`contracts/GAS.md`](contracts/GAS.md) (bench after lot 02-bis) and [`contracts/PAYER.md`](contracts/PAYER.md); "on chain" rows are receipts of our real runs.
 
 | Operation | Gas | ≈ MON | Status |
 |---|---|---|---|
-| Demo certificate, 300 edges, 100 nodes, 3 anchors, **Registry-verified** | 14,974,802 | 1.53 | MEASURED 2026-10-01 |
-| Same, Submitter-attested | 1,351,917 | 0.14 | MEASURED 2026-10-01 |
-| Real mainnet graph (6 nodes, 5 edges), Registry-verified, first certificate | 1,028,760 | 0.10 | MEASURED 2026-10-01, fork of mainnet |
-| Register an anchor set (4 tags) | 423,614 | 0.04 | MEASURED 2026-10-01 |
-| `passesAnchorPolicy` on an unknown agent (a farm is refused) | 29,231 | 0.003 | MEASURED 2026-10-01 |
-| `assess`, no veto, strict transfer check | 80,609 | | MEASURED 2026-09-28 |
-| `assess` with live veto | 139,055 – 165,888 | | MEASURED 2026-09-28 |
-| x402 settlement through `TrustGatedPayer`, `exact` | 327,909 (EOA baseline 144,605) | 0.033 | MEASURED 2026-10-01 |
+| Demo certificate, 300 edges, 100 nodes, 3 anchors, **Registry-verified** | 15,024,552 | 1.53 | MEASURED 2026-10-06 (after 02-bis) |
+| Same, Submitter-attested | 1,449,205 | 0.15 | MEASURED 2026-10-06 |
+| Certificate of the demo set on mainnet, Registry-verified, on chain | 669,810 | 0.07 | MEASURED 2026-10-10, receipt `0xd87e…6d39` |
+| Real mainnet graph (6 nodes, 5 edges), Registry-verified, first certificate | 1,028,760 | 0.10 | MEASURED 2026-10-01, fork of mainnet (before 02-bis) |
+| Register an anchor set (3 anchors, 3 tags), on chain | 558,315 | 0.06 | MEASURED 2026-10-10, mainnet |
+| `passesAnchorPolicy` on an unknown agent (a farm is refused) | 28,882 | 0.003 | MEASURED 2026-10-06 |
+| `assess`, no veto, strict transfer check | 80,983 | | MEASURED 2026-10-06 |
+| `assess` with live veto, strict mode | 180,758 – 208,728 | | MEASURED 2026-10-06 |
+| x402 settlement through `TrustGatedPayer`, `exact`, on chain (paid by the facilitator) | 406,611 | 0.041 | MEASURED 2026-10-10, mainnet receipt `0xa099…a60c` |
+| x402 settlement through `TrustGatedPayer`, `exact`, fork bench | 327,909 (EOA baseline 144,605) | 0.033 | MEASURED 2026-10-01 |
 | x402 settlement through `TrustGatedPayer`, `upto` | 385,876 | 0.039 | MEASURED 2026-10-01 |
-| A proof (`proveEdge`, omission, dilution, fabrication) | 258,685 – 304,293 | ≈ 0.03 | MEASURED 2026-10-01 |
-| Deployment (simulation) | 8,804,333 | 0.90 | MEASURED 2026-09-28 |
+| A proof (`proveEdge`: omission, dilution, fabrication) | 340,800 – 392,502 | ≈ 0.04 | MEASURED 2026-10-06 (after 02-bis, +26 to +29 %) |
+| Deployment of `AnchoredReputation`, on chain | 9,470,101 | 0.97 | MEASURED 2026-10-10, mainnet |
 
 - A Registry-verified certificate costs about 45 k gas per edge re-read; the 30 M transaction limit (DOC) caps it at about 630 edges with 3 anchors (CALCULATED, `docs/chantiers/rapports/02.md` §3).
 - The trust check adds about 183 k gas to an x402 payment, paid by the facilitator: 2.3 times an ordinary transfer.
-- Recomputation to on-chain receipt: 157 to 390 ms on a local fork, measured with the earlier v0 contract (MEASURED 2026-09-28, `docs/chantiers/rapports/04.md`). **[TBD: testnet latency.]**
+- **Veto to refusal:** one block, 260 ms on testnet (2026-10-07) and 332 ms on mainnet (2026-10-10), MEASURED in the real runs.
+- **Rating to new certificate, event-driven:** the Alchemy webhook arrived 1.1 s after the block, and the certificate landed 17 blocks (6.3 s) after the webhook, on testnet (MEASURED 2026-10-10). Webhook delivery varies: some deliveries took 16–17 s.
 
 ---
 
 ## 9. Honest limits
 
 - **Registry-verified does not close omission or dilution.** The registry has no index by rater, so the contract cannot check that a row is complete. A certificate that leaves out edges, or under-declares a row's total, is accepted and only corrected once someone proves the gap. The lower bound holds once every gap has been proven, not before. We never call the certificate "unforgeable" (`contracts/PROOFS.md`, "Guarantees").
-- **An open set needs a watcher.** On a set where anyone may submit, a diluted certificate can replace an honest one until it is proven wrong. For the judging period, our watcher audits every certificate **[TBD: watcher running, lot 04-E5]**; a set owner can also restrict submission to attested submitters.
+- **An open set needs a watcher.** On a set where anyone may submit, a diluted certificate can replace an honest one until it is proven wrong. Our certifier and watcher (`solver/alchemy_hook.py`) audit every certificate they see, woken by the Alchemy webhook with an `eth_getLogs` poller as fallback; they run on our own machine, not as a hosted service. A set owner can also restrict submission to attested submitters.
 - **The honest graph on mainnet is tiny.** Eleven edges survive. ANCRE kills the farm but says "unknown" for nearly everyone. It does not rank honest agents on today's data.
 - **Relative to the reader.** ANCRE protects a reader from anchors it did not choose, not from its own choice of anchors.
 - **Fail-closed liveness.** If nobody recertifies, payments stop after the set's maximum age. ANCRE becomes a liveness dependency of every payer that uses it.
@@ -271,8 +292,9 @@ Foundry 1.8.3, solc 0.8.28 via-IR, `network = "monad"`, forks against the real r
 - **A live veto is the anchor's latest rating.** Any later rating by the same anchor on the same agent lifts the live veto; only the certified veto bit remains. Anchors must re-post a veto rather than rate the agent again.
 - **Recertification, not every block.** We recompute on every change of the graph, not on every block.
 - **A former owner can rate an agent right after transferring it.** The rule set accepts it (the alternative was unverifiable on-chain); the screen shows it as a diagnostic.
-- **The contract is 33,527 bytes.** It fits Monad's 128 KB limit (DOC) but not Ethereum's 24 KB (EIP-170). The ERC's reference implementation will need splitting before it targets Ethereum.
-- **The x402 facilitator path is tested on forks**, with a facilitator emulated after the open-source `x402-rs`. **[TBD: result of the real testnet settlement through `x402-facilitator.molandak.org` (test T1).]**
+- **The contract is 39,261 bytes** (MEASURED on chain, 2026-10-10). It fits Monad's 128 KB limit (DOC) but not Ethereum's 24 KB (EIP-170). The ERC's reference implementation will need splitting before it targets Ethereum.
+- **Fail-closed in practice.** Our certificates expire after about 24 hours (`maxAge` = 288,000 blocks). When nobody recertifies, the screen shows `STALE` and the payer refuses: this is visible on mainnet, where we ran once and do not recertify continuously.
+- **The x402 facilitator path settled for real** through `x402-facilitator.molandak.org`, with the ERC-1271 payer: on testnet in `exact` and `upto` (2026-10-07) and on mainnet in `exact` (2026-10-10). Refusals happen at `/verify`, so nothing is broadcast.
 
 ---
 
@@ -306,8 +328,11 @@ contracts/   AnchoredReputation.sol, TrustGatedPayer.sol; ENCODING.md (format v1
 solver/      graph.py (edge rules), ppr.py (certificate), certifier.py, watcher.py, run_mainnet.py, data/ (snapshot)
 indexer/     Envio HyperIndex: config.yaml, schema.graphql, src/, analytics/ (survival scan)
 plugin/      mm ancre: src/, skills/ancre/SKILL.md, DEMO.md
+app/         the screen (Vite + React), deployed on Netlify; netlify/functions/ (Alchemy Transfers API, key server-side)
+demo/        act 2 runner (fork, testnet, mainnet), frozen replay, RUNBOOK.md, JUDGES.md, trigger.ts (Alchemy demo)
 docs/erc/    draft ERC, test vectors, verify.py
-docs/        design notes and decision log (D1–D55), in French
+docs/        design notes, decision log (D1–D60), session reports, in French
+mustdo/      the to-do list of the human team, in French
 ```
 
 Research before the first commit (a private notes vault on ERC-8004, Monad and reputation algorithms, from early September 2026) is summarized in `docs/` and is identified as such; all code in this repository was written during the hackathon.
@@ -316,9 +341,9 @@ Research before the first commit (a private notes vault on ERC-8004, Monad and r
 
 ## 13. AI tool disclosure
 
-This project was built with heavy use of an AI coding agent, **Claude Code** (Anthropic). The agent drafted most of the research notes; the design-review "council" documents in `docs/conseil/`, where five expert voices are **simulated by a single model** (their independence is a writing discipline, not a guarantee); the PPR solver and its tests; the verifier and payer contracts, their tests and gas measurements; the Envio indexer; the MetaMask plugin; the draft ERC; and this README.
+This project was built with heavy use of an AI coding agent, **Claude Code** (Anthropic). The agent drafted most of the research notes; the design-review "council" documents in `docs/conseil/`, where five expert voices are **simulated by a single model** (their independence is a writing discipline, not a guarantee); the PPR solver and its tests; the verifier and payer contracts, their tests and gas measurements; the Envio indexer; the screen; the demo runner; the MetaMask plugin; the draft ERC; and this README.
 
-The human team set the goals, took every design decision recorded in the decision log (D1–D55 in `docs/conseil/CR-conseil.md`), chose what to measure, and reviewed **[TO FILL by the team: which parts were reviewed line by line — e.g. contract logic, certificate verification, payer — and which parts only at the level of tests and runs]**.
+The human team set the goals, took every design decision recorded in the decision log (D1–D60 in `docs/conseil/CR-conseil.md`), chose what to measure, and reviewed **[TO FILL by the team: which parts were reviewed line by line — e.g. contract logic, certificate verification, payer — and which parts only at the level of tests and runs]**.
 
 Every number in this README was produced by a script or test in this repository, or by an on-chain read whose command is given, and can be re-run. AI-generated text was checked against those outputs.
 
