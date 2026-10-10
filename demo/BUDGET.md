@@ -119,3 +119,70 @@ readable (naive average 100 over 5 feedback) and costs about 0.55 MON less. We k
 - **The real facilitator with the ERC-1271 payer.** This is gate P3 (test T1), still waiting for Hugo. If it fails,
   scenes 1, 4 and 7 (honest payments settled) fail on the testnet. The refusals are still observed, since they need no
   transaction.
+
+## 7. Minimal mainnet run (143), D40 + D59
+
+> Written 2026-10-10. **Nothing has been sent to the mainnet by us.** Source: the rehearsal
+> `MAINNET_OWNER=0xD6Fa…4071 node run.ts --rehearse-mainnet --sweep` on a fork of mainnet block **112 175 382**
+> (anvil 1.8.3 `--network monad`, interval mining at 1 s, base fee **pinned at 100 gwei** so that the fork pays the
+> mainnet bill: anvil otherwise lets it decay on empty blocks). Archive: `docs/chantiers/rapports/mainnet-rehearsal/`
+> (`run-20261010T115315Z.*`, 23 checks PASS).
+
+### Assumptions
+
+| | Value | Status |
+|---|---|---|
+| Mainnet gas price | **102 gwei** (`cast gas-price --rpc-url https://rpc.monad.xyz`) | MEASURED 10/10 (D59) |
+| Mainnet base fee | **100 gwei** (`cast base-fee`, fork of block 112 172 900) | MEASURED 10/10 |
+| Effective price on the rehearsal | 101 gwei (100 + 1 tip) for every transaction | MEASURED-FORK 10/10 |
+| Billing | the gas **limit**: Σ limit × price = 1.515 MON, Σ used × price = 1.371 MON, the operator's balance moved by the first | MEASURED-FORK 10/10 |
+| Scenes | 0 setup, 1 honest provider paid, 2 Eve-8004 refused, 4 breaker (slash, refused, recertified, refused) | choice (D40) |
+| Accounts that send | **3**: the operator (`ancre-demo`), anchor-A, anchor-B. anchor-C is in the set but sends nothing | MEASURED-FORK |
+
+### Measured transactions (billed gas limit)
+
+| Transaction | Gas limit | MON at 102 gwei |
+|---|---|---|
+| Deploy `AnchoredReputation` | 9 394 299 | 0.958 |
+| Deploy `TrustGatedPayer` (owner, treasury, operator distinct) | 2 408 511 | 0.246 |
+| `registerAnchorSet` (k = 3, 3 tags) | 552 671 | 0.056 |
+| `register` + `setAgentWallet` (provider-1) | 392 919 + 96 784 | 0.050 |
+| `giveFeedback` × 3 (2 vouches, 1 slash) | 326 950 + 307 954 + 222 939 | 0.087 |
+| `submitCertificate` × 2 (after the vouches; carrying the veto) | 663 872 + 348 586 | 0.103 |
+| Transfers: MON × 2 to the anchors, USDC to the payer, USDC rest to the treasury | 28 100 × 2 + 115 315 + 115 341 | 0.029 |
+| **14 transactions** | **15 002 341** | **1.530** |
+| Sweep of the 2 anchors (21 000 each, not in the ledger) | 42 000 | 0.004 |
+
+### Envelopes
+
+| | MON |
+|---|---|
+| Fees, all our transactions (MEASURED-FORK, limits × 102 gwei) | **1.53** |
+| With the +30 % margin shown by the script before it sends | 2.00 |
+| Capital lent to anchor-A / anchor-B (1.5 × their limits) | 0.156, of which **0.064 swept back** |
+| **Operator balance consumed by the rehearsal** (4 → 2.480 MON) | **1.520** (MEASURED-FORK) |
+| Required before the start (the script stops below it) | 2.04 MON and 0.03 USDC |
+
+Budget D59: 4 MON sent, ≤ 2.5 MON of fees and capital. **Spent: 1.52 MON (MEASURED-FORK), margin ≈ 1 MON.** The
+operator held **15 MON** on mainnet on 10/10 (MEASURED, `cast balance`, ≈ 11:55 UTC), above the 10 MON reserve: the
+reserve waits of `lib/chain.ts` then do not trigger for the operator.
+
+USDC: **0.03 USDC** deposited in the payer, **0.01** paid to provider-1, **0.02 left in the payer** (only the owner or
+the treasury can `sweep` it, RUNBOOK §7). `--sweep` sends the rest of the operator's USDC (0.97 in the rehearsal)
+to the treasury, so that the agent's key holds no USDC (AM-6.9).
+
+### What others pay
+
+- **The facilitator** (`0x7f6a…Db86`, the same signer on 143 and 10143, `GET /supported` 10/10; 94 344 MON on
+  mainnet, MEASURED 10/10): one settlement, **403 417 gas ≈ 0.041 MON** (MEASURED-FORK, emulated as x402-rs does it).
+  The two refusals (Eve, the vetoed provider) and the refusal after recertification fail at `/verify`: no transaction.
+- **Envio**: the mainnet indexer sees 8 registry events (5 Identity, 3 Reputation), MEASURED-FORK.
+
+### What the fork cannot tell
+
+- The real facilitator on **mainnet** with the ERC-1271 payer: it worked on the testnet on 07/10 (same binary
+  presumably, same signer), UNVERIFIED on 143. If `/settle` fails, scene 1 stops at "expected PAID"; Eve's refusal
+  and the breaker do not depend on it.
+- `eth_estimateGas` of `rpc.monad.xyz` against anvil's: on the testnet run of 07/10 the limits matched within the
+  10 % margin; UNVERIFIED on mainnet.
+- The gas price on the day: the script reads it and budgets at max(live, 102 gwei).

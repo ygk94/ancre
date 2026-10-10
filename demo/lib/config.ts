@@ -24,6 +24,32 @@ export const TESTNET = {
   facilitatorSigner: getAddress("0x7f6a2850669202519f0FE8aa912451238820Db86"), // MESURÉ 01/10 (chantier 05)
 } as const;
 
+/** Monad mainnet 143 (D40, D59): the real ERC-8004 v2.0.0 registries (CLAUDE.md §3, getVersion 2.0.0 re-read on a fork
+ * of block 112 172 900, 10/10), native USDC (FiatToken, domain "USDC"/"2", re-read 10/10), the same facilitator. */
+export const MAINNET = {
+  chainId: 143,
+  network: "eip155:143",
+  rpc: "https://rpc.monad.xyz", // sends and reads of the real run (25 rps)
+  archiveRpc: "https://rpc1.monad.xyz", // fork source: accepts the whole history (MEASURED 27/09)
+  identity: getAddress("0x8004A169FB4a3325136EB29fA0ceB6D2e539a432"),
+  reputation: getAddress("0x8004BAa17C55a88189AE136b182e5fdA19dE9b63"),
+  usdc: getAddress("0x754704Bc059F8C67012fEd69BC8A327a5aafb603"),
+  facilitatorUrl: "https://x402-facilitator.molandak.org",
+  // GET /supported, 10/10 11:40 UTC: exact + upto on eip155:143, signer below (94 344 MON on mainnet, same day)
+  facilitatorSigner: getAddress("0x7f6a2850669202519f0FE8aa912451238820Db86"),
+} as const;
+
+export type Network = {
+  chainId: number; network: string; rpc: string; archiveRpc?: string; identity: `0x${string}`; reputation: `0x${string}`;
+  usdc: `0x${string}`; facilitatorUrl: string; facilitatorSigner: `0x${string}`;
+};
+
+/** The network every module reads (live ES binding): the testnet unless run.ts selects the mainnet. */
+export let NET: Network = TESTNET;
+export function useNetwork(n: "testnet" | "mainnet") {
+  NET = n === "mainnet" ? MAINNET : TESTNET;
+}
+
 export const FORK_PORT = 8549;
 
 /** Demo set (D39 policy committed in the setId). */

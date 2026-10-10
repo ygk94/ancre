@@ -11,6 +11,8 @@ rejected, and a second hop (D50) paid. Everything below was run on 2026-10-06 (c
 | Resumable rehearsal | `node fork.ts` + `node run.ts --rpc http://127.0.0.1:8549` | fork | ~30 s |
 | Dress rehearsal of the testnet run | `node run.ts --rehearse-testnet --keystore <ks> --sweep` | fork, interval mining | 166 s at 1 s blocks (MEASURED 06/10) |
 | **Real testnet** (Hugo's go-ahead only) | `node run.ts --network testnet --keystore <ks> --sweep` | Monad testnet | 3-5 min (ESTIMATED) |
+| Rehearsal of the minimal mainnet act (§7) | `MAINNET_OWNER=0x… node run.ts --rehearse-mainnet [--keystore <ks>] --sweep` | fork of mainnet, 1 s blocks | 25 s (MEASURED 10/10) |
+| **Real mainnet, minimal** (Hugo only, §7) | `MAINNET_OWNER=0x… node run.ts --network mainnet --keystore <ks> --sweep` | Monad mainnet 143 | ~3 min (ESTIMATED) |
 
 ## 1. Prerequisites (≈ 5 minutes, once)
 
@@ -120,7 +122,7 @@ Cost (`BUDGET.md`): ≈ 3.15 MON of fees (≈ 4.1 with margin), 2.25 MON lent to
 7. `--sweep` sends the unspent MON of the 16 emitters back to the operator (`node run.ts --network testnet
    --keystore … --sweep-only` does only that).
 
-Nothing is ever sent to the mainnet by these scripts (D40: a minimal mainnet run is a separate decision).
+Nothing is sent to the mainnet by these commands: the mainnet has its own mode and its own guards (§7).
 
 ## 6. Options
 
@@ -131,3 +133,80 @@ Nothing is ever sent to the mainnet by these scripts (D40: a minimal mainnet run
 | `--fork-block N` | pin the fork |
 | `--sweep` / `--sweep-only` | recover the emitters' MON after the scenes / only that |
 | `ANCRE_FARM_SIZE`, `ANCRE_FARM_PAYMENTS` | farm size (10) and payments inside the farm (5) |
+
+## 7. Mainnet minimal run (🧑 Hugo only, D40 + D59)
+
+What it does on Monad **mainnet 143**, in 14 transactions of ours (`lib/mainnet.ts`): deploy `AnchoredReputation` and
+`TrustGatedPayer`, register the demo anchor set (3 anchors, m = 2, θ = 1 %), register **provider-1 (demo)**, have
+anchor-A and anchor-B vouch for it, certify, **pay it 0.01 USDC through the real x402 facilitator**, **refuse to pay
+Eve-8004** (agent #182, the farm already on the registry; refused at `/verify`, no transaction), then the **breaker**:
+anchor-B slashes provider-1, the next payment is refused, a certificate carries the veto, still refused.
+
+The payer has **three distinct addresses** (the script and the contract refuse otherwise):
+
+| Role | Address | Can |
+|---|---|---|
+| owner | `MAINNET_OWNER` = Hugo's MetaMask `0xD6FabC0A420127F493DeECdb461EaD4DAD644071` | sweep, pause/unpause, policy |
+| treasury | `0x0146082951DE0C4d09fca1e1277ACa8963a305B9` | receive (and sweep to itself) |
+| operator | `ancre-demo` keystore `0x810724967b0d895d087b991304385720d4903c3F` | sign payments, pause; **never** sweep or unpause (D47) |
+
+Budget (`BUDGET.md` §7): **1.52 MON consumed** in the rehearsal (MEASURED-FORK at 101 gwei), the script requires
+2.04 MON and 0.03 USDC before it sends anything; it prints the estimate first. About 3 minutes (ESTIMATED: 25 s on
+the fork at 1 s blocks; mainnet blocks are faster, the certifier and the facilitator dominate).
+
+Run everything in **Terminal.app**, from the repository root, in one shell:
+
+**1. Prerequisites** (once): §1 above, and on this branch:
+```bash
+export PATH="$PATH:$HOME/.foundry/bin"
+(cd contracts && forge build) && (cd demo && npm ci)
+ls ~/.foundry/keystores/ancre-demo                     # the operator keystore (0x8107…3c3F)
+```
+
+**2. Funds** on the operator, on mainnet (read-only checks):
+```bash
+cast balance 0x810724967b0d895d087b991304385720d4903c3F -e --rpc-url https://rpc.monad.xyz      # >= 2.1 (15 on 10/10)
+cast call 0x754704Bc059F8C67012fEd69BC8A327a5aafb603 "balanceOf(address)(uint256)" \
+  0x810724967b0d895d087b991304385720d4903c3F --rpc-url https://rpc.monad.xyz                    # >= 30000 (0.03 USDC)
+```
+
+**3. The owner**, for this shell only (the script refuses to start without it, or if it equals the operator or
+the treasury):
+```bash
+export MAINNET_OWNER=0xD6FabC0A420127F493DeECdb461EaD4DAD644071
+```
+
+**4. Dress rehearsal** with the real keystore, on a fork of mainnet (nothing is sent anywhere; the facilitator is
+emulated; the fork uses your real balances if the operator is funded, else 4 MON and 1 USDC):
+```bash
+cd demo
+node run.ts --rehearse-mainnet --keystore ~/.foundry/keystores/ancre-demo --sweep
+```
+Expect `MAINNET ACT PASS (scenes 0,1,2,4, rehearsal-mainnet)` and 23 ✓.
+
+**5. Real run**: type the phrase `send real Monad mainnet transactions`, then the keystore password:
+```bash
+node run.ts --network mainnet --keystore ~/.foundry/keystores/ancre-demo --sweep
+```
+Guards, in this order: `MAINNET_OWNER` present and distinct; the RPC answers chain id 143 and is not an anvil;
+the budget is printed and the run stops if the operator lacks MON or USDC; the typed phrase; the keystore must be
+`0x8107…3c3F`.
+
+**6. If it stops**: read the `✗` line, then run **the same command** again: done steps are skipped
+(`demo/out/state-mainnet.json`). Specific cases:
+- `expected PAID` at `1.pay:p1` (the facilitator refused the ERC-1271 payer, or `/settle` failed): the rest is
+  still worth running; re-run once; if it fails again, run `--scenes 2,4` and keep the testnet payment for the video.
+- a transaction reverted: it paid its limit; check it on https://monadscan.com before re-running.
+- the run stops before any send (balance, owner, chain): nothing was spent; fix and re-run.
+- to only recover the anchors' MON and the operator's USDC: `node run.ts --network mainnet --keystore … --sweep-only`.
+- never delete `out/state-mainnet.json` after a partial run: it is what prevents a second deployment.
+
+**7. After the run**:
+- the payer keeps 0.02 USDC. Only the owner (or the treasury) can take it out: from MetaMask on `0xD6Fa…4071`, call
+  `sweep(0x754704Bc059F8C67012fEd69BC8A327a5aafb603, 20000)` on the payer (or leave it: the screen shows a live payer);
+- the operator keeps its MON (`--sweep` brings the anchors' MON back to it).
+
+**8. What to send back** (they go into `demo/JUDGES.md`, mainnet table): `demo/out/state-mainnet.json`, the
+`demo/out/run-<ts>.json` and `run-<ts>.budget.json` of the run, and the console output. From them: the `ancre`,
+`payer`, `setId` and provider agent id, and the hashes of `0.deploy-ancre`, `0.deploy-payer`, `1.cert`, `1.pay:p1`
+(`settlementTx`), `4.slash`, `4.cert`.

@@ -105,6 +105,37 @@ contract's, not the client's: the scripts sign the farm's payment anyway, and th
 
 See `demo/RUNBOOK.md` §5 for how it is run.
 
+### Minimal act 2 on Monad mainnet (143)
+
+One short run on the real mainnet (D40, D59): ANCRE and the payer deployed, the demo anchor set (3 anchors, m = 2,
+θ = 1 %), one provider "demo" vouched for by 2 anchors and **paid by the real x402 facilitator**, the payer **refusing
+to pay Eve-8004** (agent #182, the farm already on the registry: 7 665 feedbacks in the snapshot of 21/09), and the
+breaker (an anchor slashes the provider, the next payment is refused). No scripted farm: the real one is enough.
+The payer has three distinct addresses: owner (a human wallet), treasury, operator (the agent's key). The operator
+can neither sweep the funds nor lift a pause: only the human owner can.
+
+Replay it on a fork of mainnet (nothing sent; any owner address works for a replay):
+
+```bash
+cd demo
+MAINNET_OWNER=0x000000000000000000000000000000000000dEaD node run.ts --rehearse-mainnet --sweep   # 23 checks, "MAINNET ACT PASS"
+```
+
+**Mainnet deployment** (to be filled from `demo/out/state-mainnet.json` and `run-<ts>.json` after the real run;
+explorer https://monadscan.com):
+
+| What | Address / tx |
+|---|---|
+| `AnchoredReputation` | _pending_ |
+| `TrustGatedPayer` (ERC-1271; owner `0xD6Fa…4071`, treasury `0x0146…05B9`, operator `0x8107…3c3F`) | _pending_ |
+| Anchor set (`setId`) | _pending_ |
+| ERC-8004 registries (official mainnet deployment) | Identity `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`, Reputation `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63` |
+| provider-1 (demo), agent id | _pending_ |
+| Certificate, Registry-verified (scene 1) | _pending_ |
+| Honest provider paid through the x402 facilitator | _pending_ |
+| Eve-8004 (#182) refused at `/verify` (`UNTRUSTED`): no transaction, see the event log | _pending (event `2.pay:eve`)_ |
+| Anchor slashes provider-1 (breaker) | _pending_ |
+
 ## What to keep in mind (measured vs. claimed)
 
 - **Trust is relative to the anchors the reader chooses.** ANCRE does not output a global score. A reader who

@@ -8,6 +8,8 @@
 //   node run.ts --frozen                     replay scenes 1-6 on the frozen state, offline
 //   node run.ts --sweep                      ... then send the unspent MON of every emitter back to the operator
 //   node run.ts --network testnet --keystore <path>   REAL testnet: needs Hugo's go-ahead (typed confirmation)
+//   node run.ts --rehearse-mainnet [--keystore <path>] [--sweep]   minimal act on a fork of MAINNET 143 (lib/mainnet.ts)
+//   node run.ts --network mainnet --keystore <path> --sweep        REAL mainnet (D59): Hugo only, MAINNET_OWNER required
 import { copyFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
@@ -25,13 +27,14 @@ import { ancreArt, type Ctx, scene0, scene1, scene2, scene3, scene4, scene5, sce
 import { loadState, saveState, type State, statePath } from "./lib/state.ts";
 import { budgetReport } from "./lib/budget.ts";
 import { sweep } from "./lib/sweep.ts";
+import { mainnetMain } from "./lib/mainnet.ts";
 
 // strict: a mistyped option (`--scene 0`) is an error, never silently "all scenes" (it matters on the testnet)
 const { values: args } = parseArgs({ strict: true, options: {
   network: { type: "string", default: "fork" }, rpc: { type: "string" }, scenes: { type: "string" }, port: { type: "string" },
   "fork-block": { type: "string" }, keystore: { type: "string" }, freeze: { type: "boolean" }, frozen: { type: "boolean" },
   online: { type: "boolean" }, "keep-state": { type: "boolean" }, resume: { type: "boolean" }, sweep: { type: "boolean" },
-  "sweep-only": { type: "boolean" }, "rehearse-testnet": { type: "boolean" },
+  "sweep-only": { type: "boolean" }, "rehearse-testnet": { type: "boolean" }, "rehearse-mainnet": { type: "boolean" },
 } });
 
 function parseScenes(s: string): number[] {
@@ -62,7 +65,12 @@ async function unlock(ks: string | undefined, real: boolean) {
 }
 
 async function main() {
-  if (args.network !== "fork" && args.network !== "testnet") throw new Error(`--network ${args.network}: fork or testnet`);
+  // the minimal mainnet act (D40, D59) has its own flow and guards: lib/mainnet.ts
+  if (args.network === "mainnet" || args["rehearse-mainnet"]) {
+    if (args.freeze || args.frozen || args["rehearse-testnet"]) throw new Error("--freeze/--frozen/--rehearse-testnet do not apply to the mainnet act");
+    return mainnetMain(args);
+  }
+  if (args.network !== "fork" && args.network !== "testnet") throw new Error(`--network ${args.network}: fork, testnet or mainnet`);
   // dress rehearsal of the testnet run on a fork: keystore, cast keystore signer, reserve waits, interval mining,
   // a 5 MON operator; only the facilitator stays emulated (no request to any external service)
   const rehearse = !!args["rehearse-testnet"];
