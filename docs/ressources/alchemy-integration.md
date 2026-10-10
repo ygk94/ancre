@@ -72,7 +72,7 @@ rebuilding the graph needs the whole event history, and the Free tier caps `eth_
 | Envio indexer behind the testnet head at reception | 0 to 95 blocks (five readings) | MEASURED 2026-10-10 |
 | Alchemy Free tier, `eth_getLogs` | 10 blocks per call | MEASURED 2026-10-10 |
 | On-chain block → webhook delivery, commit state of the block at delivery | **median 1.3 s** (0.7-2.1 s, 14 steady deliveries; block timestamps have 1 s resolution), block **Finalized at reception in 17 of 18** deliveries, 2 blocks behind `latest`. The first 4 deliveries, sent right after the webhook was created, arrived about 77 s late (backlog) | MEASURED 2026-10-10, 11:54-11:58 UTC, Monad testnet, `docs/chantiers/rapports/alchemy-live/webhook-testnet-2026-10-10.jsonl` |
-| Webhook → certificate **submitted** on the testnet | logged by the same line with `--send` | NOT MEASURED |
+| Webhook → certificate **submitted** on the testnet | anchor-A's `NewFeedback` in block 69 834 805 (tx `0xd4c4…26ca`) → webhook **1.056 s** after the block timestamp, head +3 blocks, **Finalized** → Envio at the event block after 57 ms, export 1.9 s → `submitCertificate` in block **69 834 822** (tx `0x8478…8046`): **+17 blocks, 6.28 s after the webhook**. The certificate's own `CertificateSubmitted` came back through the webhook 16 s later and was audited: 0 discrepancy; Envio `SetHealth` CLEAN, 6 certificates | MEASURED 2026-10-10 13:16 UTC, `docs/chantiers/rapports/alchemy-live/live-send-2026-10-10.jsonl` |
 | Transfers API: first MON of Eve-8004's raters | see §3 | MEASURED 2026-10-10 |
 
 Webhook retries and the delivery format follow the Alchemy docs (DOC: Custom Webhook, `X-Alchemy-Signature`,
