@@ -1616,3 +1616,16 @@ Mesures, MESURÉ sur le testnet :
 - Un refus ne laisse aucune transaction sur l'explorateur : il échoue dans la simulation du facilitator (AM-6.8). La preuve d'un refus est dans le journal des events, ou passe par `reportRefusal` si on veut une trace on-chain.
 
 **Proposition (pilote)** : faire de cette instance l'instance **officielle** du testnet, celle de l'indexeur Envio (`start_block` 68 978 842), de l'écran 07-bis et de la soumission, plutôt que de redéployer le 08/10. On économise un déploiement, et l'écran montre de vrais certificats. **Limite** : son payeur a owner = trésorerie = opérateur. C'est acceptable pour 0,1 USDC de testnet, mais il faudra un payeur à trois adresses distinctes pour le mainnet (D40). À valider par Hugo.
+
+---
+
+## Exécution minimale sur le mainnet (D59), 10/10
+
+**Résultat : `MAINNET ACT PASS`** (run `run-20261010T123036Z`, 12:30 UTC, MESURÉ), scènes 0, 1, 2 et 4, lancé par Hugo dans Terminal.app.
+- ANCRE `0x0Da1579233E7Cb07a174986D059D59B1F293b30E` ; payeur `0x52f361A14A49fAB267703203f833b997B9cF5Dc0`, avec trois rôles distincts (owner `0xD6Fa…4071`, trésorerie `0x0146…05B9`, opérateur `0x8107…3c3F`) ; D47 vérifié par simulation.
+- Le fournisseur de démo #10330, endossé par 2 ancres, a une masse robuste de 5,19 % et passe la politique. Il est **payé 0,01 USDC par le vrai facilitator** : tx `0xa099…a60c`, émise par `0x7f6a…db86`. **Le risque « facilitator et ERC-1271 sur le mainnet » est levé.**
+- Eve-8004 (#182) a une masse robuste de 0 : paiement refusé au `/verify`, aucune diffusion.
+- Disjoncteur : slash, puis refus au paiement suivant **1 bloc et 332 ms plus tard** (MESURÉ). Le certificat de veto est soumis.
+- Coût : 1,548 MON dépensés par l'opérateur, contre 1,52 en répétition. 0,063 MON récupérés sur les ancres, et 2,425 USDC renvoyés à la trésorerie. Il reste 0,02 USDC dans le payeur, que seul l'owner peut sortir.
+- Fonds : 100 MON échangés contre 2,455 USDC sur Uniswap v3 (pool MON/USDC 0,3 %, SwapRouter02 `0xfe31…b900`), commande préparée et simulée par le pilote, envoyée par Hugo.
+

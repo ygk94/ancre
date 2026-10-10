@@ -45,12 +45,12 @@
 
 1. [x] **Divulgation : on ne la fait pas** (D57, Hugo, 10/10). Les observations sont publiées comme faits on-chain et expliquées dans la vidéo. Les marqueurs DISCLOSURE-GATE sont retirés.
 2. [x] **On garde tout public**, `mustdo/` et `docs/conseil/` compris (D58, 10/10).
-3. [ ] **Mainnet : oui** (D59, 10/10). Presque fini :
+3. [x] **Mainnet : fait** ✅ 10/10 à 12:30 UTC, **MAINNET ACT PASS** (scènes 0, 1, 2 et 4). ANCRE `0x0Da1…b30E`, payeur `0x52f3…5Dc0`, fournisseur #10330 payé 0,01 USDC par le vrai facilitator, Eve-8004 refusée, disjoncteur en **1 bloc / 332 ms**. 1,548 MON dépensés. Tout est dans `demo/JUDGES.md`, run archivé dans `docs/chantiers/rapports/act-mainnet/`.
    - ✅ **Owner** du payeur = `0xD6FabC0A420127F493DeECdb461EaD4DAD644071` (ton MetaMask principal) ; trésorerie `0x0146…05B9` ; opérateur `ancre-demo` (`0x8107…3c3F`).
    - ✅ **Fonds** : 135 MON envoyés sur `0x8107…3c3F` ; **100 MON échangés contre 2,455 USDC** sur Uniswap v3 (pool MON/USDC 0,3 %, 10/10). Solde : 29,97 MON et 2,455 USDC.
    - ✅ **Mode mainnet** prêt et fusionné (`node run.ts --network mainnet`, RUNBOOK §7, BUDGET §7).
    - ✅ **Répétition sur fork du mainnet : MAINNET ACT PASS** (scènes 0, 1, 2 et 4), 1,52 MON consommés (MESURÉ 10/10).
-   - [ ] **Le vrai run** (Terminal.app, depuis `demo/`, avec `MAINNET_OWNER` exporté) : `node run.ts --network mainnet --keystore ~/.foundry/keystores/ancre-demo --sweep`. Tape d'abord la phrase `send real Monad mainnet transactions`, puis le mot de passe. Colle-moi **toute** la sortie : je remplis `demo/JUDGES.md`.
+   - ✅ **Le vrai run** (Terminal.app, depuis `demo/`, avec `MAINNET_OWNER` exporté) : `node run.ts --network mainnet --keystore ~/.foundry/keystores/ancre-demo --sweep`. Tape d'abord la phrase `send real Monad mainnet transactions`, puis le mot de passe. Colle-moi **toute** la sortie : je remplis `demo/JUDGES.md`.
    - À la fin, le `--sweep` envoie l'USDC restant vers la trésorerie (ton 2ᵉ compte). Environ 0,02 USDC restent dans le payeur, et seul ton MetaMask principal peut les sortir (`sweep(USDC, amount)`).
 4. [ ] **Webhook Alchemy** (bounty Alchemy, D60). Il reste trois choses :
    - ✅ Le webhook est créé sur Monad testnet, avec l'URL du tunnel ; les deux clés sont dans `solver/.env`.

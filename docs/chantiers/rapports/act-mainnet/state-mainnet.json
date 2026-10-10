@@ -1,0 +1,254 @@
+{
+  "version": 1,
+  "mode": "mainnet",
+  "chainId": 143,
+  "operator": "0x810724967b0d895d087b991304385720d4903c3F",
+  "runId": "run-20261010T123036Z",
+  "agents": {
+    "provider-1 (demo)": {
+      "agentId": "10330",
+      "owner": "0x810724967b0d895d087b991304385720d4903c3F",
+      "wallet": "0xbd2AeDcAb8FCBa9Ee0c036110ac168bbC525DAE8",
+      "role": "provider"
+    }
+  },
+  "done": {
+    "0.fund-mon": {
+      "block": 112182845,
+      "at": "2026-10-10T12:30:37.299Z"
+    },
+    "0.deploy-ancre": {
+      "block": 112182848,
+      "at": "2026-10-10T12:30:38.306Z"
+    },
+    "0.anchor-set": {
+      "block": 112182850,
+      "at": "2026-10-10T12:30:38.921Z"
+    },
+    "0.register:provider-1 (demo)": {
+      "block": 112182852,
+      "at": "2026-10-10T12:30:39.447Z"
+    },
+    "0.wallet:provider-1 (demo)": {
+      "block": 112182855,
+      "at": "2026-10-10T12:30:40.397Z"
+    },
+    "0.deploy-payer": {
+      "block": 112182858,
+      "at": "2026-10-10T12:30:41.399Z"
+    },
+    "0.fund-payer": {
+      "block": 112182860,
+      "at": "2026-10-10T12:30:41.890Z"
+    },
+    "scene-0": {
+      "block": 112182860,
+      "at": "2026-10-10T12:30:41.993Z"
+    },
+    "1.vouch:A->p1": {
+      "block": 112182862,
+      "at": "2026-10-10T12:30:42.543Z",
+      "value": {
+        "block": 112182862,
+        "wallMs": 1791635442489
+      }
+    },
+    "1.vouch:B->p1": {
+      "block": 112182864,
+      "at": "2026-10-10T12:30:43.085Z",
+      "value": {
+        "block": 112182864,
+        "wallMs": 1791635443029
+      }
+    },
+    "1.cert": {
+      "block": 112182875,
+      "at": "2026-10-10T12:30:46.598Z",
+      "value": {
+        "action": "certified",
+        "block": 112182869
+      }
+    },
+    "1.pay:p1": {
+      "block": 112182878,
+      "at": "2026-10-10T12:30:47.454Z",
+      "value": {
+        "decision": "PAID",
+        "stage": "settled",
+        "reason": "OK",
+        "block": 112182878,
+        "wallMs": 1791635447318,
+        "providerReceived": {
+          "$big": "10000"
+        }
+      }
+    },
+    "scene-1": {
+      "block": 112182879,
+      "at": "2026-10-10T12:30:47.506Z"
+    },
+    "2.eve-facts": {
+      "block": 112182879,
+      "at": "2026-10-10T12:30:47.592Z"
+    },
+    "2.pay:eve": {
+      "block": 112182879,
+      "at": "2026-10-10T12:30:47.830Z",
+      "value": {
+        "decision": "REFUSED",
+        "stage": "verify",
+        "reason": "UNTRUSTED",
+        "block": 112182879,
+        "wallMs": 1791635447794,
+        "providerReceived": {
+          "$big": "0"
+        }
+      }
+    },
+    "scene-2": {
+      "block": 112182880,
+      "at": "2026-10-10T12:30:47.934Z"
+    },
+    "4.slash": {
+      "block": 112182883,
+      "at": "2026-10-10T12:30:48.848Z",
+      "value": {
+        "block": 112182882,
+        "wallMs": 1791635448787
+      }
+    },
+    "4.pay:p1-after-slash": {
+      "block": 112182884,
+      "at": "2026-10-10T12:30:49.188Z",
+      "value": {
+        "decision": "REFUSED",
+        "stage": "verify",
+        "reason": "ANCRE_STATUS",
+        "block": 112182883,
+        "wallMs": 1791635449119,
+        "providerReceived": {
+          "$big": "0"
+        }
+      }
+    },
+    "4.cert": {
+      "block": 112182896,
+      "at": "2026-10-10T12:30:52.706Z",
+      "value": {
+        "action": "certified",
+        "block": 112182889
+      }
+    },
+    "4.pay:p1-after-cert": {
+      "block": 112182897,
+      "at": "2026-10-10T12:30:52.946Z",
+      "value": {
+        "decision": "REFUSED",
+        "stage": "verify",
+        "reason": "ANCRE_STATUS",
+        "block": 112182896,
+        "wallMs": 1791635452891,
+        "providerReceived": {
+          "$big": "0"
+        }
+      }
+    },
+    "scene-4": {
+      "block": 112182897,
+      "at": "2026-10-10T12:30:53.041Z"
+    },
+    "sweep-usdc": {
+      "block": 112182907,
+      "at": "2026-10-10T12:30:56.082Z"
+    }
+  },
+  "notes": {
+    "breakerLatency": {
+      "from": {
+        "step": "4.slash",
+        "block": 112182882,
+        "wallMs": 1791635448787
+      },
+      "to": {
+        "step": "4.pay:p1-after-slash",
+        "block": 112182883,
+        "wallMs": 1791635449119
+      },
+      "blocks": 1,
+      "ms": 332,
+      "parts": [
+        {
+          "name": "slash -> refused payment (live veto, no certificate needed)",
+          "blocks": 1,
+          "ms": 332
+        },
+        {
+          "name": "slash -> certificate carrying the veto",
+          "blocks": 7,
+          "ms": null
+        }
+      ],
+      "measured": "mainnet"
+    }
+  },
+  "ancre": "0x0Da1579233E7Cb07a174986D059D59B1F293b30E",
+  "setId": "0x627c8afe36b03432b280723a7170357333ded4d9ce56a78467c5829739653e10",
+  "set": {
+    "anchors": [
+      "0x658d74da41c2c12a42d10aee6285cbdce8e1c752",
+      "0xc016278eedaa2c73878bd28279c7f8d0ab2f5619",
+      "0xec8047fc7ed9ef9b7f1aeb5ab2be26d231fd51d6"
+    ],
+    "lambdas": [
+      "333333333333333333",
+      "333333333333333334",
+      "333333333333333333"
+    ],
+    "alphaN": 1,
+    "alphaD": 3,
+    "minAnchors": 2,
+    "tagSchemaHash": "0x98f7b42fe5b6195397f4d6e7f9643dd7e7527f11965a047067d03ba9288138e0",
+    "tags": [
+      {
+        "tag": "vouch",
+        "min": "0",
+        "neutral": "0",
+        "max": "100000000000000000000",
+        "kind": 0
+      },
+      {
+        "tag": "review",
+        "min": "-1000000000000000000",
+        "neutral": "0",
+        "max": "1000000000000000000",
+        "kind": 0
+      },
+      {
+        "tag": "slash",
+        "min": "-100000000000000000000",
+        "neutral": "0",
+        "max": "0",
+        "kind": 0
+      }
+    ],
+    "policy": {
+      "theta": 10000000000000000,
+      "rhoN": 1,
+      "rhoD": 2,
+      "minAnchors": 2,
+      "vetoQuorum": 1,
+      "vetoMax": -1,
+      "maxAge": 288000,
+      "minRefresh": 288000,
+      "slackRefresh": 0,
+      "eLowMax": 10000000000000000,
+      "strictTransfer": true,
+      "registryVerified": true,
+      "ownerFallback": false,
+      "submitters": [
+        "0x810724967b0d895d087b991304385720d4903c3f"
+      ]
+    }
+  },
+  "payer": "0x52f361A14A49fAB267703203f833b997B9cF5Dc0"
+}

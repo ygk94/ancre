@@ -121,20 +121,19 @@ cd demo
 MAINNET_OWNER=0x000000000000000000000000000000000000dEaD node run.ts --rehearse-mainnet --sweep   # 23 checks, "MAINNET ACT PASS"
 ```
 
-**Mainnet deployment** (to be filled from `demo/out/state-mainnet.json` and `run-<ts>.json` after the real run;
-explorer https://monadscan.com):
+**Mainnet deployment** (real run `run-20261010T123036Z`, 2026-10-10 12:30 UTC, `MAINNET ACT PASS`, scenes 0, 1, 2 and 4; operator spent 1.548 MON, MEASURED; files in `docs/chantiers/rapports/act-mainnet/`; explorer https://monadscan.com):
 
 | What | Address / tx |
 |---|---|
-| `AnchoredReputation` | _pending_ |
-| `TrustGatedPayer` (ERC-1271; owner `0xD6Fa…4071`, treasury `0x0146…05B9`, operator `0x8107…3c3F`) | _pending_ |
-| Anchor set (`setId`) | _pending_ |
+| `AnchoredReputation` | [`0x0Da1579233E7Cb07a174986D059D59B1F293b30E`](https://monadscan.com/address/0x0Da1579233E7Cb07a174986D059D59B1F293b30E) (deploy [`0xaacf…7965`](https://monadscan.com/tx/0xaacf78b9c2ac58dedac127b0ffc90f23d9584d037c378ab1d4ae6dcb0c827965), block 112 182 847) |
+| `TrustGatedPayer` (ERC-1271; owner `0xD6Fa…4071`, treasury `0x0146…05B9`, operator `0x8107…3c3F`) | [`0x52f361A14A49fAB267703203f833b997B9cF5Dc0`](https://monadscan.com/address/0x52f361A14A49fAB267703203f833b997B9cF5Dc0) (deploy [`0x3024…34da`](https://monadscan.com/tx/0x3024db4f684a0d053bbfd02d9e4fbf6f682353ec78ef3c1d6e2dc50c87f334da)) |
+| Anchor set (`setId`) | `0x627c8afe36b03432b280723a7170357333ded4d9ce56a78467c5829739653e10` (register [`0x33c6…a894`](https://monadscan.com/tx/0x33c638830384bff7293d16a848d83606591c624cce46ec8c91ea28ffdda5a894)) |
 | ERC-8004 registries (official mainnet deployment) | Identity `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`, Reputation `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63` |
-| provider-1 (demo), agent id | _pending_ |
-| Certificate, Registry-verified (scene 1) | _pending_ |
-| Honest provider paid through the x402 facilitator | _pending_ |
-| Eve-8004 (#182) refused at `/verify` (`UNTRUSTED`): no transaction, see the event log | _pending (event `2.pay:eve`)_ |
-| Anchor slashes provider-1 (breaker) | _pending_ |
+| provider-1 (demo), agent id | **#10330** (register [`0xfef1…03eb`](https://monadscan.com/tx/0xfef14033bb4d73730474d04637a28d4aad72a404fc79d544cb6d378dbc5603eb)); vouched by anchor-A [`0x5806…275f`](https://monadscan.com/tx/0x5806e04744f90d2adb95798a39346452c7ba4b5716ca73abbbc4b9f116bc275f) and anchor-B [`0xf9ed…8ca5`](https://monadscan.com/tx/0xf9ed3d1e58b06e06e290d33f336b05dacf096980d95dd160f3bd5d2442818ca5) |
+| Certificate, Registry-verified (scene 1) | [`0xd87e…6d39`](https://monadscan.com/tx/0xd87e9049f6244d56e71ffac565a5ac6b82f886a9dd7864ec5b6004d5520f6d39) (block 112 182 869): provider-1 robust mass 5.19 %, trusted |
+| Honest provider paid through the x402 facilitator | [`0xa099…a60c`](https://monadscan.com/tx/0xa099331e10ae31327e54d53b78a3c24277e140f235fe2373f33946d06853a60c) (block 112 182 878, sent by the facilitator `0x7f6a…db86`): 0.01 USDC |
+| Eve-8004 (#182) refused at `/verify` (`UNTRUSTED`): no transaction, see the event log | event `2.pay:eve`, block 112 182 879: robust mass 0, nothing broadcast, Eve received 0 |
+| Anchor slashes provider-1 (breaker) | slash [`0x6be5…e08c`](https://monadscan.com/tx/0x6be5453d4e36237980d30243219c6256c0be2763c46e36b3286814d14c33e08c) (block 112 182 882) → next payment refused (`ANCRE_STATUS`) **1 block, 332 ms** later; veto certificate [`0x6a2c…b959`](https://monadscan.com/tx/0x6a2c04418319e814c96f2346a4ddc263f53b47df388ce95d78666c5c9855b959) |
 
 ## What to keep in mind (measured vs. claimed)
 

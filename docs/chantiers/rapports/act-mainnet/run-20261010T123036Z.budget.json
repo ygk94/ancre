@@ -1,0 +1,327 @@
+{
+  "mode": "mainnet",
+  "txCount": 14,
+  "sendingAccounts": 3,
+  "declaredEmitters": 3,
+  "gasLimitTotal": "15124673",
+  "feesMonAt102gwei": 1.542716,
+  "capitalLentToEmittersMon": 0.15606,
+  "facilitatorGasLimitTotal": "406611",
+  "facilitatorMonAt102gwei": 0.041474,
+  "eventsByContract": {
+    "0x0da1579233e7cb07a174986d059d59b1f293b30e": 4,
+    "0x8004a169fb4a3325136eb29fa0ceb6d2e539a432": 5,
+    "0x52f361a14a49fab267703203f833b997b9cf5dc0": 3,
+    "0x754704bc059f8c67012fed69bc8a327a5aafb603": 2,
+    "0x8004baa17c55a88189ae136b182e5fda19de9b63": 3
+  },
+  "byFunction": {
+    "MON transfer": {
+      "n": 4,
+      "gasLimit": "287323",
+      "gasUsed": "287323",
+      "minLimit": "28100",
+      "maxLimit": "115568",
+      "avgLimit": "71830",
+      "monAt102gwei": 0.029306
+    },
+    "deploy": {
+      "n": 2,
+      "gasLimit": "11898972",
+      "gasUsed": "11898972",
+      "minLimit": "2428871",
+      "maxLimit": "9470101",
+      "avgLimit": "5949486",
+      "monAt102gwei": 1.213695
+    },
+    "registerAnchorSet": {
+      "n": 1,
+      "gasLimit": "558315",
+      "gasUsed": "558315",
+      "minLimit": "558315",
+      "maxLimit": "558315",
+      "avgLimit": "558315",
+      "monAt102gwei": 0.056948
+    },
+    "register": {
+      "n": 1,
+      "gasLimit": "396297",
+      "gasUsed": "396297",
+      "minLimit": "396297",
+      "maxLimit": "396297",
+      "avgLimit": "396297",
+      "monAt102gwei": 0.040422
+    },
+    "setAgentWallet": {
+      "n": 1,
+      "gasLimit": "97100",
+      "gasUsed": "97100",
+      "minLimit": "97100",
+      "maxLimit": "97100",
+      "avgLimit": "97100",
+      "monAt102gwei": 0.009904
+    },
+    "giveFeedback": {
+      "n": 3,
+      "gasLimit": "864836",
+      "gasUsed": "864836",
+      "minLimit": "223279",
+      "maxLimit": "330277",
+      "avgLimit": "288278",
+      "monAt102gwei": 0.088213
+    },
+    "submitCertificate": {
+      "n": 2,
+      "gasLimit": "1021830",
+      "gasUsed": "1021830",
+      "minLimit": "352020",
+      "maxLimit": "669810",
+      "avgLimit": "510915",
+      "monAt102gwei": 0.104226
+    }
+  },
+  "ledger": [
+    {
+      "label": "fund anchor-A (demo)",
+      "fn": "transfer",
+      "from": "0x810724967b0d895d087b991304385720d4903c3f",
+      "hash": "0xc1f07374dbaf756ac2cc9c5bd960389e0cfd9a7767aa6beb7a0ab631db44a5b7",
+      "block": 112182843,
+      "status": "success",
+      "estimate": "21000",
+      "gasLimit": "28100",
+      "gasUsed": "28100",
+      "gasPrice": "102000000000",
+      "costWei": "2866200000000000",
+      "logs": {}
+    },
+    {
+      "label": "fund anchor-B (demo)",
+      "fn": "transfer",
+      "from": "0x810724967b0d895d087b991304385720d4903c3f",
+      "hash": "0x6bced4decda2aad4d28c59e94e2d6c3b44cbfca22422a94a65c97701f76a9af3",
+      "block": 112182845,
+      "status": "success",
+      "estimate": "21000",
+      "gasLimit": "28100",
+      "gasUsed": "28100",
+      "gasPrice": "102000000000",
+      "costWei": "2866200000000000",
+      "logs": {}
+    },
+    {
+      "label": "deploy AnchoredReputation",
+      "fn": "deploy",
+      "from": "0x810724967b0d895d087b991304385720d4903c3f",
+      "hash": "0xaacf78b9c2ac58dedac127b0ffc90f23d9584d037c378ab1d4ae6dcb0c827965",
+      "block": 112182847,
+      "status": "success",
+      "estimate": "8604637",
+      "gasLimit": "9470101",
+      "gasUsed": "9470101",
+      "gasPrice": "102000000000",
+      "costWei": "965950302000000000",
+      "logs": {}
+    },
+    {
+      "label": "registerAnchorSet",
+      "fn": "registerAnchorSet",
+      "from": "0x810724967b0d895d087b991304385720d4903c3f",
+      "hash": "0x33c638830384bff7293d16a848d83606591c624cce46ec8c91ea28ffdda5a894",
+      "block": 112182850,
+      "status": "success",
+      "estimate": "503013",
+      "gasLimit": "558315",
+      "gasUsed": "558315",
+      "gasPrice": "102000000000",
+      "costWei": "56948130000000000",
+      "logs": {
+        "0x0da1579233e7cb07a174986d059d59b1f293b30e": 1
+      }
+    },
+    {
+      "label": "register provider-1 (demo)",
+      "fn": "register",
+      "from": "0x810724967b0d895d087b991304385720d4903c3f",
+      "hash": "0xfef14033bb4d73730474d04637a28d4aad72a404fc79d544cb6d378dbc5603eb",
+      "block": 112182852,
+      "status": "success",
+      "estimate": "355724",
+      "gasLimit": "396297",
+      "gasUsed": "396297",
+      "gasPrice": "102000000000",
+      "costWei": "40422294000000000",
+      "logs": {
+        "0x8004a169fb4a3325136eb29fa0ceb6d2e539a432": 4
+      }
+    },
+    {
+      "label": "setAgentWallet provider-1 (demo)",
+      "fn": "setAgentWallet",
+      "from": "0x810724967b0d895d087b991304385720d4903c3f",
+      "hash": "0x1c2a0b8f8c343719e76f11c151baa57f109fa6c34558e0560c0d720407ed8f7b",
+      "block": 112182854,
+      "status": "success",
+      "estimate": "83727",
+      "gasLimit": "97100",
+      "gasUsed": "97100",
+      "gasPrice": "102000000000",
+      "costWei": "9904200000000000",
+      "logs": {
+        "0x8004a169fb4a3325136eb29fa0ceb6d2e539a432": 1
+      }
+    },
+    {
+      "label": "deploy TrustGatedPayer",
+      "fn": "deploy",
+      "from": "0x810724967b0d895d087b991304385720d4903c3f",
+      "hash": "0x3024db4f684a0d053bbfd02d9e4fbf6f682353ec78ef3c1d6e2dc50c87f334da",
+      "block": 112182857,
+      "status": "success",
+      "estimate": "2203519",
+      "gasLimit": "2428871",
+      "gasUsed": "2428871",
+      "gasPrice": "102000000000",
+      "costWei": "247744842000000000",
+      "logs": {
+        "0x52f361a14a49fab267703203f833b997b9cf5dc0": 3
+      }
+    },
+    {
+      "label": "fund payer",
+      "fn": "transfer",
+      "from": "0x810724967b0d895d087b991304385720d4903c3f",
+      "hash": "0xa6a3c47eeb0ce0a6d621e3960543a43795ef8f5077f03fd4ffef689aa99bf9c9",
+      "block": 112182860,
+      "status": "success",
+      "estimate": "100504",
+      "gasLimit": "115555",
+      "gasUsed": "115555",
+      "gasPrice": "102000000000",
+      "costWei": "11786610000000000",
+      "logs": {
+        "0x754704bc059f8c67012fed69bc8a327a5aafb603": 1
+      }
+    },
+    {
+      "label": "vouch anchor-A (demo) -> provider-1 (demo)",
+      "fn": "giveFeedback",
+      "from": "0xc016278eedaa2c73878bd28279c7f8d0ab2f5619",
+      "hash": "0x5806e04744f90d2adb95798a39346452c7ba4b5716ca73abbbc4b9f116bc275f",
+      "block": 112182862,
+      "status": "success",
+      "estimate": "295706",
+      "gasLimit": "330277",
+      "gasUsed": "330277",
+      "gasPrice": "102000000000",
+      "costWei": "33688254000000000",
+      "logs": {
+        "0x8004baa17c55a88189ae136b182e5fda19de9b63": 1
+      }
+    },
+    {
+      "label": "vouch anchor-B (demo) -> provider-1 (demo)",
+      "fn": "giveFeedback",
+      "from": "0x658d74da41c2c12a42d10aee6285cbdce8e1c752",
+      "hash": "0xf9ed3d1e58b06e06e290d33f336b05dacf096980d95dd160f3bd5d2442818ca5",
+      "block": 112182864,
+      "status": "success",
+      "estimate": "278436",
+      "gasLimit": "311280",
+      "gasUsed": "311280",
+      "gasPrice": "102000000000",
+      "costWei": "31750560000000000",
+      "logs": {
+        "0x8004baa17c55a88189ae136b182e5fda19de9b63": 1
+      }
+    },
+    {
+      "label": "certifier submitCertificate",
+      "fn": "submitCertificate",
+      "from": "0x810724967b0d895d087b991304385720d4903c3f",
+      "hash": "0xd87e9049f6244d56e71ffac565a5ac6b82f886a9dd7864ec5b6004d5520f6d39",
+      "block": 112182869,
+      "status": "success",
+      "estimate": "618427",
+      "gasLimit": "669810",
+      "gasUsed": "669810",
+      "gasPrice": "102000000000",
+      "costWei": "68320620000000000",
+      "logs": {
+        "0x0da1579233e7cb07a174986d059d59b1f293b30e": 2
+      }
+    },
+    {
+      "label": "slash anchor-B (demo) -> provider-1 (demo)",
+      "fn": "giveFeedback",
+      "from": "0x658d74da41c2c12a42d10aee6285cbdce8e1c752",
+      "hash": "0x6be5453d4e36237980d30243219c6256c0be2763c46e36b3286814d14c33e08c",
+      "block": 112182882,
+      "status": "success",
+      "estimate": "198435",
+      "gasLimit": "223279",
+      "gasUsed": "223279",
+      "gasPrice": "102000000000",
+      "costWei": "22774458000000000",
+      "logs": {
+        "0x8004baa17c55a88189ae136b182e5fda19de9b63": 1
+      }
+    },
+    {
+      "label": "certifier submitCertificate",
+      "fn": "submitCertificate",
+      "from": "0x810724967b0d895d087b991304385720d4903c3f",
+      "hash": "0x6a2c04418319e814c96f2346a4ddc263f53b47df388ce95d78666c5c9855b959",
+      "block": 112182889,
+      "status": "success",
+      "estimate": "322809",
+      "gasLimit": "352020",
+      "gasUsed": "352020",
+      "gasPrice": "102500000000",
+      "costWei": "36082050000000000",
+      "logs": {
+        "0x0da1579233e7cb07a174986d059d59b1f293b30e": 1
+      }
+    },
+    {
+      "label": "usdc rest to treasury",
+      "fn": "transfer",
+      "from": "0x810724967b0d895d087b991304385720d4903c3f",
+      "hash": "0x65ce8d43929ceaeb771bd58e2e10dc5c2e46f51446ab9ac51b029582bb0fd754",
+      "block": 112182906,
+      "status": "success",
+      "estimate": "100516",
+      "gasLimit": "115568",
+      "gasUsed": "115568",
+      "gasPrice": "102000000000",
+      "costWei": "11787936000000000",
+      "logs": {
+        "0x754704bc059f8c67012fed69bc8a327a5aafb603": 1
+      }
+    }
+  ],
+  "facilitator": [
+    {
+      "label": "settle provider-1 (demo)",
+      "hash": "0xa099331e10ae31327e54d53b78a3c24277e140f235fe2373f33946d06853a60c",
+      "gasLimit": "406611",
+      "gasUsed": "406611"
+    }
+  ],
+  "network": "mainnet",
+  "forkBlock": null,
+  "gasPriceAtStart": "102000000000",
+  "operator": {
+    "before": {
+      "mon": "29973480000000000000",
+      "usdc": "2455227"
+    },
+    "after": {
+      "mon": "28425463344000000000",
+      "usdc": "0"
+    },
+    "spentMon": 1.548016656,
+    "spentUsdc": "2.455227"
+  },
+  "payerUsdcLeft": "20000"
+}
