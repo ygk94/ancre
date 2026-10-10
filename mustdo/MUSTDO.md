@@ -43,17 +43,13 @@
 
 ## 🔴 Ven 10/10 (aujourd'hui) : ce qui bloque la mise en public
 
-1. [ ] **Divulgation à ERC-8004 : envoyer, ou décider de ne pas envoyer.**
-   - Elle n'est pas obligatoire selon les règles, mais elle est recommandée. C'est le **seul verrou de la mise en public** : le README, l'écran, la démo et `ANCRE.md` montrent le contournement du garde-fou et l'EOA d'upgrade.
-   - Je resserre le brouillon `docs/erc/drafts/c-divulgation-erc8004.md` sur un ton « observations », puis tu l'envoies. Canal recommandé : l'onglet **Security** de `github.com/erc-8004/erc-8004-contracts`, sinon un e-mail aux auteurs.
-   - Si tu choisis de ne pas l'envoyer, on publie quand même : ce sont des faits on-chain publics, présentés comme tels.
-2. [ ] **Décider ce qui reste privé** dans le dépôt public. Candidats : `mustdo/` et `docs/conseil/`, liste dans `docs/soumission/publication-checklist.md`.
-   - L'historique part avec le dépôt (§4.1).
-   - Mon conseil : **tout garder**. C'est la preuve du travail, et rien n'est confidentiel une fois la divulgation réglée.
-3. [ ] **Mainnet (D40) : oui ou non ?**
-   - Budget : environ **2 MON** de vrais fonds (ESTIMÉ), pour le déploiement et le disjoncteur. Ça renforce le critère « Monad Integration », mais ce n'est **pas obligatoire** : le testnet suffit selon les règles (§9.2).
-   - Si oui : donne-moi l'adresse de ton **compte MetaMask principal**, qui sera l'owner, et envoie les MON sur `ancre-demo`.
-4. [ ] **Webhook Alchemy** (bounty Alchemy), environ 15 minutes ensemble :
+1. [x] **Divulgation : on ne la fait pas** (D57, Hugo, 10/10). Les observations sont publiées comme faits on-chain et expliquées dans la vidéo. Les marqueurs DISCLOSURE-GATE sont retirés.
+2. [x] **On garde tout public**, `mustdo/` et `docs/conseil/` compris (D58, 10/10).
+3. [ ] **Mainnet : oui** (D59, 10/10).
+   - **Envoie 4 MON et environ 1 USDC** (USDC natif du mainnet) sur **`0x810724967b0d895d087b991304385720d4903c3F`**, le keystore `ancre-demo`, **réseau Monad mainnet**.
+   - **Donne-moi l'adresse de ton MetaMask principal** : ce sera l'owner du payeur.
+   - Un agent prépare le script et le répète sur un fork du mainnet. Tu lanceras le run réel toi-même, dans Terminal.app.
+4. [ ] **Webhook Alchemy** (bounty Alchemy, D60 : on le fait, avec une vidéo d'1 min, script dans `docs/soumission/video-alchemy.md`). Le tunnel tourne. Il reste :
    1. je lance le récepteur et un tunnel ;
    2. tu crées le Custom Webhook sur Monad testnet avec le filtre `docs/ressources/alchemy-webhook-testnet.graphql` ;
    3. tu mets le jeton Notify et la clé de signature dans `solver/.env`.
