@@ -1,4 +1,5 @@
-// Monad mainnet (143), PREVIEW: nothing of ANCRE is deployed there. Every ANCRE number below is COMPUTED by the
+// Monad mainnet (143), whole-registry view. ANCRE's own contract on mainnet (minimal run of 10/10) is read
+// elsewhere (core/onchain.ts, sources/mainnetChain.ts). Every number below is COMPUTED by the
 // reference solver (scripts/export_act1.py -> src/data/act1.json, reproducible), at the snapshot block of that
 // file, under the anchors of one "lens". Names are quoted from 8004scan's public API (dated snapshot).
 import type { AgentRow, Policy, Reach, ReviewGroup, Why } from "./model";

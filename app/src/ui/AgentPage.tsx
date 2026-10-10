@@ -12,6 +12,7 @@ import { href, type Route } from "../router";
 import { act1, type Dataset } from "../sources/useDataset";
 import { Addr, Avatar, BigNum, Link, Mass, Meter, SourceLine, StatusChip } from "./common";
 import { FundersPanel, fundersMeasure } from "./Funders";
+import { agentLabel, OnchainAgentCard, OnchainCertificates, OnchainPayments, OnchainVerdict } from "./Onchain";
 
 const TABS = [
   ["overview", "Overview"],
@@ -35,7 +36,7 @@ export function AgentPage({ route, ds, error }: { route: Route & { page: "agent"
   if (!ds && !error) return <div className="empty">Loading…</div>;
 
   const name =
-    row?.name ?? (net === "mainnet" ? ds?.nameOf(id) : null) ?? live.identity?.name ?? `Agent #${id}`;
+    row?.name ?? (net === "mainnet" && ds ? agentLabel(id, ds.nameOf) : null) ?? live.identity?.name ?? `Agent #${id}`;
   const back = href({ page: "discover", network: net === "mainnet" ? "mainnet" : "testnet", lens: route.lens }, route);
   const tabHref = (t: Tab) => href({ page: "agent", net, id, tab: t === "overview" ? null : t, lens: route.lens } as Route, route);
   const ratingsCount = row ? ds!.reviewsTotal(id) : (live.registry?.feedbacks ?? null);
@@ -72,12 +73,14 @@ export function AgentPage({ route, ds, error }: { route: Route & { page: "agent"
           </div>
         </div>
         <div className="verdict">
-          {row ? (
+          {net === "mainnet" ? (
+            <OnchainVerdict id={id} />
+          ) : row ? (
             <StatusChip row={row} />
           ) : (
-            <span className="chip none">— {net === "mainnet" ? "Unknown to your anchors" : "No certificate"}</span>
+            <span className="chip none">— No certificate</span>
           )}
-          <div className="sub">{row ? row.why : net === "mainnet" ? "mass 0 under these anchors (reference solver)" : "no ANCRE certificate covers this agent"}</div>
+          {net !== "mainnet" && <div className="sub">{row ? row.why : "no ANCRE certificate covers this agent"}</div>}
         </div>
       </section>
 
@@ -92,13 +95,15 @@ export function AgentPage({ route, ds, error }: { route: Route & { page: "agent"
 
       <div className="agent-grid">
         <div>
-          {!row && <NotInSet net={net} ds={ds} />}
+          {net === "mainnet" && tab === "overview" && <OnchainAgentCard id={id} />}
+          {net === "mainnet" && tab === "overview" && <h2 className="section-h">Reference solver <span className="pill warn">COMPUTED · not certified on-chain</span></h2>}
+          {!row && (net !== "mainnet" || tab === "overview" || tab === "ratings" || tab === "path") && <NotInSet net={net} ds={ds} />}
           {tab === "overview" && row && ds && <Overview row={row} ds={ds} live={live.registry} />}
           {tab === "overview" && funders && <FundersPanel m={funders} owner={row?.owner ?? live.identity?.owner ?? live.registry?.owner} />}
           {tab === "ratings" && (row && ds ? <Ratings id={id} ds={ds} /> : <RawRatings chain={chain} id={id} />)}
           {tab === "path" && row && ds && <Path id={id} row={row} ds={ds} />}
-          {tab === "certificates" && <Certificates row={row} ds={ds} />}
-          {tab === "payments" && <Payments id={id} row={row} ds={ds} />}
+          {tab === "certificates" && (net === "mainnet" ? <OnchainCertificates id={id} /> : <Certificates row={row} ds={ds} />)}
+          {tab === "payments" && (net === "mainnet" ? <OnchainPayments id={id} /> : <Payments id={id} row={row} ds={ds} />)}
         </div>
         <aside>
           {ds && <PolicyCard ds={ds} inSet={!!row} />}
@@ -131,7 +136,7 @@ function NotInSet({ net, ds }: { net: string; ds: Dataset | null }) {
   return (
     <div className="banner info">
       {net === "mainnet"
-        ? "Under these anchors the reference solver gives this agent no mass: it is unknown to them. Nothing is certified on mainnet yet (preview)."
+        ? `Under these anchors the reference solver (registry snapshot, block ${int(act1.snapshotBlock)}) gives this agent no mass: it is unknown to them, or it was registered after the snapshot. Computed off-chain; the on-chain answer of ANCRE's own anchor set is above.`
         : fork
           ? "No ANCRE certificate covers this agent: the anchor set on this screen is a recorded run on a fork of the testnet, whose demo agents are other agents with the same numbers. Its registry ratings are listed, not weighted."
           : "This agent is not in the certified anchor set's graph: mass 0, unknown to the anchors."}
@@ -149,8 +154,8 @@ function Overview({ row, ds, live }: { row: AgentRow; ds: Dataset; live: AgentRe
     <>
       <section className="card">
         <div className="card-h">
-          <h2>Under your anchors</h2>
-          <span className="muted small">{row.status ? `assess() status ${row.status}` : "reference solver, off-chain"}</span>
+          <h2>{ds.net === "mainnet" ? "Reference solver, under these anchors" : "Under your anchors"}</h2>
+          <span className="muted small">{row.status ? `assess() status ${row.status}` : "computed off-chain, not certified"}</span>
         </div>
         <div className="card-b">
           <Meter massPct={massPct} thetaPct={ds.policy.thetaPct} />
@@ -160,7 +165,7 @@ function Overview({ row, ds, live }: { row: AgentRow; ds: Dataset; live: AgentRe
           <Metric label="Raw mass Σλt" val={<Mass wad={row.trust} />} sub={oneAnchor ? "from one anchor only" : "before leave-one-out"} />
           <Metric label="Distrust" val={<Mass wad={row.distrust} />} sub="one hop, from slashes" />
           <Metric label="Error bound e" val={bound(row.e)} sub="certificate, upper" />
-          <Metric label="Certificate" val={row.certBlock ? `block ${int(row.certBlock)}` : "—"} sub={row.certBlock ? "the one assess() read" : ds.net === "mainnet" ? "none on mainnet" : "NO_CERT"} />
+          <Metric label="Certificate" val={row.certBlock ? `block ${int(row.certBlock)}` : "—"} sub={row.certBlock ? "the one assess() read" : ds.net === "mainnet" ? "none: solver output (on-chain: above)" : "NO_CERT"} />
         </div>
       </section>
       <section className="card">
@@ -376,7 +381,7 @@ function Path({ id, row, ds }: { id: string; row: AgentRow; ds: Dataset }) {
 // ------------------------------------------------------------------ certificates, payments
 function Certificates({ row, ds }: { row: AgentRow | null; ds: Dataset | null }) {
   if (!ds?.run)
-    return <div className="banner info">No ANCRE certificate on {ds?.net === "mainnet" ? "mainnet yet: this network is a preview, computed off-chain" : "this network yet"}.</div>;
+    return <div className="banner info">No ANCRE certificate on this network yet.</div>;
   const certs = [...ds.run.certificates].reverse();
   return (
     <section className="card">
@@ -420,9 +425,7 @@ function Payments({ id, row, ds }: { id: string; row: AgentRow | null; ds: Datas
   if (!ds?.run || !row)
     return (
       <div className="banner info">
-        {ds?.net === "mainnet" && row
-          ? `No payer contract on mainnet. Under these anchors the reference solver says: ${row.passes ? "would pay" : "would refuse"} (${row.why}).`
-          : "No payment to this agent in the recorded run."}
+        No payment to this agent in the recorded run.
       </div>
     );
   const ps = ds.run.payments.filter((p) => p.agentId === id).reverse();
@@ -467,7 +470,7 @@ function PolicyCard({ ds, inSet }: { ds: Dataset; inSet: boolean }) {
   return (
     <section className="card">
       <div className="card-h">
-        <h2>Your anchor policy</h2>
+        <h2>{ds.net === "mainnet" ? "Reference solver: anchor policy" : "Your anchor policy"}</h2>
       </div>
       <div className="card-b kv">
         <div>Anchors</div>
@@ -504,7 +507,9 @@ function Sources({ net, ds, row, live }: { net: string; ds: Dataset | null; row:
         <h2>Sources</h2>
       </div>
       <div className="card-b note" style={{ marginTop: 0 }}>
-        {row && ds && <SourceLine status={ds.source.status} text={`ANCRE numbers: ${ds.source.text}`} detail={ds.source.detail} />}
+        {net === "mainnet" && <SourceLine status="READ ON-CHAIN" text="certified state: AnchoredReputation.assess() and TrustGatedPayer.decide(), eth_call on the public mainnet RPC" />}
+        {net === "mainnet" && <SourceLine status="RECORDED" text="transactions of the minimal mainnet run, 2026-10-10 (event log)" />}
+        {row && ds && <SourceLine status={ds.source.status} text={`${ds.net === "mainnet" ? "Reference solver numbers" : "ANCRE numbers"}: ${ds.source.text}`} detail={ds.source.detail} />}
         {net !== "demo" && (
           <SourceLine status={live ? "MEASURED" : "—"} text={live ? "registry ratings and identity: Envio HyperIndex, live" : "registry ratings: Envio unreachable or loading"} />
         )}

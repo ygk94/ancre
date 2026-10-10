@@ -1,5 +1,6 @@
 // Network: what ANCRE reads and writes on each chain. Registry addresses are constants (CLAUDE.md §3), ANCRE's
-// contracts come from the run header (never from here), indexer counts are read live from Envio.
+// contracts come from a run header (testnet: the newest recorded run; mainnet: the archived run of 10/10, via
+// src/data/mainnet-run.json), indexer counts are read live from Envio, the mainnet certificate from the contract.
 import { useEffect, useState } from "react";
 import { NETWORK_CHOICES, NETWORKS, ENVIO_GRAPHQL } from "../config/networks";
 import type { Header } from "../core/demo";
@@ -7,7 +8,8 @@ import type { NetId } from "../core/model";
 import { chainHead, type ChainHead } from "../lib/envio";
 import { int } from "../lib/format";
 import { href, navigate, type Route } from "../router";
-import { act1 } from "../sources/useDataset";
+import { act1, mainnetName } from "../sources/useDataset";
+import { MainnetContractRows, OnchainSetCard } from "./Onchain";
 import { useRunSet } from "../sources/useRunSet";
 import scan from "../data/scan-snapshot.json";
 
@@ -28,6 +30,7 @@ export function Network({ route }: { route: Route }) {
           <NetCard key={n.id} n={n} route={route} run={rs?.header ?? null} runError={error} />
         ))}
       </div>
+      <OnchainSetCard route={route} nameOf={mainnetName} />
       <div className="note">
         Registry addresses: ERC-8004 v2.0.0, <code>getVersion()</code> read on-chain on 27/09. Indexer counts: Envio GraphQL, read now. A dash
         means we have no verified value.
@@ -44,20 +47,26 @@ function NetCard({ n, route, run, runError }: { n: Choice; route: Route; run: He
     <section className={`card netcard${current ? " current" : ""}${n.state === "soon" ? " off" : ""}`}>
       <div className="card-h">
         <h2>
-          <span className={`dot ${n.state === "active" ? "live" : n.state === "preview" ? "preview" : "off"}`} /> {n.label}
+          <span className={`dot ${n.state === "active" ? "live" : "off"}`} /> {n.label}
         </h2>
         <span className="muted small">chain {n.chainId}</span>
       </div>
       <div className="card-b">
         <p className="small" style={{ marginTop: 0 }}>
-          {n.state === "active" && <>Where ANCRE runs today: our anchor set, its certificates and the payer contract.</>}
-          {n.state === "preview" && <>Preview: the real registry, read by our reference solver. Nothing is certified on-chain here yet.</>}
+          {n.id === "testnet" && <>Where ANCRE's full demo runs: our anchor set, its certificates and the payer contract.</>}
+          {n.id === "mainnet" && (
+            <>
+              ANCRE deployed by a minimal real run on 10/10: a demo anchor set, its certificate and the payer, read on-chain by this screen. No
+              continuous recertification: the certificate goes STALE after maxAge. The whole registry is also read by our reference solver
+              (computed off-chain, not certified).
+            </>
+          )}
           {n.state === "soon" && <>Soon. Not indexed by ANCRE yet.</>}
         </p>
         <div className="kv">
           <div>Status</div>
           <div>
-            <span className={`pill ${n.state === "active" ? "good" : "warn"}`}>{n.state === "active" ? "active" : n.state}</span>
+            <span className={`pill ${n.state === "active" ? "good" : "warn"}`}>{n.state === "active" ? (n.tag ?? "active") : n.state}</span>
           </div>
           <div>ERC-8004 Identity</div>
           <div>{reg ? <code className="mono">{reg.identity}</code> : "—"}</div>
@@ -66,9 +75,8 @@ function NetCard({ n, route, run, runError }: { n: Choice; route: Route; run: He
           {n.id === "testnet" && <AncreRows run={run} runError={runError} />}
           {n.id === "mainnet" && (
             <>
-              <div>ANCRE contracts</div>
-              <div className="muted">not deployed</div>
-              <div>Solver snapshot</div>
+              <MainnetContractRows />
+              <div>Reference solver snapshot</div>
               <div>
                 block <span className="num">{int(act1.snapshotBlock)}</span> · {int(act1.snapshotAgents)} agents · {int(act1.snapshotFeedbacks)} ratings
               </div>
