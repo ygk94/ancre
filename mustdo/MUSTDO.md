@@ -45,16 +45,24 @@
 
 1. [x] **Divulgation : on ne la fait pas** (D57, Hugo, 10/10). Les observations sont publiées comme faits on-chain et expliquées dans la vidéo. Les marqueurs DISCLOSURE-GATE sont retirés.
 2. [x] **On garde tout public**, `mustdo/` et `docs/conseil/` compris (D58, 10/10).
-3. [ ] **Mainnet : oui** (D59, 10/10).
-   - **Envoie 4 MON et environ 1 USDC** (USDC natif du mainnet) sur **`0x810724967b0d895d087b991304385720d4903c3F`**, le keystore `ancre-demo`, **réseau Monad mainnet**.
-   - **Donne-moi l'adresse de ton MetaMask principal** : ce sera l'owner du payeur.
-   - Un agent prépare le script et le répète sur un fork du mainnet. Tu lanceras le run réel toi-même, dans Terminal.app.
-4. [ ] **Webhook Alchemy** (bounty Alchemy, D60 : on le fait, avec une vidéo d'1 min, script dans `docs/soumission/video-alchemy.md`). Le tunnel tourne. Il reste :
-   1. je lance le récepteur et un tunnel ;
-   2. tu crées le Custom Webhook sur Monad testnet avec le filtre `docs/ressources/alchemy-webhook-testnet.graphql` ;
-   3. tu mets le jeton Notify et la clé de signature dans `solver/.env`.
-
-   Si on manque de temps, on abandonne le bounty Alchemy sans dommage pour le reste.
+3. [ ] **Mainnet : oui** (D59, 10/10). Presque fini :
+   - ✅ **Owner** du payeur = `0xD6FabC0A420127F493DeECdb461EaD4DAD644071` (ton MetaMask principal) ; trésorerie `0x0146…05B9` ; opérateur `ancre-demo` (`0x8107…3c3F`).
+   - ✅ **Fonds** : 135 MON envoyés sur `0x8107…3c3F` ; **100 MON échangés contre 2,455 USDC** sur Uniswap v3 (pool MON/USDC 0,3 %, 10/10). Solde : 29,97 MON et 2,455 USDC.
+   - ✅ **Mode mainnet** prêt et fusionné (`node run.ts --network mainnet`, RUNBOOK §7, BUDGET §7).
+   - ✅ **Répétition sur fork du mainnet : MAINNET ACT PASS** (scènes 0, 1, 2 et 4), 1,52 MON consommés (MESURÉ 10/10).
+   - [ ] **Le vrai run** (Terminal.app, depuis `demo/`, avec `MAINNET_OWNER` exporté) : `node run.ts --network mainnet --keystore ~/.foundry/keystores/ancre-demo --sweep`. Tape d'abord la phrase `send real Monad mainnet transactions`, puis le mot de passe. Colle-moi **toute** la sortie : je remplis `demo/JUDGES.md`.
+   - À la fin, le `--sweep` envoie l'USDC restant vers la trésorerie (ton 2ᵉ compte). Environ 0,02 USDC restent dans le payeur, et seul ton MetaMask principal peut les sortir (`sweep(USDC, amount)`).
+4. [ ] **Webhook Alchemy** (bounty Alchemy, D60). Il reste trois choses :
+   - ✅ Le webhook est créé sur Monad testnet, avec l'URL du tunnel ; les deux clés sont dans `solver/.env`.
+   - ✅ Le récepteur tourne en mode sec derrière le tunnel ; il refuse bien les requêtes non signées (401).
+   - ✅ **L'intégration complète est fusionnée** :
+     - à chaque webhook, rafraîchissement depuis Envio, recalcul et nouveau certificat on-chain, avec une ligne `TIMELINE` pour la vidéo (rejeu local : 3,6 s de la réception au certificat préparé, MESURÉ) ;
+     - panneau « Who funded the raters? » sur la page d'Eve, alimenté par la Transfers API : 150/150, 11,0 MON, MESURÉ 10/10 ;
+     - `solver/funders.py` et `docs/ressources/alchemy-integration.md`.
+   - [ ] Clique sur **Test Webhook** dans le dashboard Alchemy : rien n'est encore reçu.
+   - [ ] **Netlify** : ajoute la variable `ALCHEMY_API_KEY` (même valeur que `solver/.env`) dans *Site configuration → Environment variables*. Ensuite il faut un push, sans quoi le panneau d'Eve ne marche pas en ligne.
+   - [ ] Le mode réel du récepteur (`--send`) et le tournage de la vidéo Alchemy : `docs/soumission/video-alchemy.md`, commandes dans `docs/chantiers/rapports/alchemy-live.md`.
+   - Le tunnel change d'URL s'il redémarre : il faudra alors mettre à jour l'URL du webhook.
 5. [ ] **Relire le README public et le write-up.** Les textes de la plateforme sont dans `docs/soumission/textes-plateforme.txt`.
 
 ## 🟠 Sam 11/10 : le tournage et la mise en public
@@ -65,7 +73,7 @@
 2. [ ] **Voix et tournage de la vidéo de 3 minutes** : `demo/VIDEO-SHOTS.md`, mis à jour par 07-bis, avec sa checklist d'honnêteté.
    - Elle doit montrer de vraies interactions Monad (§9.4) : le run testnet du 07/10 et les liens vers l'explorateur.
    - Au tournage, ré-exporter l'acte 1 (AM-07.1).
-3. [ ] Option : **vidéo Alchemy** de 2 minutes au plus, seulement si le webhook est fait.
+3. [ ] **Vidéos des bounties, 1 min chacune** (D60) : Alchemy (`docs/soumission/video-alchemy.md`) et Envio (`docs/soumission/video-envio.md`, chiffres lus en direct le 10/10).
 
 ## 🟡 Dim 12/10 : la soumission
 
