@@ -8,7 +8,7 @@
 ## 🔴 Ven 10/10 (aujourd'hui)
 
 1. [x] **Webhook Alchemy** ✅ : 18 livraisons signées, bloc → réception en 1,3 s (médiane), puis **de bout en bout en réel à 13:16 UTC** : avis → webhook 1,06 s → certificat on-chain +17 blocs / 6,3 s, audité CLEAN. **Le certificat officiel du testnet est rafraîchi.**
-2. [ ] **Netlify : variable `ALCHEMY_API_KEY`**, en cochant « Contains secret values ». En cours. Si la variable est créée après le dernier push, fais un *Trigger deploy* : les fonctions ne lisent la variable qu'au déploiement.
+2. [x] ✅ **Netlify : variable `ALCHEMY_API_KEY`** (vérifiée en ligne), en cochant « Contains secret values ». En cours. Si la variable est créée après le dernier push, fais un *Trigger deploy* : les fonctions ne lisent la variable qu'au déploiement.
 3. [x] **Push** ✅ (mainnet, Alchemy, scripts vidéo, écran mainnet).
 4. [x] **Écran mainnet (option 1)** ✅ : lecture directe du contrat, avec le certificat, son âge et `STALE` (à partir du 11/10 vers midi UTC, estimé), les liens monadscan, le libellé « live · minimal run 10/10 » et 61 tests.
 5. [ ] **Relire le README public et le write-up.** Les textes de la plateforme sont dans `docs/soumission/textes-plateforme.txt` (adresses mainnet et mesures Alchemy déjà ajoutées).
@@ -17,7 +17,7 @@
 ## 🟠 Sam 11/10 : la mise en public et le tournage
 
 1. [x] **Dépôt public** ✅ 10/10 : https://github.com/ygk94/ancre (MIT, 262 commits datés d'origine, une seule identité perso, adresses pro et consignes internes retirées). Le dépôt privé de travail devient `ygk94/ancre-dev`. Je republie après chaque changement avec `~/.ancre-publish/publish.sh --push`. L'indexeur `ygk94/ancre-indexerv2` a sa branche `main` réécrite sous l'adresse perso ; `envio` est inchangée (option a).
-   - [ ] **Retirer la protection par mot de passe de Netlify** (*Site configuration → Access & security → Visitor access*).
+   - [x] **Site public** ✅ 10/10 : https://ancre-xyz.netlify.app répond sans mot de passe ; `/api/funders` (Transfers API, clé côté Netlify) répond en direct.
    - [ ] **Sur l'autre machine** : `git remote set-url origin git@github.com:ygk94/ancre-dev.git`.
 2. [ ] **Voix et tournage de la vidéo de 3 minutes** : `demo/VIDEO-SHOTS.md`, avec sa checklist d'honnêteté.
    - Elle doit montrer de vraies interactions Monad (§9.4). On a maintenant **le testnet (07/10) et le mainnet (10/10)**, avec les liens vers l'explorateur.
