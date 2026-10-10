@@ -42,9 +42,7 @@
 | Reference Implementation : Verified, déployé sur Monad | Note interne : niveau ResidualVerified, preuve (i) seule, chantiers R4 et R5 en cours, aucun chiffre de gas avant mesure | Monad hors texte normatif | CLAUDE.md §5 ; AM-3.6 | D18 |
 | Security : capture d'ancre, trou de complétude, lectures périmées, changements de contrôleur, le paiement n'est pas l'honnêteté, arrondi, gas | + `minAnchors` ≥ 2 **MUST**, clé d'ancre volée, consommateur-ancre, surveillants, borne globale, vivacité, rachat, gouvernance du registre et garde-fou (note G1), wallets partagés, négatif permanent et recours `appendResponse`, oracle de refus, fuite par les mesures, lignes d'ancre > rowMax, même chaîne | Étendu | Tours 2 et 3, « Changements », Security | D8, D10, D14, D16, D17 |
 
-<!-- DISCLOSURE-GATE:start — keep only once the ERC-8004 maintainers have been notified (decision D29) -->
 **Note G1.** Le garde-fou de `giveFeedback` ne rejette pas l'`agentWallet` de l'agent (78 avis de son propre wallet sur #8317, MESURÉ le 27/09, inchangé le 07/10), et les deux proxys des registres ont pour owner une seule EOA, `0x5472…2603`, sans timelock (relu le 07/10, bloc 111 299 306).
-<!-- DISCLOSURE-GATE:end -->
 
 **Points ⟦OPEN⟧ repris dans le texte** : les 9 désaccords normatifs listés ci-dessous, sans les trancher.
 - **Tour 2** :

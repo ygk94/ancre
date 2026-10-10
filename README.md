@@ -54,9 +54,7 @@ We re-read the canonical registries on Monad mainnet directly on-chain (never th
 
 Any application that ranks agents by average rating puts Eve-8004 first. Requiring proof of payment does not fix it: the farm paid, and the raters' funds came from the same owner. We checked a random sample of 150 of Eve's raters: each one received its first MON from Eve's owner, always 11.0 MON (MEASURED, 2026-10-06, Alchemy Transfers API on `rpc1.monad.xyz`; `docs/ressources/alchemy.md` **[TBD: commit the script and its JSON output]**).
 
-<!-- DISCLOSURE-GATE:start — keep only once the ERC-8004 maintainers have been notified (decision D29) -->
 The registry's self-rating guard checks the agent's owner and operators, not its `agentWallet`: agent #8317 received 78 ratings from its own agent wallet, all accepted by the registry. ANCRE drops all 78 (MEASURED, `solver/out/mainnet.md` §c).
-<!-- DISCLOSURE-GATE:end -->
 
 **The same pattern on other chains.** We ran the same edge rules over seven ERC-8004 deployments with Envio HyperSync (MEASURED, 2026-09-28, [`indexer/analytics/survival_scan.py`](indexer/analytics/survival_scan.py), report `docs/chantiers/rapports/03.md` §3):
 

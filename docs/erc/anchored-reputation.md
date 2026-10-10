@@ -31,9 +31,7 @@ Contracts read the result synchronously. `passesAnchorPolicy(agentId, setId)` ap
 
 - **Payment is not a defence.** The farm above paid for its interactions, and the raters were funded by the rated agent's owner: in a random sample of 150 of its raters, each one received its first native-token transfer from that owner, always for the same amount *(measured 2026-10-06)*. A third-party analysis of the same data found 16 entries out of 9,188 with clean payment provenance *(reported 2026-09-21, not re-verified)*. Another third-party service reports that 73 of 85 payment claims in ERC-8004 evidence documents on that chain cite a transaction absent from the chain they name *(self-reported, read 2026-09-28)*. A receipt, true or false, says nothing about whether the payer is independent of the payee.
 
-<!-- DISCLOSURE-GATE:start — keep only once the ERC-8004 maintainers have been notified (decision D29) -->
 - **The registry's own guard is bypassed in practice.** `giveFeedback` rejects the owner and operators of an agent, but not its `agentWallet`. On the same deployment, one agent received 78 entries from its own `agentWallet` *(measured and checked against the deployed source, 2026-09-27)*.
-<!-- DISCLOSURE-GATE:end -->
 
 - **Wallets are shared and transient.** On the same deployment, 178 wallets are each the `agentWallet` of several agents (1,773 agents in total, up to 762 per wallet), and the wallet was cleared at each of the 72 historical transfers *(measured, 2026-09-27)*. An aggregator cannot equate a wallet with an agent.
 
@@ -895,9 +893,7 @@ This ERC requires no change to ERC-8004. Aggregators only read the registries: `
 3. **Timelock registry upgrades.** Upgrades should be announced on-chain, with a delay, before they take effect.
 4. **Standardize `getVersion()`** in the ERC-8004 interfaces, so that aggregators can commit to a registry version without relying on an implementation detail.
 5. **Emit the registration events in state order.** `register()` should emit `MetadataSet` for `agentWallet` before the ERC-721 receiver callback, so that an indexer that replays events obtains the state the registry stores (Security Considerations, *Indexers*).
-<!-- DISCLOSURE-GATE:start — keep only once the ERC-8004 maintainers have been notified (decision D29) -->
 6. **Extend the `giveFeedback` guard to `agentWallet`.** The current guard rejects the owner and approved operators, but not the agent's own wallet.
-<!-- DISCLOSURE-GATE:end -->
 
 If the registries change the semantics of `agentWallet`, of `feedbackIndex` or of the guard, existing certificates become `REGISTRY_CHANGED` (§7) once the version string changes, and sets need recertification.
 
@@ -1158,9 +1154,7 @@ In every case, the lower bound is guaranteed for the registry's graph only once 
 - The committed owner is a 63-bit fingerprint. A transfer to an address that shares those 63 bits goes unnoticed. Finding one takes about 2⁶³ attempts.
 
 **Registry governance.**
-<!-- DISCLOSURE-GATE:start — keep only once the ERC-8004 maintainers have been notified (decision D29) -->
 The registries of the deployment in Motivation are upgradeable proxies controlled by a single externally owned account, with no timelock *(verified 2026-09-27)*.
-<!-- DISCLOSURE-GATE:end -->
 Registries are typically upgradeable. Whoever controls an upgrade can change any semantics this ERC relies on, including making any certificate pass the `RegistryVerified` re-reads, without changing the version string.
 - The version hash detects an upgrade only if the version string changes, and only for the sets on which someone calls `checkRegistry`. An upgrade that keeps the version string is detectable only off-chain, through `Upgraded` events.
 - Consumers of high-value flows should monitor those events.
@@ -1168,9 +1162,7 @@ Registries are typically upgradeable. Whoever controls an upgrade can change any
 - `getVersion` and the reference registry's `isAuthorizedOrOwner` are not part of the ERC-8004 interface. On a registry without them, the reference implementation refuses every submission and every proof that needs them. An implementation can use the ERC-721 functions of §1 instead of `isAuthorizedOrOwner`.
 
 **Controllers, former owners and shared wallets.**
-<!-- DISCLOSURE-GATE:start — keep only once the ERC-8004 maintainers have been notified (decision D29) -->
 - The ERC-8004 guard does not reject an agent's own `agentWallet`: one agent of the deployment in Motivation received 78 feedback entries from it. §3.3 rejects the positive edges of every current controller, `agentWallet` included.
-<!-- DISCLOSURE-GATE:end -->
 - Former owners are not rejected, because past ownership cannot be checked on-chain. A seller can rate the agent it sold, with the weight of its own mass, like any third party, including right after the transfer.
 - A wallet shared by several agents makes each of them emit the same row with its own mass. A platform wallet whose agents are all reputable therefore speaks with their combined mass. That is concentration, not a Sybil gain, and it is visible in the certificate.
 
