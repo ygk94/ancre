@@ -7,14 +7,12 @@
 
 ## 🔴 Ven 10/10 (aujourd'hui)
 
-1. [ ] **Webhook Alchemy : cliquer sur « Test Webhook »** dans le dashboard Alchemy. Rien n'est encore reçu.
-   - Vérifie que l'URL du webhook est exactement `https://effectiveness-justice-animation-nevada.trycloudflare.com/alchemy`.
-   - Le tunnel change d'URL s'il redémarre : il faudra alors la remettre dans le webhook.
-2. [ ] **Netlify : ajouter la variable `ALCHEMY_API_KEY`**, avec la même valeur que dans `solver/.env`, dans *Site configuration → Environment variables*.
-3. [ ] **Autoriser le push de `main`** (12 commits : mainnet, Alchemy, scripts vidéo, décisions D57 à D60). Le site se republie, et le panneau d'Eve marche en ligne.
-4. [ ] **Passer le récepteur Alchemy en mode réel** (`--send`). Je te donne la commande, à lancer dans Terminal.app avec ton mot de passe.
-   - **C'est aussi ce qui rafraîchit le certificat de l'instance officielle du testnet** : il a dépassé `maxAge` et l'écran l'affiche `STALE`. Il faut le rafraîchir avant le tournage.
-5. [ ] **Relire le README public et le write-up.** Les textes de la plateforme sont dans `docs/soumission/textes-plateforme.txt`.
+1. [x] **Webhook Alchemy** ✅ : 18 livraisons signées, bloc → réception en 1,3 s (médiane), puis **de bout en bout en réel à 13:16 UTC** : avis → webhook 1,06 s → certificat on-chain +17 blocs / 6,3 s, audité CLEAN. **Le certificat officiel du testnet est rafraîchi.**
+2. [ ] **Netlify : variable `ALCHEMY_API_KEY`**, en cochant « Contains secret values ». En cours. Le push de 16:xx redéploie le site, donc pas besoin de *Trigger deploy*.
+3. [x] **Push** ✅ (mainnet, Alchemy, scripts vidéo, écran mainnet).
+4. [x] **Écran mainnet (option 1)** ✅ : lecture directe du contrat, avec le certificat, son âge et `STALE` (à partir du 11/10 vers midi UTC, estimé), les liens monadscan, le libellé « live · minimal run 10/10 » et 61 tests.
+5. [ ] **Relire le README public et le write-up.** Les textes de la plateforme sont dans `docs/soumission/textes-plateforme.txt` (adresses mainnet et mesures Alchemy déjà ajoutées).
+6. [ ] **Laisser l'onglet du récepteur Alchemy ouvert** si tu veux qu'il continue à recertifier. Pour la vidéo, relance `node trigger.ts --send --keystore ~/.foundry/keystores/ancre-demo` (depuis `demo/`).
 
 ## 🟠 Sam 11/10 : la mise en public et le tournage
 
@@ -57,9 +55,6 @@
 
 ## Décisions en attente
 
-- [ ] **L'écran pour le mainnet.** Il affiche « soon » alors qu'ANCRE y est maintenant déployé.
-  - Option 1 : l'activer en lecture directe du contrat, ce que je peux faire.
-  - Option 2 : ajouter aussi le contrat mainnet à l'indexeur Envio. Ça consomme le **3ᵉ et dernier** déploiement gratuit.
 - [ ] « **Donate** » sur l'écran : affiché « soon ». Que veux-tu dedans, ou faut-il le retirer ?
 - [ ] La lentille « A reader who anchors inside the farm » : la garder dans le sélecteur, ou seulement dans le README ? (07-bis)
 - [ ] Les points de la revue laissés au conseil, sans effet sur la démo : A1b, EFF1, G-11 (EOA 7702), liveness des faits, AM-08bis.11 et .12 côté norme.
