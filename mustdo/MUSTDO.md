@@ -16,10 +16,9 @@
 
 ## 🟠 Sam 11/10 : la mise en public et le tournage
 
-1. [ ] **Rendre le dépôt public** : plus rien ne bloque (D57, D58). La règle §7.2 demande un code public « throughout ».
-   - Avant, relis la **clause de cession des inventions** de ton contrat (§4.3), plus bas.
-   - Installe `git-filter-repo` : `brew install git-filter-repo`. Je prépare ensuite le **clone filtré** sous ton adresse perso (mailmap, `publication-checklist.md` §4).
-   - Tu le pousses vers le dépôt public, puis tu retires la protection Netlify.
+1. [x] **Dépôt public** ✅ 10/10 : https://github.com/ygk94/ancre (MIT, 262 commits datés d'origine, une seule identité perso, adresses pro et consignes internes retirées). Le dépôt privé de travail devient `ygk94/ancre-dev`. Je republie après chaque changement avec `~/.ancre-publish/publish.sh --push`. L'indexeur `ygk94/ancre-indexerv2` a sa branche `main` réécrite sous l'adresse perso ; `envio` est inchangée (option a).
+   - [ ] **Retirer la protection par mot de passe de Netlify** (*Site configuration → Access & security → Visitor access*).
+   - [ ] **Sur l'autre machine** : `git remote set-url origin git@github.com:ygk94/ancre-dev.git`.
 2. [ ] **Voix et tournage de la vidéo de 3 minutes** : `demo/VIDEO-SHOTS.md`, avec sa checklist d'honnêteté.
    - Elle doit montrer de vraies interactions Monad (§9.4). On a maintenant **le testnet (07/10) et le mainnet (10/10)**, avec les liens vers l'explorateur.
    - Au tournage, ré-exporter l'acte 1 (AM-07.1).
