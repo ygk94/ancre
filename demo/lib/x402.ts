@@ -12,7 +12,7 @@ import {
 } from "viem";
 import { usdcAbi } from "./abi.ts";
 import type { Chain } from "./chain.ts";
-import { TESTNET } from "./config.ts";
+import { NET } from "./config.ts";
 
 export type Authorization = { from: Address; to: Address; value: bigint; validAfter: bigint; validBefore: bigint; nonce: Hex };
 
@@ -116,7 +116,7 @@ function settlementCall(payload: ReturnType<typeof paymentPayload>): Hex {
 export class EmulatedFacilitator implements Facilitator {
   chain: Chain;
   usdc: Address;
-  signer: Address = TESTNET.facilitatorSigner;
+  signer: Address = NET.facilitatorSigner;
   constructor(chain: Chain, usdc: Address) {
     this.chain = chain;
     this.usdc = usdc;

@@ -1,0 +1,88 @@
+
+rehearsal on a fork of Monad mainnet (143), block 112175382: http://127.0.0.1:8551
+payer roles: owner 0xD6FabC0A420127F493DeECdb461EaD4DAD644071 (MAINNET_OWNER), treasury 0x0146082951DE0C4d09fca1e1277ACa8963a305B9, operator 0x3b839DD0c12014444cc9DCEb2C4586dA74b3bEe1
+
+budget of the remaining steps (gas limits MEASURED-FORK, at 102 gwei, +30 %):
+  0.fund-mon                       MON to anchor-A and anchor-B (gas only)             56200 gas  0.0057 MON
+  0.deploy-ancre                   deploy AnchoredReputation                         9395000 gas  0.9583 MON
+  0.anchor-set                     registerAnchorSet (3 anchors, m = 2)               553000 gas  0.0564 MON
+  0.register:provider-1 (demo)     register provider-1 (demo)                         393000 gas  0.0401 MON
+  0.wallet:provider-1 (demo)       setAgentWallet provider-1                           97000 gas  0.0099 MON
+  0.deploy-payer                   deploy TrustGatedPayer (3 roles)                  2409000 gas  0.2457 MON
+  0.fund-payer                     USDC deposit in the payer                          116000 gas  0.0118 MON
+  1.vouch:A->p1                    anchor-A vouches                                   327000 gas  0.0334 MON
+  1.vouch:B->p1                    anchor-B vouches                                   308000 gas  0.0314 MON
+  1.cert                           submitCertificate                                  664000 gas  0.0677 MON
+  4.slash                          anchor-B slashes provider-1                        223000 gas  0.0227 MON
+  4.cert                           submitCertificate (veto)                           349000 gas  0.0356 MON
+  sweep                            --sweep: 2 MON returns + operator's USDC rest to the treasury     158000 gas  0.0161 MON
+  fees 1.9954 MON (with margin), capital lent to the anchors 0.1561 MON (swept back by --sweep)
+  operator needs 2.0377 MON and 0.03 USDC; holds 4.0000 MON and 1 USDC
+
+== scene 0: setup: ANCRE, anchor set, one provider (demo), payer with three distinct roles
+  [0.start] setup: ANCRE, anchor set, one provider (demo), payer with three distinct roles
+  [0.fund-mon:anchor-A (demo)] fund anchor-A (demo) with MON for gas
+  [0.fund-mon:anchor-B (demo)] fund anchor-B (demo) with MON for gas
+  [0.deploy-ancre] deploy AnchoredReputation
+  [0.anchor-set] register the demo anchor set (3 anchors, m = 2)
+  [0.register:provider-1 (demo)] ANCRE operator (ancre-demo) registers provider-1 (demo) as agent #10330 | explorer n=0 avg=null | ANCRE NO_CERT mass=0% trusted=false
+  [0.wallet:provider-1 (demo)] provider-1 (demo) wallet set | explorer n=0 avg=null | ANCRE NO_CERT mass=0% trusted=false
+  [0.deploy-payer] deploy TrustGatedPayer (owner = Hugo's wallet, treasury, operator = ancre-demo: three distinct addresses; exact only)
+  [0.fund-payer] deposit 0.03 USDC in the payer
+  [0.end] setup: ANCRE, anchor set, one provider (demo), payer with three distinct roles: PASS
+  ✓ payer owner = MAINNET_OWNER: expected 0xD6FabC0A420127F493DeECdb461EaD4DAD644071, got 0xD6FabC0A420127F493DeECdb461EaD4DAD644071
+  ✓ payer treasury = 0x0146…05B9: expected 0x0146082951DE0C4d09fca1e1277ACa8963a305B9, got 0x0146082951DE0C4d09fca1e1277ACa8963a305B9
+  ✓ operator (ancre-demo) is a payer operator: expected true, got true
+  ✓ owner is not an operator: expected false, got false
+  ✓ payer setId = the registered set: expected 0x676454745e544979a0d5be56a8a898b8cb50932b07dd035f3e2d8ef2d999a2fb, got 0x676454745e544979a0d5be56a8a898b8cb50932b07dd035f3e2d8ef2d999a2fb
+  ✓ maxPerPayment = 0.01 USDC: expected 10000, got 10000
+  ✓ D47: the operator cannot sweep the payer (eth_call): expected reverts, got reverts
+  ✓ D47: the owner can sweep it to the treasury (eth_call): expected ok, got ok
+  ✓ D47: the operator cannot lift a pause (eth_call): expected reverts, got reverts
+  ✓ the owner can (eth_call): expected ok, got ok
+
+== scene 1: an honest provider (demo), vouched for by 2 anchors, is paid by the real x402 facilitator
+  [1.start] an honest provider (demo), vouched for by 2 anchors, is paid by the real x402 facilitator
+  [1.vouch:A->p1] anchor-A (demo) gives vouch 80 to provider-1 (demo) | explorer n=1 avg=80.000000 | ANCRE NO_CERT mass=0% trusted=false
+  [1.vouch:B->p1] anchor-B (demo) gives vouch 70 to provider-1 (demo) | explorer n=2 avg=75.000000 | ANCRE NO_CERT mass=0% trusted=false
+  [1.cert] certifier: certified (anchors vouched for the provider)
+  [1.pay:p1] payer pays provider-1 (demo) 0.01 USDC: PAID | explorer n=2 avg=75.000000 | ANCRE OK mass=5.185185% trusted=true
+  [1.end] an honest provider (demo), vouched for by 2 anchors, is paid by the real x402 facilitator: PASS
+  ✓ provider-1 trusted (2 anchors, leave-one-out m = 2): expected true, got true
+  ✓ provider-1 robust mass above theta: expected true, got true
+  ✓ provider-1 paid: expected PAID, got PAID
+  ✓ provider-1 received 0.01 USDC: expected 10000, got 10000
+
+== scene 2: the real farm: the payer refuses to pay Eve-8004 (#182)
+  [2.start] the real farm: the payer refuses to pay Eve-8004 (#182)
+  [2.eve-facts] Eve-8004 (#182): owner 0x97cD97CFE21799bacBf39D0a53469e5f82f30996, agentWallet 0x97cD97CFE21799bacBf39D0a53469e5f82f30996 (on-chain facts, read now); ~7 665 feedbacks (snapshot 21/09) | explorer n=7665 avg=null | ANCRE OK mass=0% trusted=false
+  [2.pay:eve] payer pays Eve-8004 (agent #182, real farm) 0.01 USDC: REFUSED (UNTRUSTED) | explorer n=7665 avg=null | ANCRE OK mass=0% trusted=false
+  [2.end] the real farm: the payer refuses to pay Eve-8004 (#182): PASS
+  ✓ Eve's status is OK (an unknown agent, AM-6.1): expected 0, got 0
+  ✓ Eve's robust mass: expected 0, got 0
+  ✓ Eve not trusted: expected false, got false
+  ✓ payment refused by the contract: expected UNTRUSTED, got UNTRUSTED
+  ✓ refused at /verify: nothing broadcast: expected verify, got verify
+  ✓ Eve received nothing: expected 0, got 0
+
+== scene 4: breaker: an anchor slashes the provider, refused at the very next payment
+  [4.start] breaker: an anchor slashes the provider, refused at the very next payment
+  [4.slash] anchor-B (demo) slashes provider-1 (-100) | explorer n=3 avg=16.666666 | ANCRE VETOED mass=5.185185% trusted=false
+  [4.pay:p1-after-slash] payer pays provider-1 (demo) 0.01 USDC: REFUSED (ANCRE_STATUS) | explorer n=3 avg=16.666666 | ANCRE VETOED mass=5.185185% trusted=false
+  [4.cert] certifier: certified (an anchor slashed provider-1)
+  [4.pay:p1-after-cert] payer pays provider-1 (demo) 0.01 USDC: REFUSED (ANCRE_STATUS) | explorer n=3 avg=16.666666 | ANCRE VETOED mass=0% trusted=false
+  [4.latency] breaker latency: 0 block(s), 99 ms (fork) | explorer n=3 avg=16.666666 | ANCRE VETOED mass=0% trusted=false
+  [4.end] breaker: an anchor slashes the provider, refused at the very next payment: PASS
+  ✓ refused right after the slash: expected ANCRE_STATUS, got ANCRE_STATUS
+  ✓ still refused after recertification: expected REFUSED, got REFUSED
+  ✓ status VETOED: expected 4, got 4
+  sweep anchor-A (demo): 0.01645705 MON success
+  sweep anchor-B (demo): 0.047878807 MON success
+  recovered 0.064335857 MON
+  [sweep-usdc] operator's USDC rest (0.97) to the treasury
+
+operator: 4.0000 -> 2.4800 MON (spent 1.5200), 1 -> 0 USDC
+events: /Users/hugo/Projet/ancre/.claude/worktrees/agent-a0935641263e74b04/demo/out/run-20261010T115315Z.json
+state:  /Users/hugo/Projet/ancre/.claude/worktrees/agent-a0935641263e74b04/demo/out/state-rehearsal-mainnet.json
+MAINNET ACT PASS (scenes 0,1,2,4, rehearsal-mainnet)
+payer 0x424405A4007626AE5c3836ca3E051595dAe07945: what is left in it goes back to the treasury only through the OWNER (MetaMask): sweep(USDC, amount), RUNBOOK §7

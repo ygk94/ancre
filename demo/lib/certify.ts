@@ -7,7 +7,7 @@ import { promisify } from "node:util";
 import { type Abi, type Address, type Hex, keccak256, toHex } from "viem";
 import { identityAbi, reputationAbi } from "./abi.ts";
 import type { Chain } from "./chain.ts";
-import { DEMO, OUT, PYTHON, SET, TESTNET } from "./config.ts";
+import { DEMO, OUT, PYTHON, SET, NET } from "./config.ts";
 import type { AgentRec } from "./state.ts";
 
 const run = promisify(execFile);
@@ -61,9 +61,9 @@ export async function registryData(chain: Chain, ancre: { address: Address; abi:
   for (const a of agents) {
     const id = BigInt(a.agentId);
     const [[clients, idx, values, decs, t1, t2, rev], o, w] = await Promise.all([
-      chain.pub.readContract({ address: TESTNET.reputation, abi: reputationAbi, functionName: "readAllFeedback", args: [id, [], "", "", true], blockNumber }),
-      chain.pub.readContract({ address: TESTNET.identity, abi: identityAbi, functionName: "ownerOf", args: [id], blockNumber }),
-      chain.pub.readContract({ address: TESTNET.identity, abi: identityAbi, functionName: "getAgentWallet", args: [id], blockNumber }),
+      chain.pub.readContract({ address: NET.reputation, abi: reputationAbi, functionName: "readAllFeedback", args: [id, [], "", "", true], blockNumber }),
+      chain.pub.readContract({ address: NET.identity, abi: identityAbi, functionName: "ownerOf", args: [id], blockNumber }),
+      chain.pub.readContract({ address: NET.identity, abi: identityAbi, functionName: "getAgentWallet", args: [id], blockNumber }),
     ]);
     clients.forEach((c, i) => feedbacks.push({ a: a.agentId, c: c.toLowerCase(), i: Number(idx[i]), v: values[i].toString(),
       d: decs[i], t1: t1[i], t2: t2[i], r: rev[i] }));

@@ -9,7 +9,7 @@ import {
 import type { PrivateKeyAccount } from "viem/accounts";
 import { CONTRACTS, GAS_MARGIN_ABS, GAS_MARGIN_BPS } from "./config.ts";
 
-export type Mode = "fork" | "frozen" | "testnet";
+export type Mode = "fork" | "frozen" | "testnet" | "mainnet";
 
 export type TxRecord = {
   label: string; fn: string; from: Address; hash: Hash; block: number; status: "success" | "reverted";
@@ -44,7 +44,7 @@ export class Chain {
   chainId: number;
   monadRules: boolean; // apply the reserve-balance waits (real testnet, or its rehearsal on an interval-mined fork)
   // no TS parameter properties: Node's type stripping only accepts erasable syntax
-  constructor(rpc: string, mode: Mode, chainId: number, monadRules = mode === "testnet") {
+  constructor(rpc: string, mode: Mode, chainId: number, monadRules = mode === "testnet" || mode === "mainnet") {
     this.rpc = rpc;
     this.monadRules = monadRules;
     this.mode = mode;
@@ -121,7 +121,7 @@ export class Chain {
 
   // ---------------------------------------------------------------- fork-only helpers
   get isLocal() {
-    return this.mode !== "testnet";
+    return this.mode === "fork" || this.mode === "frozen";
   }
 
   async setBalance(who: Address, wei: bigint) {

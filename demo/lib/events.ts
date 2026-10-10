@@ -6,7 +6,7 @@ import { type Abi, type Address, type Hex, keccak256, toHex, zeroHash } from "vi
 import { reputationAbi, STATUSES } from "./abi.ts";
 import type { Chain, TxRecord } from "./chain.ts";
 import { readAssess } from "./ancre.ts";
-import { OUT, TESTNET } from "./config.ts";
+import { OUT, NET } from "./config.ts";
 
 export const FORMAT = "ancre-demo-events-v1";
 const WAD = 10n ** 18n;
@@ -28,7 +28,7 @@ export function naiveAverage(values: bigint[], decimals: number[]): string | nul
 }
 
 export type AgentSnapshot = {
-  explorer: { feedbackCount: number; revokedCount: number; clientCount: number; naiveAverage: string | null };
+  explorer: { feedbackCount: number; revokedCount: number; clientCount: number; naiveAverage: string | null; source?: string };
   contract: Record<string, unknown>;
 };
 
@@ -41,6 +41,8 @@ export class EventLog {
   tagNames = new Map<string, string>();
   timestamps = new Map<number, number>(); // block -> timestamp (3-4 Monad blocks share a second; events share blocks)
   ancre?: { address: Address; abi: Abi; setId: Hex; theta: bigint };
+  // explorer column given, not read: agents whose readAllFeedback does not fit in an eth_call (Eve-8004 on the mainnet)
+  explorerStatic = new Map<string, AgentSnapshot["explorer"]>();
 
   constructor(chain: Chain, runId: string, header: Record<string, unknown>) {
     this.chain = chain;
@@ -84,18 +86,24 @@ export class EventLog {
 
   /** Both columns of the screen for one agent, read at `block`. */
   async snapshot(agentId: bigint, block: bigint): Promise<AgentSnapshot> {
-    const [[clients, , values, decs, , , revoked], x] = await Promise.all([
-      this.chain.pub.readContract({ address: TESTNET.reputation, abi: reputationAbi, functionName: "readAllFeedback",
+    const given = this.explorerStatic.get(agentId.toString());
+    const [all, x] = await Promise.all([
+      given ? undefined : this.chain.pub.readContract({ address: NET.reputation, abi: reputationAbi, functionName: "readAllFeedback",
         args: [agentId, [], "", "", true], blockNumber: block }),
       this.ancre ? readAssess(this.chain, this.ancre, agentId, this.ancre.setId, block) : undefined,
     ]);
-    const live = revoked.map((r, i) => (r ? -1 : i)).filter((i) => i >= 0);
-    const explorer = {
-      feedbackCount: live.length,
-      revokedCount: revoked.length - live.length,
-      clientCount: new Set(live.map((i) => clients[i].toLowerCase())).size,
-      naiveAverage: naiveAverage(live.map((i) => values[i]), live.map((i) => decs[i])),
-    };
+    let explorer: AgentSnapshot["explorer"];
+    if (given || !all) explorer = given!;
+    else {
+      const [clients, , values, decs, , , revoked] = all;
+      const live = revoked.map((r, i) => (r ? -1 : i)).filter((i) => i >= 0);
+      explorer = {
+        feedbackCount: live.length,
+        revokedCount: revoked.length - live.length,
+        clientCount: new Set(live.map((i) => clients[i].toLowerCase())).size,
+        naiveAverage: naiveAverage(live.map((i) => values[i]), live.map((i) => decs[i])),
+      };
+    }
     let contract: Record<string, unknown> = { status: "NO_CERT", trusted: false };
     if (this.ancre && x) {
       const tt = x.triggerTag as Hex;

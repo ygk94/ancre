@@ -9,7 +9,7 @@ import { type Actor, type DemoAccounts, emitters } from "./accounts.ts";
 import { readAssess } from "./ancre.ts";
 import { certify, printSet, registryData, type SetConfig, setConfig } from "./certify.ts";
 import { artifact, type Chain } from "./chain.ts";
-import { FARM_PAY_AMOUNT, FARM_PAYMENTS, FARM_USDC, PAY_AMOUNT, PAYER_DEPOSIT, SET, TAG2, TESTNET, VALUES } from "./config.ts";
+import { FARM_PAY_AMOUNT, FARM_PAYMENTS, FARM_USDC, PAY_AMOUNT, PAYER_DEPOSIT, SET, TAG2, NET, VALUES } from "./config.ts";
 import type { EventLog } from "./events.ts";
 import { type AgentRec, decodeValue, encodeValue, saveState, type State } from "./state.ts";
 import {
@@ -28,10 +28,11 @@ export type Ctx = {
   passwordEnv?: Record<string, string>;
   monBudget: Record<string, bigint>; // per emitter label (wei)
   facilitatorTxs: { label: string; hash: Hex; gasLimit?: bigint; gasUsed?: bigint }[];
+  external?: Record<string, AgentRec>; // agents we neither own nor certify (Eve-8004 on the mainnet): never in the certifier's data
 };
 
-type Check = { name: string; ok: boolean; expected: unknown; actual: unknown };
-const check = (name: string, expected: unknown, actual: unknown): Check => ({ name, ok: expected === actual, expected, actual });
+export type Check = { name: string; ok: boolean; expected: unknown; actual: unknown };
+export const check = (name: string, expected: unknown, actual: unknown): Check => ({ name, ok: expected === actual, expected, actual });
 
 export const ancreArt = artifact("AnchoredReputation");
 const payerArt = artifact("TrustGatedPayer");
@@ -39,13 +40,13 @@ const usdc = (x: bigint) => formatUnits(x, 6);
 
 const agentURI = (label: string) => "data:application/json;base64," + Buffer.from(JSON.stringify({
   type: "https://eips.ethereum.org/EIPS/eip-8004#registration-v1", name: label,
-  description: "ANCRE act 2 demo agent (Monad testnet). Not a real service.", tags: ["demo"],
+  description: `ANCRE act 2 demo agent (Monad ${NET.chainId === 143 ? "mainnet" : "testnet"}). Not a real service.`, tags: ["demo"],
 })).toString("base64");
 
 // ---------------------------------------------------------------- step machinery
 
 /** Run `fn` once per state file: its value is recorded with the step and returned again on a resumed run. */
-async function step<T = void>(ctx: Ctx, id: string, fn: () => Promise<T>): Promise<T> {
+export async function step<T = void>(ctx: Ctx, id: string, fn: () => Promise<T>): Promise<T> {
   const done = ctx.state.done[id];
   if (done) {
     console.log(`  [${id}] already done, skipped`);
@@ -57,7 +58,7 @@ async function step<T = void>(ctx: Ctx, id: string, fn: () => Promise<T>): Promi
   return value;
 }
 
-async function scene(ctx: Ctx, n: number, title: string, body: () => Promise<Check[]>) {
+export async function scene(ctx: Ctx, n: number, title: string, body: () => Promise<Check[]>) {
   if (ctx.state.done[`scene-${n}`]) {
     console.log(`\n== scene ${n} (${title}) already done, skipped`);
     return;
@@ -74,24 +75,24 @@ async function scene(ctx: Ctx, n: number, title: string, body: () => Promise<Che
   await step(ctx, `scene-${n}`, async () => {});
 }
 
-const ancre = (ctx: Ctx) => ({ address: ctx.state.ancre!, abi: ancreArt.abi });
-const agent = (ctx: Ctx, label: string): AgentRec => {
-  const a = ctx.state.agents[label];
+export const ancre = (ctx: Ctx) => ({ address: ctx.state.ancre!, abi: ancreArt.abi });
+export const agent = (ctx: Ctx, label: string): AgentRec => {
+  const a = ctx.state.agents[label] ?? ctx.external?.[label];
   if (!a) throw new Error(`agent ${label} is not registered (run the earlier scenes first)`);
   return a;
 };
-const id = (a: AgentRec) => BigInt(a.agentId);
+export const id = (a: AgentRec) => BigInt(a.agentId);
 const cfgOf = (ctx: Ctx): SetConfig => setConfig(ctx.acc.anchors.map((x) => x.account.address), ctx.acc.operator.account.address);
-const usdcBalance = (ctx: Ctx, who: Address) =>
-  ctx.chain.pub.readContract({ address: TESTNET.usdc, abi: usdcAbi, functionName: "balanceOf", args: [who] });
+export const usdcBalance = (ctx: Ctx, who: Address) =>
+  ctx.chain.pub.readContract({ address: NET.usdc, abi: usdcAbi, functionName: "balanceOf", args: [who] });
 
-const assess = (ctx: Ctx, a: AgentRec) => readAssess(ctx.chain, ancre(ctx), id(a), ctx.state.setId!);
+export const assess = (ctx: Ctx, a: AgentRec) => readAssess(ctx.chain, ancre(ctx), id(a), ctx.state.setId!);
 
 // ---------------------------------------------------------------- building blocks
 
-async function registerAgent(ctx: Ctx, scene: number, label: string, owner: Actor, wallet: Actor, role: string) {
+export async function registerAgent(ctx: Ctx, scene: number, label: string, owner: Actor, wallet: Actor, role: string) {
   await step(ctx, `${scene}.register:${label}`, async () => {
-    const r = await ctx.chain.send(`register ${label}`, owner.account, { to: TESTNET.identity, abi: identityAbi,
+    const r = await ctx.chain.send(`register ${label}`, owner.account, { to: NET.identity, abi: identityAbi,
       functionName: "register", args: [agentURI(label)] });
     const ev = parseEventLogs({ abi: identityAbi, logs: r.receipt.logs, eventName: "Registered" })[0];
     if (!ev) throw new Error("no Registered event");
@@ -104,13 +105,13 @@ async function registerAgent(ctx: Ctx, scene: number, label: string, owner: Acto
     const a = agent(ctx, label);
     const deadline = BigInt((await ctx.chain.block()).timestamp + 240); // <= 5 min (registry MAX_DEADLINE_DELAY)
     const signature = await wallet.account.signTypedData({
-      domain: { name: "ERC8004IdentityRegistry", version: "1", chainId: ctx.chain.chainId, verifyingContract: TESTNET.identity },
+      domain: { name: "ERC8004IdentityRegistry", version: "1", chainId: ctx.chain.chainId, verifyingContract: NET.identity },
       types: { AgentWalletSet: [{ name: "agentId", type: "uint256" }, { name: "newWallet", type: "address" },
         { name: "owner", type: "address" }, { name: "deadline", type: "uint256" }] },
       primaryType: "AgentWalletSet",
       message: { agentId: id(a), newWallet: wallet.account.address, owner: owner.account.address, deadline },
     });
-    const r = await ctx.chain.send(`setAgentWallet ${label}`, owner.account, { to: TESTNET.identity, abi: identityAbi,
+    const r = await ctx.chain.send(`setAgentWallet ${label}`, owner.account, { to: NET.identity, abi: identityAbi,
       functionName: "setAgentWallet", args: [id(a), wallet.account.address, deadline, signature] });
     a.wallet = wallet.account.address;
     // AM-08.A: an anchor must never be the agentWallet of an agent
@@ -121,10 +122,10 @@ async function registerAgent(ctx: Ctx, scene: number, label: string, owner: Acto
 }
 
 /** giveFeedback(value, 0 decimals, tag1, "demo"); returns where and when it landed (scene 4 latency). */
-function feedback(ctx: Ctx, scene: number, stepId: string, from: Actor, to: string, value: bigint, tag1: string, label?: string) {
+export function feedback(ctx: Ctx, scene: number, stepId: string, from: Actor, to: string, value: bigint, tag1: string, label?: string) {
   return step(ctx, stepId, async () => {
     const a = agent(ctx, to);
-    const r = await ctx.chain.send(`${tag1} ${from.label} -> ${to}`, from.account, { to: TESTNET.reputation, abi: reputationAbi,
+    const r = await ctx.chain.send(`${tag1} ${from.label} -> ${to}`, from.account, { to: NET.reputation, abi: reputationAbi,
       functionName: "giveFeedback", args: [id(a), value, 0, tag1, TAG2, "", "", zeroHash] });
     const wallMs = Date.now();
     const ev = parseEventLogs({ abi: reputationAbi, logs: r.receipt.logs, eventName: "NewFeedback" })[0];
@@ -144,7 +145,7 @@ async function runCertifier(ctx: Ctx, reason: string, fabricate?: unknown) {
 
 /** `accept`: "certified", or also "skip_identical" where the graph change cannot move mass (the farm, a zero-mass
  * rater). A deferred certificate never passes: it would fake the recertification. Returns the last tx block. */
-function certifyStep(ctx: Ctx, scene: number, stepId: string, reason: string, accept: "certified" | "certified-or-identical" = "certified") {
+export function certifyStep(ctx: Ctx, scene: number, stepId: string, reason: string, accept: "certified" | "certified-or-identical" = "certified") {
   return step(ctx, stepId, async () => {
     const r = await runCertifier(ctx, reason);
     if (r.action !== "certified" && !(accept === "certified-or-identical" && r.action === "skip_identical")) {
@@ -164,11 +165,11 @@ function certifyStep(ctx: Ctx, scene: number, stepId: string, reason: string, ac
   });
 }
 
-type PayOutcome = { decision: "PAID" | "REFUSED"; stage: string; reason: string; block: number; wallMs: number; providerReceived: bigint };
+export type PayOutcome = { decision: "PAID" | "REFUSED"; stage: string; reason: string; block: number; wallMs: number; providerReceived: bigint };
 
 /** One x402 `exact` payment from the TrustGatedPayer to an agent. The operator signs even when `decide` already
  * refuses: the refusal shown is the contract's (hard guard, D41), not the client's. */
-function payViaPayer(ctx: Ctx, scene: number, stepId: string, label: string, expect: "PAID" | "REFUSED"): Promise<PayOutcome> {
+export function payViaPayer(ctx: Ctx, scene: number, stepId: string, label: string, expect: "PAID" | "REFUSED"): Promise<PayOutcome> {
   return step(ctx, stepId, async () => {
     const a = agent(ctx, label);
     const payer = ctx.state.payer!;
@@ -177,8 +178,8 @@ function payViaPayer(ctx: Ctx, scene: number, stepId: string, label: string, exp
     const auth = newAuthorization(payer, a.wallet, PAY_AMOUNT, now, expect === "PAID" ? 120 : 60);
     const td = ancrePaymentTypedData(chainId, auth, id(a));
     const blob = encodeExactBlob(auth, id(a), await ctx.acc.payerOperator.account.signTypedData(td));
-    const hash = hashTypedData(usdcAuthorizationTypedData(chainId, TESTNET.usdc, auth));
-    const req = requirements(TESTNET.network, TESTNET.usdc, a.wallet, PAY_AMOUNT, id(a));
+    const hash = hashTypedData(usdcAuthorizationTypedData(chainId, NET.usdc, auth));
+    const req = requirements(NET.network, NET.usdc, a.wallet, PAY_AMOUNT, id(a));
     const payload = paymentPayload(req, auth, blob, `ancre-demo://agent/${a.agentId}`);
     const p = { address: payer, abi: payerArt.abi };
     // independent reads, one round trip; /verify is then an eth_call on the state of evalBlock (scene 4 latency)
@@ -241,12 +242,12 @@ export async function scene0(ctx: Ctx) {
       }
     });
     await step(ctx, "0.deploy-ancre", async () => {
-      for (const [reg, abi] of [[TESTNET.identity, identityAbi], [TESTNET.reputation, reputationAbi]] as const) { // as Deploy.s.sol (D17)
+      for (const [reg, abi] of [[NET.identity, identityAbi], [NET.reputation, reputationAbi]] as const) { // as Deploy.s.sol (D17)
         const v = await chain.pub.readContract({ address: reg, abi, functionName: "getVersion" });
         if (v !== "2.0.0") throw new Error(`registry ${reg} is ${v}, not 2.0.0`);
       }
       const r = await chain.send("deploy AnchoredReputation", op.account, {
-        deploy: encodeDeployData({ ...ancreArt, args: [TESTNET.identity, TESTNET.reputation] }) });
+        deploy: encodeDeployData({ ...ancreArt, args: [NET.identity, NET.reputation] }) });
       ctx.state.ancre = getAddress(r.receipt.contractAddress!);
       await ctx.log.emit({ scene: 0, step: "0.deploy-ancre", kind: "deploy", label: "deploy AnchoredReputation", tx: r, data: { contract: "ancre", address: ctx.state.ancre } });
     });
@@ -270,14 +271,14 @@ export async function scene0(ctx: Ctx) {
     await registerAgent(ctx, 0, "provider-1 (demo)", op, acc.providers[0], "provider");
     await registerAgent(ctx, 0, "provider-2 (demo)", op, acc.providers[1], "provider");
     await step(ctx, "0.deploy-payer", async () => {
-      const r = await chain.send("deploy TrustGatedPayer", op.account, { deploy: encodeDeployData({ ...payerArt, args: [TESTNET.usdc, zeroAddress,
+      const r = await chain.send("deploy TrustGatedPayer", op.account, { deploy: encodeDeployData({ ...payerArt, args: [NET.usdc, zeroAddress,
         zeroAddress, ctx.state.ancre!, op.account.address, op.account.address, acc.payerOperator.account.address, ctx.state.setId!, PAY_AMOUNT] }) });
       ctx.state.payer = getAddress(r.receipt.contractAddress!);
       await ctx.log.emit({ scene: 0, step: "0.deploy-payer", kind: "deploy", label: "deploy TrustGatedPayer (owner = treasury = operator; exact only)", tx: r,
         data: { contract: "payer", address: ctx.state.payer } });
     });
     await step(ctx, "0.fund-payer", async () => {
-      const r = await chain.send("fund payer", op.account, { to: TESTNET.usdc, abi: usdcAbi, functionName: "transfer", args: [ctx.state.payer!, PAYER_DEPOSIT] });
+      const r = await chain.send("fund payer", op.account, { to: NET.usdc, abi: usdcAbi, functionName: "transfer", args: [ctx.state.payer!, PAYER_DEPOSIT] });
       await ctx.log.emit({ scene: 0, step: "0.fund-payer", kind: "fund", label: `deposit ${usdc(PAYER_DEPOSIT)} USDC in the payer`, tx: r,
         data: { token: "USDC", to: ctx.state.payer, amount: PAYER_DEPOSIT.toString() } });
     });
@@ -321,7 +322,7 @@ export async function scene7(ctx: Ctx) {
     await feedback(ctx, 7, "7.vouch:p1->p3", acc.providers[0], H2, VALUES.hopVouch, "vouch", `provider-1 (trusted, 2 anchors) vouches for ${H2}`);
     await certifyStep(ctx, 7, "7.cert", "provider-1 vouched for provider-3");
     const pay = await payViaPayer(ctx, 7, "7.pay:p3", H2, "PAID");
-    const [x, raters] = await Promise.all([assess(ctx, agent(ctx, H2)), ctx.chain.pub.readContract({ address: TESTNET.reputation,
+    const [x, raters] = await Promise.all([assess(ctx, agent(ctx, H2)), ctx.chain.pub.readContract({ address: NET.reputation,
       abi: reputationAbi, functionName: "readAllFeedback", args: [id(agent(ctx, H2)), [], "", "", false] })]);
     const anchorSet = new Set(acc.anchors.map((a) => a.account.address.toLowerCase()));
     return [
@@ -358,7 +359,7 @@ export async function scene2(ctx: Ctx) {
     // USDC for scene 3 (outside its timer)
     for (let i = 0; i < Math.min(FARM_PAYMENTS, N); i++) {
       await step(ctx, `2.fund-farm-usdc:${i + 1}`, async () => {
-        const r = await ctx.chain.send(`usdc to farm-${i + 1}`, acc.operator.account, { to: TESTNET.usdc, abi: usdcAbi, functionName: "transfer",
+        const r = await ctx.chain.send(`usdc to farm-${i + 1}`, acc.operator.account, { to: NET.usdc, abi: usdcAbi, functionName: "transfer",
           args: [acc.farm[i].account.address, FARM_USDC] });
         await ctx.log.emit({ scene: 2, step: `2.fund-farm-usdc:${i + 1}`, kind: "fund", label: `USDC to ${acc.farm[i].label} (for scene 3)`, tx: r,
           data: { token: "USDC", to: acc.farm[i].account.address, amount: FARM_USDC.toString() } });
@@ -388,14 +389,14 @@ export async function scene3(ctx: Ctx) {
         const toRec = agent(ctx, farmLabel((i + 1) % N));
         const now = (await ctx.chain.block()).timestamp;
         const auth = newAuthorization(from.account.address, toRec.wallet, FARM_PAY_AMOUNT, now, 120);
-        const sig = await from.account.signTypedData(usdcAuthorizationTypedData(ctx.chain.chainId, TESTNET.usdc, auth));
-        const req = requirements(TESTNET.network, TESTNET.usdc, toRec.wallet, FARM_PAY_AMOUNT, id(toRec));
+        const sig = await from.account.signTypedData(usdcAuthorizationTypedData(ctx.chain.chainId, NET.usdc, auth));
+        const req = requirements(NET.network, NET.usdc, toRec.wallet, FARM_PAY_AMOUNT, id(toRec));
         const payload = paymentPayload(req, auth, sig, `ancre-demo://farm/${toRec.agentId}`);
         const v = await ctx.fac.verify(payload, req);
         const s = v.ok ? await ctx.fac.settle(payload, req) : undefined;
         if (!s?.ok || !s.hash) throw new Error(`farm payment ${i + 1} failed: ${v.error ?? s?.error}`);
         ctx.facilitatorTxs.push({ label: `farm settle ${i + 1}`, hash: s.hash, gasLimit: s.gasLimit, gasUsed: s.gasUsed });
-        const t = await transferInReceipt(ctx.chain, s.hash, TESTNET.usdc);
+        const t = await transferInReceipt(ctx.chain, s.hash, NET.usdc);
         const ok = !!t && getAddress(t.from) === from.account.address && getAddress(t.to) === toRec.wallet && t.value === FARM_PAY_AMOUNT;
         await ctx.log.emit({ scene: 3, step: `3.farm-pay:${i + 1}`, kind: "farm-payment", agentId: id(toRec), block: s.block,
           actor: from.account.address, label: `${from.label} pays ${farmLabel((i + 1) % N)} ${usdc(FARM_PAY_AMOUNT)} USDC over x402 (true receipt)`,
@@ -485,10 +486,10 @@ export async function scene6(ctx: Ctx) {
 // ---------------------------------------------------------------- fork helpers
 
 /** FiatToken v2.2 keeps balances in slot 9 (chantier 05, plugin/scripts/local.mjs): test USDC on a local chain only. */
-async function dealUsdc(chain: Chain, who: Address, amount: bigint) {
+export async function dealUsdc(chain: Chain, who: Address, amount: bigint) {
   chain.assertLocal();
   const slot = keccak256(encodeAbiParameters([{ type: "address" }, { type: "uint256" }], [who, 9n]));
-  await chain.rawRequest("anvil_setStorageAt", [TESTNET.usdc, slot, toHex(amount, { size: 32 })]);
-  const b = await chain.pub.readContract({ address: TESTNET.usdc, abi: usdcAbi, functionName: "balanceOf", args: [who] });
+  await chain.rawRequest("anvil_setStorageAt", [NET.usdc, slot, toHex(amount, { size: 32 })]);
+  const b = await chain.pub.readContract({ address: NET.usdc, abi: usdcAbi, functionName: "balanceOf", args: [who] });
   if (b !== amount) throw new Error(`USDC balance slot guess wrong (got ${b})`);
 }
