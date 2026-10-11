@@ -51,7 +51,7 @@ Environ 210 mots, soit environ 1:25 à un rythme posé. Si ça dépasse 1:30, co
 
 - `SetHealth` du set officiel `0x627c…3e10` : **10 certificats, CLEAN, 0 écart ouvert**, dernier certificat au bloc 70 167 250 (MESURÉ, 11/10).
 - Dernier `Certificate` : tx `0x4976…afd7` (celle de la prise de la démo, 11/10), `AUDITED`, `graphRootMatches: true`, `discrepancyCount: 0`.
-- E4 : pendant la prise, Envio était au bloc de l'événement après 617 ms d'attente, export en 1,998 s (journal du récepteur, 11/10).
+- E4 : image réelle du récepteur pendant la prise de la démo (11/10, 19:09:33) : « Envio indexer at block 70167234 (waited 609 ms): 2466 feedbacks exported in 1976 ms ».
 - E6 : scan HyperSync du 28/09/2026 (MESURÉ, `indexer/analytics/survival_scan.py`). Dire « we ran », au passé.
 - **Pas d'accusation** : « an agent's own controllers can't rate it » décrit une règle, pas un agent. On ne nomme personne.
 
