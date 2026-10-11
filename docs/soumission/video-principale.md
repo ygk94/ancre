@@ -8,24 +8,24 @@
 >
 > **Règle §9.4** : la vidéo de démo montre le produit **en fonctionnement réel**, sans maquette ni slides, avec des interactions Monad visibles. **Aucune slide dans la démo**, même pas en carte de fin.
 >
-> Voix en anglais, notes de réalisation en français. Viser **1:50** pour le pitch et **2:50** pour la démo.
+> Voix en anglais, notes de réalisation en français. Viser **1:35** pour le pitch et **2:50** pour la démo.
 
 ---
 
-## Vidéo 1 : pitch (slides et caméra, 1:50)
+## Vidéo 1 : pitch (slides et caméra, 1:35)
 
-Le pitch répond à trois questions : quel problème, pourquoi c'est nouveau, pourquoi ça compte. La démo prouve le reste. Ton texte, à environ 150 mots par minute :
+Ta trame (11/10) : qui tu es, le problème, « payer ne suffit pas », ce que fait ANCRE, le résultat, pourquoi Monad et les outils. Environ 240 mots, soit **1:35** à 150 mots par minute : tu gardes 25 s de marge sous les 2:00. Les temps de la colonne sont indicatifs.
 
 | Slide | Temps | Voix |
 |---|---|---|
-| 1 · ANCRE | 0:00-0:12 | "Hi, I'm Hugo. This is ANCRE. AI agents are starting to pay each other, and before an agent pays, someone has to answer one question: can I trust this agent? ANCRE lets the paying contract answer it, and refuse." |
-| 2 · 83 % | 0:12-0:32 | "Agents get their reputation from ERC-8004, the standard registry. Anyone can rate any agent, for free, and the standard explicitly leaves Sybil filtering to the reader. Here is what that gives on Monad mainnet today: eighty-three percent of all ratings point to a single agent, with an average of ten to the thirty-six. Only eleven ratings out of nine thousand are usable trust." |
-| 3 · 150/150 | 0:32-0:47 | "The usual fix is to count only paid ratings. It doesn't work: the farm really paid. Every rater we sampled got its first MON from the same address, eleven MON each. A receipt can be true and still come from a farm." |
-| 4 · L'idée | 0:47-1:10 | "So ANCRE asks a different question: does anyone you trust vouch for this agent? You pick a few anchors. Trust flows from them through the rating graph, personalized PageRank, even two hops away. A farm that only rates itself gets exactly zero, because nothing flows in from your anchors. And we leave the largest anchor out of every score, so one stolen key is never enough." |
-| 5 · Le contrat refuse | 1:10-1:30 | "The result is a certificate checked on-chain against the registry, and it's read by the contract that pays, before every x402 payment. The refusal isn't in an interface you can bypass, it's in the payer's signature. And an anchor's veto is read live: on Monad, the next payment is refused one block later, three hundred and thirty-two milliseconds." |
-| 6 · Running for real | 1:30-1:50 | "This isn't a mock-up. It runs on Monad testnet and mainnet with real transactions. Envio indexes the registries and audits every certificate, Alchemy triggers recertification on each new rating. And ANCRE is the reference implementation of a draft ERC: the layer ERC-8004 leaves to the reader, made a standard. The demo shows it working." |
+| 1 · ANCRE | 0:00-0:10 | "Hi, I'm Hugo Thomas from Devinci Blockchain, and today I'm presenting my submission: ANCRE. When you want to answer the question *can I trust this agent?*, you use ERC-8004, the agent reputation registry." |
+| 2 · 83 % | 0:10-0:22 | "But on Monad mainnet, I found a farm of good ratings: eighty-three percent of all ratings, seven thousand six hundred out of nine thousand three hundred, point to one single agent, with an average score of ten to the thirty-six." |
+| 3 · 150/150 | 0:22-0:35 | "ERC-8004 ratings are free, so you might think: just count the paid ones. That doesn't work, the farm paid. In a random sample of a hundred and fifty raters, every single one got its first MON from the same address. Paying doesn't stop a farm." |
+| 4 · L'idée | 0:35-0:50 | "So I built ANCRE. You choose a few anchors you trust, and ANCRE measures how much of their trust reaches each agent through the rating graph: a farm that only rates itself gets exactly zero." |
+| 5 · Le contrat refuse | 0:50-1:05 | "That result is certified on-chain, and the contract that pays reads it before every x402 payment. On Monad mainnet, the farm's agent was refused, an honest provider was paid, and an anchor's veto blocked the next payment one block later: three hundred and thirty-two milliseconds." |
+| 6 · Why Monad | 1:05-1:22 | "Why Monad? A check before every payment only makes sense with fast blocks and cheap verification, and the agent registry and x402 are already live here. ANCRE uses ERC-8004, x402, Envio to index and audit every certificate, and Alchemy webhooks to recertify on each new rating. Now, the demo." |
 
-Si tu dépasses 2:00, raccourcis d'abord la slide 3 en ne gardant que la dernière phrase, puis la fin de la slide 6.
+Les chiffres dits viennent des slides : 7 665 sur 9 283 avis (bloc 108 835 675, 28/09, recompté par Envio le 10/10), 150/150 (Alchemy Transfers API, 10/10), 332 ms (mainnet, 10/10). Ne dis pas « the owner » : dis « the same address » (fait on-chain, sans accusation).
 
 ---
 
