@@ -1,6 +1,6 @@
 // /mera — P4 prototype (ROADMAP 06-E3): does the synced passkey give the SAME PRF output, hence the same epoch
 // keys, on the Mac and on the iPhone, for rpId ancre-xyz.netlify.app? Nothing leaves the browser: the page makes
-// no network request (CSP connect-src 'none' in netlify.toml) and only the public credential ID is stored.
+// no network request except section 4 (the veto: one JSON-RPC call set to the Monad testnet RPC), and only the public credential ID is stored.
 import {
   createPasskeyWithPrfOutput,
   getPasskeyPrfOutput,
@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   deriveEpochPublic,
   epochSalt,
+  openEpochSession,
   epochSaltLabel,
   formatReport,
   parseReport,
@@ -17,6 +18,7 @@ import {
   sameAddress,
   type EpochPublic,
 } from "./derive";
+import { MERA_ANCHOR, sendSlash, TARGET, type VetoResult } from "./veto";
 import { browserLabel, DEFINITIVE_RP_ID, explainError, probeCapabilities, rpInfo, type Capabilities } from "./env";
 
 const EPOCHS = [0, 1] as const;
@@ -58,6 +60,8 @@ export function MeraProto() {
   const [derived, setDerived] = useState<Derived | null>(null);
   const [reference, setReference] = useState("");
   const [copied, setCopied] = useState(false);
+  const [armed, setArmed] = useState(false);
+  const [veto, setVeto] = useState<VetoResult | null>(null);
 
   useEffect(() => {
     probeCapabilities().then(setCaps, () => setCaps({ webauthn: false, platformAuthenticator: false, prfReported: false }));
@@ -114,6 +118,29 @@ export function MeraProto() {
     } catch (e) {
       setError(explainError(e));
     } finally {
+      setBusy(null);
+    }
+  }
+
+  // Section 4: the passkey anchor's veto. One click: one PRF prompt (epoch 0), a Mera signing session, one testnet tx.
+  async function onVeto() {
+    setError(null);
+    setVeto(null);
+    setBusy("Passkey prompt: unlocking anchor key epoch 0…");
+    let session: ReturnType<typeof openEpochSession> | undefined;
+    try {
+      const res = await getPasskeyPrfOutput({ rpId: rp.rpId, credential: pinned ?? undefined, prfSalt: epochSalt(PROTO_LABEL, 0) });
+      session = openEpochSession(res.prfOutput); // zeroes the PRF output
+      if (!sameAddress(session.address, MERA_ANCHOR)) {
+        throw new Error(`This passkey's epoch 0 is ${session.address}, not the mera anchor ${MERA_ANCHOR}: pick the passkey used on 12/10.`);
+      }
+      const r = await sendSlash(session.address, session.signDigest, setBusy);
+      setVeto(r);
+      setArmed(false);
+    } catch (e) {
+      setError(explainError(e));
+    } finally {
+      session?.end();
       setBusy(null);
     }
   }
@@ -274,6 +301,29 @@ export function MeraProto() {
           </div>
         ))}
         {allMatch && <p className="ok big">P4 passes: the passkey re-derives both epoch keys on this device.</p>}
+      </section>
+
+      <section className="card">
+        <h2>4 · Veto as a passkey anchor</h2>
+        <p className="muted">
+          Epoch key 0 of this passkey is an anchor of the ANCRE "mera" set on Monad testnet ({MERA_ANCHOR.slice(0, 8)}…
+          {MERA_ANCHOR.slice(-4)}). One Face ID / Touch ID: Mera opens a signing session on that key, which slashes{" "}
+          {TARGET.label} (#{TARGET.agentId.toString()}) in the ERC-8004 registry. The mera payer then refuses its next payment.
+        </p>
+        <label className="small">
+          <input type="checkbox" checked={armed} onChange={(e) => setArmed(e.target.checked)} /> I know this sends a real Monad testnet transaction
+        </label>
+        <button className="btn danger" disabled={!armed || !!busy || !rp.definitive || caps?.webauthn === false} onClick={onVeto}>
+          Slash {TARGET.label} with the passkey
+        </button>
+        {veto && (
+          <p className={veto.status === "success" ? "ok" : "bad"}>
+            {veto.status === "success" ? "✓ Slash on chain" : "✗ Transaction failed or not seen"} in block {veto.block}:{" "}
+            <a className="mono" href={`https://testnet.monadscan.com/tx/${veto.hash}`} target="_blank" rel="noreferrer">
+              {veto.hash.slice(0, 10)}…{veto.hash.slice(-6)}
+            </a>
+          </p>
+        )}
       </section>
 
       <p className="muted small">

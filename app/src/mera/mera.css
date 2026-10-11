@@ -53,3 +53,4 @@ dd { margin: 0; overflow-wrap: anywhere; }
 .report { background: var(--bg); border: 1px dashed var(--line); border-radius: 8px; padding: 8px; font-size: 0.85rem; user-select: all; -webkit-user-select: all; }
 textarea { width: 100%; font: 0.9rem var(--mono); padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
 .verdict { margin-top: 8px; }
+.btn.danger{background:#c2412c}.btn.danger:disabled{opacity:.45}

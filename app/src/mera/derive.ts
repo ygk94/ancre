@@ -105,3 +105,23 @@ export function parseReport(text: string): Record<number, string> {
   [...text.matchAll(/0x[0-9a-fA-F]{40}/g)].forEach((m, i) => (out[i] = m[0]));
   return out;
 }
+
+/**
+ * Opens a Mera secp256k1 signing session on the epoch key derived from `prfOutput` (ZEROED in place). The private key
+ * lives only inside the session: call `end()` as soon as the transaction is signed (the veto button signs one).
+ */
+export function openEpochSession(prfOutput: Uint8Array): { address: Hex; signDigest: (d: Uint8Array) => Promise<{ compact: Uint8Array; recovery: 0 | 1 }>; end: () => void } {
+  let seed: Uint8Array | undefined;
+  let sk: Uint8Array | undefined;
+  try {
+    if (prfOutput.length !== 32) throw new Error(`PRF output must be 32 bytes, got ${prfOutput.length}`);
+    seed = hkdf(sha256, prfOutput, undefined, INFO_KEY, 48);
+    sk = secp256k1.utils.randomSecretKey(seed);
+    const session = createSecp256k1SigningSession({ privateKey: sk });
+    return { address: getEvmAddress(session.publicKey) as Hex, signDigest: (d) => session.signDigest(d), end: () => session.end() };
+  } finally {
+    prfOutput.fill(0);
+    seed?.fill(0);
+    sk?.fill(0);
+  }
+}
