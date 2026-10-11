@@ -1,11 +1,11 @@
 # MUSTDO — ce que Hugo doit faire lui-même
 
-> **État au ven 10/10 après-midi.** Clôture : **14/10 à 05:59 (Paris)**. **Objectif : soumettre le 12/10**, avec le lundi 13/10 en marge.
+> **État au ven 10/10 après-midi.** Clôture : **14/10 à 05:59 (Paris)**. **Objectif : soumettre le 12/10**, avec le mardi 13/10 en marge.
 > Le retard du 09/10 est **rattrapé** : la divulgation et le « privé » sont tranchés, le mainnet est fait, et Alchemy est intégré.
 >
 > Ce fichier ne garde que ce qui reste, **par ordre de priorité** : un point en haut débloque souvent ceux d'en dessous. Anciennes versions : `mustdo/archive/`. La version cochable est l'artefact MUSTDO ANCRE.
 
-## 🔴 Ven 10/10 (aujourd'hui)
+## 🔴 Sam 10/10
 
 1. [x] **Webhook Alchemy** ✅ : 18 livraisons signées, bloc → réception en 1,3 s (médiane), puis **de bout en bout en réel à 13:16 UTC** : avis → webhook 1,06 s → certificat on-chain +17 blocs / 6,3 s, audité CLEAN. **Le certificat officiel du testnet est rafraîchi.**
 2. [x] ✅ **Netlify : variable `ALCHEMY_API_KEY`** (vérifiée en ligne), en cochant « Contains secret values ». En cours. Si la variable est créée après le dernier push, fais un *Trigger deploy* : les fonctions ne lisent la variable qu'au déploiement.
@@ -14,7 +14,7 @@
 5. [ ] **Relire le README public et le write-up.** Les textes de la plateforme sont dans `docs/soumission/textes-plateforme.txt` (adresses mainnet et mesures Alchemy déjà ajoutées).
 6. [ ] **Laisser l'onglet du récepteur Alchemy ouvert** si tu veux qu'il continue à recertifier. Pour la vidéo, relance `node trigger.ts --send --keystore ~/.foundry/keystores/ancre-demo` (depuis `demo/`).
 
-## 🟠 Sam 11/10 : la mise en public et le tournage
+## 🟠 Dim 11/10 : la mise en public et le tournage
 
 1. [x] **Dépôt public** ✅ 10/10 : https://github.com/ygk94/ancre (MIT, 262 commits datés d'origine, une seule identité perso, adresses pro et consignes internes retirées). Le dépôt privé de travail devient `ygk94/ancre-dev`. Je republie après chaque changement avec `~/.ancre-publish/publish.sh --push`. L'indexeur `ygk94/ancre-indexerv2` a sa branche `main` réécrite sous l'adresse perso ; `envio` est inchangée (option a).
    - [x] **Site public** ✅ 10/10 : https://ancre-xyz.netlify.app répond sans mot de passe ; `/api/funders` (Transfers API, clé côté Netlify) répond en direct.
@@ -27,7 +27,7 @@
    - Alchemy : `docs/soumission/video-alchemy.md`. Il faut le récepteur en mode réel pour la scène en direct.
    - Envio : `docs/soumission/video-envio.md` (chiffres lus en direct le 10/10).
 
-## 🟡 Dim 12/10 : la soumission
+## 🟡 Lun 12/10 : la vidéo Mera et la soumission (mardi 13/10 en marge)
 
 1. [ ] **Soumission finale**, avec :
    - le profil et le write-up ;
