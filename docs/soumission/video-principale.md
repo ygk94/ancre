@@ -85,6 +85,21 @@ Recharge chaque onglet juste avant la prise : `at=` ne s'applique qu'au premier 
 | D9 | 2:15-2:27 | Onglet 10 | **→** jusqu'à `120` : **rejected · EdgeMismatch** | "A forged certificate fails: every edge is re-read in the ERC-8004 registry at submission." |
 | D10 | 2:27-2:50 | Onglets 11, puis 12 | Onglet 11 : encadré **READ ON-CHAIN**, le paiement réglé puis refusé. Onglet 12 : la transaction sur monadscan | "And on Monad mainnet: the same contract, a real x402 payment settled by the facilitator, then refused after an anchor's veto, three hundred and thirty-two milliseconds later. ANCRE: the reader ERC-8004 asks for, and it refuses to pay." |
 
+### Texte final de la démo (prise du 11/10, montage de 2:36)
+
+La prise du 11/10 à 19:07 (souris pilotée, D4 et D9 coupés au montage) sert de base. Valeurs réelles de D8, mesurées pendant la prise : webhook **0,87 s** après le bloc 70 167 232, certificat on-chain **18 blocs plus tard, 6,3 s** après le webhook (tx `0x4976…afd7`), audit Envio **CLEAN**. Le mainnet affiche STALE depuis le 11/10 (certificat de plus de 24 h) : on dit « settled on October 10th », jamais « passes ».
+
+| Plan | Début | Voix |
+|---|---|---|
+| D1 | 0:00 | "Monad mainnet, the ERC-8004 reputation registry. This agent, Eve-8004, has seven thousand six hundred ratings, with an average of ten to the thirty-six. And the registry won't even compute it without a list of raters you trust." |
+| D2 | 0:15 | "This is ANCRE's screen. An explorer lists every agent; we show who your anchors actually reach. Eve: seven thousand six hundred ratings, mass zero. Refused." |
+| D3 | 0:28 | "Not one of those ratings carries weight: none comes from anyone your anchors reach. Alchemy's Transfers API shows why: a hundred and fifty raters sampled, all first funded by the same address." |
+| D5 | 0:43 | "On testnet we run our own agents. Provider-1 and provider-3 pass. Provider-3 was never rated by an anchor, only by provider-1: trust two hops away. The farm's target: refused." |
+| D6 | 1:00 | "This is our recorded testnet run of October 7th, every event a real transaction. Ten fake agents pump their target to a hundred. ANCRE gives it zero. Then one anchor is compromised and vouches for it: still refused. No single anchor is enough." |
+| D7 | 1:17 | "Now a provider goes bad and an anchor slashes it. The very next payment is refused by the payer contract itself, one block later: two hundred and sixty milliseconds on Monad testnet. No recertification needed: the veto is read live." |
+| D8 | 1:38 | "And this part is live, today. An anchor rates an agent on testnet. Alchemy's webhook reaches our certifier less than a second after the block, and a new certificate is on-chain eighteen blocks later, about six seconds. Envio's indexer audits it against the registry: clean. Here it is on the explorer." |
+| D10 | 2:13 | "And on Monad mainnet: the same contract settled a real x402 payment through the facilitator on October 10th, then refused the next one three hundred and thirty-two milliseconds after an anchor's veto. Here is that payment on monadscan. ANCRE: the reader ERC-8004 asks for. And it refuses to pay." |
+
 **Ordre de coupe**, si la prise dépasse 2:55 :
 1. D4 ;
 2. la fin de D3 (le panneau Alchemy, qui a sa propre vidéo) ;
