@@ -1,6 +1,6 @@
 # MUSTDO — ce que Hugo doit faire lui-même
 
-> **État au ven 10/10 après-midi.** Clôture : **14/10 à 05:59 (Paris)**. **Objectif : soumettre le 12/10**, avec le mardi 13/10 en marge.
+> **État au lun 12/10, 1 h.** Clôture : **14/10 à 05:59 (Paris)**. **Objectif : soumettre le 12/10**, avec le mardi 13/10 en marge.
 > Le retard du 09/10 est **rattrapé** : la divulgation et le « privé » sont tranchés, le mainnet est fait, et Alchemy est intégré.
 >
 > Ce fichier ne garde que ce qui reste, **par ordre de priorité** : un point en haut débloque souvent ceux d'en dessous. Anciennes versions : `mustdo/archive/`. La version cochable est l'artefact MUSTDO ANCRE.
