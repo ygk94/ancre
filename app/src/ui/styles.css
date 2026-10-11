@@ -97,7 +97,7 @@ h3 { font-size: 14px; }
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
 }
-.brand { display: flex; align-items: baseline; gap: 10px; color: var(--text); white-space: nowrap; }
+.brand { display: flex; align-items: center; gap: 10px; color: var(--text); white-space: nowrap; }
 .brand b { font-size: 17px; letter-spacing: 0.04em; }
 .brand span { color: var(--muted); font-size: 13px; }
 .brand:hover { text-decoration: none; }

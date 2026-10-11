@@ -9,6 +9,7 @@ import { Discover } from "./Discover";
 import { Feed } from "./Feed";
 import { Leaderboard } from "./Leaderboard";
 import { Live } from "./Live";
+import { Logo } from "./Logo";
 import { Network } from "./Network";
 
 export function App() {
@@ -81,6 +82,7 @@ function Header({ route }: { route: Route }) {
   return (
     <header className="top">
       <Link to={href({ page: "discover" }, route)} className="brand">
+        <Logo size={26} />
         <b>ANCRE</b>
         <span>anchored reputation for ERC-8004 agents</span>
       </Link>
