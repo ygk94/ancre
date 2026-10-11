@@ -62,7 +62,7 @@
 
 ## En pause ou abandonné
 
-- **Prototype Mera (porte P4)** : ✅ **porte P4 passée le 12/10 vers 00:30** (Mac Safari + iPhone, même passkey iCloud : adresses d'epoch 0 et 1 et empreintes identiques). Le prototype est en ligne sur `/mera/`. Reste à décider l'intégration minimale (veto posé par une ancre-passkey) et la vidéo du bounty.
+- **Prototype Mera (porte P4)** : ✅ **porte P4 passée le 12/10 vers 00:30** (Mac Safari + iPhone, même passkey iCloud : adresses d'epoch 0 et 1 et empreintes identiques). Le prototype est en ligne sur `/mera/`. **Intégration faite le 12/10 vers 01:30** : ensemble « mera » `0x2d11…4f2f` (anchor-A, anchor-B, ancre-passkey `0xe3c8…309b`) sur l'instance officielle, payeur dédié `0x7CB3…bd1B` (owner = ton MetaMask), provider-1 payé (0.01 USDC). Le veto se pose depuis `/mera/` section 4 (Face ID, Mera signe). **À faire pendant la vidéo** : le veto, puis `node mera.ts after --keystore ~/.foundry/keystores/ancre-demo` (depuis `demo/`) qui montre le refus. Répété sur fork : refus 1 bloc après le veto.
 - **Bounty MetaMask** : abandonné, car réservé à la track 01 (D53). Le plugin reste dans le dépôt.
 
 ## ✅ Ce qui est fait
