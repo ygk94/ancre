@@ -62,7 +62,7 @@
 
 ## En pause ou abandonné
 
-- **Prototype Mera (porte P4)** : en pause depuis le 07/10, branche `chantier/mera-proto` non fusionnée. Sans lui, pas de bounty Mera.
+- **Prototype Mera (porte P4)** : ✅ **porte P4 passée le 12/10 vers 00:30** (Mac Safari + iPhone, même passkey iCloud : adresses d'epoch 0 et 1 et empreintes identiques). Le prototype est en ligne sur `/mera/`. Reste à décider l'intégration minimale (veto posé par une ancre-passkey) et la vidéo du bounty.
 - **Bounty MetaMask** : abandonné, car réservé à la track 01 (D53). Le plugin reste dans le dépôt.
 
 ## ✅ Ce qui est fait
