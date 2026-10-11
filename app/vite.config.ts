@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
 import { runsDirs } from "./scripts/runs-dir.mjs";
@@ -31,5 +31,10 @@ export default defineConfig({
   plugins: [react(), liveRuns()],
   // History-API routes (/agent/testnet/2022) need absolute asset URLs; a sub-path host sets ANCRE_BASE=/sub/
   base: process.env.ANCRE_BASE ?? "/",
-  build: { target: "es2022", chunkSizeWarningLimit: 900 },
+  build: {
+    target: "es2022",
+    chunkSizeWarningLimit: 900,
+    // Second entry: the /mera passkey PRF prototype (06-E3), kept out of the demo screen's bundle.
+    rolldownOptions: { input: { main: resolve(__dirname, "index.html"), mera: resolve(__dirname, "mera/index.html") } },
+  },
 });

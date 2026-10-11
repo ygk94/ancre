@@ -14,6 +14,9 @@
     "sync:runs": "node scripts/sync-runs.mjs"
   },
   "dependencies": {
+    "@category-labs/mera": "0.2.0",
+    "@noble/curves": "2.2.0",
+    "@noble/hashes": "2.2.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "viem": "^2.57.3"

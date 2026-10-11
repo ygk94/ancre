@@ -14,6 +14,12 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
+# the /mera passkey prototype is its own page (second Vite entry), not a route of the screen
+[[redirects]]
+  from = "/mera"
+  to = "/mera/index.html"
+  status = 200
+
 # single-page app: unknown paths fall back to the screen
 [[redirects]]
   from = "/*"
