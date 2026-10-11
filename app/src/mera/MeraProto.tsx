@@ -89,32 +89,28 @@ export function MeraProto() {
     }
   }
 
+  // One click per epoch: Safari (macOS) refuses a second WebAuthn call that is not started by its own user gesture
+  // (NotAllowedError), so epoch 1 gets its own button instead of chaining two prompts from one click.
   async function onDerive() {
     setError(null);
-    setDerived(null);
+    const n = derived && derived.epochs.length < EPOCHS.length ? derived.epochs.length : 0;
+    if (n === 0) setDerived(null);
+    setBusy(`Deriving epoch ${n} (one Touch ID / Face ID prompt)…`);
     try {
-      const epochs: EpochPublic[] = [];
-      // Without a pinned credential (fresh iPhone), the first prompt lets the platform pick the passkey; the second
-      // epoch is then pinned to that same credential so both epochs always come from one passkey.
-      let cred = pinned ?? undefined;
-      let credentialId = "";
-      for (const n of EPOCHS) {
-        setBusy(`Prompt ${n + 1}/${EPOCHS.length}: deriving epoch ${n}…`);
-        const res = await getPasskeyPrfOutput({ rpId: rp.rpId, credential: cred, prfSalt: epochSalt(PROTO_LABEL, n) });
-        if (credentialId && res.credentialId !== credentialId) {
-          res.prfOutput.fill(0);
-          throw new Error("Two different passkeys answered the two prompts: retry and pick the same passkey.");
-        }
-        credentialId = res.credentialId;
-        epochs.push(deriveEpochPublic(res.prfOutput)); // zeroes prfOutput
-        cred ??= { credentialId: res.credentialId };
+      const cred = n > 0 && derived ? { credentialId: derived.credentialId } : (pinned ?? undefined);
+      const res = await getPasskeyPrfOutput({ rpId: rp.rpId, credential: cred, prfSalt: epochSalt(PROTO_LABEL, n) });
+      if (n > 0 && derived && res.credentialId !== derived.credentialId) {
+        res.prfOutput.fill(0);
+        throw new Error("A different passkey answered for epoch 1: start again from epoch 0 and pick the same passkey.");
       }
+      const epoch = deriveEpochPublic(res.prfOutput); // zeroes prfOutput
+      const next: Derived = { credentialId: res.credentialId, epochs: n === 0 ? [epoch] : [...(derived?.epochs ?? []), epoch] };
       if (!pinned) {
-        const c = { credentialId };
+        const c = { credentialId: res.credentialId };
         savePinned(c);
         setPinned(c);
       }
-      setDerived({ credentialId, epochs });
+      setDerived(next);
     } catch (e) {
       setError(explainError(e));
     } finally {
@@ -148,7 +144,8 @@ export function MeraProto() {
     return sameAddress(mine, theirs);
   });
   const allMatch = verdicts.every((v) => v === true);
-  const distinct = derived ? derived.epochs[0].address.toLowerCase() !== derived.epochs[1].address.toLowerCase() : null;
+  const complete = !!derived && derived.epochs.length === EPOCHS.length;
+  const distinct = complete ? derived.epochs[0].address.toLowerCase() !== derived.epochs[1].address.toLowerCase() : null;
   const createVsGet =
     created && derived && created.credentialId === derived.credentialId
       ? sameAddress(created.epoch0.address, derived.epochs[0].address)
@@ -214,9 +211,9 @@ export function MeraProto() {
 
       <section className="card">
         <h2>2 · Derive epoch 0 and epoch 1</h2>
-        <p className="muted">Two Face ID / Touch ID prompts, one PRF salt per epoch.</p>
+        <p className="muted">One click and one Face ID / Touch ID prompt per epoch (one PRF salt each).</p>
         <button className="btn" disabled={!!busy || !canRun || caps?.webauthn === false} onClick={onDerive}>
-          Derive epoch 0 and epoch 1
+          {derived && !complete ? "Derive epoch 1" : complete ? "Start again: derive epoch 0" : "Derive epoch 0"}
         </button>
         {derived && (
           <>
@@ -234,16 +231,20 @@ export function MeraProto() {
                 </div>
               </div>
             ))}
-            <p className={distinct ? "ok" : "bad"}>{distinct ? "✓ The two epochs give two unrelated keys." : "✗ Both epochs gave the same key: salts are not isolated."}</p>
+            {complete && <p className={distinct ? "ok" : "bad"}>{distinct ? "✓ The two epochs give two unrelated keys." : "✗ Both epochs gave the same key: salts are not isolated."}</p>}
             {createVsGet !== null && (
               <p className={createVsGet ? "ok" : "bad"}>
                 {createVsGet ? "✓ Epoch 0 at creation = epoch 0 now." : "✗ Epoch 0 at creation differs from epoch 0 now."}
               </p>
             )}
-            <div className="report mono">{formatReport(derived.epochs.map((e) => e.address))}</div>
-            <button className="btn secondary" onClick={onCopy}>
-              {copied ? "Copied" : "Copy report"}
-            </button>
+            {complete && (
+              <>
+                <div className="report mono">{formatReport(derived.epochs.map((e) => e.address))}</div>
+                <button className="btn secondary" onClick={onCopy}>
+                  {copied ? "Copied" : "Copy report"}
+                </button>
+              </>
+            )}
           </>
         )}
       </section>

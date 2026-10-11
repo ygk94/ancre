@@ -76,7 +76,7 @@ export function explainError(e: unknown): string {
         return "PRF not supported by this authenticator: it returned no PRF output. Use iCloud Keychain (Safari macOS 15+ / iOS 18.4+) or 1Password; not a local Chrome profile, Bitwarden or Dashlane.";
       case "PASSKEY_OPERATION_FAILED":
         if (causeName === "NotAllowedError")
-          return "Cancelled, timed out, or no passkey for this rpId on this device. If you are on the second device: check that the passkey has synced (Settings > Passwords on iPhone), then retry.";
+          return `Cancelled, timed out, or no passkey for this rpId on this device (${cause instanceof Error ? cause.message : "NotAllowedError"}). If you are on the second device: check that the passkey has synced (Passwords app), then retry.`;
         if (causeName === "InvalidStateError") return "A passkey for this rpId already exists on this authenticator.";
         if (causeName === "SecurityError") return "Security error: the rpId does not match this page's domain, or the page is not served over HTTPS.";
         return `WebAuthn failed (${causeName || "unknown cause"}): ${cause instanceof Error ? cause.message : e.message}`;
