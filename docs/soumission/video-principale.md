@@ -31,25 +31,59 @@ Si tu dépasses 2:00, raccourcis d'abord la slide 3 en ne gardant que la derniè
 
 ## Vidéo 2 : démo (écran seul, voix par-dessus, 2:50)
 
-**Préparation :**
-- Chrome en 1920×1080, zoom 100 %, thème clair, sur **https://ancre-xyz.netlify.app** (le site public).
-- Les indices `at=` correspondent au run **testnet du 07/10** (`run-20261007T131141Z`) que l'écran affiche. Vérifie-les avec le compteur `n/121` en haut de la Live demo avant la prise.
-- Pour D8 : le récepteur Alchemy tourne en mode réel, et la commande `node trigger.ts --send --keystore ~/.foundry/keystores/ancre-demo` est prête dans un terminal (depuis `demo/`).
-- Pour D1 : un terminal avec `cast` et la commande `getSummary` de `README.md` §5.
+### Mise en place (10 min avant)
 
-| # | Temps | À l'écran | Voix |
-|---|---|---|---|
-| D1 | 0:00-0:12 | Terminal : `getSummary(182, all clients)` donne **1.5e36**, puis `getSummary(182, [])` **revert** | "Monad mainnet, the ERC-8004 registry. This agent's average rating is ten to the thirty-six. And the standard won't even compute it without a list of raters you trust." |
-| D2 | 0:12-0:30 | **Discover**, réseau **Monad mainnet**. Le tableau des refusés : **Eve-8004, 7,665 ratings → 0** | "This is ANCRE's screen: the layer we want to add to explorers like 8004scan. They list every agent. We show which ones are reachable from anchors you choose. Eve: seven thousand six hundred ratings. Zero." |
-| D3 | 0:30-0:45 | Clic sur **Eve-8004**, onglet **Ratings** (« 0 of 7,665 carry weight »), puis le panneau **« Who funded the raters? »** | "Every rating is accounted for, and none comes from anyone your anchors reach. The panel shows why, through Alchemy's Transfers API: the raters were all funded by the same address." |
-| D4 | 0:45-0:55 | Sélecteur d'ancres : **« A risk screener read as trust »** (34.56 % de fuite vers la ferme), puis **« Same screener, schema D15 »** (0) | "If you read an automated risk scanner as trust, a third of its mass leaks into the farm. ANCRE separates measurements from endorsements: zero." (premier plan à couper) |
-| D5 | 0:55-1:10 | Réseau **Monad testnet**, Discover : provider-1 et provider-3 passent, la cible de la ferme est refusée. Clic sur **provider-3**, onglet **Trust path** | "On testnet we run our own agents. Provider-3 was never rated by an anchor, only by a provider they trust, and it still passes. That's trust beyond one hop, with a Sybil bound." |
-| D6 | 1:10-1:30 | **Live demo**, `at=87` → `at=90` : la cible de la ferme affiche **100** dans l'explorateur et **0** chez ANCRE, **Refused · UNTRUSTED**. Ensuite l'ancre C, compromise, l'endosse : toujours refusée | "The payer is a contract that asks ANCRE before every x402 payment. The farm pumps its target to a hundred: refused. Now one anchor is compromised and vouches for it. Trust is computed leaving any one anchor out: still refused." |
-| D7 | 1:30-1:50 | `at=106` → `at=111` : provider-2 est **Paid**, l'ancre B le sanctionne (slash), puis le paiement suivant est **Refused · ANCRE_STATUS**. Encadré du disjoncteur : **1 block, 260 ms** | "A provider goes bad and an anchor slashes it. The very next payment is refused: one block, two hundred and sixty milliseconds on Monad testnet. No recertification needed: the veto is read live." |
-| D8 | 1:50-2:15 | **En direct, écran partagé** : à gauche le terminal `node trigger.ts --send`, à droite la console du récepteur (webhook → `submitCertificate` → `TIMELINE`). Ensuite le feed de l'écran, onglet **ANCRE**, où le nouveau certificat apparaît | "Live now: an anchor rates an agent. Alchemy's webhook pushes the event to our certifier in about a second, and a new certificate lands on-chain a few seconds later. Then our Envio indexer audits it against the registry. Clean." |
-| D9 | 2:15-2:27 | `at=118` → `at=120`, ou la page agent, onglet **Certificates** : **rejected · EdgeMismatch** | "A forged certificate fails: every edge is re-read in the ERC-8004 registry at submission." |
-| D10 | 2:27-2:45 | Réseau **Monad mainnet**, agent **#10330**, encadré « READ ON-CHAIN », onglets **Payments** et **Certificates**. Clic sur le lien **monadscan** du paiement réglé `0xa099…a60c` | "And on Monad mainnet: the same contract, a real x402 payment settled by the facilitator, then refused after a veto, three hundred and thirty-two milliseconds later. Every address and transaction is in the repo." |
-| D11 | 2:45-2:50 | Le README sur GitHub, section « Deployed addresses » (pas de slide) | "ANCRE: the reader ERC-8004 asks for, and it refuses to pay." |
+Le terminal occupe la **moitié gauche** de l'écran, Chrome la **moitié droite** (ou en plein écran pour les plans sans terminal). Tu enregistres l'écran entier, en 1920×1080, avec le thème clair de Chrome.
+
+**Les onglets de Chrome, à ouvrir dans cet ordre** (un onglet par plan, tu passes à l'onglet suivant avec ⌘⌥→) :
+
+| Onglet | URL | Plan |
+|---|---|---|
+| 1 | https://ancre-xyz.netlify.app/?network=mainnet | D2 |
+| 2 | https://ancre-xyz.netlify.app/agent/mainnet/182?tab=ratings | D3 |
+| 3 | https://ancre-xyz.netlify.app/agent/mainnet/182 (faire défiler jusqu'au panneau « Who funded the raters? ») | D3 |
+| 4 | https://ancre-xyz.netlify.app/?network=mainnet&anchors=screener-as-trust | D4 |
+| 5 | https://ancre-xyz.netlify.app/?network=mainnet&anchors=screener-d15 | D4 |
+| 6 | https://ancre-xyz.netlify.app/ (testnet) | D5 et D8 (le feed) |
+| 7 | https://ancre-xyz.netlify.app/agent/testnet/2052?tab=path | D5 |
+| 8 | https://ancre-xyz.netlify.app/live?at=87 | D6 |
+| 9 | https://ancre-xyz.netlify.app/live?at=106 | D7 |
+| 10 | https://ancre-xyz.netlify.app/live?at=118 | D9 |
+| 11 | https://ancre-xyz.netlify.app/agent/mainnet/10330?tab=payments | D10 |
+| 12 | https://monadscan.com/tx/0xa099331e10ae31327e54d53b78a3c24277e140f235fe2373f33946d06853a60c | D10 |
+
+Recharge chaque onglet juste avant la prise : `at=` ne s'applique qu'au premier chargement. Dans la Live demo, la touche **→** avance d'un événement, et le compteur `n/121` en haut te dit où tu en es.
+
+**Le terminal, 3 onglets :**
+1. **D1**, prêt à taper (ou à coller) :
+   ```bash
+   export PATH="$PATH:$HOME/.foundry/bin"; R=0x8004BAa17C55a88189AE136b182e5fdA19dE9b63; RPC=https://rpc1.monad.xyz
+   C=$(cast call $R "getClients(uint256)(address[])" 182 --rpc-url $RPC)
+   cast call $R "getSummary(uint256,address[],string,string)(uint64,int128,uint8)" 182 "$C" "" "" --rpc-url $RPC
+   cast call $R "getSummary(uint256,address[],string,string)(uint64,int128,uint8)" 182 "[]" "" "" --rpc-url $RPC
+   ```
+   Lance la ligne `C=$(…)` **avant** l'enregistrement : elle met quelques secondes. Pendant la prise, tu ne lances que les deux `getSummary`.
+2. **D8, le récepteur Alchemy** en mode réel, déjà lancé (commande dans le MUSTDO). Il affiche ses lignes au fil des événements.
+3. **D8, le déclencheur**, dans `demo/`, prêt à lancer :
+   ```bash
+   cd /Users/hugo/Projet/ancre/demo && node trigger.ts --send --keystore ~/.foundry/keystores/ancre-demo
+   ```
+   Il demande une phrase puis ton mot de passe : **tape-les avant de lancer l'enregistrement**, ou coupe ce passage au montage.
+
+### Plans
+
+| # | Temps | Où | Ce que tu fais | Voix |
+|---|---|---|---|---|
+| D1 | 0:00-0:12 | Terminal, onglet 1 | Lance le 1er `getSummary` : **1.5e36**. Puis le 2ᵉ : **revert** | "Monad mainnet, the ERC-8004 registry. This agent's average rating is ten to the thirty-six. And the standard won't even compute it without a list of raters you trust." |
+| D2 | 0:12-0:30 | Chrome, onglet 1 | Montre le tableau des refusés : **Eve-8004, 7,665 ratings → 0** | "This is ANCRE's screen: the layer we want to add to explorers like 8004scan. They list every agent. We show which ones are reachable from anchors you choose. Eve: seven thousand six hundred ratings. Zero." |
+| D3 | 0:30-0:45 | Onglets 2, puis 3 | Onglet 2 : « 0 of 7,665 carry weight ». Onglet 3 : le panneau **Who funded the raters?** | "Every rating is accounted for, and none comes from anyone your anchors reach. The panel shows why, through Alchemy's Transfers API: the raters were all funded by the same address." |
+| D4 | 0:45-0:55 | Onglets 4, puis 5 | Onglet 4 : **34.56 %** de fuite vers la ferme. Onglet 5 : **0** | "Read an automated risk scanner as trust, and a third of its mass leaks into the farm. ANCRE separates measurements from endorsements: zero." *(premier plan à couper)* |
+| D5 | 0:55-1:10 | Onglets 6, puis 7 | Onglet 6 : provider-1 et provider-3 passent, la cible de la ferme est refusée. Onglet 7 : le **Trust path** de provider-3 | "On testnet we run our own agents. Provider-3 was never rated by an anchor, only by a provider they trust, and it still passes. That's trust beyond one hop, with a Sybil bound." |
+| D6 | 1:10-1:30 | Onglet 8 | La cible de la ferme : **100** dans l'explorateur, **0** chez ANCRE, **Refused · UNTRUSTED**. Puis **→** jusqu'à `90` : l'ancre C, compromise, l'endosse, et le paiement est encore refusé | "The payer is a contract that asks ANCRE before every x402 payment. The farm pumps its target to a hundred: refused. Now one anchor is compromised and vouches for it. Trust is computed leaving any one anchor out: still refused." |
+| D7 | 1:30-1:50 | Onglet 9 | **→** de `106` à `111` : provider-2 est **Paid**, l'ancre B le sanctionne (slash), puis **Refused · ANCRE_STATUS**, et l'encadré du disjoncteur affiche **1 block, 260 ms** | "A provider goes bad and an anchor slashes it. The very next payment is refused: one block, two hundred and sixty milliseconds on Monad testnet. No recertification needed: the veto is read live." |
+| D8 | 1:50-2:15 | Terminal, onglets 3 et 2, puis Chrome, onglet 6 | Lance le déclencheur. Dans la console du récepteur : webhook, puis `submitCertificate`, puis `TIMELINE`. Puis l'onglet 6, feed, onglet **ANCRE** : le nouveau certificat | "Live now: an anchor rates an agent. Alchemy's webhook pushes the event to our certifier in about a second, and a new certificate lands on-chain a few seconds later. Then our Envio indexer audits it against the registry. Clean." |
+| D9 | 2:15-2:27 | Onglet 10 | **→** jusqu'à `120` : **rejected · EdgeMismatch** | "A forged certificate fails: every edge is re-read in the ERC-8004 registry at submission." |
+| D10 | 2:27-2:50 | Onglets 11, puis 12 | Onglet 11 : encadré **READ ON-CHAIN**, le paiement réglé puis refusé. Onglet 12 : la transaction sur monadscan | "And on Monad mainnet: the same contract, a real x402 payment settled by the facilitator, then refused after an anchor's veto, three hundred and thirty-two milliseconds later. ANCRE: the reader ERC-8004 asks for, and it refuses to pay." |
 
 **Ordre de coupe**, si la prise dépasse 2:55 :
 1. D4 ;
@@ -57,7 +91,7 @@ Si tu dépasses 2:00, raccourcis d'abord la slide 3 en ne gardant que la derniè
 3. D9 ;
 4. D8 raccourci à l'apparition du certificat dans le feed.
 
-**Ne jamais couper** D2, D6 et D7 : la ferme refusée, l'ancre compromise et le disjoncteur (D52). Garde aussi au moins une interaction Monad réelle visible, D8 ou D10 (§9.4).
+**Ne jamais couper** D2, D6 et D7 : la ferme refusée, l'ancre compromise et le disjoncteur (D52). Garde aussi au moins une interaction Monad réelle visible, D8 ou D10 (§9.4). La vidéo s'arrête sur D10 : pas de README ni de carte de fin.
 
 ---
 
