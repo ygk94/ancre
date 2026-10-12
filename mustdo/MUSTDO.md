@@ -1,6 +1,6 @@
 # MUSTDO — ce que Hugo doit faire lui-même
 
-> **État au lun 12/10, 1 h.** Clôture : **14/10 à 05:59 (Paris)**. **Objectif : soumettre le 12/10**, avec le mardi 13/10 en marge.
+> **État au mar 13/10, 00:30 : SOUMIS ✅** (track 04, bounties Envio, Alchemy et Mera « One Passkey, Many Keys »). Clôture : **mer 14/10 à 05:59 (Paris)** : modifiable jusque-là, en recliquant **SUBMIT** après chaque changement.
 > Le retard du 09/10 est **rattrapé** : la divulgation et le « privé » sont tranchés, le mainnet est fait, et Alchemy est intégré.
 >
 > Ce fichier ne garde que ce qui reste, **par ordre de priorité** : un point en haut débloque souvent ceux d'en dessous. Anciennes versions : `mustdo/archive/`. La version cochable est l'artefact MUSTDO ANCRE.
@@ -27,21 +27,17 @@
    - Alchemy : `docs/soumission/video-alchemy.md`. Il faut le récepteur en mode réel pour la scène en direct.
    - Envio : `docs/soumission/video-envio.md` (chiffres lus en direct le 10/10).
 
-## 🟡 Lun 12/10 : la vidéo Mera et la soumission (mardi 13/10 en marge)
+## ✅ Lun 12/10 – mar 13/10 : la soumission
 
-1. [ ] **Soumission finale**, avec :
-   - le profil et le write-up ;
-   - le lien vers le code public et les vidéos ;
-   - la déclaration des outils IA ;
-   - les champs des bounties Envio et Alchemy. Mera est en pause, donc pas de champ Mera.
-2. [ ] **Le surveillant pendant le jugement, du 13 au 27/10.** Les certificats expirent au bout d'environ 24 h (`maxAge`) et s'affichent alors `STALE`. Que fait-on ?
-   - (a) Laisser tourner le récepteur Alchemy sur ton Mac. Il faut le Mac allumé et le tunnel stable.
-   - (b) Un petit hôte gratuit, à décider.
-   - (c) Rien ne tourne : l'écran explique `STALE`, et `JUDGES.md` garde les transactions.
+1. [x] **Soumission envoyée** le 13/10 vers 00:20 : logo, one-liner, description (7 858 / 8 000), go-to-market, dépôt public, site, démo et pitch (publics), instructions pour le jury, X `@ancre_xyz`, bounties Envio, Alchemy et Mera « One Passkey, Many Keys » (texte recentré sur le travail non-compte du PRF). Tous les liens vérifiés en ligne le 13/10. Textes : `docs/soumission/textes-plateforme.txt`.
+2. [x] **Les 5 vidéos** (YouTube, publiques) : pitch https://youtu.be/-0WbUo5fytk · démo https://youtu.be/YcCupzYoTDo · Envio https://youtu.be/hErys6rsqvo · Alchemy https://youtu.be/mhPeqNbootc · Mera https://youtu.be/kZRyA5Alos8. Fichiers : `ancre-videos/export/final/`.
+3. [ ] **Descriptions YouTube** à coller une fois la vérification du compte validée (jusqu'à 24 h) : `ancre-videos/export/final/youtube-descriptions.txt`.
+4. [ ] **Le surveillant pendant le jugement, du 13 au 27/10.** Recommandation : **(c)** rien ne tourne ; l'écran explique `STALE` et `JUDGES.md` garde les transactions. (a) récepteur Alchemy sur le Mac, (b) petit hôte gratuit : à trancher si tu veux des certificats frais.
+5. [ ] Option, avant le 14/10 05:59 : relire une dernière fois la soumission sur la plateforme ; toute modification exige de recliquer **SUBMIT**.
 
 ## 🧑 À toi seul, quand tu peux
 
-- [ ] **Clause de cession des inventions** de ton contrat de travail (§4.3 des règles). À relire **avant la mise en public**.
+- [x] **Clause de cession des inventions** : vérifiée par Hugo (10/10), pas de problème.
 - [ ] **Sur l'autre machine** : `git pull`, puis `git config user.email hugo.thomas.perso@gmail.com`.
 - [ ] **Régénérer le token Envio** (envio.dev/app/api-tokens) : l'ancien est apparu en clair (AM-03.7).
 - [ ] Option : récupérer les **0,02 USDC** restés dans le payeur mainnet, depuis ton MetaMask principal, avec `sweep(USDC, amount)` (RUNBOOK §7). Ce n'est pas urgent.
@@ -62,7 +58,7 @@
 
 ## En pause ou abandonné
 
-- **Prototype Mera (porte P4)** : ✅ **porte P4 passée le 12/10 vers 00:30** (Mac Safari + iPhone, même passkey iCloud : adresses d'epoch 0 et 1 et empreintes identiques). Le prototype est en ligne sur `/mera/`. **Intégration faite le 12/10 vers 01:30** : ensemble « mera » `0x2d11…4f2f` (anchor-A, anchor-B, ancre-passkey `0xe3c8…309b`) sur l'instance officielle, payeur dédié `0x7CB3…bd1B` (owner = ton MetaMask), provider-1 payé (0.01 USDC). Le veto se pose depuis `/mera/` section 4 (Face ID, Mera signe). **À faire pendant la vidéo** : le veto, puis `node mera.ts after --keystore ~/.foundry/keystores/ancre-demo` (depuis `demo/`) qui montre le refus. Répété sur fork : refus 1 bloc après le veto.
+- **Prototype Mera (porte P4)** : ✅ **porte P4 passée le 12/10 vers 00:30** (Mac Safari + iPhone, même passkey iCloud : adresses d'epoch 0 et 1 et empreintes identiques). Le prototype est en ligne sur `/mera/`. **Intégration faite le 12/10 vers 01:30** : ensemble « mera » `0x2d11…4f2f` (anchor-A, anchor-B, ancre-passkey `0xe3c8…309b`) sur l'instance officielle, payeur dédié `0x7CB3…bd1B` (owner = ton MetaMask), provider-1 payé (0.01 USDC). Le veto se pose depuis `/mera/` section 4 (Face ID, Mera signe). **Fait le 12/10 (vidéo)** : veto signé par passkey, tx `0x7884…cfed` (bloc 70 462 375), payeur mera : refus `ANCRE_STATUS`, statut VETOED. Répété sur fork : refus 1 bloc après le veto.
 - **Bounty MetaMask** : abandonné, car réservé à la track 01 (D53). Le plugin reste dans le dépôt.
 
 ## ✅ Ce qui est fait
