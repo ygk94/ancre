@@ -17,7 +17,7 @@
 | M2 | 0:11 | "Each epoch gives a fresh key, always from the same passkey. One passkey, many keys." |
 | M3 | 0:17 | "And because the passkey is synced by iCloud, my iPhone derives exactly the same addresses. There is no seed phrase and nothing is stored." |
 | M4 | 0:25 | "Epoch key zero is a real anchor of an ANCRE set on Monad testnet. With one Touch ID, Mera signs a veto against a provider, and the browser sends it on chain." |
-| M5 | 0:36 | "The payer contract reads that veto live, so the next payment to this provider is refused." |
+| M5 | 0:36 | "The payer contract reads that veto live, so the next payment to this provider is refused. No new certificate is needed, the veto counts from the very next block." |
 | M6 | 0:47 | "Here is the veto on chain. With Mera, an ANCRE anchor fits in a passkey." |
 
 Honnêteté : la pré-rotation (engager la clé suivante on-chain) n'est **pas** implémentée dans le contrat (ERC, « future version ») ; on ne la dit pas. Ce qui est dit : une ancre réelle dont la clé vient d'un passkey via Mera, et son veto.
