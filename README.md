@@ -14,7 +14,7 @@ It is the reference implementation of a draft ERC, *Anchored Reputation for Trus
 | Status | **Deployed and run for real** on Monad testnet (act 2, 8/8 scenes, 2026-10-07) and mainnet (minimal run, 2026-10-10): addresses and transactions in §7 and [`demo/JUDGES.md`](demo/JUDGES.md) |
 | Live screen | https://ancre-xyz.netlify.app |
 | Indexer (Envio Cloud) | `https://indexer.dev.hyperindex.xyz/38cf597/v1/graphql`, repository [`ygk94/ancre-indexerv2`](https://github.com/ygk94/ancre-indexerv2) |
-| Video | **[TBD: video link, 12/10]** |
+| Video | Pitch https://youtu.be/-0WbUo5fytk · Demo https://youtu.be/YcCupzYoTDo · Envio https://youtu.be/hErys6rsqvo · Alchemy https://youtu.be/mhPeqNbootc · Mera https://youtu.be/kZRyA5Alos8 |
 
 **How to read the numbers.** Every figure below links to the file that produced it, with its date and one of four labels: **MEASURED** (output of a script or test in this repository, or an on-chain read we made), **DOC** (official documentation), **ESTIMATED**, **UNVERIFIED**.
 
