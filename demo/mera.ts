@@ -150,6 +150,8 @@ async function main() {
   }
 
   if (cmd === "after" || rehearse) {
+    log.ancre = { address: OFFICIAL.ancre, abi: ancreArt.abi, setId: st.setId!, theta: SET.theta };
+    if (cmd === "after") { delete st.done["1.pay:p1-after-slash"]; delete st.done["scene-1"]; saveState(name, st); } // eth_call only: re-runnable
     await scene(ctx, 1, "breaker: the passkey anchor slashed provider-1, the mera payer refuses the next payment", async () => {
       // the slash: the passkey anchor's latest NewFeedback on provider-1 with tag "slash"
       // eth_getLogs is capped at 100 blocks per call on the testnet RPC: walk back from the head, 100 at a time
@@ -167,7 +169,7 @@ async function main() {
       const lat = { slashBlock: Number(slash.blockNumber), slashTx: slash.transactionHash, refusedAt: refused.block, blocks: refused.block - Number(slash.blockNumber) };
       st.notes.meraBreaker = lat;
       saveState(name, st);
-      console.log(`passkey anchor slash in block ${lat.slashBlock} (${lat.slashTx}) -> payment refused at block ${lat.refusedAt}: ${lat.blocks} block(s) later`);
+      console.log(`passkey anchor veto in block ${lat.slashBlock} (${lat.slashTx})\n-> payment refused at block ${lat.refusedAt}: the veto is read live, every payment after block ${lat.slashBlock} is refused`);
       return [check("refused after the passkey anchor's slash", "ANCRE_STATUS", refused.reason), check("status VETOED", 4, Number(x.status))];
     });
   }
